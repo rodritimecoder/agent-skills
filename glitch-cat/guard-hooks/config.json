@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "name": "guard-hooks",
+  "description": "Deterministic pre-execution guardrails and immutable file protections",
+  "protected_files": [
+    "KeepMD",
+    "keep.md",
+    "STATE.md",
+    ".agent_state.json",
+    ".env",
+    ".agent_keys.env",
+    "id_rsa",
+    "id_ed25519",
+    "*.pem",
+    "*.key"
+  ],
+  "forbidden_commands": [
+    {
+      "pattern": "\\brm\\s+(-[a-zA-Z]*r[a-zA-Z]*f*\\s+|--recursive\\s+.*)(/|~|\\*|\\$HOME)",
+      "reason": "Destructive recursive deletion of system or home root"
+    },
+    {
+      "pattern": "\\bgit\\s+push\\s+.*(--force|-f)\\s+.*(main|master)",
+      "reason": "Destructive force-push to protected main/master branch"
+    },
+    {
+      "pattern": "\\bgit\\s+reset\\s+--hard\\s+HEAD~",
+      "reason": "Destructive unhedged git hard reset"
+    },
+    {
+      "pattern": "\\b(drop\\s+database|drop\\s+table)\\b",
+      "reason": "Destructive database drop statement"
+    },
+    {
+      "pattern": "\\bchmod\\s+(-R\\s+)?777\\b",
+      "reason": "Dangerous global 777 permission escalation"
+    }
+  ],
+  "secret_leak_patterns": [
+    "sk-or-v1-[a-f0-9]{64}",
+    "sk-ant-[a-zA-Z0-9_-]{40,}",
+    "AIzaSy[a-zA-Z0-9_-]{33}",
+    "-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----"
+  ]
+}

@@ -1,0 +1,88 @@
+  <!-- Background Interactive Graph Canvas -->
+  <div id="graphContainer">
+    <canvas id="graphCanvas"></canvas>
+  </div>
+
+  <!-- Top Navigation & Stats Bar -->
+  <header class="hud-header">
+    <div class="hud-left">
+      <div class="glass-card">
+        <div class="badge-logo">Knowledge Cosmos</div>
+        <div class="stats-label"><span id="nodeCount">0</span> Nodes &bull; <span id="edgeCount">0</span> Edges</div>
+      </div>
+
+      <div class="glass-card search-wrapper">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search concept, course, tag...">
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="view-mode-toggle" id="viewModeToggle" title="Toggle between Canvas Week Constellations, Classic Semantic Obsidian Web, and Radial Sunburst">
+        <button class="mode-btn active" id="btnModeConstellation" onclick="setViewMode('constellation')">
+          <span>📅</span> Canvas Constellations
+        </button>
+        <button class="mode-btn" id="btnModeSemantic" onclick="setViewMode('semantic')">
+          <span>🌌</span> Semantic Web
+        </button>
+        <button class="mode-btn" id="btnModeSunburst" onclick="setViewMode('sunburst')">
+          <span>☀️</span> Radial Sunburst
+        </button>
+        <a href="study.html" target="_blank" class="mode-btn cornell-launch-btn" id="btnModeStudy" title="Open Interactive Study Workspace (Lecture Sync + Cues + Quiz)" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#ffffff; background:rgba(88,166,255,0.18); border:1px solid rgba(88,166,255,0.4);">
+          <span>📖</span> Study Workspace ↗
+        </a>
+        <a href="cornell_index.html" target="_blank" class="mode-btn anki-launch-btn" id="btnModePortal" title="Open Flashcards &amp; Revision Index" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#f5c2e7;">
+          <span>🎴</span> Flashcards &amp; Notes ↗
+        </a>
+      </div>
+
+      <div class="glass-card" style="padding: 4px 6px;">
+        <button id="resetBtn" class="btn-icon" title="Reset Zoom & Center">&#8982;</button>
+        <button id="toggleLabelsBtn" class="btn-icon active" title="Toggle Labels">Aa</button>
+        <button id="settingsBtn" class="btn-icon" title="Physics & Graph Settings">&#9881;</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Course Galaxy Filter Chips -->
+  <div class="course-chips" id="courseChips"></div>
+
+  <!-- Canvas Module / Week Filter Chips -->
+  <div class="week-chips-bar" id="weekFilterBar">
+    <div class="week-chips-scroll" id="weekChips"></div>
+    <a href="cornell_index.html" target="_blank" class="cornell-portal-link" title="Open Canvas Cornell Study Portal">
+      📖 Study Portal &rsaquo;
+    </a>
+  </div>
+
+  <!-- Settings Popover -->
+  <div class="settings-popover" id="settingsPopover">
+    <div class="pop-title">Simulation Physics</div>
+
+    <div class="setting-row">
+      <div class="setting-label">Repulsion Charge <span id="valCharge">-180</span></div>
+      <input type="range" id="sliderCharge" min="-600" max="-40" value="-180" step="10">
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">Synaptic Elasticity <span id="valLink">65</span></div>
+      <input type="range" id="sliderLink" min="20" max="180" value="65" step="5">
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">Galaxy Clustering <span id="valCluster">0.12</span></div>
+      <input type="range" id="sliderCluster" min="0" max="0.35" value="0.12" step="0.01">
+    </div>
+
+    <div class="pop-title" style="margin-top: 6px;">Visual Aesthetics</div>
+
+    <div class="toggle-row toggle-active" id="toggleGlowRow">
+      <span>Node Halo Bloom</span>
+      <div class="toggle-switch"></div>
+    </div>
+
+    <div class="toggle-row toggle-active" id="togglePulsesRow">
+      <span>Active Edge Pulse</span>
+      <div class="toggle-switch"></div>
+    </div>
+  </div>

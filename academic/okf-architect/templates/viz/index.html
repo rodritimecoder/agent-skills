@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Knowledge Cosmos — D3 Interactive Graph</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- D3.js (Inlined for file:// offline resilience) -->
+  <script>/* __D3_INLINE__ */</script>
+  <script>
+    if (typeof d3 === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Marked.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+
+  <style>
+    <!-- @include "css/base.css" -->
+    <!-- @include "css/graph.css" -->
+    <!-- @include "css/academic_drawer.css" -->
+  </style>
+</head>
+<body>
+  <!-- @include "components/header_hud.html" -->
+  <!-- @include "components/academic_drawer.html" -->
+  <!-- @include "components/legend_bar.html" -->
+
+  <script>
+    <!-- @include "js/data_store.js" -->
+    <!-- @include "js/graph_engine.js" -->
+    <!-- @include "js/academic_drawer.js" -->
+    <!-- @include "js/app_init.js" -->
+  </script>
+</body>
+</html>

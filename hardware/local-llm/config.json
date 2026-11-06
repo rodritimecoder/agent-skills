@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "name": "local-llm",
+  "description": "Client for the local Qwen3.6-35B-A3B Uncensored Genesis server on :8080 with dual-GPU Vulkan offload",
+  "default_endpoint": "http://127.0.0.1:8080",
+  "model_name": "qwen3.6-35b-genesis",
+  "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+  "defaults": {
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "max_tokens": 4096,
+    "presence_penalty": 1.5
+  }
+}

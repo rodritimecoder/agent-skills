@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pipeline step evidence (step_NN.json)",
+  "description": "Serialized evidence written by run_pipeline.py into 05_verify/ after every stage run.",
+  "type": "object",
+  "required": [
+    "stage",
+    "stage_name",
+    "step_type",
+    "status",
+    "started_at",
+    "finished_at",
+    "inputs",
+    "outputs",
+    "evidence",
+    "errors"
+  ],
+  "properties": {
+    "stage": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "stage_name": {
+      "type": "string"
+    },
+    "step_type": {
+      "type": "string",
+      "enum": ["D", "P", "H"],
+      "description": "D = deterministic code, P = probabilistic model call, H = human in the loop."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "failed", "skipped"]
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "finished_at": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object"
+    },
+    "outputs": {
+      "type": "array"
+    },
+    "evidence": {
+      "type": "array"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

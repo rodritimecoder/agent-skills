@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT="${SKILL_DIR}/scripts/vault_mine.py"
+
+exec python3 "${SCRIPT}" "$@"

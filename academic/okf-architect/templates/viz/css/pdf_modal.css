@@ -1,0 +1,85 @@
+  /* Inlined PDF Viewer Modal */
+  .pdf-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10005;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .pdf-modal-container {
+    width: 90vw;
+    height: 92vh;
+    background: #181825;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+  .pdf-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #11111b;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .pdf-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .btn-pdf-view {
+    width: 100%;
+    background: rgba(203, 166, 247, 0.12);
+    border: 1px solid #cba6f7;
+    color: #cba6f7;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+  .btn-pdf-view:hover {
+    background: #cba6f7;
+    color: #11111b;
+  }
+  .solution-cue-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(137, 180, 250, 0.08);
+    border: 1px solid rgba(137, 180, 250, 0.25);
+    color: #cdd6f4;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+    transition: all 0.15s ease;
+  }
+  .solution-cue-btn:hover {
+    background: rgba(137, 180, 250, 0.2);
+    border-color: #89b4fa;
+    color: #fff;
+  }
+  .solution-time-badge {
+    background: rgba(137, 180, 250, 0.2);
+    color: #89b4fa;
+    font-family: monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }

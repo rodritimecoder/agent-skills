@@ -1,0 +1,213 @@
+{
+  "week_1_tutorial_solutions_toan": {
+    "title": "Dr. Trong Toan Tran \u2014 Week 1 Tutorial Problem Walkthrough",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/5B7QIAjUKfS54PORwr1ijvJPEor3z5loikK0quVCTfkfZ_OQwAeMAY3KAT6_A9dv.CJTU0_s9zKosU0oP",
+    "passcode": "S!6o2WH?",
+    "pdfPath": "48520 - Electronics and Circuits/Week_1/Week_1_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: KCL & KVL Sign Discipline at Multi-Branch Nodes",
+        "time": "08:15",
+        "seconds": 495
+      },
+      {
+        "label": "Problem 2: Ideal Op-Amp Virtual Short & Virtual Ground",
+        "time": "18:40",
+        "seconds": 1120
+      },
+      {
+        "label": "Problem 3: Inverting vs Non-Inverting Closed-Loop Gain",
+        "time": "27:30",
+        "seconds": 1650
+      }
+    ]
+  },
+  "week_2_tutorial_solutions_toan": {
+    "title": "Dr. Trong Toan Tran \u2014 Week 2 Tutorial Problem Walkthrough",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/ia2MsDB8A6Y_8gldh5LMEhmw6aj6R65P8s9zzD6oTcAdeZeklTNc6t6THR23aK9X.DQLuH_sianj5PqfM",
+    "passcode": "58yD*jgf",
+    "pdfPath": "48520 - Electronics and Circuits/Week_2/Week_2_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Nodal Analysis with Supernode",
+        "time": "11:23",
+        "seconds": 683
+      },
+      {
+        "label": "Problem 2: Mesh Current Analysis with Supermesh",
+        "time": "17:57",
+        "seconds": 1077
+      },
+      {
+        "label": "Problem 3: Superposition Principle & Power Trap",
+        "time": "26:04",
+        "seconds": 1564
+      },
+      {
+        "label": "Problem 4: Source Transformation for Parallel Reductions",
+        "time": "31:54",
+        "seconds": 1914
+      },
+      {
+        "label": "Problem 5: Thevenin Equivalent with Dependent Sources (Test Source Method)",
+        "time": "45:27",
+        "seconds": 2727
+      }
+    ]
+  },
+  "week_3_tutorial_solutions_toan": {
+    "title": "Dr. Trong Toan Tran \u2014 Week 3 Tutorial Walkthrough",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/wZlmRCJKn-7JFJvLjNEG4UAw8obnVxDc2ciRl6LkOL6dy3tw4ls8TsGw8NSdSN1X.OumpYhYC2D_R6DN5",
+    "passcode": "KjPI%#N7",
+    "pdfPath": "48520 - Electronics and Circuits/Week_3/Week_3_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Weighted Inverting Summing Amplifier",
+        "time": "12:58",
+        "seconds": 778
+      },
+      {
+        "label": "Problem 2: Difference / Subtractor Amplifier Balancing Condition",
+        "time": "20:08",
+        "seconds": 1208
+      },
+      {
+        "label": "Problem 3: Ideal Op-Amp Integrator & DC Saturation",
+        "time": "26:55",
+        "seconds": 1615
+      }
+    ]
+  },
+  "week_4_tutorial_solutions_toan": {
+    "title": "Dr. Trong Toan Tran \u2014 Week 4 Tutorial Walkthrough",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/dDa7ezM4TevrEjGMescpW5svkFb3bu5YFSu75M5b3AKU7C_jQw64mchdSAIz8juu.VDjGFan0ESEcuWq5",
+    "passcode": "Quqks$H4",
+    "pdfPath": "48520 - Electronics and Circuits/Week_4/Week_4_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Diode CVD Model State Assumption & Verification",
+        "time": "06:42",
+        "seconds": 402
+      },
+      {
+        "label": "Problem 2: Source-Free RC Natural Decay & Time Constant",
+        "time": "15:10",
+        "seconds": 910
+      }
+    ]
+  },
+  "week_5_tutorial_solutions_toan": {
+    "title": "Dr. Trong Toan Tran \u2014 Week 5 Tutorial Walkthrough (First-Order Step Response)",
+    "type": "mp4",
+    "videoSrc": "48520 - Electronics and Circuits/recordings/Week_5_Tutorial/w05_tutorial.mp4",
+    "fallbackSrc": "https://utsmeet.zoom.us/rec/share/DhZstniuHu9-d7KeA-XyAoQtAc-umMz4QGcvJ5infbTSBTdETj0RZObj0hFqjlUb.IM1bODA6rKvl8zPs?from=hub",
+    "passcode": "A=Q^3GPp",
+    "pdfPath": "48520 - Electronics and Circuits/Week_5/Week_5_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: The Universal 3-Step Transient Formula",
+        "time": "04:40",
+        "seconds": 280
+      },
+      {
+        "label": "Problem 2: Continuity of State Variables ($t=0^-$ vs $t=0^+$)",
+        "time": "13:35",
+        "seconds": 815
+      }
+    ]
+  },
+  "week_6_tutorial_solutions_alpha": {
+    "title": "Alpha Bah \u2014 Week 6 Tutorial Walkthrough (Phasors)",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/play/Gou2AReMcGLeyYjshUAUJi6W9xlsTMi9rjI_xzjHPubf5F9Hjkmp_yfZlL7TMudnytYnYGr6pf6OZB7R.RMQULA6ODPu0ibvo",
+    "passcode": ".c?Zkp1E",
+    "pdfPath": "48520 - Electronics and Circuits/Week_6/Week_6_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Sinusoid to Phasor Domain Transform",
+        "time": "05:12",
+        "seconds": 312
+      },
+      {
+        "label": "Problem 2: Complex Impedance of Reactive Components",
+        "time": "14:45",
+        "seconds": 885
+      }
+    ]
+  },
+  "week_7_tutorial_solutions_alpha": {
+    "title": "Alpha Bah \u2014 Week 7 Tutorial Walkthrough (AC Steady-State)",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/play/R5RhCkrQIWeNnzyXCXKIoksEsCroFQdtms8karR2ZhvbQkktDnYi6x7xEuOjQwh-0qvQ2H-pVvafdG0g.R_Qu2WajugqEnl7M",
+    "passcode": "TnV!%0fs",
+    "pdfPath": "48520 - Electronics and Circuits/Week_7/Week_7_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: AC Nodal Analysis with Phasor Admittances",
+        "time": "08:45",
+        "seconds": 525
+      },
+      {
+        "label": "Problem 2: AC Thevenin Equivalent Circuit",
+        "time": "18:20",
+        "seconds": 1100
+      }
+    ]
+  },
+  "week_8_tutorial_solutions_ash": {
+    "title": "Aiswarya Pradeepkumar \u2014 Week 8 Tutorial Walkthrough (Filters)",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/Wa22bKt8lMBhM47m1-raAz-qbAHb6mvKMJVN0VS7x3pPxfaBI6g2rO2xTy3H_Orl.7gXD5LoDg6sxuVS4",
+    "passcode": "PewJ=a44",
+    "pdfPath": "48520 - Electronics and Circuits/Week_8/Week_8_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Active Inverting Low-Pass Filter Transfer Function",
+        "time": "07:49",
+        "seconds": 469
+      },
+      {
+        "label": "Problem 2: Filter Design from Specs ($f_c$ and Passband Gain)",
+        "time": "36:24",
+        "seconds": 2184
+      }
+    ]
+  },
+  "week_9_tutorial_solutions_ash": {
+    "title": "Aiswarya Pradeepkumar \u2014 Week 9 Tutorial Walkthrough (RLC)",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/bSvN4fiSE83sPrLAVOvKElw5VqTXMVsiSzy-ydgp7VSbx2NNaOfswn5B0kDSh_1b.w7iuKNIODLouhjR0",
+    "passcode": "*+w4RgNp",
+    "pdfPath": "48520 - Electronics and Circuits/Week_9/Week_9_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Series RLC Damping Factor $\\alpha$ vs Resonant Frequency $\\omega_0$",
+        "time": "11:20",
+        "seconds": 680
+      }
+    ]
+  },
+  "week_10_tutorial_solutions_alpha": {
+    "title": "Alpha Bah \u2014 Week 10 Tutorial Walkthrough (Resonance & Q)",
+    "type": "zoom",
+    "videoSrc": "https://utsmeet.zoom.us/rec/share/Zlc_xsAjWO858kllE6q-MUHpmMopUt95p4UNSrfshTk2JamQ-KewJwkCQjvZNR_8.G7qIJtGRiOSdcCZ3",
+    "passcode": "#5yN5N^6",
+    "pdfPath": "48520 - Electronics and Circuits/Week_10/Week_10_Topic_Notes.pdf",
+    "cues": [
+      {
+        "label": "Problem 1: Series vs Parallel Resonant Formulas",
+        "time": "04:34",
+        "seconds": 274
+      },
+      {
+        "label": "Problem 2: Half-Power Frequencies $\\omega_1$ and $\\omega_2$",
+        "time": "20:20",
+        "seconds": 1220
+      }
+    ]
+  }
+}

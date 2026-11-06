@@ -1,0 +1,265 @@
+{
+  "video": "/run/media/rodri/AI/creator-vault/kem_glitch/2026-10-06_glitch_orchestra_alignment_first/source.mp4",
+  "segments": [
+    {
+      "id": "seg1_conductor_01_09",
+      "label": "Conductor Solo & Alignment Prompt",
+      "range": "0:01 - 0:09",
+      "notes": "Conductor stands at baseline with anchored 2-row platform bar. Monospace prompt > /glitch-orchestra. Outputting \u266b tell drifts upward. Feet strictly pinned at baseline y=596.",
+      "key_frames": [
+        {
+          "second": 1,
+          "timestamp": "0:01",
+          "window_crop": "win_t001.png",
+          "stage_crop_nn": "stage_nn_t001.png"
+        },
+        {
+          "second": 2,
+          "timestamp": "0:02",
+          "window_crop": "win_t002.png",
+          "stage_crop_nn": "stage_nn_t002.png"
+        },
+        {
+          "second": 3,
+          "timestamp": "0:03",
+          "window_crop": "win_t003.png",
+          "stage_crop_nn": "stage_nn_t003.png"
+        },
+        {
+          "second": 4,
+          "timestamp": "0:04",
+          "window_crop": "win_t004.png",
+          "stage_crop_nn": "stage_nn_t004.png"
+        },
+        {
+          "second": 5,
+          "timestamp": "0:05",
+          "window_crop": "win_t005.png",
+          "stage_crop_nn": "stage_nn_t005.png"
+        },
+        {
+          "second": 6,
+          "timestamp": "0:06",
+          "window_crop": "win_t006.png",
+          "stage_crop_nn": "stage_nn_t006.png"
+        },
+        {
+          "second": 7,
+          "timestamp": "0:07",
+          "window_crop": "win_t007.png",
+          "stage_crop_nn": "stage_nn_t007.png"
+        },
+        {
+          "second": 8,
+          "timestamp": "0:08",
+          "window_crop": "win_t008.png",
+          "stage_crop_nn": "stage_nn_t008.png"
+        },
+        {
+          "second": 9,
+          "timestamp": "0:09",
+          "window_crop": "win_t009.png",
+          "stage_crop_nn": "stage_nn_t009.png"
+        }
+      ]
+    },
+    {
+      "id": "seg2_orchestra_18_26",
+      "label": "Orchestra Alignment & Spawning",
+      "range": "0:18 - 0:26",
+      "notes": "Multi-agent terminal stage. Workers stand on 4 leg stubs; conductor on platform bar. Heads aligned horizontally at Row 3 baseline. Five-step pokeball spawn.",
+      "key_frames": [
+        {
+          "second": 18,
+          "timestamp": "0:18",
+          "window_crop": "win_t018.png",
+          "stage_crop_nn": "stage_nn_t018.png"
+        },
+        {
+          "second": 19,
+          "timestamp": "0:19",
+          "window_crop": "win_t019.png",
+          "stage_crop_nn": "stage_nn_t019.png"
+        },
+        {
+          "second": 20,
+          "timestamp": "0:20",
+          "window_crop": "win_t020.png",
+          "stage_crop_nn": "stage_nn_t020.png"
+        },
+        {
+          "second": 21,
+          "timestamp": "0:21",
+          "window_crop": "win_t021.png",
+          "stage_crop_nn": "stage_nn_t021.png"
+        },
+        {
+          "second": 22,
+          "timestamp": "0:22",
+          "window_crop": "win_t022.png",
+          "stage_crop_nn": "stage_nn_t022.png"
+        },
+        {
+          "second": 23,
+          "timestamp": "0:23",
+          "window_crop": "win_t023.png",
+          "stage_crop_nn": "stage_nn_t023.png"
+        },
+        {
+          "second": 24,
+          "timestamp": "0:24",
+          "window_crop": "win_t024.png",
+          "stage_crop_nn": "stage_nn_t024.png"
+        },
+        {
+          "second": 25,
+          "timestamp": "0:25",
+          "window_crop": "win_t025.png",
+          "stage_crop_nn": "stage_nn_t025.png"
+        },
+        {
+          "second": 26,
+          "timestamp": "0:26",
+          "window_crop": "win_t026.png",
+          "stage_crop_nn": "stage_nn_t026.png"
+        }
+      ]
+    },
+    {
+      "id": "seg3_progress_37_42",
+      "label": "Progress & Side-by-Side Execution",
+      "range": "0:37 - 0:42",
+      "notes": "Conductor and Frontend in active execution. Thinking sparkles alternate white/orange above heads. Terminal log streams downward.",
+      "key_frames": [
+        {
+          "second": 37,
+          "timestamp": "0:37",
+          "window_crop": "win_t037.png",
+          "stage_crop_nn": "stage_nn_t037.png"
+        },
+        {
+          "second": 38,
+          "timestamp": "0:38",
+          "window_crop": "win_t038.png",
+          "stage_crop_nn": "stage_nn_t038.png"
+        },
+        {
+          "second": 39,
+          "timestamp": "0:39",
+          "window_crop": "win_t039.png",
+          "stage_crop_nn": "stage_nn_t039.png"
+        },
+        {
+          "second": 40,
+          "timestamp": "0:40",
+          "window_crop": "win_t040.png",
+          "stage_crop_nn": "stage_nn_t040.png"
+        },
+        {
+          "second": 41,
+          "timestamp": "0:41",
+          "window_crop": "win_t041.png",
+          "stage_crop_nn": "stage_nn_t041.png"
+        },
+        {
+          "second": 42,
+          "timestamp": "0:42",
+          "window_crop": "win_t042.png",
+          "stage_crop_nn": "stage_nn_t042.png"
+        }
+      ]
+    },
+    {
+      "id": "seg4_interaction_52_65",
+      "label": "Inter-Agent Dialogue & Status Board",
+      "range": "0:52 - 1:05",
+      "notes": "Kanban board updates with task counts. Blue packet dots ping between Conductor and Worker. Step meter bar tracks worker completion.",
+      "key_frames": [
+        {
+          "second": 52,
+          "timestamp": "0:52",
+          "window_crop": "win_t052.png",
+          "stage_crop_nn": "stage_nn_t052.png"
+        },
+        {
+          "second": 53,
+          "timestamp": "0:53",
+          "window_crop": "win_t053.png",
+          "stage_crop_nn": "stage_nn_t053.png"
+        },
+        {
+          "second": 54,
+          "timestamp": "0:54",
+          "window_crop": "win_t054.png",
+          "stage_crop_nn": "stage_nn_t054.png"
+        },
+        {
+          "second": 55,
+          "timestamp": "0:55",
+          "window_crop": "win_t055.png",
+          "stage_crop_nn": "stage_nn_t055.png"
+        },
+        {
+          "second": 56,
+          "timestamp": "0:56",
+          "window_crop": "win_t056.png",
+          "stage_crop_nn": "stage_nn_t056.png"
+        },
+        {
+          "second": 57,
+          "timestamp": "0:57",
+          "window_crop": "win_t057.png",
+          "stage_crop_nn": "stage_nn_t057.png"
+        },
+        {
+          "second": 58,
+          "timestamp": "0:58",
+          "window_crop": "win_t058.png",
+          "stage_crop_nn": "stage_nn_t058.png"
+        },
+        {
+          "second": 59,
+          "timestamp": "0:59",
+          "window_crop": "win_t059.png",
+          "stage_crop_nn": "stage_nn_t059.png"
+        },
+        {
+          "second": 60,
+          "timestamp": "1:00",
+          "window_crop": "win_t060.png",
+          "stage_crop_nn": "stage_nn_t060.png"
+        },
+        {
+          "second": 61,
+          "timestamp": "1:01",
+          "window_crop": "win_t061.png",
+          "stage_crop_nn": "stage_nn_t061.png"
+        },
+        {
+          "second": 62,
+          "timestamp": "1:02",
+          "window_crop": "win_t062.png",
+          "stage_crop_nn": "stage_nn_t062.png"
+        },
+        {
+          "second": 63,
+          "timestamp": "1:03",
+          "window_crop": "win_t063.png",
+          "stage_crop_nn": "stage_nn_t063.png"
+        },
+        {
+          "second": 64,
+          "timestamp": "1:04",
+          "window_crop": "win_t064.png",
+          "stage_crop_nn": "stage_nn_t064.png"
+        },
+        {
+          "second": 65,
+          "timestamp": "1:05",
+          "window_crop": "win_t065.png",
+          "stage_crop_nn": "stage_nn_t065.png"
+        }
+      ]
+    }
+  ]
+}

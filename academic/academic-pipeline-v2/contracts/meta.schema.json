@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Course metadata (meta.json)",
+  "description": "Constellation node metadata produced by Stage 1 and consumed by Stage 3.",
+  "type": "object",
+  "required": ["course", "weeks"],
+  "properties": {
+    "course": {
+      "type": "string"
+    },
+    "weeks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["week", "topic", "tutorial", "nodes"],
+        "properties": {
+          "week": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "tutorial": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "label", "kind"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Hierarchy &amp; CPU Caches</title>
+  <style>
+    /* Reset & Base Styles */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #1a1a1a;
+      background-color: #f8fafc;
+      padding: 16mm 20mm;
+      max-width: 215mm;
+      margin: 0 auto;
+    }
+
+    /* Print Styles */
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 8.5pt;
+        color: #777;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        max-width: none;
+        background: transparent;
+        color: #000;
+      }
+      .study-toolbar,
+      .page-footer-screen,
+      .notes-reveal-hint {
+        display: none !important;
+      }
+      .notes-col {
+        filter: none !important;
+        opacity: 1 !important;
+      }
+      a {
+        text-decoration: underline;
+        color: inherit;
+      }
+    }
+
+    /* Study Toolbar */
+    .study-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 9pt;
+    }
+
+    .toolbar-btn {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #24292f;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .toolbar-btn:hover {
+      background: #ebecf0;
+      border-color: #afb8c1;
+    }
+
+    .toolbar-btn.active {
+      background: #0969da;
+      color: #ffffff;
+      border-color: #0969da;
+    }
+
+    .toolbar-badge-stats {
+      font-size: 8.5pt;
+      color: #57606a;
+    }
+
+    /* Container sheet */
+    .document-sheet {
+      background: #ffffff;
+      padding: 20px 24px;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border: 1px solid #e1e4e8;
+    }
+
+    @media print {
+      .document-sheet {
+        padding: 0;
+        box-shadow: none;
+        border: none;
+      }
+    }
+
+    /* Header */
+    header.document-header {
+      border-bottom: 2pt solid #222;
+      padding-bottom: 10pt;
+      margin-bottom: 14pt;
+    }
+
+    .document-title {
+      font-size: 20pt;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #111;
+      margin-bottom: 4pt;
+      word-break: break-word;
+    }
+
+    .document-meta {
+      font-size: 8.5pt;
+      color: #555;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16pt;
+    }
+
+    .meta-item {
+      display: inline-block;
+    }
+
+    /* Sections */
+    section.section-block {
+      margin-bottom: 18pt;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+
+    .section-heading {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #111;
+      background: #f0f2f5;
+      padding: 4.5pt 8pt;
+      border-left: 4pt solid #333;
+      border-bottom: 1pt solid #ddd;
+      margin-top: 12pt;
+      margin-bottom: 8pt;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    /* Cornell Notes Table / Grid Header */
+    .grid-header {
+      display: grid;
+      grid-template-columns: 32% 68%;
+      background: #eaecee;
+      border-top: 1pt solid #333;
+      border-bottom: 1pt solid #333;
+      font-size: 8.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #333;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    .grid-header-col {
+      padding: 4pt 8pt;
+    }
+
+    .grid-header-col:first-child {
+      border-right: 1.5pt solid #bbb;
+    }
+
+    /* Cornell Entries Container */
+    .entries-container {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1.5pt solid #333;
+    }
+
+    /* Paired Entry Row */
+    .entry-row {
+      display: grid;
+      grid-template-columns: 32% 68%;
+      border-bottom: 0.75pt solid #ddd;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      min-height: 24pt;
+      position: relative;
+    }
+
+    .entry-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Cue Column */
+    .cue-col {
+      padding: 6pt 8pt;
+      font-weight: 600;
+      color: #111;
+      background-color: #fafbfc;
+      border-right: 1.5pt solid #bbb;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      font-size: 10pt;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      gap: 4pt;
+    }
+
+    /* Review checkboxes & cognitive badge */
+    .cue-top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 2pt;
+    }
+
+    .cue-badge {
+      display: inline-block;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 1pt 4pt;
+      border-radius: 3pt;
+      background: #e1e4e8;
+      color: #24292f;
+      border: 0.5pt solid #cfd3d8;
+    }
+
+    .cue-badge.mechanism { background: #ddf4ff; color: #0969da; border-color: #54aeff; }
+    .cue-badge.definition { background: #dafbe1; color: #1a7f37; border-color: #4ac26b; }
+    .cue-badge.comparison { background: #fff8c5; color: #9a6700; border-color: #d4a72c; }
+    .cue-badge.formula { background: #fbefff; color: #8250df; border-color: #c297ff; }
+    .cue-badge.pitfall { background: #ffebe9; color: #cf222e; border-color: #ff8182; }
+
+    .review-checks {
+      display: inline-flex;
+      gap: 3px;
+    }
+
+    .review-box {
+      width: 9px;
+      height: 9px;
+      border: 1px solid #888;
+      border-radius: 2px;
+      display: inline-block;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .review-box.checked {
+      background: #2da44e;
+      border-color: #2da44e;
+    }
+
+    /* Notes Column */
+    .notes-col {
+      padding: 6pt 10pt;
+      color: #222;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      font-size: 10pt;
+      line-height: 1.45;
+      position: relative;
+      transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+
+    /* Interactive Study (Blur / Conceal) Mode */
+    body.study-mode .notes-col {
+      cursor: pointer;
+    }
+
+    body.study-mode .notes-col.blurred {
+      filter: blur(5px);
+      opacity: 0.35;
+      user-select: none;
+    }
+
+    body.study-mode .notes-col.blurred:hover {
+      filter: blur(2.5px);
+      opacity: 0.55;
+    }
+
+    body.study-mode .notes-col.revealed {
+      filter: none;
+      opacity: 1;
+      user-select: auto;
+    }
+
+    body.study-mode .notes-col.revealed:hover {
+      background-color: #f6f8fa;
+    }
+
+    /* Rich text styling inside notes & cues */
+    .notes-col p, .cue-col p {
+      margin-bottom: 5pt;
+    }
+    .notes-col p:last-child, .cue-col p:last-child {
+      margin-bottom: 0;
+    }
+
+    .notes-col ul, .notes-col ol {
+      margin: 4pt 0 6pt 16pt;
+    }
+
+    .notes-col li {
+      margin-bottom: 2pt;
+    }
+
+    /* Obsidian-style callouts */
+    .callout {
+      margin: 6pt 0;
+      padding: 6pt 8pt;
+      border-radius: 4px;
+      border-left: 3.5pt solid #0969da;
+      background: #f6f8fa;
+      font-size: 9pt;
+      line-height: 1.35;
+    }
+    .callout-title {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 7.5pt;
+      letter-spacing: 0.5px;
+      margin-bottom: 3pt;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .callout.note { border-color: #0969da; background: #f0f7ff; }
+    .callout.note .callout-title { color: #0969da; }
+    .callout.tip { border-color: #1a7f37; background: #f2faf3; }
+    .callout.tip .callout-title { color: #1a7f37; }
+    .callout.warning { border-color: #9a6700; background: #fffbf0; }
+    .callout.warning .callout-title { color: #9a6700; }
+    .callout.danger { border-color: #cf222e; background: #fff5f5; }
+    .callout.danger .callout-title { color: #cf222e; }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 9pt;
+      background-color: #f1f3f5;
+      padding: 1.5pt 3pt;
+      border-radius: 2pt;
+      border: 0.5pt solid #e0e0e0;
+      word-break: break-all;
+    }
+
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 8.5pt;
+      background-color: #f6f8fa;
+      border: 0.75pt solid #d0d7de;
+      border-radius: 3pt;
+      padding: 6pt 8pt;
+      margin: 5pt 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    table.notes-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 5pt 0;
+      font-size: 9pt;
+    }
+
+    table.notes-table th, table.notes-table td {
+      border: 0.75pt solid #d0d7de;
+      padding: 3.5pt 6pt;
+      text-align: left;
+    }
+
+    table.notes-table th {
+      background-color: #f6f8fa;
+      font-weight: 600;
+    }
+
+    a {
+      color: #0969da;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    /* Section Summary */
+    .section-summary-block {
+      margin-top: 6pt;
+      background: #fdfdfd;
+      border: 1pt solid #ccc;
+      border-left: 3.5pt solid #2c3e50;
+      padding: 6pt 10pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .summary-title {
+      font-size: 8.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #2c3e50;
+      margin-bottom: 3pt;
+    }
+
+    .summary-content {
+      font-size: 9.5pt;
+      line-height: 1.4;
+      color: #333;
+    }
+
+    /* Screen footer */
+    .page-footer-screen {
+      margin-top: 20pt;
+      padding-top: 8pt;
+      border-top: 1pt solid #eee;
+      font-size: 8.5pt;
+      color: #888;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Study Toolbar -->
+  <div class="study-toolbar">
+    <div class="toolbar-left">
+      <button type="button" class="toolbar-btn" id="study-toggle-btn" onclick="toggleStudyMode()">
+        <span>👁️</span> Test / Conceal Answers
+      </button>
+      <button type="button" class="toolbar-btn" id="reveal-all-btn" onclick="revealAllNotes()" style="display:none;">
+        <span>📖</span> Reveal All
+      </button>
+      <button type="button" class="toolbar-btn" id="blur-all-btn" onclick="blurAllNotes()" style="display:none;">
+        <span>🔒</span> Hide All
+      </button>
+    </div>
+    <div class="toolbar-right">
+      <span class="toolbar-badge-stats" id="study-stats">A4 Ready &bull; Tip: Click blurred answer to reveal</span>
+      <button type="button" class="toolbar-btn" onclick="window.print()">
+        <span>🖨️</span> Print / Save PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="document-sheet">
+    <header class="document-header">
+      <h1 class="document-title">Memory Hierarchy &amp; CPU Caches</h1>
+      <div class="document-meta">
+        <span class="meta-item"><strong>Source:</strong> examples/input.md</span>
+        <span class="meta-item"><strong>Generated:</strong> 2026-10-12 02:07</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="section-block">
+  <h2 class="section-heading">Cache Organization &amp; Mapping</h2>
+  <div class="grid-header">
+    <div class="grid-header-col">Cue / Prompt / Keyword</div>
+    <div class="grid-header-col">Notes / Explanations</div>
+  </div>
+  <div class="entries-container">
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span></span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>Why do architectures use a memory hierarchy?</p>
+      </div>
+      <div class="notes-col"><p>To balance trade-offs between access speed, storage capacity, and cost. High-speed SRAM caches sit close to CPU registers while slower, high-capacity DRAM acts as main storage.</p></div>
+    </div>
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span class="cue-badge comparison">comparison</span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>What is the penalty of a cache miss vs cache hit?</p>
+      </div>
+      <div class="notes-col"><p>Cache hits resolve in sub-nanosecond to a few nanoseconds (4-5 CPU cycles for L1). Cache misses require fetching from DRAM across the memory bus, taking 50–100 nanoseconds (~200+ cycles).</p></div>
+    </div>
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span class="cue-badge comparison">comparison</span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>Compare the 3 cache placement policies</p>
+      </div>
+      <div class="notes-col"><ul>
+  <li>Direct Mapped: Each block maps to exactly 1 cache line; simple and fast hardware, but prone to frequent conflict misses.</li>
+  <li>Fully Associative: Blocks can reside in any line; eliminates conflict misses but requires complex, expensive parallel search hardware.</li>
+  <li>Set Associative: Balanced hybrid where cache is split into sets with N ways (e.g., 8-way set associative).</li>
+</ul></div>
+    </div>
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span class="cue-badge formula">formula</span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>Summary of cache levels, sizes, and latencies</p>
+      </div>
+      <div class="notes-col"><table class="notes-table">
+  <tr>
+    <th>Cache Level</th>
+    <th>Typical Size</th>
+    <th>Typical Latency</th>
+    <th>Location</th>
+  </tr>
+  <tr>
+    <td>L1 Cache</td>
+    <td>32 KB - 64 KB per core</td>
+    <td>1 - 2 ns (4-5 cycles)</td>
+    <td>On-chip (Core)</td>
+  </tr>
+  <tr>
+    <td>L2 Cache</td>
+    <td>512 KB - 1 MB per core</td>
+    <td>3 - 5 ns (12-14 cycles)</td>
+    <td>On-chip (Core)</td>
+  </tr>
+  <tr>
+    <td>L3 Cache</td>
+    <td>16 MB - 64 MB shared</td>
+    <td>10 - 20 ns (40-60 cycles)</td>
+    <td>On-chip (Shared)</td>
+  </tr>
+  <tr>
+    <td>Main DRAM</td>
+    <td>16 GB - 128 GB</td>
+    <td>60 - 100 ns</td>
+    <td>Off-chip DIMMs</td>
+  </tr>
+</table></div>
+    </div>
+  </div>
+  <div class="section-summary-block">
+    <div class="summary-title">Summary &amp; Key Synthesis</div>
+    <div class="summary-content"><p>CPU caches bridge the multi-order-of-magnitude speed disparity between fast processor cores and high-capacity DRAM using multi-tier L1/L2/L3 caches with set-associative placement.</p></div>
+  </div>
+</section>
+
+<section class="section-block">
+  <h2 class="section-heading">Locality Principles &amp; Optimization</h2>
+  <div class="grid-header">
+    <div class="grid-header-col">Cue / Prompt / Keyword</div>
+    <div class="grid-header-col">Notes / Explanations</div>
+  </div>
+  <div class="entries-container">
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span class="cue-badge comparison">comparison</span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>What are Temporal vs Spatial Locality?</p>
+      </div>
+      <div class="notes-col"><ol>
+  <li>Temporal Locality: Memory accessed once is likely to be accessed again soon (e.g. loop index variables, repeated functions).</li>
+  <li>Spatial Locality: Memory items physically adjacent to recently accessed items are likely to be accessed soon (e.g. contiguous arrays).</li>
+</ol></div>
+    </div>
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span class="cue-badge mechanism">mechanism</span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>How does loop ordering impact spatial locality in C?</p>
+      </div>
+      <div class="notes-col"><p>Since C stores matrices in row-major order, traversing row-by-row maximizes cache line hits:</p>
+<pre><code>// Good spatial locality (row-major order in C)
+for (int i = 0; i &lt; N; i++) {
+    for (int j = 0; j &lt; N; j++) {
+        sum += matrix[i][j];
+    }
+}</code></pre>
+<p>Traversing column-first (<code>matrix[j][i]</code>) causes stride misses on every iteration once the matrix exceeds cache capacity.</p></div>
+    </div>
+    <div class="entry-row">
+      <div class="cue-col">
+        <div class="cue-top-meta"><span></span><div class="review-checks" title="SRS Retention Level (New)"><span class="review-box " title="Pass 1 (1d)"></span><span class="review-box " title="Pass 2 (3d)"></span><span class="review-box " title="Pass 3 (Mastery)"></span></div></div>
+        <p>Reference text &amp; authoritative documentation</p>
+      </div>
+      <div class="notes-col"><p>For in-depth explanations and benchmarks, consult the <a href="https://csapp.cs.cmu.edu/" target="_blank" rel="noopener">Computer Systems: A Programmer&#x27;s Perspective Reference</a>.</p></div>
+    </div>
+  </div>
+  <div class="section-summary-block">
+    <div class="summary-title">Summary &amp; Key Synthesis</div>
+    <div class="summary-content"><p>Exploiting hardware cache line prefetching through row-major data layout and sequential access patterns dramatically boosts execution speed by preventing high-latency DRAM misses.</p></div>
+  </div>
+</section>
+    </main>
+
+    <footer class="page-footer-screen">
+      Generated Cornell Notes &bull; Ready for print / PDF export (A4)
+    </footer>
+  </div>
+
+  <script>
+    let studyModeActive = false;
+
+    function toggleStudyMode() {
+      studyModeActive = !studyModeActive;
+      const body = document.body;
+      const toggleBtn = document.getElementById('study-toggle-btn');
+      const revealBtn = document.getElementById('reveal-all-btn');
+      const blurBtn = document.getElementById('blur-all-btn');
+      const stats = document.getElementById('study-stats');
+
+      if (studyModeActive) {
+        body.classList.add('study-mode');
+        toggleBtn.classList.add('active');
+        revealBtn.style.display = 'inline-flex';
+        blurBtn.style.display = 'inline-flex';
+        blurAllNotes();
+        stats.textContent = "Self-Quiz Mode: Click any notes block to reveal / click again to re-blur";
+      } else {
+        body.classList.remove('study-mode');
+        toggleBtn.classList.remove('active');
+        revealBtn.style.display = 'none';
+        blurBtn.style.display = 'none';
+        revealAllNotes();
+        stats.textContent = "A4 Ready • Tip: Click blurred answer to reveal / re-blur";
+      }
+    }
+
+    function blurAllNotes() {
+      document.querySelectorAll('.notes-col').forEach(col => {
+        col.classList.remove('revealed');
+        col.classList.add('blurred');
+      });
+    }
+
+    function revealAllNotes() {
+      document.querySelectorAll('.notes-col').forEach(col => {
+        col.classList.remove('blurred');
+        col.classList.add('revealed');
+      });
+    }
+
+    // Attach click listeners to notes columns (toggle reveal <-> blur)
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.notes-col').forEach(col => {
+        col.addEventListener('click', (e) => {
+          if (!studyModeActive) return;
+          // Don't toggle blur if user is clicking an active hyperlink
+          if (e.target.tagName.toLowerCase() === 'a') return;
+
+          if (col.classList.contains('blurred')) {
+            col.classList.remove('blurred');
+            col.classList.add('revealed');
+          } else {
+            col.classList.remove('revealed');
+            col.classList.add('blurred');
+          }
+        });
+      });
+
+      // Interactive review checkboxes
+      document.querySelectorAll('.review-box').forEach(box => {
+        box.addEventListener('click', (e) => {
+          e.stopPropagation();
+          box.classList.toggle('checked');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

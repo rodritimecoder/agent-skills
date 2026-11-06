@@ -1,0 +1,16 @@
+[Unit]
+Description=companion — character chat over local ASR, 35B and TTS
+Documentation=file://%h/src/my-agent-skills/orchestration/companion/SKILL.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/companion serve --host 127.0.0.1 --port 7778
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,215 @@
+name: Cloud Subagent Worker (Kem Glitch Architecture)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task prompt for the subagent'
+        required: true
+        type: string
+      target_branch:
+        description: 'Branch name to push changes to'
+        required: true
+        default: 'agent/patch'
+        type: string
+      model:
+        description: 'OpenCode Go model id, without the provider prefix'
+        required: false
+        default: 'deepseek-v4.1-flash'
+        type: string
+      turns:
+        description: 'Model turns before the agent stops'
+        required: false
+        default: '24'
+        type: string
+      needs_browser:
+        description: 'Start a CDP browser for frontend work (true/false)'
+        required: false
+        default: 'false'
+        type: string
+      expect_path:
+        description: 'Path the run must modify or create, or it fails (optional)'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: subagent-${{ github.workflow }}-${{ github.event.inputs.target_branch }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  subagent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      # A dispatch with no key used to fail three steps later, inside the agent.
+      # Fail here, and say what to set.
+      - name: Install OpenCode CLI
+        run: |
+          # The public installer ships v1; --major moves it to v2, which is the
+          # version this workflow is written against.
+          curl -fsSL https://opencode.ai/install | bash > /tmp/oc-install.log 2>&1
+          export PATH="$HOME/.opencode/bin:$PATH"
+          opencode --version
+          opencode upgrade --major > /tmp/oc-upgrade.log 2>&1 || true
+          version="$(opencode --version | grep -oE '[0-9]+(\.[0-9]+)+' | head -1)"
+          echo "opencode $version"
+          case "$version" in
+            2.*) echo "✅ v2 CLI ready" ;;
+            *) echo "❌ expected an OpenCode 2 CLI, got $version" >&2; tail -20 /tmp/oc-upgrade.log >&2; exit 1 ;;
+          esac
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Install the lane agent
+        run: |
+          mkdir -p "$HOME/.config/opencode/agents"
+          cp orchestration/gh-action-subagent/assets/agents/lane.md "$HOME/.config/opencode/agents/lane.md"
+          echo "✅ lane agent installed (shell allowed, push/rm/sudo denied)"
+
+      - name: Preflight — provider credentials
+        env:
+          OPENCODE_GO_TOKEN: ${{ secrets.OPENCODE_GO_TOKEN }}
+        run: |
+          if [ -z "$OPENCODE_GO_TOKEN" ]; then
+            echo "❌ OPENCODE_GO_TOKEN is not set for this repository." >&2
+            echo "   Settings → Secrets and variables → Actions → New repository secret" >&2
+            echo "   Nothing was run; no branch was created." >&2
+            exit 1
+          fi
+          echo "✅ OpenCode Go token present"
+
+      - name: Install Native Kem Binaries
+        run: |
+          mkdir -p artifacts
+          for pair in \
+            "glitch-cat/guard-hooks/bin/guard-hooks:guard-hooks" \
+            "glitch-cat/state-compactor/bin/cgate:cgate" \
+            "multimodal/playwright/bin/playwright-rs:playwright-rs"
+          do
+            src="${pair%%:*}"
+            name="${pair##*:}"
+            if [ -f "$src" ]; then
+              chmod +x "$src"
+              sudo cp "$src" "/usr/local/bin/$name"
+              echo "✅ installed $name"
+            fi
+          done
+          if command -v playwright-rs >/dev/null; then
+            sudo ln -sf /usr/local/bin/playwright-rs /usr/local/bin/fast-cdp
+          fi
+
+      - name: Verify Pre-Execution Guardrails
+        run: |
+          guard-hooks check "ls -la"
+          if guard-hooks check "rm -rf /" 2>/dev/null; then
+            echo "❌ Guardrails failed to intercept a destructive command" >&2
+            exit 1
+          fi
+          echo "✅ Guardrails active"
+
+      - name: Start the Browser Daemon on CDP Port 9222
+        if: inputs.needs_browser == 'true'
+        run: |
+          playwright-rs daemon start --port 9222
+          sleep 2
+          playwright-rs daemon status
+          for _ in 1 2 3 4 5; do
+            if curl -fsS http://127.0.0.1:9222/json/version; then exit 0; fi
+            sleep 2
+          done
+          echo "❌ the CDP daemon did not answer on :9222" >&2
+          echo "--- chrome log ---" >&2
+          cat "${TMPDIR:-/tmp}/playwright-rs-chrome.log" >&2 2>/dev/null || true
+          exit 1
+
+      - name: Prepare Subagent Branch
+        env:
+          BRANCH: ${{ inputs.target_branch }}
+        run: |
+          git config user.name "cloud-subagent[bot]"
+          git config user.email "cloud-subagent[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+      - name: Execute the Lane with the OpenCode CLI
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_GO_TOKEN }}
+          MODEL: ${{ inputs.model }}
+          TASK: ${{ inputs.task }}
+          EXPECT: ${{ inputs.expect_path }}
+        run: |
+          export PATH="$HOME/.opencode/bin:$PATH"
+          if [ -z "$OPENCODE_API_KEY" ]; then
+            echo "❌ OPENCODE_GO_TOKEN is not set" >&2
+            exit 1
+          fi
+          case "$MODEL" in
+            */*) MODEL_REF="$MODEL" ;;
+            *)   MODEL_REF="opencode-go/$MODEL" ;;
+          esac
+          echo "model: $MODEL_REF"
+          set +e
+          opencode run --standalone --auto --agent lane --format json -m "$MODEL_REF" "$TASK"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo "❌ the lane exited $rc" >&2
+            exit "$rc"
+          fi
+          if [ -n "$EXPECT" ]; then
+            if [ -z "$(git status --porcelain -- "$EXPECT")" ]; then
+              echo "❌ the lane finished but changed nothing under $EXPECT" >&2
+              exit 1
+            fi
+            echo "✅ changed: $(git status --porcelain -- "$EXPECT" | head -3 | tr '\n' ' ')"
+          fi
+
+      - name: Upload Verification Artifacts (Screenshots, Logs & State Ledger)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: subagent-artifacts-${{ github.run_id }}
+          path: |
+            artifacts/
+            STATE.md
+            .agent_state.json
+          if-no-files-found: ignore
+
+      - name: Commit, Push, and Open PR if Changes Exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ inputs.target_branch }}
+          TASK: ${{ inputs.task }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          # artifacts/ is evidence, not source: it is uploaded above, never committed.
+          if [ -n "$(git status --porcelain -- . ':(exclude)artifacts')" ]; then
+            git add -A -- . ':(exclude)artifacts'
+            git commit -m "chore(subagent): $TASK"
+            # The branch is agent-owned and recreated per run; lease keeps a
+            # human's commits from being overwritten by a stale worker.
+            git push -u origin "HEAD:refs/heads/$BRANCH" --force-with-lease
+            # GitHub caps the title at 256 characters; a task prompt is longer.
+            TITLE="[Subagent] ${TASK:0:200}"
+            BODY=$(printf 'Automated patch generated by the Cloud Subagent using `%s` with Kem guardrails.\n\nTask:\n%s\n' "$MODEL" "$TASK")
+            gh pr create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --head "$BRANCH" \
+              --base main || true
+          else
+            echo "No source changes made by the subagent."
+          fi

@@ -1,0 +1,61 @@
+{
+  "crop": [
+    340,
+    330
+  ],
+  "background": "#12131c",
+  "bbox": [
+    14,
+    26,
+    292,
+    180
+  ],
+  "map": [
+    16,
+    10
+  ],
+  "pitch": [
+    18.25,
+    18.0
+  ],
+  "aspect_drift": 0.0139,
+  "palette": [
+    {
+      "hex": "#12131c",
+      "pixels": 16349,
+      "char": ".",
+      "background": true
+    },
+    {
+      "hex": "#e17c51",
+      "pixels": 34000,
+      "char": "#",
+      "background": false
+    }
+  ],
+  "rows": [
+    "..############..",
+    "..############..",
+    "..##.######.##..",
+    "..##.######.##..",
+    "################",
+    "################",
+    "..############..",
+    "..############..",
+    "..#.#......#.#..",
+    "..#.#......#.#.."
+  ],
+  "cell_error": 0.0,
+  "pixel_error": 0.0492,
+  "clipped": false,
+  "stage": {
+    "reel": "/run/media/rodri/AI/creator-vault/kem_glitch/2026-10-06_glitch_orchestra_alignment_first/source.mp4",
+    "at": 54.3,
+    "rect": [
+      140,
+      690,
+      340,
+      330
+    ]
+  }
+}

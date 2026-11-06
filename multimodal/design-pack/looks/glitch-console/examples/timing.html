@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>glitch-console · timing</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body { padding: var(--s-9) var(--s-7); max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: var(--fs-lg); letter-spacing: var(--track-label); text-transform: uppercase; margin-bottom: var(--s-2); }
+  .sub { color: var(--dim); font-size: var(--fs-sm); margin-bottom: var(--s-8); }
+  .prog { margin-bottom: var(--s-8); }
+  .prog__head { display: flex; align-items: baseline; gap: var(--s-4); margin-bottom: var(--s-3); }
+  .prog__name { font-weight: 700; letter-spacing: var(--track-label); text-transform: uppercase; font-size: var(--fs-sm); }
+  .prog__total { color: var(--yellow); font-size: var(--fs-sm); }
+  .prog__note { color: var(--dim); font-size: var(--fs-xs); margin-left: auto; }
+  .strip { display: flex; height: 34px; border: var(--b-1) solid var(--rule); }
+  .seg { display: flex; align-items: center; justify-content: center; font-size: var(--fs-2xs);
+         color: var(--on-accent); border-right: var(--b-1) solid var(--ink-900); overflow: hidden; }
+  .seg--rest   { background: var(--ink-500); color: var(--text-2); }
+  .seg--up     { background: var(--blue); }
+  .seg--jump   { background: var(--coral); }
+  .seg--descent{ background: var(--yellow); }
+  .seg--down   { background: var(--mint); }
+  .seg--flash  { background: var(--paper); }
+  .seg--squash { background: var(--pink); }
+  .ruler { display: flex; justify-content: space-between; color: var(--dim); font-size: var(--fs-2xs); margin-top: var(--s-2); }
+  footer { color: var(--dim); font-size: var(--fs-xs); border-top: var(--b-1) solid var(--rule); padding-top: var(--s-5); margin-top: var(--s-7); }
+</style>
+</head>
+<body>
+<h1>Timing</h1>
+<p class="sub">Rendered from <code>Pixels.programs</code> — each strip is scaled to fit; segment widths remain proportional to milliseconds.</p>
+<div id="out"></div>
+<footer>
+  Every value here is one constant in <code>sprites.js</code>. The idle strip is 64 poses drawn from the measured hold set, so it is irregular on purpose. A pose change costs one frame at 30 fps, and the feet never leave the floor — the body stretches about them. Nothing in the pack eases.
+</footer>
+
+<script src="../sprites.js"></script>
+<script>
+  const MAX_WIDTH = 980;
+  const MAX_SCALE = 0.62;
+  const NOTES = {
+    idle: "measured holds, feet pinned · 30 fps",
+    walk: "the step cycle · 12 fps",
+    jump: "conductor high jump (4-row air gap) · 30 fps",
+    workerJump: "worker squat & jump · 30 fps",
+    spawn: "the pokeball · five held steps",
+  };
+  const out = document.getElementById("out");
+  for (const [name, steps] of Object.entries(Pixels.programs)) {
+    const total = steps.reduce((s, x) => s + x.ms, 0);
+    const scale = Math.min(MAX_SCALE, MAX_WIDTH / total);
+    const row = document.createElement("section");
+    row.className = "prog";
+
+    const head = document.createElement("div");
+    head.className = "prog__head";
+    head.innerHTML = `<span class="prog__name">${name}</span>
+      <span class="prog__total">${total} ms</span>
+      <span class="prog__note">${NOTES[name] || ""}</span>`;
+
+    const strip = document.createElement("div");
+    strip.className = "strip";
+    strip.style.width = (total * scale) + "px";
+    for (const s of steps) {
+      const seg = document.createElement("div");
+      seg.className = "seg seg--" + s.pose;
+      const width = s.ms * scale;
+      seg.style.width = width + "px";
+      seg.textContent = width >= 40 ? s.ms : "";
+      seg.title = `${s.pose} · ${s.ms} ms · ${s.scale ?? 1}×`;
+      strip.appendChild(seg);
+    }
+
+    const ruler = document.createElement("div");
+    ruler.className = "ruler";
+    ruler.style.width = (total * scale) + "px";
+    const tick = total > 5000 ? 5000 : 250;
+    for (let t = 0; t <= total; t += tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: t + "ms" }));
+    if (total % tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: total + "ms" }));
+
+    row.append(head, strip, ruler);
+    out.appendChild(row);
+  }
+</script>
+</body>
+</html>

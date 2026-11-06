@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deck</title>
+<style>
+  :root{
+    --bg:#08090b; --panel:#0d0f13; --line:#1a1e26; --text:#c9d1d9;
+    --dim:#6b7280; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --accent:#e3b341;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--mono);
+       font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1380px;margin:0 auto;padding:26px 22px 60px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 16px;
+        grid-column:span 4;min-width:0}
+  .hero{grid-column:span 12;display:flex;align-items:flex-end;justify-content:space-between;
+        gap:24px;flex-wrap:wrap;background:transparent;border:none;padding:0 2px 6px}
+  .widest{grid-column:span 7}.wide{grid-column:span 5}.mid{grid-column:span 4}.full{grid-column:span 12}
+  h1{font-size:26px;margin:0;letter-spacing:-.5px;font-weight:600}
+  h1 span{color:var(--dim);font-weight:400}
+  .sub{color:var(--dim);font-size:11.5px;margin-top:5px;letter-spacing:.04em}
+  .chat{display:inline-block;margin-top:9px;padding:4px 11px;border:1px solid var(--line);
+        border-radius:999px;color:var(--dim);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+        text-decoration:none;transition:color .15s,border-color .15s}
+  .chat:hover{color:var(--text);border-color:#2c333f}
+  .card h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);
+           margin:0 0 13px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+  .card h2 em{font-style:normal;color:#444b57;letter-spacing:0;text-transform:none;font-size:10px}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim);
+       margin-right:7px;vertical-align:middle;flex:none}
+  .live .dot{background:var(--ok);box-shadow:0 0 7px rgba(63,185,80,.6)}
+  .idle .dot{background:var(--warn)}
+  .stale .dot{background:var(--bad);box-shadow:0 0 7px rgba(248,81,73,.55)}
+  .big{font-size:34px;font-weight:600;letter-spacing:-1.5px;line-height:1.1}
+  .big small{font-size:12px;color:var(--dim);letter-spacing:0;font-weight:400;margin-left:5px}
+  .meter{height:6px;background:#151922;border-radius:3px;overflow:hidden;margin:7px 0 5px}
+  .meter i{display:block;height:100%;background:var(--ok);border-radius:3px;transition:width .5s}
+  .meter i.hot{background:var(--warn)}.meter i.max{background:var(--bad)}
+  .gpu{padding:11px 0;border-top:1px solid var(--line)}
+  .gpu:first-of-type{border-top:none;padding-top:2px}
+  .gpu-top{display:flex;justify-content:space-between;font-size:12px}
+  .gpu-top b{font-weight:500}
+  .gpu-meta{color:var(--dim);font-size:11px;display:flex;justify-content:space-between;margin-top:3px}
+  .row{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:12px;min-width:0}
+  .row .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .meta{color:var(--dim);font-size:10.5px;white-space:nowrap}
+  .chip{display:inline-block;padding:3px 8px;border-radius:5px;font-size:10.5px;
+        background:#141821;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .chip.ok{color:var(--ok);border-color:rgba(63,185,80,.25);background:rgba(63,185,80,.07)}
+  .chip.warn{color:var(--warn);border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.07)}
+  .chip.bad{color:var(--bad);border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.08)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .stat{text-align:right}
+  .stat .k{font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+  .stat .v{font-size:19px;font-weight:600;letter-spacing:-.4px}
+  .stats{display:flex;gap:30px}
+  .mono-dim{color:var(--dim)}
+  .pr{display:flex;gap:9px;padding:5px 0;font-size:11.5px;align-items:baseline}
+  .pr b{color:var(--accent);font-weight:500;flex:none}
+  .pr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .err{color:var(--warn);font-size:11px;margin-top:9px}
+  .foot{margin-top:16px;color:#3b4250;font-size:10.5px;display:flex;justify-content:space-between}
+  @media(max-width:1080px){.card,.widest,.wide,.mid{grid-column:span 12}.stats{gap:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+    <header class="card hero">
+      <div>
+        <h1 id="host">deck</h1>
+        <div class="sub" id="sub">connecting…</div>
+        <a class="chat" href="/chat/">talk to orchid →</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">devices</div><div class="v" id="s-dev">—</div></div>
+        <div class="stat"><div class="k">vram</div><div class="v" id="s-vram">—</div></div>
+        <div class="stat"><div class="k">services</div><div class="v" id="s-svc">—</div></div>
+        <div class="stat"><div class="k">uptime</div><div class="v" id="s-up">—</div></div>
+      </div>
+    </header>
+
+    <section class="card widest" id="c-vram">
+      <h2>vram <em id="vram-age"></em></h2>
+      <div class="big" id="vram-total">—<small></small></div>
+      <div id="vram-cards"></div>
+    </section>
+
+    <section class="card wide" id="c-dev">
+      <h2>devices <em id="dev-age"></em></h2>
+      <div id="devices"></div>
+    </section>
+
+    <section class="card wide" id="c-svc">
+      <h2>servers <em id="svc-age"></em></h2>
+      <div id="servers"></div>
+    </section>
+
+    <section class="card mid" id="c-gh">
+      <h2>github <em id="gh-age"></em></h2>
+      <div id="github"></div>
+    </section>
+
+    <section class="card mid" id="c-vault">
+      <h2>vault <em id="vault-age"></em></h2>
+      <div id="vault"></div>
+    </section>
+
+    <section class="card mid" id="c-cf">
+      <h2>cloudflare <em id="cf-age"></em></h2>
+      <div id="cloudflare"></div>
+    </section>
+
+    <section class="card mid" id="c-skills">
+      <h2>hub <em id="sk-age"></em></h2>
+      <div id="skills"></div>
+    </section>
+  </div>
+  <div class="foot">
+    <span>read-only · no writes · deck</span>
+    <span id="link">—</span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function age(ts){
+  if(!ts) return "";
+  const s = Math.max(0, Date.now()/1000 - ts);
+  if(s < 90) return Math.round(s)+"s";
+  if(s < 5400) return Math.round(s/60)+"m";
+  return Math.round(s/3600)+"h";
+}
+function dur(s){
+  if(s < 60) return s+"s";
+  if(s < 3600) return Math.floor(s/60)+"m";
+  if(s < 86400) return Math.floor(s/3600)+"h "+Math.floor(s%3600/60)+"m";
+  return Math.floor(s/86400)+"d";
+}
+function stamp(el, src){ if(el) el.textContent = src ? age(src.ts) : ""; }
+function cls(state){ return ["live","idle","stale"].includes(state) ? state : "idle"; }
+function chip(state){
+  const label = {live:"live", idle:"idle", stale:"stale"}[state] || state;
+  const kind = {live:"ok", idle:"warn", stale:"bad"}[state] || "";
+  return `<span class="chip ${kind}">${label}</span>`;
+}
+function bar(pct){
+  const k = pct >= 90 ? "max" : pct >= 75 ? "hot" : "";
+  return `<div class="meter"><i class="${k}" style="width:${Math.min(100,Math.max(0,pct))}%"></i></div>`;
+}
+
+function render(snap){
+  const S = snap.sources || {};
+  const g = S.gpus, t = S.tailscale, p = S.ports, gh = S.github, v = S.vault, cf = S.cloudflare, sk = S.skills;
+
+  $("host").innerHTML = esc(snap.host) + ' <span>/ linux</span>';
+  $("s-up").textContent = dur(snap.uptime_s);
+  const all = Object.values(S);
+  const live = all.filter(s => s.state === "live").length;
+  $("sub").textContent = `read-only · ${live}/${all.length} sources live · ${age(snap.generated_at)} ago`;
+  $("link").textContent = "snapshot " + age(snap.generated_at) + " ago";
+
+  const devOn = t?.data?.online ?? 0, devTotal = t?.data?.devices?.length ?? 0;
+  $("s-dev").textContent = t?.data ? `${devOn}/${devTotal}` : "—";
+  const gpct = g?.data?.pct;
+  $("s-vram").textContent = gpct == null ? "—" : Math.round(gpct) + "%";
+  const svcUp = p?.data?.services?.filter(x => x.up).length ?? 0;
+  const svcTotal = p?.data?.services?.length ?? 0;
+  $("s-svc").textContent = p?.data ? `${svcUp}/${svcTotal}` : "—";
+
+  stamp($("vram-age"), g);
+  if(g?.data){
+    const d = g.data;
+    $("vram-total").innerHTML = `${d.used_gb.toFixed(1)}<small> / ${d.total_gb.toFixed(1)} GB · ${d.pct}%</small>`;
+    $("vram-cards").innerHTML = d.cards.map(c => `
+      <div class="gpu">
+        <div class="gpu-top"><b>${esc(c.id)}</b><span>${c.pct.toFixed(1)}%</span></div>
+        ${bar(c.pct)}
+        <div class="gpu-meta">
+          <span>${c.used_gb.toFixed(2)} / ${c.total_gb.toFixed(2)} GB</span>
+          <span>${c.temp_c.toFixed(0)}°C · busy ${c.busy_pct}%</span>
+        </div>
+      </div>`).join("");
+  } else {
+    $("vram-total").innerHTML = `—`;
+    $("vram-cards").innerHTML = `<div class="err">${esc(g?.error || "no gpu data")}</div>`;
+  }
+
+  stamp($("dev-age"), t);
+  if(t?.data){
+    $("devices").innerHTML = t.data.devices.map(d => `
+      <div class="row ${d.online ? "live" : "idle"}">
+        <i class="dot"></i>
+        <span class="name">${esc(d.name)}${d.self ? " <span class='mono-dim'>· this box</span>" : ""}</span>
+        <span class="meta">${esc(d.os)} · ${esc(d.ip || "—")}${d.online ? "" : " · " + (age(d.last_seen ? Date.parse(d.last_seen)/1000 : 0) || "—") + " ago"}</span>
+      </div>`).join("");
+    if(t.state !== "live") $("devices").insertAdjacentHTML("beforeend", `<div class="err">${esc(t.error || "")}</div>`);
+  } else {
+    $("devices").innerHTML = `<div class="err">${esc(t?.error || "no tailscale data")}</div>`;
+  }
+
+  stamp($("svc-age"), p);
+  if(p?.data){
+    $("servers").innerHTML = p.data.services.map(x => `
+      <div class="row ${x.up ? "live" : "idle"}">
+        <i class="dot"></i>
+        <span class="name">:${x.port} <span class="mono-dim">${esc(x.kind)}</span></span>
+        <span class="meta">${esc(x.label)} · ${x.up ? x.ms + "ms" : "down"}</span>
+      </div>`).join("");
+  } else {
+    $("servers").innerHTML = `<div class="err">${esc(p?.error || "no port data")}</div>`;
+  }
+
+  stamp($("gh-age"), gh);
+  if(gh?.data){
+    const c = gh.data.commit;
+    $("github").innerHTML =
+      `<div class="row"><span class="name mono-dim">${esc(gh.data.repo)}</span></div>` +
+      (c ? `<div class="row"><span class="name">${esc(c.sha)} ${esc(c.message || "")}</span></div>` : "") +
+      (gh.data.prs.length
+        ? gh.data.prs.map(pr => `<div class="pr"><b>#${pr.number}</b><span>${esc(pr.title)}</span>
+            <i class="dot" style="background:${pr.mergeable === "MERGEABLE" ? "var(--ok)" : "var(--dim)"}"></i></div>`).join("")
+        : `<div class="row mono-dim">no open pull requests</div>`);
+  } else {
+    $("github").innerHTML = `<div class="err">${esc(gh?.error || "no github data")}</div>`;
+  }
+
+  stamp($("vault-age"), v);
+  if(v?.data){
+    $("vault").innerHTML = `
+      <div class="big">${v.data.reels}<small> reels</small></div>
+      <div class="row"><span class="name mono-dim">${esc(Object.entries(v.data.creators).map(([k,n]) => k + " " + n).join(" · "))}</span></div>
+      ${v.data.newest ? `<div class="row"><i class="dot live"></i><span class="name">${esc(v.data.newest.name)}</span></div>
+      <div class="row mono-dim" style="padding-top:0">${esc(v.data.newest.creator)} · ${age(v.data.newest.mtime)} ago</div>` : ""}`;
+  } else {
+    $("vault").innerHTML = `<div class="err">${esc(v?.error || "no vault data")}</div>`;
+  }
+
+  stamp($("cf-age"), cf);
+  if(cf?.data){
+    const svcs = cf.data.services || {};
+    $("cloudflare").innerHTML =
+      `<div class="row"><span class="name">plan</span><span class="meta">${esc(cf.data.plan || "?")} · ${esc(cf.data.email || "")}</span></div>` +
+      `<div class="chips">` + Object.entries(svcs).map(([name, info]) =>
+        `<span class="chip ${info.state === "active" ? "ok" : info.state === "empty" ? "" : "warn"}">${esc(name)}: ${esc(info.state)}</span>`
+      ).join("") + `</div>`;
+  } else {
+    $("cloudflare").innerHTML = `<div class="err">${esc(cf?.error || "no cloudflare data")}</div>`;
+  }
+
+  stamp($("sk-age"), sk);  if(sk?.data){
+    $("skills").innerHTML = `
+      <div class="big">${sk.data.skills ?? "?"}<small> skills</small></div>
+      <div class="row"><span class="name mono-dim">${esc(sk.data.head || "")} ${esc((sk.data.subject || "").slice(0, 46))}</span></div>
+      <div class="chips"><span class="chip ${sk.data.dirty ? "warn" : "ok"}">${sk.data.dirty ? sk.data.dirty + " uncommitted" : "working tree clean"}</span></div>`;
+  } else {
+    $("skills").innerHTML = `<div class="err">${esc(sk?.error || "no hub data")}</div>`;
+  }
+}
+
+let es;
+function connect(){
+  es = new EventSource("/events");
+  es.onmessage = e => {
+    try { render(JSON.parse(e.data)); } catch(err) { console.error(err); }
+    $("link").textContent = "live";
+  };
+  es.onerror = () => {
+    $("link").textContent = "reconnecting…";
+    es.close();
+    setTimeout(connect, 3000);
+  };
+}
+connect();
+</script>
+</body>
+</html>

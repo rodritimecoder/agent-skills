@@ -1,0 +1,513 @@
+{
+  "version": 1,
+  "description": "Golden routing evaluation for the omnicli catalog. Each case is a natural-language intent an agent would actually receive. `top1` is the skill that must win outright; `expect` must appear in the top 3; `expect_not` must NOT win (it is the hijack assertion); `min_margin` additionally requires the winner to beat the forbidden skill by that factor. Cases marked `drift` rely on curated aliases bridging a vocabulary gap (e.g. 'podcast' -> audio tooling); cases marked `prose` rely on the documentation body. (+8 cases for the 8 glitch-cat skills surfaced at the root)",
+  "cases": [
+    {
+      "query": "turn a recorded podcast into readable text",
+      "top1": "audiocpp",
+      "expect": [
+        "audiocpp"
+      ],
+      "expect_not": [
+        "icm-architect"
+      ],
+      "min_margin": 1.5,
+      "kind": "drift",
+      "note": "The original failure: 'podcast' appears in no audiocpp doc, only in the curated alias list. icm-architect is the historical hijacker and must lose by a clear margin."
+    },
+    {
+      "query": "what rules should I follow before pushing code",
+      "top1": "review-hub",
+      "expect": [
+        "review-hub",
+        "guard-hooks"
+      ],
+      "expect_not": [
+        "icm-architect"
+      ],
+      "min_margin": 1.5,
+      "kind": "drift"
+    },
+    {
+      "query": "get the course reading list",
+      "top1": "canvas-cli",
+      "expect": [
+        "canvas-cli"
+      ],
+      "expect_not": [
+        "icm-architect"
+      ],
+      "kind": "drift",
+      "note": "Replaces 'find the cheat sheet for a course'. That phrasing was a 0.3-point coin flip between canvas-cli and edstem-cli, with cornell-notes a third candidate — 'cheat sheet' plausibly answers three skills, so as an assertion it tested nothing. Adding it as a canvas-cli alias was measured and did not move the score at all. This query tests the same capability (course material retrieval) unambiguously, with a 1.4x margin."
+    },
+    {
+      "query": "transcribe a zoom lecture recording",
+      "top1": "zoom-recorder",
+      "expect": [
+        "zoom-recorder"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "download the slides from a zoom cloud recording",
+      "top1": "zoom-recorder",
+      "expect": [
+        "zoom-recorder"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "browse a website and take a screenshot",
+      "top1": "playwright",
+      "expect": [
+        "playwright"
+      ],
+      "kind": "drift",
+      "note": "hybrid-browser retired 2026-10; playwright is the browser-control successor"
+    },
+    {
+      "query": "convert a PDF into markdown",
+      "top1": "markitdown-cli",
+      "expect": [
+        "markitdown-cli"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "read the text out of a screenshot",
+      "top1": "ocr",
+      "expect": [
+        "ocr"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "extract text from a scanned document",
+      "top1": "ocr",
+      "expect": [
+        "ocr"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "cloned voice sample",
+      "top1": "audiocpp",
+      "expect": [
+        "audiocpp"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "speak this text out loud as a wav file",
+      "top1": "audiocpp",
+      "expect": [
+        "audiocpp"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "my assignment is due tomorrow, what is on canvas",
+      "top1": "canvas-cli",
+      "expect": [
+        "canvas-cli"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "grade and announcement feed for my class",
+      "top1": "canvas-cli",
+      "expect": [
+        "canvas-cli"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "turn my notes into a revision guide with active recall",
+      "top1": "cornell-notes",
+      "expect": [
+        "cornell-notes"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "printable study sheet with cue column",
+      "top1": "cornell-notes",
+      "expect": [
+        "cornell-notes"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "search the class forum threads and read the answers",
+      "top1": "edstem-cli",
+      "expect": [
+        "edstem-cli"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "post a question to the discussion board",
+      "top1": "edstem-cli",
+      "expect": [
+        "edstem-cli"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "look up what people are saying about this topic on the internet",
+      "top1": "agent-reach",
+      "expect": [
+        "agent-reach"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "search reddit and twitter for discussion about a product",
+      "top1": "agent-reach",
+      "expect": [
+        "agent-reach"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "调研一下这个话题在网上的讨论",
+      "top1": "agent-reach",
+      "expect": [
+        "agent-reach"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "is it safe to run rm -rf on this directory",
+      "top1": "guard-hooks",
+      "expect": [
+        "guard-hooks"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "block force push and drop table commands",
+      "top1": "guard-hooks",
+      "expect": [
+        "guard-hooks"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "protect the state file from being edited",
+      "top1": "guard-hooks",
+      "expect": [
+        "guard-hooks"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "run several coding agents in parallel on separate git branches",
+      "top1": "worktree-harness",
+      "expect": [
+        "worktree-harness"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "merge conflicts between parallel agent branches",
+      "top1": "worktree-harness",
+      "expect": [
+        "worktree-harness"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "sync all my repositories across machines",
+      "top1": "github-architect",
+      "expect": [
+        "github-architect"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "bootstrap a fresh machine with my git config",
+      "top1": "github-architect",
+      "expect": [
+        "github-architect"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "make sure no secrets get committed",
+      "top1": "github-architect",
+      "expect": [
+        "github-architect"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "spawn a subagent inside a github action runner",
+      "top1": "gh-action-subagent",
+      "expect": [
+        "gh-action-subagent"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "run untrusted code in an isolated container",
+      "top1": "subagent-spaces",
+      "expect": [
+        "subagent-spaces"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "cpu pinned sandbox with no blast radius on the host",
+      "top1": "subagent-spaces",
+      "expect": [
+        "subagent-spaces"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "expose a local service over private https on the tailnet",
+      "top1": "tailscale-ops",
+      "expect": [
+        "tailscale-ops"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "open a temporary public webhook url",
+      "top1": "tailscale-ops",
+      "expect": [
+        "tailscale-ops"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "how much gpu vram is free right now",
+      "top1": "model-layer",
+      "expect": [
+        "model-layer"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "swap the running model and check the thermal state",
+      "top1": "model-layer",
+      "expect": [
+        "model-layer"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "extract the knowledge from this youtube video into notes",
+      "top1": "video-miner",
+      "expect": [
+        "video-miner"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "sample keyframes from a video and transcribe the audio",
+      "top1": "video-miner",
+      "expect": [
+        "video-miner"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "classify this ticket and give me a confidence probability",
+      "top1": "jev-decision",
+      "expect": [
+        "jev-decision"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "pick one of these labels and score the confidence",
+      "top1": "jev-decision",
+      "expect": [
+        "jev-decision"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "search my knowledge base for what we know about refunds",
+      "top1": "graph-memory",
+      "expect": [
+        "graph-memory"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "walk the entity graph two hops and recall related documents",
+      "top1": "graph-memory",
+      "expect": [
+        "graph-memory"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "delegate a coding loop to a free cloud model",
+      "top1": "openrouter-free",
+      "expect": [
+        "openrouter-free"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "batch several shell commands into one cloud request",
+      "top1": "openrouter-free",
+      "expect": [
+        "openrouter-free"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "call a hosted deepseek endpoint with pooled api keys",
+      "top1": "nvidia-nim",
+      "expect": [
+        "nvidia-nim"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "scaffold a knowledge bundle with provenance and trust tiers",
+      "top1": "okf-architect",
+      "expect": [
+        "okf-architect"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "validate an open knowledge format bundle",
+      "top1": "okf-architect",
+      "expect": [
+        "okf-architect"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "lay out a workspace so an agent can walk the folder",
+      "top1": "icm-architect",
+      "expect": [
+        "icm-architect"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "map this repo into a context architecture",
+      "top1": "icm-architect",
+      "expect": [
+        "icm-architect"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "build a kanban driven software factory pipeline",
+      "top1": "agentic-engineering",
+      "expect": [
+        "agentic-engineering"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "split a task across subagents and judge the results fresh",
+      "top1": "agentic-engineering",
+      "expect": [
+        "agentic-engineering"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "unify canvas zoom and cornell into one study hub",
+      "top1": "academic-icm",
+      "expect": [
+        "academic-icm"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "use the local llm to write a python script",
+      "top1": "local-llm",
+      "expect": [
+        "local-llm"
+      ],
+      "kind": "drift",
+      "note": "Corrected 2026-10-23. This case expected `omnicli`, which ships llm_client.py but is archived and therefore excluded from the index (SIDELINED_DIRS), so the expectation was unreachable. The actionable skill is `local-llm`, which owns llm_client.py on :8080; `local` remains the virtual skill holding the endpoint tools."
+    },
+    {
+      "query": "check which local inference servers are online",
+      "top1": "local",
+      "expect": [
+        "local"
+      ],
+      "kind": "drift"
+    },
+    {
+      "query": "tag each step of my pipeline as deterministic code or model",
+      "top1": "eval-pipeline",
+      "expect": [
+        "eval-pipeline"
+      ],
+      "kind": "prose",
+      "note": "The [D]/[P]/[H] step tagging is eval-pipeline's core contract; a generic 'pipeline' query must not drift to agentic-engineering."
+    },
+    {
+      "query": "decide which model should handle this prompt before answering",
+      "top1": "eval-router",
+      "expect": [
+        "eval-router"
+      ],
+      "kind": "prose",
+      "note": "Prompt complexity routing. Must not drift to jev-decision, which classifies a *given* value rather than picking a model."
+    },
+    {
+      "query": "act as a conductor supervising several terminal sessions at once",
+      "top1": "glitch-orchestra",
+      "expect": [
+        "glitch-orchestra"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "split the test suite across cpu cores so the regression run is faster",
+      "top1": "parallel-test-lane",
+      "expect": [
+        "parallel-test-lane"
+      ],
+      "kind": "prose",
+      "note": "Test-lane partitioning. Must not drift to worktree-harness, which is about git branches, not test suites."
+    },
+    {
+      "query": "coordinate several agents through a throttled task queue with a memory cap",
+      "top1": "projects-harness",
+      "expect": [
+        "projects-harness"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "answer the same question again instantly without paying for the model twice",
+      "top1": "semantic-cache",
+      "expect": [
+        "semantic-cache"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "my context is rotting in a long session, compact the agent state",
+      "top1": "state-compactor",
+      "expect": [
+        "state-compactor"
+      ],
+      "kind": "prose"
+    },
+    {
+      "query": "stop the workers before they blow the token budget ceiling",
+      "top1": "swarm-contract",
+      "expect": [
+        "swarm-contract"
+      ],
+      "kind": "prose"
+    }
+  ]
+}

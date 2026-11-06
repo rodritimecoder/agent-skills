@@ -1,0 +1,138 @@
+/* design-system/tokens.css
+ *
+ * One token layer, three looks. Every look defines the same five groups:
+ *
+ *   colour      --ink  --ink-soft  --paper  --paper-sunk  --accent  --rule
+ *   font stack  --font-body  --font-display  --font-mono
+ *   radius      --radius
+ *   border      --border
+ *   shadow      --shadow
+ *
+ * Base rules below never hardcode a colour: they only read those variables,
+ * so a look is one block and nothing else. scripts/render.py inlines the base
+ * rules plus exactly one [data-look="..."] block, never all three.
+ */
+
+/* ── base rules ─────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+  max-width: 44rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, p, pre, table, blockquote, ul, ol { margin: 0 0 1rem; }
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 1.2rem + 2vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.3;
+  margin-top: 2.25rem;
+  padding-bottom: .35rem;
+  border-bottom: var(--border);
+}
+
+p { max-width: 38rem; }
+
+pre {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  line-height: 1.5;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: var(--paper-sunk);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+code, kbd, samp { font-family: var(--font-mono); font-size: .9em; }
+
+table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+
+th, td { text-align: left; padding: .45rem .55rem; border-bottom: var(--border); vertical-align: top; }
+
+th { font-family: var(--font-display); font-weight: 600; }
+
+blockquote {
+  margin-left: 0;
+  padding: .1rem 0 .1rem 1.1rem;
+  border-left: 3px solid var(--accent);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+hr { border: 0; border-top: var(--border); margin: 2.5rem 0; }
+
+/* ── look: house (default, light, quiet product page) ───────────────── */
+
+[data-look="house"] {
+  color-scheme: light;
+  --ink: #171a1f;
+  --ink-soft: #5a6270;
+  --paper: #fbfaf8;
+  --paper-sunk: #f1efe9;
+  --accent: #0f766e;
+  --rule: #dedbd2;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 10px;
+  --border: 1px solid var(--rule);
+  --shadow: 0 1px 2px rgba(23, 26, 31, .06), 0 8px 24px -12px rgba(23, 26, 31, .18);
+}
+
+/* ── look: paper (serif, cream, printed page) ───────────────────────── */
+
+[data-look="paper"] {
+  color-scheme: light;
+  --ink: #211d18;
+  --ink-soft: #6b6257;
+  --paper: #fdfaf1;
+  --paper-sunk: #f6f1e3;
+  --accent: #8a3b12;
+  --rule: #d8cfba;
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-mono: "Courier New", ui-monospace, monospace;
+  --radius: 0;
+  --border: 1px solid var(--rule);
+  --shadow: none;
+}
+
+/* ── look: terminal (dark, monospace, green phosphor) ───────────────── */
+
+[data-look="terminal"] {
+  color-scheme: dark;
+  --ink: #c8f7d4;
+  --ink-soft: #79a886;
+  --paper: #08110c;
+  --paper-sunk: #0c1a12;
+  --accent: #38e07b;
+  --rule: #1f3a29;
+  --font-body: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 3px;
+  --border: 1px solid var(--rule);
+  --shadow: 0 0 0 1px rgba(56, 224, 123, .12), 0 0 18px -6px rgba(56, 224, 123, .35);
+}

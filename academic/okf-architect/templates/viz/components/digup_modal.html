@@ -1,0 +1,34 @@
+  <!-- DigUp Multimodal Cross-Modal Search Modal (EmbeddingGemma-2 768d) -->
+  <div id="digupModal" class="cornell-modal" style="display:none;">
+    <div class="cornell-modal-backdrop" onclick="closeDigUpModal()"></div>
+    <div class="cornell-modal-content" style="max-width:980px; height:85vh; background:#11111b; border:1px solid #313244; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; position:relative; z-index:1001; margin:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);">
+      <div class="cornell-modal-header" style="background:#181825; border-bottom:1px solid #313244; padding:12px 20px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:22px;">⚡</span>
+          <div>
+            <div style="font-weight:700; font-size:15px; color:#cdd6f4;">DigUp Multimodal Search</div>
+            <div style="font-size:11px; color:#a6adc8;">EmbeddingGemma-2 (768d Vulkan) · Cross-Modal Slide & Video Jump</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:11px; background:#1e1e2e; padding:3px 8px; border-radius:4px; color:#bac2de; border:1px solid #313244;">Ctrl+Shift+Space</span>
+          <button class="cornell-modal-close-btn" onclick="closeDigUpModal()" style="background:none; border:none; color:#bac2de; font-size:18px; cursor:pointer;" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div style="padding:16px 20px; background:#181825; border-bottom:1px solid #313244;">
+        <div style="position:relative; width:100%;">
+          <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:16px; opacity:0.6;">🔍</span>
+          <input type="text" id="digupSearchInput" placeholder="Describe what you want to find (e.g. noise incentive, triple bottom line, step response)..." style="width:100%; box-sizing:border-box; padding:12px 14px 12px 42px; background:#11111b; border:1px solid #45475a; border-radius:8px; color:#cdd6f4; font-size:14px; outline:none;" oninput="handleDigUpInput(this.value)">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px; align-items:center;" id="digupFilterTabs">
+          <button class="digup-tab-btn active" id="tabAll" onclick="setDigUpTab('all')">All Matches (<span id="digupTotalCount">0</span>)</button>
+          <button class="digup-tab-btn" id="tabSlides" onclick="setDigUpTab('slides')">Visual Slides (<span id="digupSlidesCount">0</span>)</button>
+          <button class="digup-tab-btn" id="tabCues" onclick="setDigUpTab('cues')">Cornell Cues (<span id="digupCuesCount">0</span>)</button>
+        </div>
+      </div>
+      <div id="digupResultsContainer" style="flex:1; overflow-y:auto; padding:20px; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; align-content:start;">
+        <!-- Populated dynamically by performDigUpSearch -->
+      </div>
+    </div>
+  </div>
+

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>orchid</title>
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (!path.endsWith("/")) {
+          var base = document.createElement("base");
+          base.href = path + "/";
+          document.head.appendChild(base);
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <span class="dot" id="health" title="checking…"></span>
+          <span>orchid</span>
+        </div>
+        <div class="meta">35B · nemotron · kokoro</div>
+      </header>
+
+      <main>
+        <section class="stage">
+          <div class="frame">
+            <img id="avatar" alt="Orchid" width="128" height="128" />
+          </div>
+          <div class="state" id="state">idle</div>
+        </section>
+
+        <section class="log" id="log" aria-live="polite"></section>
+      </main>
+
+      <footer>
+        <div class="live" id="live" aria-live="polite"></div>
+        <div class="controls">
+          <form id="text-form" autocomplete="off">
+            <input id="text-input" type="text" placeholder="or type instead…" aria-label="message" />
+            <button type="submit" class="send" id="send" aria-label="send" disabled>↑</button>
+          </form>
+          <button id="talk" class="talk" aria-label="hold to talk">
+            <span class="talk-label">hold to talk</span>
+          </button>
+        </div>
+      </footer>
+
+      <div class="meter" id="meter" hidden><i></i></div>
+      <div class="stats" id="stats"></div>
+      <div class="diagrow">
+        <select id="mic" aria-label="microphone"></select>
+        <div class="diag" id="diag"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

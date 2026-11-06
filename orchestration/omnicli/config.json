@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "name": "llm-cli",
+  "description": "Direct CLI client for local Qwen3.6-35B-A3B Uncensored Genesis on port :8080 with dual-GPU Vulkan offload",
+  "default_endpoint": "http://127.0.0.1:8080",
+  "model_name": "qwen3.6-35b-genesis",
+  "fallback_endpoints": [
+    "http://127.0.0.1:8000/v1/chat/completions",
+    "http://127.0.0.1:4000/v1/chat/completions"
+  ],
+  "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+  "defaults": {
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "max_tokens": 4096,
+    "presence_penalty": 1.5
+  }
+}

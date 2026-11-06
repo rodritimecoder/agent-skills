@@ -1,0 +1,12 @@
+{
+  "ponytail": {
+    "repo": "https://github.com/DietrichGebert/ponytail.git",
+    "updated_at": "2026-11-06T05:19:01Z",
+    "version": "5.3.3"
+  },
+  "pstack": {
+    "repo": "https://github.com/cursor/plugins.git",
+    "updated_at": "2026-11-06T05:19:06Z",
+    "version": "0.15.36"
+  }
+}

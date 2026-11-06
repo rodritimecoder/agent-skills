@@ -1,0 +1,68 @@
+{
+  "source_doc": "48520-electronics-week-2.md",
+  "nodes": [
+    {
+      "name": "Nodal Analysis",
+      "type": "PROCESS",
+      "description": "Systematic method using KCL to find node voltages; applicable to all planar and non-planar circuits"
+    },
+    {
+      "name": "Mesh Analysis",
+      "type": "PROCESS",
+      "description": "Systematic method using KVL to find mesh currents; restricted strictly to planar circuits"
+    },
+    {
+      "name": "Supernode",
+      "type": "PROCESS",
+      "description": "Formed by enclosing a dependent or independent voltage source connected between two non-reference nodes; treated as a single node for KCL"
+    },
+    {
+      "name": "Supermesh",
+      "type": "PROCESS",
+      "description": "Formed by removing a current source branch shared between two adjacent meshes and applying KVL around the perimeter loop"
+    },
+    {
+      "name": "Kirchhoffs Current Law",
+      "type": "POLICY",
+      "description": "The algebraic sum of currents entering any node equals zero; conservation of electrical charge"
+    },
+    {
+      "name": "Kirchhoffs Voltage Law",
+      "type": "POLICY",
+      "description": "The algebraic sum of voltages around any closed loop equals zero; conservation of energy"
+    },
+    {
+      "name": "Thevenin Equivalent",
+      "type": "PROCESS",
+      "description": "Any linear two-terminal circuit replaced by an open-circuit voltage source Vth in series with resistance Rth"
+    },
+    {
+      "name": "Norton Equivalent",
+      "type": "PROCESS",
+      "description": "Any linear two-terminal circuit replaced by a short-circuit current source In in parallel with resistance Rn where Rn = Rth"
+    },
+    {
+      "name": "Source Transformation",
+      "type": "PROCESS",
+      "description": "Equivalence duality allowing conversion between Thevenin series voltage source and Norton parallel current source via Ohms Law"
+    }
+  ],
+  "edges": [
+    {"source": "Nodal Analysis", "predicate": "references", "target": "Kirchhoffs Current Law"},
+    {"source": "Mesh Analysis", "predicate": "references", "target": "Kirchhoffs Voltage Law"},
+    {"source": "Nodal Analysis", "predicate": "delegates_to", "target": "Supernode"},
+    {"source": "Mesh Analysis", "predicate": "delegates_to", "target": "Supermesh"},
+    {"source": "Thevenin Equivalent", "predicate": "part_of", "target": "Source Transformation"},
+    {"source": "Norton Equivalent", "predicate": "part_of", "target": "Source Transformation"}
+  ],
+  "aliases": [
+    {"entity": "Kirchhoffs Current Law", "alias": "KCL"},
+    {"entity": "Kirchhoffs Voltage Law", "alias": "KVL"},
+    {"entity": "Nodal Analysis", "alias": "Node Voltage Method"},
+    {"entity": "Mesh Analysis", "alias": "Loop Current Method"},
+    {"entity": "Thevenin Equivalent", "alias": "Thevenin Theorem"},
+    {"entity": "Thevenin Equivalent", "alias": "Thevenin"},
+    {"entity": "Norton Equivalent", "alias": "Norton Theorem"},
+    {"entity": "Norton Equivalent", "alias": "Norton"}
+  ]
+}

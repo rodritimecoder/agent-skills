@@ -1,0 +1,241 @@
+# llama-swap Configuration for Dual AMD Radeon RX 9060 XT (32 GB VRAM)
+# Upstream canonical: ~/src/my-agent-skills/hardware/model-layer/config/llama-swap.yaml
+
+healthCheckTimeout: 180
+logLevel: info
+startPort: 10001
+sendLoadingState: true
+globalTTL: 0 # 0 = do not evict solely by timer; matrix solver manages VRAM
+
+macros:
+  server_vulkan_rocm: "/run/media/rodri/AI/ROCmFPX/build-vulkan-linux/bin/llama-server"
+  server_upstream_vulkan: "/run/media/rodri/AI/llama.cpp/build/bin/llama-server"
+  qwen_template: "/run/media/rodri/AI/models/froggeric/Qwen-Fixed-Chat-Templates/chat_template.jinja"
+
+models:
+  # ============================================================
+  # 1. Pinned Resident King: Qwen3.6-35B-A3B Uncensored Genesis (~22 GB)
+  # ============================================================
+  "qwen3.6-35b":
+    aliases:
+      - "agent-coder"
+      - "local-coder-primary"
+      - "default"
+      - "qwen-35b"
+      - "luffy"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-GGUF/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-Q4_K_M.gguf
+      --jinja
+      --chat-template-file ${qwen_template}
+      --reasoning on
+      --load-mode none
+      -np 1
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -sm layer
+      -ts 45/55
+      -c 65536
+      -b 2048
+      -ub 512
+      -ctk q4_0
+      -ctv q4_0
+      -fa on
+      -t 4
+      -tb 4
+      --temp 0.8
+      --top-p 0.95
+      --top-k 40
+      --min-p 0.0
+      --presence-penalty 0.0
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 0
+
+  # ============================================================
+  # 2. Premier Decision: h2o-lightning-4b — JEV DECISION MODEL
+  #    Native /v1/systemone text and image decisions, calibrated server-side.
+  # ============================================================
+  "h2o-lightning-4b":
+    aliases:
+      - "agent-classifier"
+      - "local-classifier-jev"
+      - "jev-decision"
+      - "local-decide"
+    cmd: >
+      PORT=${PORT} sh $HOME/src/my-agent-skills/launchers/h2o.sh
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 2b. Retired: pplx-decider-flash v1.2 (4B) — legacy pplx client only
+  #     Native llama.cpp decision model (qwen35.decision.type=pplx-decider).
+  #     Needs non-causal attention and runs in embedding mode: the readout head
+  #     is applied client-side at each <|fim_suffix|> marker.
+  # ============================================================
+  "pplx-decider-flash":
+    aliases:
+      - "pplx-decider"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/perplexity-ai/pplx-decider-flash-v1.2/pplx-decider-flash-v1.2-Q4_K_M.gguf
+      --mmproj /run/media/rodri/AI/models/perplexity-ai/pplx-decider-flash-v1.2/mmproj-decider-flash-v1.2-f16.gguf
+      --override-kv qwen35.attention.causal=bool:false
+      --embeddings
+      --pooling none
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -c 8192
+      -b 8192
+      -ub 8192
+      -np 1
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 3. Auxiliary Vision/Decision: vllm-d3-mini (~3.5 GB) — Legacy
+  # ============================================================
+  "vllm-d3-mini":
+    aliases:
+      - "agent-classifier-legacy"
+      - "vllm-d3"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/ggml-org/vllm-d3-mini-GGUF/vllm-d3-mini-Q4_K_M.gguf
+      --mmproj /run/media/rodri/AI/models/ggml-org/vllm-d3-mini-GGUF/mmproj-vllm-d3-mini-Q8_0.gguf
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -c 8192
+      --image-min-tokens 1024
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 4. Auxiliary Vision/Decision: Imajev-4B (~3.5 GB) — Legacy
+  # ============================================================
+  "imajev-4b":
+    aliases:
+      - "agent-classifier-imajev"
+      - "imajev"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf
+      --mmproj /run/media/rodri/AI/models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -c 8192
+      --image-min-tokens 1024
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 5. Auxiliary Flagship OCR: LightOnOCR-3-0.8B (~0.6 GB)
+  # ============================================================
+  "lighton-ocr":
+    aliases:
+      - "agent-ocr"
+      - "local-ocr-vision"
+      - "lighton"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf
+      --mmproj /run/media/rodri/AI/models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -c 8192
+      -np 1
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 4. Computer-Use / GUI Grounding: DeskForge-Qwen3.5-4B (~3.5 GB)
+  # ============================================================
+  "deskforge-4b":
+    aliases:
+      - "agent-browser"
+      - "deskforge"
+    cmd: >
+      ${server_upstream_vulkan}
+      -m /run/media/rodri/AI/models/docling-project/DeskForge-Qwen3.5-4B/DeskForge-Qwen3.5-4B.Q4_K_M.gguf
+      --mmproj /run/media/rodri/AI/models/docling-project/DeskForge-Qwen3.5-4B/DeskForge-Qwen3.5-4B.mmproj-bf16.gguf
+      --host 127.0.0.1
+      --port ${PORT}
+      --jinja
+      --image-min-tokens 1024
+      -ngl 99
+      -c 8192
+      -np 1
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 600
+
+  # ============================================================
+  # 5. Heavy General Model: Gemma4-26B-A4B HauhauCS (~18 GB)
+  # ============================================================
+  "gemma4-26b":
+    aliases:
+      - "agent-fast"
+      - "local-general-heavy"
+      - "gemma"
+    cmd: >
+      ${server_vulkan_rocm}
+      -m /run/media/rodri/AI/models/HauhauCS/Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-MTP/Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf
+      --chat-template-kwargs '{"enable_thinking":false}'
+      --reasoning off
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      -sm layer
+      -ts 45/55
+      -c 65536
+      -b 2048
+      -ub 512
+      --cont-batching
+      --cache-type-k q4_0
+      --cache-type-v q4_0
+      -fa on
+      -t 4
+      -tb 4
+      --temp 0.6
+      --top-k 64
+      --top-p 0.9
+      --min-p 0.05
+      --repeat-penalty 1.1
+    proxy: "http://127.0.0.1:${PORT}"
+    ttl: 300
+
+# ============================================================
+# Concurrency Swap Matrix (32 GB VRAM Budget)
+# ============================================================
+swap:
+  matrix:
+    vars:
+      q: "qwen3.6-35b"
+      p: "vllm-d3-nano"
+      v: "vllm-d3-mini"
+      i: "imajev-4b"
+      l: "lighton-ocr"
+      d: "deskforge-4b"
+      g: "gemma4-26b"
+
+    evict_costs:
+      q: 100 # Highest cost - keep the primary coder resident
+      g: 40
+      d: 15
+      p: 10
+      v: 10
+      i: 10
+      l: 10
+
+    sets:
+      # Pinned King (22G) + Premier Decision vllm-d3-nano (3.5G) + OCR (1.5G) = 27 GB <= 32 GB
+      standard_trio: "q & p & l"
+
+      # Pinned King (22G) + GUI Browser Grounding (3.5G) + OCR (1.5G) = 27 GB <= 32 GB
+      browser_agent: "q & d & l"
+
+      # Alternative heavy model with auxiliary tools (18G + 3.1G + 1.5G = 23 GB)
+      gemma_suite: "g & p & l"

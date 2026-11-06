@@ -1,0 +1,16 @@
+{
+  "reel": "/run/media/rodri/AI/creator-vault/kem_glitch/2026-10-06_glitch_orchestra_alignment_first/source.mp4",
+  "at": 4.0,
+  "frame": 120,
+  "rect": [
+    140,
+    760,
+    340,
+    360
+  ],
+  "source": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30.0
+  }
+}

@@ -1,0 +1,61 @@
+  <!-- Embedded Cornell Study Portal & Reader Modal -->
+  <div id="cornellModal" class="cornell-modal" style="display:none;">
+    <!-- View 1: Cornell Notes Hub (Organized chronologically by Subject and Week) -->
+    <div id="cornellHubView" class="cornell-hub-view">
+      <div class="cornell-hub-toolbar">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button class="cornell-back-btn" onclick="closeCornellModal()" title="Return to Knowledge Cosmos (Esc)">
+            <span>←</span> Back to Cosmos
+          </button>
+          <div class="cornell-hub-title">
+            <span>📝</span> Cornell Notes Hub
+          </div>
+        </div>
+        <div class="cornell-hub-filter-pills" id="cornellCourseFilterPills">
+          <!-- Dynamically filled with course pills -->
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="cornell-hub-search-box">
+            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; opacity:0.6;">🔍</span>
+            <input type="text" id="cornellSearchInput" class="cornell-hub-search-input" placeholder="Filter notes or cues..." oninput="filterCornellHub(this.value)">
+          </div>
+          <button class="cornell-modal-close-btn" onclick="closeCornellModal()" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="cornell-hub-body" id="cornellHubGrid">
+        <!-- Rendered dynamically by renderCornellHubGrid -->
+      </div>
+    </div>
+
+    <!-- View 2: Cornell Note Reader View (Native Self-Contained Document & Interactive Self-Quiz Mode) -->
+    <div id="cornellReaderView" class="cornell-modal-content" style="display:none; background:#0b0c10;">
+      <div class="cornell-modal-header">
+        <button id="cornellReaderBack" class="cornell-back-btn" onclick="returnToCornellHub()" title="Return to Notes Hub">
+          <span>←</span> Back to Notes Hub
+        </button>
+        <div id="cornellReaderTitle" class="cornell-modal-title">
+          <span>📝</span> Cornell Interactive Notes
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button id="cornellQuizToggleBtn" class="cornell-quiz-toggle-btn" onclick="toggleCornellQuizMode()" title="Toggle Blur on Explanations for Active Recall">
+            <span>🙈</span> Quiz: OFF
+          </button>
+          <button id="cornellReaderStudyAnki" class="cornell-anki-switch-btn" title="Practice these cues in Flashcards">
+            <span>🎴</span> Study Flashcards
+          </button>
+          <a id="cornellModalPopout" href="#" target="_blank" rel="noopener noreferrer" class="cornell-popout-btn" title="Open standalone HTML file in new tab">
+            <span>↗</span> Open Standalone
+          </a>
+          <button id="cornellModalClose" class="cornell-modal-close-btn" onclick="closeCornellModal()" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="cornell-paper-scroll" id="cornellPaperScroll">
+        <div id="cornellPaperContent" class="cornell-paper-sheet">
+          <!-- Rendered dynamically by renderNativeCornellNote -->
+        </div>
+      </div>
+      <iframe id="cornellIframe" src="" style="display:none; width:100vw; height:calc(100vh - 48px); border:none; background:#f8fafc;"></iframe>
+    </div>
+  </div>
+
+  

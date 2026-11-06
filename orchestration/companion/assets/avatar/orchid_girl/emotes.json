@@ -1,0 +1,64 @@
+{
+  "format": "pi-emote-v1",
+  "avatar": "orchid_girl",
+  "resolution": "128x128",
+  "states": {
+    "idle": {
+      "frames": [
+        "idle.png"
+      ],
+      "blink": "idle_blink.png",
+      "interval": 4000
+    },
+    "talk": {
+      "mouths": [
+        "talk_close.png",
+        "talk_small.png",
+        "talk_mid.png",
+        "talk_wide.png"
+      ],
+      "speed": 120
+    },
+    "hi": {
+      "frames": [
+        "hi.png"
+      ]
+    },
+    "think": {
+      "frames": [
+        "think.png",
+        "think_hard.png"
+      ]
+    },
+    "read": {
+      "frames": [
+        "read.png"
+      ]
+    },
+    "write": {
+      "frames": [
+        "write.png"
+      ]
+    },
+    "tool": {
+      "frames": [
+        "tool.png"
+      ]
+    },
+    "success": {
+      "frames": [
+        "success.png"
+      ]
+    },
+    "failure": {
+      "frames": [
+        "failure.png"
+      ]
+    },
+    "compact": {
+      "frames": [
+        "compact.png"
+      ]
+    }
+  }
+}

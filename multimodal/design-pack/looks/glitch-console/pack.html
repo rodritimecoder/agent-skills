@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>glitch-console · design pack 01</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* page furniture only — nothing here is part of the look */
+  .page { max-width: 1120px; margin: 0 auto; padding: 48px 24px 96px; }
+  .rail { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .rail__id { color: var(--dim); font-size: var(--fs-2xs); letter-spacing: .14em; }
+  .sec { margin-top: 64px; }
+  .sec__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+  .sec__n { color: var(--yellow); font-size: var(--fs-xs); }
+  .sec__title { font-size: var(--fs-lg); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .sec__note { color: var(--dim); font-size: var(--fs-xs); margin-left: auto; }
+  .grid { display: grid; gap: 16px; }
+  .grid--pal { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }
+  .grid--two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  .sw { border: 1px solid var(--rule); }
+  .sw__chip { height: 56px; }
+  .sw__meta { padding: 6px 8px; font-size: var(--fs-2xs); display: flex; justify-content: space-between; gap: 6px; }
+  .sw__hex { color: var(--text-2); }
+  .sw__role { color: var(--dim); }
+
+  .type-row { display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid var(--ink-700); padding: 8px 0; }
+  .type-row__spec { color: var(--dim); font-size: var(--fs-2xs); width: 92px; flex: none; }
+
+  .roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+  .roster .agent { align-items: flex-start; }
+
+  .spec { font-size: var(--fs-xs); color: var(--text-2); }
+  .spec b { color: var(--text); }
+  .kbd { border: 1px solid var(--rule); border-bottom-width: 2px; font-size: var(--fs-2xs); padding: 1px 5px; }
+  pre.snip { background: var(--ink-900); border: 1px solid var(--rule); font-size: var(--fs-xs); overflow-x: auto; padding: 12px; color: var(--text-2); }
+  pre.snip b { color: var(--mint); font-weight: 400; }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <div class="rail">
+    <span class="rail__id">GLITCH CONSOLE // PACK 01</span>
+    <span class="rail__id">16×10 SPRITES · 30 FPS IDLE · ONE TERMINAL</span>
+  </div>
+
+  <h1 class="headline">A terminal that <mark>moves in pixels</mark>, not tweens</h1>
+
+  <p class="muted" style="margin-top:16px;max-width:70ch">
+    Every colour on this page was sampled from the source frames. Every sprite row is a
+    pixel that exists on screen. Stepped motion only — nothing eases.
+  </p>
+
+  <!-- ── 01 palette ─────────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">01</span>
+      <h2 class="sec__title">Palette</h2>
+      <span class="sec__note">one accent per worker · attention is yellow</span>
+    </div>
+    <div class="grid grid--pal">
+      <div class="sw"><div class="sw__chip" style="background:var(--ink-800)"></div><div class="sw__meta"><span>ink-800</span><span class="sw__hex">#12151c</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--ink-700)"></div><div class="sw__meta"><span>ink-700</span><span class="sw__hex">#171b24</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--paper)"></div><div class="sw__meta"><span>paper</span><span class="sw__hex">#fdf6e3</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--coral)"></div><div class="sw__meta"><span>coral</span><span class="sw__hex">#d87653</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--blue)"></div><div class="sw__meta"><span>blue</span><span class="sw__hex">#68a8e6</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--pink)"></div><div class="sw__meta"><span>pink</span><span class="sw__hex">#f02e75</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--mint)"></div><div class="sw__meta"><span>mint</span><span class="sw__hex">#54c693</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--yellow)"></div><div class="sw__meta"><span>yellow</span><span class="sw__hex">#f7d140</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--violet)"></div><div class="sw__meta"><span>violet</span><span class="sw__hex">#7848f6</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--red)"></div><div class="sw__meta"><span>red</span><span class="sw__hex">#de301c</span></div></div>
+    </div>
+  </section>
+
+  <!-- ── 02 type ────────────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">02</span>
+      <h2 class="sec__title">Type</h2>
+      <span class="sec__note">Fantasque Mono everywhere · one face, two voices</span>
+    </div>
+    <div class="stack">
+      <div class="type-row"><span class="type-row__spec">3xl · 56</span><span style="font-size:var(--fs-3xl);font-weight:700;letter-spacing:-.01em">ORCHESTRATOR</span></div>
+      <div class="type-row"><span class="type-row__spec">2xl · 38</span><span style="font-size:var(--fs-2xl);font-weight:700">Four tasks, three workers.</span></div>
+      <div class="type-row"><span class="type-row__spec">xl · 26</span><span style="font-size:var(--fs-xl)">Press <b class="action">s</b> when you are ready.</span></div>
+      <div class="type-row"><span class="type-row__spec">md · 15</span><span style="font-size:var(--fs-md)">frontend, copy and tests have their briefs.</span></div>
+      <div class="type-row"><span class="type-row__spec">sm · 13</span><span class="muted" style="font-size:var(--fs-sm)">the hero, page copy, run tests</span></div>
+      <div class="type-row"><span class="type-row__spec">2xs · 9</span><span class="label">BOARD · 0 OF 4 DONE</span></div>
+    </div>
+  </section>
+
+  <!-- ── 03 stage & sprites ────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">03</span>
+      <h2 class="sec__title">Stage & Sprites</h2>
+      <span class="sec__note">one 16×10 body · anchored platform · 30 fps discrete motion</span>
+    </div>
+    <div class="win win--paper">
+      <div class="win__bar">
+        <span class="win__dots"><i class="win__dot win__dot--pink"></i><i class="win__dot win__dot--yellow"></i><i class="win__dot win__dot--mint"></i></span>
+        <span class="win__path"><b>/glitch-orchestra</b></span>
+        <span class="win__chip">♪ orchestrator</span>
+      </div>
+      <div class="win__body stack" style="padding:28px 24px">
+        <div class="log">
+          <p class="log__line log__line--cmd">&gt; /glitch-orchestra</p>
+          <p class="log__line"><span class="log__bullet">●</span>Ground truth: 0:01–0:09 conductor tuning up (term_t004 crouch into platform, ♫ tells).</p>
+          <p class="log__line"><span class="log__bullet">●</span>0:24–0:26 &amp; 0:52–1:05 inter-agent communication: dotted neuron pings firing across channel.</p>
+        </div>
+
+        <!-- Live Interactive Agent Stage -->
+        <div class="agent-stage" id="orchestra-stage" style="margin-top:20px">
+          <!-- Conductor Slot -->
+          <div class="agent-slot">
+            <span class="comm-notes" data-active="conducting">♫ ♪</span>
+            <canvas class="sprite" data-sprite="conductor" style="--sprite-scale:8px"></canvas>
+            <div class="agent-label">♪ conductor</div>
+            <div class="agent-status" id="conductor-status">• tuning up</div>
+          </div>
+
+          <!-- Mid-stage communication channel -->
+          <div class="comm-channel">
+            <span class="comm-dots" data-from="worker">• • •</span>
+          </div>
+
+          <!-- Frontend Worker Slot -->
+          <div class="agent-slot" style="--agent:var(--blue)">
+            <canvas class="sprite" data-sprite="frontend" style="--sprite-scale:8px"></canvas>
+            <div class="agent-label">frontend</div>
+            <div class="agent-status">• the world</div>
+          </div>
+
+          <!-- Copy Worker Slot -->
+          <div class="agent-slot" style="--agent:var(--pink)">
+            <canvas class="sprite" data-sprite="copy" style="--sprite-scale:8px" data-offset="900"></canvas>
+            <div class="agent-label">copy</div>
+            <div class="agent-status">• the words</div>
+          </div>
+
+          <!-- Tests Worker Slot -->
+          <div class="agent-slot" style="--agent:var(--mint)">
+            <canvas class="sprite" data-sprite="tests" style="--sprite-scale:8px" data-offset="1600"></canvas>
+            <div class="agent-label">tests</div>
+            <div class="agent-status">• the holdout</div>
+          </div>
+
+          <!-- Sol Slot -->
+          <div class="agent-slot">
+            <canvas class="sprite" data-sprite="sol" style="--sprite-scale:8px"></canvas>
+            <div class="agent-label">sol</div>
+            <div class="agent-status">✓ passed</div>
+          </div>
+
+          <!-- Astra Slot -->
+          <div class="agent-slot" style="--agent:var(--violet)">
+            <canvas class="sprite" data-sprite="astra" style="--sprite-scale:8px"></canvas>
+            <div class="agent-label">astra</div>
+            <div class="agent-status">• ready</div>
+          </div>
+        </div>
+
+        <!-- Interactive controls to verify every dynamic -->
+        <div class="row" style="margin-top:24px;gap:8px">
+          <button class="btn btn--primary" id="btn-run-orchestra">▶ Run Sequence (0:24–0:26)</button>
+          <button class="btn" id="btn-crouch-cond">Crouch Conductor (term_t004)</button>
+          <button class="btn" id="btn-jump-cond">Jump Conductor (0:01–0:03)</button>
+          <button class="btn" id="btn-comm-ping">Dotted Ping (• • •)</button>
+          <button class="btn" id="btn-toggle-sparks">Thinking Specs</button>
+          <button class="btn" id="spawn-all">▶ Spawn all</button>
+        </div>
+      </div>
+      <div class="win__foot">crouch: legs submerge flush behind platform (term_t004) · jump: 4-row air gap · ♫ notes float · • • • neuron pings</div>
+    </div>
+  </section>
+
+  <!-- ── 04 components ──────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">04</span>
+      <h2 class="sec__title">Components</h2>
+      <span class="sec__note">six primitives · every state drawn · there is no seventh</span>
+    </div>
+
+    <div class="grid grid--two">
+
+      <div class="win">
+        <div class="win__bar"><span class="label">1 · window — the only container</span></div>
+        <div class="win__body stack">
+          <div class="win win--paper">
+            <div class="win__bar">
+              <span class="win__dots"><i class="win__dot win__dot--pink"></i><i class="win__dot win__dot--yellow"></i><i class="win__dot win__dot--mint"></i></span>
+              <span class="win__path"><b>/glitch-orchestra</b></span>
+              <span class="win__chip">♪ orchestrator</span>
+            </div>
+            <div class="win__body" style="padding:12px"><p class="line line--cmd line--sm">&gt; paper · the reel</p></div>
+          </div>
+          <div class="win win--inset">
+            <div class="win__bar"><span class="label">inset · no shadow</span></div>
+            <div class="win__body" style="padding:12px"><p class="line line--dim line--sm">a window inside a window</p></div>
+          </div>
+          <p class="spec">three states: <b>ink</b> (default frame), <b>paper</b> (the reel's cream bar), <b>inset</b> (no shadow, for nesting). No fourth.</p>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">2 · line — every row is text</span></div>
+        <div class="win__body stack">
+          <p class="line line--cmd line--sm">&gt; /glitch-orchestra</p>
+          <p class="line line--sm"><span class="line__bullet">●</span>Started. A pane per worker.</p>
+          <p class="line line--dim line--sm"><span class="line__bullet">·</span>the hero, page copy, run tests</p>
+          <p class="line line--alert line--sm"><span class="line__bullet">!</span>It stopped. I watched.</p>
+          <p class="spec">four voices, one element: <b>cmd</b> (you), <b>event</b> (the system), <b>dim</b> (context), <b>alert</b> (needs a human).</p>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">3 · chip · rule · label</span></div>
+        <div class="win__body stack">
+          <div class="row">
+            <span class="chip">default</span>
+            <span class="chip chip--ink">ink</span>
+            <span class="chip chip--pink">blocked</span>
+            <span class="chip chip--mint">passed</span>
+          </div>
+          <hr class="rule">
+          <hr class="rule rule--heavy">
+          <hr class="rule rule--dashed">
+          <span class="label">board · 0 of 4 done</span>
+          <p class="spec">a chip is an inverted label, never a button. a rule is 1px, 2px or dashed — there is no third weight.</p>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">4 · meter · sprite</span></div>
+        <div class="win__body stack">
+          <div class="bar">
+            <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i>
+            <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i>
+            <i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i>
+          </div>
+          <div class="bar" style="width:60%">
+            <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--warn"></i><i class="bar__cell"></i>
+          </div>
+          <div class="row" style="gap:12px;align-items:flex-end;margin-top:8px">
+            <figure class="bot" style="gap:0"><canvas data-sprite="conductor" data-static data-pose="rest" style="--sprite-scale:4px"></canvas><figcaption class="bot__note">rest</figcaption></figure>
+            <figure class="bot bot--blue" style="gap:0"><canvas data-sprite="frontend" data-static data-pose="up" style="--sprite-scale:4px"></canvas><figcaption class="bot__note">up 1.2</figcaption></figure>
+            <figure class="bot bot--pink" style="gap:0"><canvas data-sprite="copy" data-static data-pose="down" style="--sprite-scale:4px"></canvas><figcaption class="bot__note">down 0.85</figcaption></figure>
+            <figure class="bot bot--mint" style="gap:0"><canvas data-sprite="tests" data-static data-pose="squash" style="--sprite-scale:4px"></canvas><figcaption class="bot__note">squash</figcaption></figure>
+            <figure class="bot bot--violet" style="gap:0"><canvas data-sprite="astra" data-static data-pose="jump" style="--sprite-scale:4px"></canvas><figcaption class="bot__note">jump</figcaption></figure>
+          </div>
+          <p class="spec">the meter is discrete cells, never a percentage bar. the sprite has five poses (rest, up, down, squash, jump); moods (white/orange sparks, rising <b>♪</b>) complete the motion vocabulary.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="spec" style="margin-top:16px;max-width:78ch">
+      <b>There is no seventh primitive.</b> No select, checkbox, slider, modal, tooltip or menu —
+      a terminal has none of those. A screen that needs one is a <b>block</b>: a new window, or a
+      line that asks the question inline.
+    </p>
+  </section>
+
+  <!-- ── 04b web layer (not part of the terminal look) ───────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">04b</span>
+      <h2 class="sec__title">Web layer</h2>
+      <span class="sec__note">for pages outside a terminal · never used inside a window</span>
+    </div>
+    <details>
+      <summary class="label" style="cursor:pointer;padding:8px 0">buttons · fields · tabs · progress · toast — open</summary>
+    <div class="grid grid--two">
+      <div class="win">
+        <div class="win__bar"><span class="label">buttons</span></div>
+        <div class="win__body stack">
+          <div class="row">
+            <button class="btn">rest</button>
+            <button class="btn btn--primary">primary</button>
+            <button class="btn btn--ghost">ghost</button>
+            <button class="btn btn--danger">danger</button>
+          </div>
+          <div class="row">
+            <button class="btn" disabled>disabled</button>
+            <button class="btn is-hover">hover</button>
+            <button class="btn is-active">pressed</button>
+            <button class="btn is-focus">focus</button>
+          </div>
+          <p class="spec">hover is one step up the ink ladder · press moves 1px down-right · focus is a 2px yellow ring, never a glow</p>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">fields</span></div>
+        <div class="win__body stack">
+          <label class="field"><span class="label">agent name</span>
+            <input class="input" placeholder="conductor">
+          </label>
+          <label class="field"><span class="label">focused</span>
+            <input class="input is-focus" value="frontend">
+          </label>
+          <label class="field"><span class="label">disabled</span>
+            <input class="input" value="not yet built" disabled>
+          </label>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">tabs · badge · kbd</span></div>
+        <div class="win__body stack">
+          <div class="tabs">
+            <button class="tab" aria-selected="true">survey</button>
+            <button class="tab">sections</button>
+            <button class="tab">elevations</button>
+            <button class="tab">notes</button>
+          </div>
+          <div class="row">
+            <span class="badge">passed</span>
+            <span class="badge badge--pink">blocked</span>
+            <span class="badge badge--yellow">needs you</span>
+            <span class="badge badge--dim">queued</span>
+          </div>
+          <p class="spec"><span class="kbd">s</span> start · <span class="kbd">h</span> hide · <span class="kbd">2</span> stop · <span class="kbd">esc</span> back</p>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">progress · toast</span></div>
+        <div class="win__body stack">
+          <div class="stack">
+            <span class="label">indexing 8 of 12</span>
+            <div class="bar">
+              <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i>
+              <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i>
+              <i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i>
+            </div>
+          </div>
+          <div class="toast"><span class="ok">✓</span><span>4 of 4 tasks verified</span></div>
+          <div class="toast toast--warn"><span class="warn">!</span><span>the hall is built, the gate has not landed</span></div>
+          <div class="toast toast--bad"><span style="color:var(--pink)">✕</span><span>It stopped. I watched.</span><span class="badge badge--pink" style="margin-left:auto">retry</span></div>
+        </div>
+      </div>
+    </div>
+    </details>
+  </section>
+
+  <!-- ── 05 blocks ──────────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">05</span>
+      <h2 class="sec__title">Blocks</h2>
+      <span class="sec__note">full screens assembled from the parts above</span>
+    </div>
+
+    <div class="win">
+      <div class="win__bar">
+        <span class="win__dots"><i class="win__dot win__dot--pink"></i><i class="win__dot win__dot--yellow"></i><i class="win__dot win__dot--mint"></i></span>
+        <span class="win__path">/glitch-console <b>· board</b></span>
+        <span class="win__chip">♪ orchestrator</span>
+      </div>
+      <div class="win__body stack">
+        <div>
+          <p class="prompt"><span class="prompt__caret">❯</span> <span class="muted">Drafting the plan.</span></p>
+          <p class="prompt" style="margin-top:8px"><span class="prompt__caret">●</span> Four tasks for three workers.<br>
+          <span class="muted" style="padding-left:1.4em">Press <b class="action">s</b> when you are ready.</span></p>
+          <p class="prompt" style="margin-top:8px"><span class="prompt__caret">●</span> Started. A pane per worker.<br>
+          <span class="muted" style="padding-left:1.4em">frontend, copy and tests have their briefs.</span></p>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--rule)">
+        <div class="stack" style="gap:8px">
+          <span class="label">BOARD · 0 OF 4 DONE</span>
+          <div class="cols">
+            <span class="col col--todo"><span class="col__name">to do</span><span class="col__n">1</span></span>
+            <span class="col col--needs"><span class="col__name">needs you</span><span class="col__n">0</span></span>
+            <span class="col col--doing"><span class="col__name">doing</span><span class="col__n">3</span></span>
+            <span class="col col--check"><span class="col__name">checking</span><span class="col__n">0</span></span>
+            <span class="col col--done"><span class="col__name">done</span><span class="col__n">0</span></span>
+          </div>
+          <div class="cols" style="color:var(--text-2);font-size:var(--fs-sm)">
+            <span>pricing</span>
+            <span style="margin-left:auto;text-align:right">the hero<br>page copy<br>run tests</span>
+          </div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--rule)">
+        <div class="roster" style="grid-template-columns:repeat(4,auto);justify-content:start;gap:32px">
+          <div class="agent"><canvas class="sprite" data-sprite="conductor"></canvas><span class="agent__name">conductor</span></div>
+          <div class="agent agent--blue"><canvas class="sprite" data-sprite="frontend"></canvas><span class="agent__name">frontend</span></div>
+          <div class="agent agent--pink"><canvas class="sprite" data-sprite="copy"></canvas><span class="agent__name">copy</span></div>
+          <div class="agent agent--mint"><canvas class="sprite" data-sprite="tests"></canvas><span class="agent__name">tests</span></div>
+        </div>
+        <div class="bar" style="height:8px">
+          <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i>
+          <i class="bar__cell bar__cell--on"></i><i class="bar__cell bar__cell--on"></i><i class="bar__cell"></i><i class="bar__cell"></i>
+        </div>
+        <div class="row" style="color:var(--dim);font-size:var(--fs-xs)">
+          <span><b class="muted">1</b> Hide</span><span><b class="muted">2</b> Stop</span>
+          <span style="margin-left:auto">4 tasks · 3 doing · 1 queued</span>
+        </div>
+      </div>
+      <div class="win__foot"><span class="prompt__caret">❯</span></div>
+    </div>
+
+    <div class="grid grid--two" style="margin-top:16px">
+      <div class="win">
+        <div class="win__bar"><span class="win__path">/settings <b>· roster</b></span><span class="win__chip">4 workers</span></div>
+        <div class="win__body stack">
+          <p class="line line--dim line--sm">AGENT       ROLE             TASKS   STATE</p>
+          <hr class="rule">
+          <p class="line line--sm"><span style="color:var(--coral)">conductor</span>   orchestrates     —       <span class="chip chip--mint">in tune</span></p>
+          <p class="line line--sm"><span style="color:var(--blue)">frontend</span>    hero, layout     2       <span class="chip">doing</span></p>
+          <p class="line line--sm"><span style="color:var(--pink)">copy</span>        page text        1       <span class="chip">doing</span></p>
+          <p class="line line--sm"><span style="color:var(--mint)">tests</span>       verification     1       <span class="chip chip--ink">queued</span></p>
+          <hr class="rule rule--dashed">
+          <p class="line line--dim line--sm">All workers attached. Built strictly from six primitives.</p>
+        </div>
+      </div>
+
+      <div class="win win--paper">
+        <div class="win__bar">
+          <span class="win__dots"><i class="win__dot win__dot--pink"></i><i class="win__dot win__dot--yellow"></i><i class="win__dot win__dot--mint"></i></span>
+          <span class="win__path"><b>/glitch-orchestra</b></span>
+          <span class="win__chip">hero</span>
+        </div>
+        <div class="win__body stack" style="align-items:center;text-align:center;padding:28px 16px">
+          <canvas class="sprite" data-sprite="conductor" style="--sprite-scale:6px"></canvas>
+          <p class="line line--cmd" style="font-size:var(--fs-xl);font-weight:700">&gt; GLITCH CONSOLE</p>
+          <p class="line line--dim line--sm" style="max-width:36ch">One 16×10 body per worker. Stepped 30 fps motion, six primitives, zero easing.</p>
+          <hr class="rule rule--heavy" style="width:100%;max-width:240px">
+          <div class="row">
+            <span class="chip chip--mint">ready</span>
+            <span class="chip chip--ink">press s to start</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 06 motion ──────────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">06</span>
+      <h2 class="sec__title">Motion</h2>
+      <span class="sec__note">holds 100–726 ms · one-frame pose swap · spawn 450 ms</span>
+    </div>
+    <div class="grid grid--two">
+      <div class="win">
+        <div class="win__bar"><span class="label">rules</span></div>
+        <div class="win__body stack">
+          <p class="spec"><b>1.</b> Hold, then swap. A step lasts its full <code>ms</code>; nothing interpolates.</p>
+          <p class="spec"><b>2.</b> Discrete 16-row ladder (no flattening stretch): <b>jump</b> launches to Row 0 leaving a clear 4-row air gap over the platform (dy: -3), <b>squash</b> compresses down 2 rows (dy: +2), <b>rest</b> (dy: 0). Holds are irregular — 100 to 726 ms, median ≈ 350 — drawn from the measured set so a roster drifts apart.</p>
+          <p class="spec"><b>3.</b> A step cycle is 84ms per pose — 12 fps, the GBA cadence.</p>
+          <p class="spec"><b>4.</b> The spawn is five held frames, 90ms each (450ms). White, oversize, squash, colour, settle. No fade. Particle tells are three held steps: sparks while thinking, <code>♫</code> → <code>♫ ♪</code> → <code>♫</code> while outputting.</p>
+          <p class="spec"><b>5.</b> Colour changes are instant. A pose swap costs <b>one frame, 33 ms</b>. All bots share one terminal — never a card each. A text cursor blinks at 2 fps.</p>
+          <p class="spec"><b>6.</b> <code>prefers-reduced-motion</code> kills all of it and keeps the look.</p>
+        </div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">copy this</span></div>
+        <div class="win__body stack">
+          <pre class="snip">&lt;link rel="stylesheet" href="tokens.css"&gt;
+&lt;script src="sprites.js" defer&gt;&lt;/script&gt;
+
+&lt;!-- sprites: mood, spawn, static pose --&gt;
+&lt;canvas <b>data-sprite</b>="conductor" <b>data-mood</b>="outputting"&gt;&lt;/canvas&gt;
+&lt;canvas <b>data-sprite</b>="frontend" <b>data-mood</b>="thinking" <b>data-spawn</b>&gt;&lt;/canvas&gt;
+&lt;canvas <b>data-sprite</b>="tests" <b>data-static</b> <b>data-pose</b>="up"&gt;&lt;/canvas&gt;
+
+&lt;!-- line vocabulary: four voices --&gt;
+&lt;p class="line line--cmd"&gt;&gt; /glitch-orchestra&lt;/p&gt;
+&lt;p class="line"&gt;&lt;span class="line__bullet"&gt;●&lt;/span&gt;event: worker attached&lt;/p&gt;
+&lt;p class="line line--dim"&gt;· context or meta line&lt;/p&gt;
+&lt;p class="line line--alert"&gt;! blocked on human review&lt;/p&gt;</pre>
+          <p class="spec">JS API: <code>Pixels.spawn(canvas)</code>, <code>Pixels.jump(canvas)</code>, <code>Pixels.communicate(stage)</code>, <code>Pixels.confetti(container)</code>, <code>Pixels.pose(canvas, "rest")</code>. Poses: <code>rest</code>, <code>squash</code>, <code>jump</code>, <code>descent</code>.</p>
+          <p class="label" style="margin-top:4px">verify a build</p>
+          <pre class="snip">design-pack verify page.html</pre>
+          <p class="spec">fails on any colour, font, radius or easing the pack does not declare.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 07 ground ──────────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">07</span>
+      <h2 class="sec__title">Ground</h2>
+      <span class="sec__note">covers and share cards only — never behind a working screen</span>
+    </div>
+    <div class="ground" style="border:1px solid var(--rule)">
+      <div class="ground__disc"></div>
+      <div class="paper" style="transform:rotate(-1.2deg);max-width:420px">
+        <span class="label">agent card</span>
+        <div class="card agent" style="margin-top:12px">
+          <canvas class="sprite" data-sprite="conductor" style="--sprite-scale:8px"></canvas>
+          <span class="agent__name" style="font-size:var(--fs-lg)">conductor</span>
+        </div>
+        <p class="spec" style="color:var(--ink-500);margin-top:12px">halftone 6px · one coral disc · paper card at −1.2°</p>
+      </div>
+      <div class="tape tape--l"></div>
+      <div class="tape tape--r"></div>
+    </div>
+  </section>
+
+</main>
+<script src="sprites.js"></script>
+<script>
+  const stage = document.getElementById("orchestra-stage");
+  const condCanvas = stage?.querySelector("canvas[data-sprite='conductor']");
+  const frontCanvas = stage?.querySelector("canvas[data-sprite='frontend']");
+  const notes = stage?.querySelector(".comm-notes");
+  const dots = stage?.querySelector(".comm-dots");
+  const condStatus = document.getElementById("conductor-status");
+
+  document.getElementById("btn-run-orchestra")?.addEventListener("click", () => {
+    if (stage) Pixels.communicate(stage);
+  });
+  document.getElementById("btn-crouch-cond")?.addEventListener("click", () => {
+    if (condCanvas) {
+      if (condStatus) condStatus.textContent = "* warming up";
+      Pixels.crouch(condCanvas);
+      setTimeout(() => {
+        if (condStatus) condStatus.textContent = "• tuning up";
+      }, 1800);
+    }
+  });
+  document.getElementById("btn-jump-cond")?.addEventListener("click", () => {
+    if (condCanvas) Pixels.jump(condCanvas);
+  });
+  document.getElementById("btn-comm-ping")?.addEventListener("click", () => {
+    if (dots) {
+      dots.classList.add("is-active");
+      dots.dataset.from = "worker";
+      setTimeout(() => {
+        dots.classList.remove("is-active");
+        dots.dataset.from = "";
+      }, 660);
+    }
+  });
+  document.getElementById("btn-toggle-sparks")?.addEventListener("click", () => {
+    if (stage) Pixels.toggleThinking(stage);
+  });
+  document.getElementById("spawn-all")?.addEventListener("click", () => {
+    document.querySelectorAll("canvas[data-sprite]").forEach((c) => Pixels.spawn(c));
+  });
+  document.querySelectorAll("canvas[data-pose]").forEach((c) => {
+    Pixels.pose(c, c.dataset.pose);
+  });
+</script>
+</body>
+</html>

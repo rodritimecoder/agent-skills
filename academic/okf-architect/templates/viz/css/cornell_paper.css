@@ -1,0 +1,511 @@
+    /* Embedded Cornell Reader Modal (Full Screen Tab Experience) */
+    .cornell-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #0b0c10;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      animation: modalFadeIn 0.15s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.99); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .cornell-modal-content {
+      width: 100vw;
+      max-width: 100vw;
+      height: 100vh;
+      background: #0b0c10;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .cornell-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      min-height: 48px;
+      padding: 0 16px;
+      background: #141721;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-sizing: border-box;
+      gap: 16px;
+    }
+    .cornell-back-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cdd6f4;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cornell-back-btn:hover {
+      background: rgba(166, 227, 161, 0.2);
+      border-color: rgba(166, 227, 161, 0.5);
+      color: #a6e3a1;
+    }
+    .cornell-modal-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: #f5f5f7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      justify-content: center;
+    }
+    .cornell-popout-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(137, 180, 250, 0.1);
+      color: #89b4fa;
+      border: 1px solid rgba(137, 180, 250, 0.25);
+      border-radius: 6px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cornell-popout-btn:hover {
+      background: rgba(137, 180, 250, 0.2);
+      border-color: #89b4fa;
+      color: #fff;
+    }
+    .cornell-modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cornell-modal-close-btn:hover {
+      background: rgba(243, 139, 168, 0.15);
+      color: #f38ba8;
+    }
+
+    /* Cornell Notes Hub & Reader Components */
+    .cornell-hub-view {
+      flex: 1;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at 50% 10%, #151826, #0b0c10 85%);
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .cornell-hub-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 24px;
+      background: rgba(15, 17, 26, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      flex-wrap: wrap;
+    }
+    .cornell-hub-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cornell-hub-filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cornell-hub-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cdd6f4;
+      transition: all 0.2s;
+    }
+    .cornell-hub-pill:hover, .cornell-hub-pill.active {
+      background: rgba(166, 227, 161, 0.18);
+      border-color: #a6e3a1;
+      color: #a6e3a1;
+      box-shadow: 0 0 10px rgba(166, 227, 161, 0.25);
+    }
+    .cornell-hub-search-box {
+      position: relative;
+      min-width: 260px;
+    }
+    .cornell-hub-search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 7px 14px 7px 32px;
+      color: #ffffff;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .cornell-hub-search-input:focus {
+      border-color: #a6e3a1;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 12px rgba(166, 227, 161, 0.2);
+    }
+    .cornell-hub-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    .cornell-course-container {
+      background: rgba(20, 23, 33, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+    .cornell-course-header {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 10px;
+    }
+    .cornell-module-block {
+      margin-bottom: 18px;
+    }
+    .cornell-module-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fab387;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cornell-notes-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 12px;
+    }
+    .cornell-note-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+    .cornell-note-card:hover {
+      border-color: #a6e3a1;
+      background: rgba(166, 227, 161, 0.04);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    .cornell-note-card-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #f5f5f7;
+      line-height: 1.4;
+    }
+    .cornell-note-card-cues {
+      font-size: 11px;
+      font-weight: 600;
+      color: #a6e3a1;
+      background: rgba(166, 227, 161, 0.12);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .cornell-note-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .cornell-btn-read {
+      flex: 1;
+      text-align: center;
+      background: #1e3a2f;
+      color: #a6e3a1;
+      border: 1px solid #a6e3a1;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cornell-btn-read:hover {
+      background: #2a5242;
+    }
+    .cornell-btn-anki {
+      text-align: center;
+      background: rgba(203, 166, 247, 0.15);
+      color: #cba6f7;
+      border: 1px solid rgba(203, 166, 247, 0.35);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cornell-btn-anki:hover {
+      background: rgba(203, 166, 247, 0.28);
+      border-color: #cba6f7;
+      color: #ffffff;
+    }
+    .cornell-anki-switch-btn {
+      background: rgba(203, 166, 247, 0.15);
+      border: 1px solid rgba(203, 166, 247, 0.4);
+      color: #cba6f7;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cornell-anki-switch-btn:hover {
+      background: rgba(203, 166, 247, 0.3);
+      border-color: #cba6f7;
+      color: #fff;
+    }
+
+    /* Native Inlined Cornell Note Paper & Self-Quiz Mode */
+    .cornell-paper-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px 20px 60px 20px;
+      display: flex;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 10%, #151826, #0b0c10 85%);
+      box-sizing: border-box;
+    }
+    .cornell-paper-sheet {
+      width: 100%;
+      max-width: 960px;
+      background: #141721;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 32px 36px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+      color: #cdd6f4;
+      font-size: 14px;
+      line-height: 1.55;
+      height: fit-content;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    .cornell-doc-header {
+      border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+    .cornell-doc-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .cornell-doc-course-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cornell-doc-module-pill {
+      font-size: 12px;
+      color: #fab387;
+      font-weight: 600;
+      background: rgba(250, 179, 135, 0.1);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .cornell-doc-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+    .cornell-doc-stats {
+      font-size: 12px;
+      color: #8b92aa;
+    }
+    .cornell-section-block {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      margin-bottom: 26px;
+      overflow: hidden;
+    }
+    .cornell-sec-heading {
+      background: rgba(137, 180, 250, 0.1);
+      border-bottom: 1px solid rgba(137, 180, 250, 0.2);
+      color: #89b4fa;
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cornell-entry-pair {
+      display: grid;
+      grid-template-columns: 34% 66%;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.15s;
+    }
+    .cornell-entry-pair:last-child {
+      border-bottom: none;
+    }
+    .cornell-entry-pair:hover {
+      background: rgba(255, 255, 255, 0.015);
+    }
+    .cornell-cue-box {
+      background: rgba(255, 255, 255, 0.02);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cornell-cue-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      width: fit-content;
+      background: rgba(166, 227, 161, 0.15);
+      color: #a6e3a1;
+    }
+    .cornell-cue-text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.4;
+    }
+    .cornell-notes-box {
+      padding: 14px 18px;
+      color: #cdd6f4;
+      font-size: 13.5px;
+      line-height: 1.5;
+      transition: filter 0.2s, opacity 0.2s;
+    }
+    /* Self-Quiz Mode */
+    .quiz-mode-active .cornell-notes-box.blurred {
+      filter: blur(7px);
+      opacity: 0.2;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    .quiz-mode-active .cornell-notes-box.blurred:hover {
+      opacity: 0.4;
+      filter: blur(5px);
+    }
+    .quiz-mode-active .cornell-notes-box.revealed {
+      filter: none;
+      opacity: 1;
+      cursor: default;
+    }
+    .cornell-sec-summary {
+      background: rgba(250, 179, 135, 0.08);
+      border-top: 1px dashed rgba(250, 179, 135, 0.3);
+      padding: 12px 18px;
+      font-size: 13px;
+      color: #fab387;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .cornell-quiz-toggle-btn {
+      background: rgba(250, 179, 135, 0.15);
+      border: 1px solid rgba(250, 179, 135, 0.4);
+      color: #fab387;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cornell-quiz-toggle-btn:hover {
+      background: rgba(250, 179, 135, 0.28);
+      border-color: #fab387;
+      color: #ffffff;
+    }
+    .cornell-quiz-toggle-btn.active {
+      background: linear-gradient(135deg, #fab387, #f38ba8);
+      color: #111420;
+      font-weight: 700;
+      border-color: #fab387;
+      box-shadow: 0 0 12px rgba(250, 179, 135, 0.4);
+    }
+

@@ -1,0 +1,46 @@
+    :root {
+      --bg: #0b0c10;
+      --bg-panel: rgba(18, 19, 26, 0.85);
+      --bg-panel-hover: rgba(28, 30, 42, 0.95);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(137, 180, 250, 0.5);
+      --text: #cdd6f4;
+      --text-muted: #7f849c;
+      --accent: #89b4fa;
+      --accent-glow: rgba(137, 180, 250, 0.35);
+      --drawer-bg: rgba(15, 16, 23, 0.96);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      user-select: none;
+    }
+
+    /* Main Canvas Area */
+    #graphContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      background: radial-gradient(circle at 50% 50%, #141522 0%, #0b0c10 100%);
+    }
+    #graphContainer:active {
+      cursor: grabbing;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    canvas:active {
+      cursor: grabbing;
+    }
+

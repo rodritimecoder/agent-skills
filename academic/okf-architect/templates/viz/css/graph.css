@@ -1,0 +1,396 @@
+    /* Floating Glassmorphic Header Toolbar */
+    .hud-header {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .hud-left, .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .glass-card {
+      background: var(--bg-panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    }
+    .badge-logo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-logo::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+    .stats-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      border-left: 1px solid var(--border);
+      padding-left: 10px;
+    }
+    .stats-label span {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Search Box */
+    .search-wrapper {
+      position: relative;
+      width: 260px;
+    }
+    .search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px 6px 28px;
+      border-radius: 8px;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Course Filter Chips */
+    .course-chips {
+      position: absolute;
+      top: 68px;
+      left: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      z-index: 20;
+      pointer-events: auto;
+      max-width: 80%;
+    }
+    .chip {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+    .chip:hover {
+      background: var(--bg-panel-hover);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .chip.active {
+      color: #fff;
+      border-color: var(--chip-color, var(--accent));
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 10px var(--chip-glow, var(--accent-glow));
+    }
+    .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--chip-color, var(--accent));
+    }
+
+    /* Canvas Week / Module Filter Chips */
+    .week-chips-bar {
+      position: absolute;
+      top: 104px;
+      left: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+      pointer-events: auto;
+      max-width: calc(100% - 32px);
+    }
+    .week-chips-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px 0;
+    }
+    .week-chips-scroll::-webkit-scrollbar { display: none; }
+    .cornell-toggle-chip {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(166, 227, 161, 0.35);
+      color: #cdd6f4;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .cornell-toggle-chip:hover {
+      background: rgba(166, 227, 161, 0.15);
+      border-color: #a6e3a1;
+      color: #fff;
+    }
+    .cornell-toggle-chip.active {
+      background: rgba(166, 227, 161, 0.25);
+      border-color: #a6e3a1;
+      color: #a6e3a1;
+      box-shadow: 0 0 10px rgba(166, 227, 161, 0.3);
+    }
+    .cornell-portal-link {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(137, 180, 250, 0.35);
+      color: #89b4fa;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-decoration: none;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .cornell-portal-link:hover {
+      background: rgba(137, 180, 250, 0.2);
+      box-shadow: 0 0 10px rgba(137, 180, 250, 0.3);
+    }
+
+    /* Graph View Mode Switcher */
+    .view-mode-toggle {
+      display: flex;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .mode-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    .mode-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .mode-btn.active {
+      background: rgba(137, 180, 250, 0.18);
+      color: #89b4fa;
+      border-color: rgba(137, 180, 250, 0.4);
+      box-shadow: 0 0 10px rgba(137, 180, 250, 0.25);
+    }
+
+    .cornell-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(30, 58, 47, 0.9), rgba(20, 40, 33, 0.9));
+      border: 1px solid #a6e3a1;
+      border-radius: 8px;
+      color: #a6e3a1;
+      font-weight: 600;
+      font-size: 12px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(166, 227, 161, 0.15);
+    }
+    .cornell-action-btn:hover {
+      background: linear-gradient(135deg, #2d5544, #1e3a2f);
+      box-shadow: 0 4px 14px rgba(166, 227, 161, 0.35);
+      transform: translateY(-1px);
+    }
+
+
+    /* Floating Tool Buttons */
+    .btn-icon {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .btn-icon.active {
+      background: var(--accent);
+      color: #0b0c10;
+      border-color: var(--accent);
+    }
+
+    /* Settings Control Panel */
+    .settings-popover {
+      position: absolute;
+      top: 60px;
+      right: 16px;
+      width: 280px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 25;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    }
+    .settings-popover.open {
+      display: flex;
+    }
+    .pop-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .setting-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .setting-label {
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text);
+    }
+    .setting-label span {
+      color: var(--text-muted);
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .toggle-switch {
+      width: 32px;
+      height: 18px;
+      background: #313244;
+      border-radius: 10px;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .toggle-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-active .toggle-switch {
+      background: var(--accent);
+    }
+
+    /* Bottom Quick Legend */
+    .legend-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+      z-index: 20;
+      pointer-events: auto;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+  

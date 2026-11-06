@@ -1,0 +1,22 @@
+[package]
+name = "cgate"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "cgate"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.11"
+ureq = { version = "2.10", default-features = false, features = ["json"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,3266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICM Study Workspace &bull; Interactive Lecture Companion &amp; Active Recall</title>
+
+  <!-- Google Fonts: Inter & Fira Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp LaTeX formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base: #0d1117;
+      --bg-sidebar: #131720;
+      --bg-panel: #161b22;
+      --bg-card: #1c2128;
+      --bg-card-hover: #222730;
+      --border: #30363d;
+      --border-focus: #58a6ff;
+      --text-main: #f0f6fc;
+      --text-dim: #8b949e;
+      --text-sub: #6e7681;
+      
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-amber: #d29922;
+      --accent-purple: #bc8cff;
+      --accent-red: #f85149;
+      --accent-cyan: #39c5cf;
+
+      --sidebar-width: 320px;
+      --header-height: 56px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation HUD */
+    header.workspace-header {
+      height: var(--header-height);
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(88, 166, 255, 0.35);
+      padding: 2px 7px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .header-breadcrumb {
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .header-breadcrumb span#breadcrumbCourse {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      max-width: 140px;
+      flex-shrink: 1;
+    }
+    .header-breadcrumb strong {
+      color: var(--text-main);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      max-width: 280px;
+      vertical-align: bottom;
+      flex-shrink: 1;
+    }
+
+    /* Mode Toggles */
+    .view-switcher {
+      display: flex;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      gap: 3px;
+    }
+    .view-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .view-btn:hover {
+      color: var(--text-main);
+    }
+    .view-btn.active {
+      background: var(--bg-card);
+      color: var(--accent-blue);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-action:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+    .btn-cosmos {
+      background: rgba(188, 140, 255, 0.12);
+      border-color: rgba(188, 140, 255, 0.35);
+      color: var(--accent-purple);
+    }
+    .btn-cosmos:hover {
+      background: rgba(188, 140, 255, 0.22);
+      color: #ffffff;
+    }
+
+    /* Workspace Body */
+    .workspace-body {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - var(--header-height));
+      overflow: hidden;
+    }
+
+    /* 1. Sidebar */
+    aside.course-sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-controls {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .course-select-box {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+    .course-select-box:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .sidebar-search-box {
+      position: relative;
+    }
+    .sidebar-search-input {
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px 7px 30px;
+      font-size: 12px;
+      color: var(--text-main);
+      outline: none;
+    }
+    .sidebar-search-input:focus {
+      border-color: var(--accent-blue);
+    }
+    .sidebar-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .progress-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .progress-bar-bg {
+      height: 6px;
+      background: var(--bg-card);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent-green);
+      transition: width 0.3s ease;
+    }
+
+    /* Sidebar Tree */
+    .sidebar-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+    .module-group {
+      margin-bottom: 12px;
+    }
+    .module-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-sub);
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .lecture-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+      text-decoration: none;
+      cursor: pointer;
+      margin-bottom: 2px;
+      transition: all 0.15s ease;
+    }
+    .lecture-item:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+    .lecture-item.active {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+    .lecture-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lecture-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .badge-cues {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .badge-video {
+      font-size: 10px;
+      color: var(--accent-amber);
+    }
+
+    /* 2. Main Content Area */
+    main.workspace-main {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Synchronized Lecture View Split */
+    .view-sync-container {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Left: Media & Evidence Stage */
+    .media-stage {
+      flex: 0 0 46%;
+      border-right: 1px solid var(--border);
+      background: var(--bg-base);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .video-viewport {
+      background: #000000;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .video-viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .zoom-cloud-card {
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.08), rgba(0, 0, 0, 0.4));
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 8px;
+      margin: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .zoom-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-blue);
+    }
+    .zoom-time-info {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .zoom-passcode-box {
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-zoom-launch {
+      background: #0066cc;
+      color: #ffffff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+    /* Interactive Video Timeline Bar with Annotated Cue Pips */
+    .video-timeline-wrap {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px 6px 14px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      user-select: none;
+    }
+    .timeline-scrubber {
+      position: relative;
+      height: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .timeline-track {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: visible;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .timeline-buffered {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 4px;
+      pointer-events: none;
+      transition: width 0.2s ease;
+    }
+    .timeline-progress {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--accent-blue);
+      border-radius: 4px;
+      pointer-events: none;
+      transition: width 0.08s linear;
+    }
+    .timeline-pips-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .timeline-pip {
+      position: absolute;
+      top: -3px;
+      width: 6px;
+      height: 14px;
+      transform: translateX(-50%);
+      background: #f9e2af;
+      border-radius: 3px;
+      box-shadow: 0 0 6px rgba(249, 226, 175, 0.75);
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 5;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .timeline-pip:hover {
+      transform: translateX(-50%) scaleY(1.3) scaleX(1.4);
+      background: #ffe066;
+      box-shadow: 0 0 10px rgba(255, 224, 102, 0.95);
+      z-index: 20;
+    }
+    .timeline-pip.role-example {
+      background: #74c0fc;
+      box-shadow: 0 0 6px rgba(116, 192, 252, 0.75);
+    }
+    .timeline-pip.role-example:hover {
+      background: #a5d8ff;
+      box-shadow: 0 0 10px rgba(165, 216, 255, 0.95);
+    }
+    .timeline-pip.role-theory {
+      background: #ffd43b;
+      box-shadow: 0 0 6px rgba(255, 212, 59, 0.75);
+    }
+    .timeline-pip.role-theory:hover {
+      background: #ffe066;
+      box-shadow: 0 0 10px rgba(255, 224, 102, 0.95);
+    }
+    .timeline-info-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-dim);
+    }
+    .timeline-time {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    .timeline-cue-count {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--accent-amber);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+    .timeline-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      background: #1c2128;
+      border: 1px solid var(--border-focus);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-main);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: none;
+      animation: tooltipFadeIn 0.15s ease-out;
+    }
+    .timeline-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--border-focus) transparent transparent transparent;
+    }
+    @keyframes tooltipFadeIn {
+      from { opacity: 0; transform: translate(-50%, 4px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .tooltip-time {
+      font-weight: 700;
+      color: var(--accent-amber);
+      font-family: monospace;
+    }
+    .tooltip-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .tooltip-cue-text {
+      font-size: 11px;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 280px;
+    }
+
+    .video-controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .speed-pills {
+      display: flex;
+      gap: 4px;
+    }
+    .speed-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .speed-btn.active {
+      background: var(--accent-blue);
+      color: #ffffff;
+      border-color: var(--accent-blue);
+    }
+
+    /* Active Grounded Evidence Box */
+    .active-evidence-panel {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .evidence-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .evidence-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .evidence-role-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(57, 197, 207, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(57, 197, 207, 0.35);
+    }
+
+    .anchor-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .anchor-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .anchor-chip:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+    .anchor-chip.active {
+      background: rgba(88, 166, 255, 0.18);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .spoken-quote-card {
+      background: rgba(0, 0, 0, 0.25);
+      border-left: 3px solid var(--accent-amber);
+      padding: 12px 14px;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e6edf3;
+      font-style: italic;
+    }
+    .spoken-quote-card .quote-author {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: normal;
+      font-weight: 600;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .slide-keyframe-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000000;
+    }
+    .slide-keyframe-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      cursor: pointer;
+    }
+    .slide-keyframe-label {
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-dim);
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Right: Cornell Notes & Cues Stage */
+    .notes-stage {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: var(--bg-panel);
+    }
+
+    .lecture-heading-area {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 18px;
+    }
+    .lecture-heading-area h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .lecture-meta-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Section & Cards */
+    .notes-section {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .section-header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent-purple);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+    }
+
+    .cornell-cue-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .cornell-cue-card:hover {
+      border-color: rgba(88, 166, 255, 0.4);
+    }
+    .cornell-cue-card.active-cue {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px rgba(88, 166, 255, 0.15);
+    }
+
+    .cue-card-top {
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cue-card-badges {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cue-type-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+    }
+    .cue-question-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.45;
+    }
+    .cue-anchors-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .cue-time-chip {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      color: var(--accent-amber);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .cue-time-chip:hover {
+      background: rgba(210, 153, 34, 0.2);
+      border-color: var(--accent-amber);
+    }
+
+    .cue-card-body {
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.18);
+      border-top: 1px solid var(--border);
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text-main);
+      position: relative;
+    }
+    .cue-card-body.blurred {
+      filter: blur(5px);
+      user-select: none;
+      cursor: pointer;
+    }
+    .blur-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 17, 23, 0.7);
+      backdrop-filter: blur(2px);
+      cursor: pointer;
+    }
+    .btn-reveal-answer {
+      background: var(--bg-card);
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 600;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .cue-recall-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .recall-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-rate {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-rate:hover {
+      color: #fff;
+    }
+    .btn-rate.rate-again:hover, .btn-rate.rate-again.active {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+      background: rgba(248, 81, 73, 0.15);
+    }
+    .btn-rate.rate-good:hover, .btn-rate.rate-good.active {
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+      background: rgba(210, 153, 34, 0.15);
+    }
+    .btn-rate.rate-easy:hover, .btn-rate.rate-easy.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.15);
+    }
+
+    /* 3. Focused Recall Quiz Mode */
+    .view-quiz-container {
+      display: none;
+      flex: 1;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      background: var(--bg-base);
+    }
+    .quiz-card {
+      width: 100%;
+      max-width: 820px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 480px;
+    }
+    .quiz-card-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+    }
+    .quiz-card-content {
+      padding: 36px 32px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .quiz-question-hero {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.45;
+      margin-bottom: 24px;
+    }
+    .quiz-answer-hero {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #e6edf3;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.25);
+      border-left: 3px solid var(--accent-green);
+      border-radius: 0 8px 8px 0;
+    }
+    .quiz-card-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+    }
+
+    /* Print & Full Cornell Sheet View */
+    .view-doc-container {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px 24px;
+      background: #0c0e14;
+      color: #cdd6f4;
+    }
+    .doc-sheet-paper {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: #141721;
+      padding: 32px 36px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Cornell Paper Sheet Components */
+    .cornell-doc-header {
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+    .cornell-doc-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .cornell-doc-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cornell-doc-course-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(137, 180, 250, 0.15);
+      color: #89b4fa;
+      border: 1px solid rgba(137, 180, 250, 0.3);
+    }
+    .cornell-doc-module-pill {
+      font-size: 11px;
+      color: #fab387;
+      font-weight: 600;
+      background: rgba(250, 179, 135, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(250, 179, 135, 0.25);
+    }
+    .cornell-doc-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cornell-doc-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-dim);
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .cornell-doc-btn:hover {
+      background: rgba(137, 180, 250, 0.15);
+      border-color: #89b4fa;
+      color: #ffffff;
+    }
+    .cornell-doc-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+    .cornell-doc-stats {
+      font-size: 12px;
+      color: #8b92aa;
+    }
+    .cornell-section-block {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .cornell-sec-heading {
+      background: rgba(137, 180, 250, 0.08);
+      border-bottom: 1px solid rgba(137, 180, 250, 0.18);
+      color: #89b4fa;
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cornell-entry-pair {
+      display: grid;
+      grid-template-columns: 34% 66%;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.15s;
+    }
+    .cornell-entry-pair:last-child {
+      border-bottom: none;
+    }
+    .cornell-entry-pair:hover {
+      background: rgba(255, 255, 255, 0.015);
+    }
+    .cornell-cue-box {
+      background: rgba(255, 255, 255, 0.015);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cornell-cue-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      width: fit-content;
+      background: rgba(166, 227, 161, 0.15);
+      color: #a6e3a1;
+    }
+    .cornell-cue-text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.45;
+    }
+    .cornell-cue-video-btn {
+      background: rgba(137, 180, 250, 0.12);
+      border: 1px solid rgba(137, 180, 250, 0.3);
+      color: #89b4fa;
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      transition: all 0.15s ease;
+    }
+    .cornell-cue-video-btn:hover {
+      background: #89b4fa;
+      color: #111420;
+    }
+    .cornell-notes-box {
+      padding: 14px 20px;
+      color: #cdd6f4;
+      font-size: 13.5px;
+      line-height: 1.6;
+      transition: filter 0.2s, opacity 0.2s;
+    }
+    .cornell-notes-box.blurred {
+      filter: blur(7px);
+      opacity: 0.25;
+      cursor: pointer;
+      user-select: none;
+    }
+    .cornell-notes-box.blurred:hover {
+      opacity: 0.45;
+      filter: blur(5px);
+    }
+    .cornell-notes-box.revealed {
+      filter: none;
+      opacity: 1;
+      cursor: default;
+    }
+    .cornell-sec-summary {
+      background: rgba(250, 179, 135, 0.08);
+      border-top: 1px dashed rgba(250, 179, 135, 0.3);
+      padding: 12px 18px;
+      font-size: 13px;
+      color: #fab387;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    /* Math rendering helpers */
+    .katex-display {
+      margin: 10px 0 !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* Table & Tabular Document Styling */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .markdown-body-rendered table,
+    .doc-sheet-paper table,
+    .raw-markdown-reader table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .markdown-body-rendered th,
+    .raw-markdown-reader th {
+      background: #1e293b;
+      color: #93c5fd;
+      font-weight: 600;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .doc-sheet-paper th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+      padding: 10px 14px;
+      border-bottom: 2px solid #cbd5e1;
+      white-space: nowrap;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .markdown-body-rendered td,
+    .raw-markdown-reader td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    .doc-sheet-paper td {
+      padding: 9px 14px;
+      color: #334155;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    .markdown-body-rendered tbody tr:nth-child(even),
+    .raw-markdown-reader tbody tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .doc-sheet-paper tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .markdown-body-rendered tbody tr:hover,
+    .doc-sheet-paper tbody tr:hover,
+    .raw-markdown-reader tbody tr:hover {
+      background: rgba(147, 197, 253, 0.06);
+    }
+    td.num-cell, td:has(span.katex) {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sidebar Material Filter Chips */
+    .material-filter-bar {
+      display: flex;
+      gap: 6px;
+      padding: 2px 0;
+      overflow-x: auto;
+    }
+    .mat-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      padding: 4px 9px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .mat-chip:hover {
+      color: var(--text-main);
+      border-color: var(--accent);
+    }
+    .mat-chip.active {
+      background: rgba(147, 197, 253, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .mat-chip.chip-issues {
+      border-color: rgba(248, 81, 73, 0.45);
+      color: #f85149;
+    }
+    .mat-chip.chip-issues:hover, .mat-chip.chip-issues.active {
+      background: rgba(248, 81, 73, 0.18);
+      border-color: #f85149;
+      color: #ff7b72;
+    }
+    .note-defect-banner {
+      background: rgba(248, 81, 73, 0.08);
+      border: 1px solid rgba(248, 81, 73, 0.35);
+      border-left: 4px solid #f85149;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .note-defect-banner .defect-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      color: #ff7b72;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .note-defect-banner ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .note-defect-banner li {
+      color: #e6edf3;
+    }
+    .note-defect-banner li.sev-critical {
+      color: #ff7b72;
+      font-weight: 600;
+    }
+    .note-defect-banner li.sev-defect {
+      color: #d29922;
+    }
+    .note-defect-banner li.sev-warning {
+      color: #e3b341;
+    }
+    .note-defect-banner .defect-source {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .note-defect-banner code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #a5d6ff;
+    }
+
+    /* Asset Badges & Formatting */
+    .badge-spreadsheet {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-transcript {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .transcript-timestamp {
+      display: inline-block;
+      background: rgba(147, 197, 253, 0.12);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      margin-right: 6px;
+      font-weight: 600;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1100px) {
+      .header-breadcrumb {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .view-sync-container {
+        flex-direction: column;
+      }
+      .media-stage {
+        flex: 0 0 auto;
+        height: 45vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    /* ==========================================================================
+       PRINT SPECIFICATION (@media print)
+       ========================================================================== */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 12mm 15mm 15mm 15mm;
+      }
+
+      html,
+      body {
+        background: #ffffff !important;
+        color: #111827 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+        font-size: 11pt !important;
+        line-height: 1.5 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .workspace-body,
+      .workspace-main {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        position: static !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .workspace-header,
+      .course-sidebar,
+      .media-stage,
+      .video-stage-container,
+      .timeline-container,
+      .sync-split-handle,
+      .lecture-nav-strip,
+      .cornell-doc-actions,
+      .cornell-cue-video-btn,
+      .notes-reveal-hint,
+      .study-toolbar,
+      .audio-player-bar,
+      #modalBackdrop,
+      #quickSearchModal,
+      button,
+      .btn,
+      .floating-controls {
+        display: none !important;
+      }
+
+      #viewDocContainer,
+      .view-doc-container {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      #docSheetPaper,
+      .doc-sheet-paper {
+        background: #ffffff !important;
+        color: #111827 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+      }
+
+      .cornell-doc-header {
+        border-bottom: 2pt solid #111827 !important;
+        padding-bottom: 8pt !important;
+        margin-bottom: 14pt !important;
+      }
+
+      .cornell-doc-title {
+        color: #0f172a !important;
+        font-size: 18pt !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        margin-bottom: 4pt !important;
+      }
+
+      .cornell-doc-stats {
+        color: #4b5563 !important;
+        font-size: 9pt !important;
+      }
+
+      .cornell-doc-course-pill {
+        background: #f1f5f9 !important;
+        color: #1e3a8a !important;
+        border: 1px solid #94a3b8 !important;
+        font-size: 8.5pt !important;
+      }
+
+      .cornell-doc-module-pill {
+        background: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #fcd34d !important;
+        font-size: 8.5pt !important;
+      }
+
+      .badge-cornell,
+      .badge-spreadsheet,
+      .badge-transcript {
+        background: #f0fdf4 !important;
+        color: #166534 !important;
+        border: 1px solid #86efac !important;
+        font-size: 8.5pt !important;
+      }
+
+      .cornell-notes-box,
+      .cornell-notes-box.blurred,
+      .cornell-notes-box.revealed,
+      .cue-card-body,
+      .cue-card-body.blurred {
+        filter: none !important;
+        opacity: 1 !important;
+        user-select: auto !important;
+        cursor: default !important;
+        color: #1f2937 !important;
+        background: #ffffff !important;
+      }
+
+      .blur-overlay {
+        display: none !important;
+      }
+
+      .cornell-section-block {
+        background: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 4px !important;
+        margin-bottom: 14pt !important;
+        overflow: visible !important;
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+
+      .cornell-sec-heading {
+        background: #f3f4f6 !important;
+        border-bottom: 1.5px solid #cbd5e1 !important;
+        color: #1e3a8a !important;
+        font-size: 11pt !important;
+        font-weight: 700 !important;
+        padding: 6pt 10pt !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
+
+      .cornell-entry-pair {
+        display: grid !important;
+        grid-template-columns: 32% 68% !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        min-height: 24pt !important;
+      }
+
+      .cornell-entry-pair:last-child {
+        border-bottom: none !important;
+      }
+
+      .cornell-cue-box {
+        background: #f8fafc !important;
+        border-right: 1.5px solid #cbd5e1 !important;
+        padding: 8pt 10pt !important;
+        color: #0f172a !important;
+      }
+
+      .cornell-cue-badge {
+        background: #dcfce7 !important;
+        color: #166534 !important;
+        border: 1px solid #86efac !important;
+        font-size: 7.5pt !important;
+        font-weight: 700 !important;
+      }
+
+      .cornell-cue-text {
+        color: #0f172a !important;
+        font-size: 10pt !important;
+        font-weight: 700 !important;
+        line-height: 1.4 !important;
+      }
+
+      .cornell-notes-box {
+        padding: 8pt 12pt !important;
+        color: #1f2937 !important;
+        font-size: 10pt !important;
+        line-height: 1.55 !important;
+      }
+
+      .cornell-sec-summary {
+        background: #fffbeb !important;
+        border-top: 1.5px dashed #f59e0b !important;
+        color: #92400e !important;
+        padding: 8pt 10pt !important;
+        font-size: 9.5pt !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      .doc-markdown-body,
+      .markdown-body-rendered {
+        color: #111827 !important;
+        font-size: 10pt !important;
+        line-height: 1.6 !important;
+      }
+
+      .doc-markdown-body h1,
+      .doc-markdown-body h2,
+      .doc-markdown-body h3,
+      .doc-markdown-body h4 {
+        color: #0f172a !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
+
+      table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin: 8pt 0 !important;
+      }
+
+      table th {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        font-size: 8.5pt !important;
+        padding: 4pt 6pt !important;
+      }
+
+      table td {
+        border: 1px solid #e2e8f0 !important;
+        color: #334155 !important;
+        font-size: 9pt !important;
+        padding: 4pt 6pt !important;
+      }
+
+      table tr {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      pre,
+      code {
+        background: #f8fafc !important;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0 !important;
+        font-family: "Fira Code", monospace !important;
+        font-size: 8.5pt !important;
+        break-inside: avoid !important;
+      }
+
+      blockquote {
+        border-left: 3pt solid #3b82f6 !important;
+        background: #f8fafc !important;
+        color: #334155 !important;
+        padding: 4pt 10pt !important;
+        margin: 8pt 0 !important;
+        break-inside: avoid !important;
+      }
+
+      .katex,
+      .katex-display {
+        color: #000000 !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation HUD -->
+  <header class="workspace-header">
+    <div class="brand-area">
+      <a href="study.html" class="brand-logo">
+        <span>📖</span>
+        <span>ICM Study Workspace</span>
+      </a>
+      <span class="brand-badge">Lecture Sync</span>
+      <div class="header-breadcrumb" id="headerBreadcrumb">
+        <span>&bull;</span>
+        <span id="breadcrumbCourse">Course</span>
+        <span>&rsaquo;</span>
+        <strong id="breadcrumbLecture">Lecture Note</strong>
+      </div>
+    </div>
+
+    <!-- Mode Switcher -->
+    <div class="view-switcher">
+      <button class="view-btn active" id="btnDocView" onclick="switchViewMode('doc')">
+        <span>⚡</span> Cornell Sheet
+      </button>
+      <button class="view-btn" id="btnSyncView" onclick="switchViewMode('sync')">
+        <span>🎬</span> Lecture Sync
+      </button>
+      <button class="view-btn" id="btnQuizView" onclick="switchViewMode('quiz')">
+        <span>🧠</span> Active Recall Quiz
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <button class="btn-action" id="btnHeaderIssues" onclick="setMaterialFilter('issues', document.querySelector('.mat-chip.chip-issues'))" title="Show only notes with detected defects or issues" style="border-color:rgba(248,81,73,0.35); color:#f85149;">
+        <span>🚨</span> Issues
+      </button>
+      <button class="btn-action" id="btnToggleAllAnswers" onclick="toggleAllAnswers()">
+        <span>👁️</span> Reveal All
+      </button>
+      <a href="viz.html" class="btn-action btn-cosmos" target="_blank" title="Explore Curriculum Knowledge Cosmos in 3D">
+        <span>🌌</span> Knowledge Cosmos &rsaquo;
+      </a>
+    </div>
+  </header>
+
+  <!-- Workspace Body -->
+  <div class="workspace-body">
+
+    <!-- 1. Left Course & Lecture Sidebar -->
+    <aside class="course-sidebar">
+      <div class="sidebar-controls">
+        <select class="course-select-box" id="courseSelect" onchange="onCourseSelectChange(this.value)">
+          <!-- Populated dynamically -->
+        </select>
+
+        <div class="material-filter-bar" id="materialFilterBar">
+          <button class="mat-chip active" data-filter="all" onclick="setMaterialFilter('all', this)">All</button>
+          <button class="mat-chip" data-filter="cornell" onclick="setMaterialFilter('cornell', this)">⚡ Cornell Notes</button>
+          <button class="mat-chip" data-filter="video" onclick="setMaterialFilter('video', this)">🎬 Videos</button>
+          <button class="mat-chip" data-filter="transcript" onclick="setMaterialFilter('transcript', this)">🎙️ Transcripts</button>
+          <button class="mat-chip chip-issues" data-filter="issues" onclick="setMaterialFilter('issues', this)" title="Show only flawed notes with detected defects or issues">🚨 Issues</button>
+        </div>
+        
+        <div class="sidebar-search-box">
+          <span class="sidebar-search-icon">&#128269;</span>
+          <input type="text" id="sidebarSearchInput" class="sidebar-search-input" placeholder="Search cues, rules, formulas..." oninput="onSearchFilter(this.value)">
+        </div>
+
+        <div class="progress-card">
+          <div class="progress-labels">
+            <span>Course Retention</span>
+            <strong id="progressText">0 / 0 Cues (0%)</strong>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-tree" id="sidebarTree">
+        <!-- Module & lecture note tree items populated dynamically -->
+      </div>
+    </aside>
+
+    <!-- 2. Main Workspace Stage -->
+    <main class="workspace-main">
+
+      <!-- View 1: Synchronized Lecture View -->
+      <div class="view-sync-container" id="viewSyncContainer" style="display:none;">
+        
+        <!-- Left: Media & Grounded Evidence Stage -->
+        <section class="media-stage">
+          <!-- Video Viewport -->
+          <div class="video-viewport" id="videoViewport">
+            <video id="activeVideoPlayer" controls playsinline preload="metadata">
+              Your browser does not support HTML5 video.
+            </video>
+
+            <!-- Interactive Annotated Timeline Bar -->
+            <div class="video-timeline-wrap" id="videoTimelineWrap">
+              <div class="timeline-scrubber" id="timelineScrubber" onclick="onTimelineTrackClick(event)">
+                <div class="timeline-track" id="timelineTrack">
+                  <div class="timeline-buffered" id="timelineBuffered"></div>
+                  <div class="timeline-progress" id="timelineProgress"></div>
+                  <div class="timeline-pips-container" id="timelinePipsContainer"></div>
+                </div>
+              </div>
+              <div class="timeline-info-row">
+                <span class="timeline-time" id="timelineTimeCurrent">00:00</span>
+                <span style="color:var(--text-sub)">/</span>
+                <span class="timeline-time" id="timelineTimeTotal">00:00</span>
+                <span class="timeline-cue-count" id="timelineCueCount">0 annotations</span>
+              </div>
+              <div class="timeline-tooltip" id="timelineTooltip"></div>
+            </div>
+          </div>
+
+          <!-- Zoom Cloud Recording Launcher Card (Shown when video is cloud Zoom) -->
+          <div class="zoom-cloud-card" id="zoomCloudCard" style="display:none;">
+            <div class="zoom-header">
+              <span>🚀</span> Zoom Cloud Lecture Recording
+            </div>
+            <div class="zoom-time-info" id="zoomTimeInfo">
+              Timestamp: <strong>00:00:00</strong> (Click Launch to copy passcode &amp; jump)
+            </div>
+            <div class="zoom-passcode-box" id="zoomPasscodeBox">
+              Passcode: <strong id="zoomPasscodeText">------</strong>
+            </div>
+            <button class="btn-zoom-launch" id="btnZoomLaunch" onclick="launchZoomCloud()">
+              <span>📋</span> Copy Passcode &amp; Open Zoom
+            </button>
+          </div>
+
+          <!-- Video Controls Toolbar -->
+          <div class="video-controls-bar">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="speed-btn" onclick="skipVideo(-10)">⏪ -10s</button>
+              <button class="speed-btn" onclick="skipVideo(10)">⏩ +10s</button>
+            </div>
+            <div class="speed-pills">
+              <span style="font-size:11px; color:var(--text-dim); margin-right:4px;">Speed:</span>
+              <button class="speed-btn" onclick="setVideoSpeed(0.75, this)">0.75x</button>
+              <button class="speed-btn active" onclick="setVideoSpeed(1.0, this)">1.0x</button>
+              <button class="speed-btn" onclick="setVideoSpeed(1.25, this)">1.25x</button>
+              <button class="speed-btn" onclick="setVideoSpeed(1.5, this)">1.5x</button>
+              <button class="speed-btn" onclick="setVideoSpeed(2.0, this)">2.0x</button>
+            </div>
+          </div>
+
+          <!-- Active Evidence Panel -->
+          <div class="active-evidence-panel" id="activeEvidencePanel">
+            <div class="evidence-header">
+              <div class="evidence-title">
+                <span>📍</span> Grounded Evidence Anchors
+              </div>
+              <span class="evidence-role-badge" id="evidenceRoleBadge">Concept Explanation</span>
+            </div>
+
+            <!-- Anchor Chips -->
+            <div class="anchor-chips-row" id="anchorChipsRow">
+              <!-- Populated dynamically: [▶ 00:04:04 Theory], [▶ 00:50:00 Example] -->
+            </div>
+
+            <!-- Verbatim Spoken Lecture Quote -->
+            <div class="spoken-quote-card" id="spokenQuoteCard" style="display:none;">
+              <div id="spokenQuoteText">"..."</div>
+              <div class="quote-author">
+                <span>💬</span> Verbatim Spoken Lecture Evidence
+              </div>
+            </div>
+
+            <!-- Matched Slide Figure -->
+            <div class="slide-keyframe-card" id="slideKeyframeCard" style="display:none;">
+              <img id="slideKeyframeImg" src="" alt="Lecture Slide Diagram">
+              <div class="slide-keyframe-label">
+                <span id="slideKeyframeTitle">Slide Keyframe</span>
+                <span style="color:var(--accent-blue)">Click to Expand</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Cornell Notes & Active-Recall Cues Stage -->
+        <section class="notes-stage" id="notesStage">
+          <div class="lecture-heading-area">
+            <h1 id="lectureTitle">Select a Lecture Note</h1>
+            <div class="lecture-meta-bar">
+              <span id="lectureCourseBadge">Course</span>
+              <span>&bull;</span>
+              <span id="lectureCueCount">0 Cues</span>
+              <span>&bull;</span>
+              <span id="lectureSourcePath">Source</span>
+            </div>
+          </div>
+
+          <div id="notesContainer">
+            <!-- Sections and Interactive Cornell Cue Cards populated dynamically -->
+          </div>
+        </section>
+
+      </div>
+
+      <!-- View 2: Focused Active Recall Quiz Mode -->
+      <div class="view-quiz-container" id="viewQuizContainer">
+        <div class="quiz-card">
+          <div class="quiz-card-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="cue-type-tag" id="quizBadge">CONCEPT</span>
+              <span style="font-size:12px; color:var(--text-dim);" id="quizCounter">Card 1 of 8</span>
+            </div>
+            <button class="anchor-chip" id="quizVideoAnchorBtn" onclick="playQuizVideoAnchor()">
+              <span>▶</span> Watch Lecture Anchor
+            </button>
+          </div>
+
+          <div class="quiz-card-content">
+            <div class="quiz-question-hero" id="quizQuestionHero">
+              Question goes here...
+            </div>
+            <div class="quiz-answer-hero" id="quizAnswerHero" style="display:none;">
+              Answer derivation goes here...
+            </div>
+          </div>
+
+          <div class="quiz-card-footer">
+            <div>
+              <button class="btn-action" id="btnQuizReveal" onclick="revealQuizAnswer()">
+                <span>👁️</span> Show Derivation (Space)
+              </button>
+            </div>
+            <div style="display:flex; gap:8px;" id="quizRatingGroup" style="display:none;">
+              <button class="btn-rate rate-again" onclick="rateQuizCard('again')">1: Again</button>
+              <button class="btn-rate rate-good" onclick="rateQuizCard('good')">2: Good</button>
+              <button class="btn-rate rate-easy" onclick="rateQuizCard('easy')">3: Easy</button>
+            </div>
+            <button class="btn-action" onclick="nextQuizCard()">
+              Next &rsaquo;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View 3: Printable Cornell Sheet Document Mode -->
+      <div class="view-doc-container" id="viewDocContainer" style="display:block;">
+        <div class="doc-sheet-paper" id="docSheetPaper">
+          <!-- Rendered 2-column print sheet -->
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Embedded Study Workspace Data Payload
+    /* __STUDY_DATA__ */ {}
+
+    // Global Workspace State
+    let currentCourse = "";
+    let currentNoteId = "";
+    let currentNoteData = null;
+    let activeCueIndex = 0;
+    let currentViewMode = "doc"; // 'doc' | 'quiz' | 'sync'
+    let currentQuizIndex = 0;
+    let currentQuizCards = [];
+    let activeMaterialFilter = "all"; // 'all' | 'study' | 'transcript'
+
+    function setMaterialFilter(filterType, btnEl) {
+      activeMaterialFilter = filterType;
+      document.querySelectorAll("#materialFilterBar .mat-chip").forEach(c => c.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      renderSidebarTree(currentCourse);
+      const searchInput = document.getElementById("sidebarSearchInput");
+      if (searchInput && searchInput.value) {
+        onSearchFilter(searchInput.value);
+      }
+    }
+
+    function auditNote(note) {
+      if (!note) return [];
+      const defects = [];
+      const body = note.markdown_content || "";
+      const title = (note.title || "").toLowerCase();
+      const cues = note.cues || [];
+      const secs = note.sections || [];
+      const words = (body.match(/\b\w+\b/g) || []).length;
+
+      // 1. Corrupted values
+      if (body.includes("NaN")) {
+        defects.push({ severity: "CRITICAL", msg: "Corrupted calculation: contains 'NaN' in text/tables" });
+      }
+      if (body.includes("undefined")) {
+        defects.push({ severity: "CRITICAL", msg: "Unresolved JS variable: contains 'undefined' in text" });
+      }
+
+      // 2. Raw URLs or markdown links inside cues
+      cues.forEach((c, idx) => {
+        const cueTxt = typeof c === "string" ? c : (c.cue || c.question || "");
+        if (cueTxt.includes("http://") || cueTxt.includes("https://") || cueTxt.includes("zoom.us")) {
+          defects.push({ severity: "DEFECT", msg: `Cue #${idx + 1} contains visible URL: '${cueTxt.slice(0, 50)}...'` });
+        } else if (/\[([^\]]+)\]\([^)]+\)/.test(cueTxt)) {
+          defects.push({ severity: "DEFECT", msg: `Cue #${idx + 1} contains unparsed markdown link: '${cueTxt.slice(0, 50)}...'` });
+        }
+      });
+
+      // 3. Missing video on video-claimed notes
+      const claimsVideo = ["recording", "video", "walkthrough"].some(k => title.includes(k));
+      if (claimsVideo && !note.video_src && !note.zoom_url) {
+        defects.push({ severity: "DEFECT", msg: "Title claims recording/video but has no playable MP4 or Zoom link" });
+      }
+
+      // 4. Sparse content
+      if (words < 35) {
+        defects.push({ severity: "WARNING", msg: `Sparse note: only ${words} words` });
+      }
+
+      // 5. Missing cues/sections
+      if (cues.length === 0 && secs.length === 0) {
+        defects.push({ severity: "INFO", msg: "No Cornell active recall cues or cue-note pairs" });
+      }
+
+      return defects;
+    }
+
+    window.studyDoctor = function(errorsOnly = false) {
+      if (!window.STUDY_DATA || !window.STUDY_DATA.notes) return;
+      const issues = [];
+      Object.entries(window.STUDY_DATA.notes).forEach(([id, n]) => {
+        const d = auditNote(n);
+        const filtered = errorsOnly ? d.filter(x => x.severity === "CRITICAL" || x.severity === "DEFECT") : d;
+        if (filtered.length > 0) {
+          issues.push({
+            id: id,
+            title: n.title,
+            course: n.course,
+            words: (n.markdown_content || "").split(/\s+/).length,
+            defects: filtered.map(x => `[${x.severity}] ${x.msg}`).join(" | "),
+            source: n.source
+          });
+        }
+      });
+      console.table(issues);
+      return issues;
+    };
+
+    // Local Storage Progress Store
+    const STORAGE_KEY_PREFIX = "icm_retention_";
+
+    function cleanCueText(cue) {
+      if (!cue) return "";
+      return cue.replace(/\[▶\s*[^\]]+\]\([^)]+\)/g, "")
+                .replace(/\[(?:Timestamp:?\s*)?[0-9]{1,2}:\d{2}(?::\d{2})?\]\([^)]*\)/g, "")
+                .replace(/\[(?:Timestamp:?\s*)?[0-9]{1,2}:\d{2}(?::\d{2})?\]/g, "")
+                .replace(/\(?https?:\/\/[^\s\)]+\)?/g, "")
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+                .replace(/\$H\(/g, "$H(s)$")
+                .replace(/\$Z\(/g, "$Z(s)$")
+                .replace(/\s{2,}/g, " ")
+                .trim();
+    }
+
+    function renderMarkdownSafe(text) {
+      if (!text) return "";
+      if (!window.marked || typeof window.marked.parse !== "function") return text;
+      // Strip orphan pipe lines left behind by broken table conversions
+      let cleaned = text.replace(/^[ \t]*\|[ \t]*$/gm, "");
+      // Protect C header tags like <stdio.h>, <stdlib.h> that are outside of backticks from being stripped by DOM parser
+      cleaned = cleaned.replace(/(?<!`)(<[a-zA-Z0-9_\-\.\/]+\.h>)(?!`)/gi, "`$1`");
+      const mathTokens = [];
+      const masked = cleaned.replace(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$\n]+\$)/g, (match) => {
+        const token = `@@@MATH_${mathTokens.length}@@@`;
+        mathTokens.push(match);
+        return token;
+      });
+      let html = marked.parse(masked);
+      for (let i = 0; i < mathTokens.length; i++) {
+        const token = `@@@MATH_${i}@@@`;
+        html = html.replace(token, () => mathTokens[i]);
+      }
+      html = html.replace(/<table(\s*[^>]*)>/gi, '<div class="table-responsive"><table$1>').replace(/<\/table>/gi, '</table></div>');
+      return html;
+    }
+
+    function triggerMathRendering(targetEl = document.body) {
+      if (!targetEl) return;
+      if (typeof window.renderMathInElement === "function") {
+        try {
+          window.renderMathInElement(targetEl, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "\\[", right: "\\]", display: true },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "$", right: "$", display: false }
+            ],
+            throwOnError: false
+          });
+        } catch (e) {
+          console.warn("KaTeX render error:", e);
+        }
+      } else {
+        setTimeout(() => triggerMathRendering(targetEl), 60);
+      }
+    }
+
+    function initWorkspace() {
+      if (typeof STUDY_DATA === "undefined" || !STUDY_DATA.courses || STUDY_DATA.courses.length === 0) {
+        console.warn("No STUDY_DATA found or courses empty.");
+        return;
+      }
+
+      // Populate Course Selector
+      const courseSelect = document.getElementById("courseSelect");
+      courseSelect.innerHTML = "";
+      STUDY_DATA.courses.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.label;
+        courseSelect.appendChild(opt);
+      });
+
+      // Parse URL Search Parameters for Deep Linking
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramCourse = urlParams.get("course");
+      const paramNote = urlParams.get("note") || urlParams.get("node");
+      const paramCue = urlParams.get("cue");
+      const paramTime = urlParams.get("t");
+      const paramMode = urlParams.get("mode");
+
+      if (paramCourse && STUDY_DATA.courses.some(c => c.id === paramCourse)) {
+        currentCourse = paramCourse;
+      } else if (paramNote) {
+        const normQuery = paramNote.toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ").trim();
+        for (const c of STUDY_DATA.courses) {
+          const notes = getNotesForCourse(c.id);
+          const match = notes.find(n => {
+            const normId = n.id.toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ");
+            const normStem = (n.stem || "").toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ");
+            return normId.includes(normQuery) || normStem.includes(normQuery);
+          });
+          if (match) {
+            currentCourse = c.id;
+            break;
+          }
+        }
+      }
+      if (!currentCourse || !STUDY_DATA.courses.some(c => c.id === currentCourse)) {
+        currentCourse = STUDY_DATA.courses[0].id;
+      }
+      courseSelect.value = currentCourse;
+
+      renderSidebarTree(currentCourse);
+
+      // Select Note
+      const courseNotes = getNotesForCourse(currentCourse);
+      const firstCornell = courseNotes.find(n => (n.cues && n.cues.length > 0) || (n.sections && n.sections.length > 0));
+      let targetNote = firstCornell ? firstCornell.id : (courseNotes[0] ? courseNotes[0].id : "");
+      if (paramNote) {
+        const normQuery = paramNote.toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ").trim();
+        const found = courseNotes.find(n => {
+          const normId = n.id.toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ");
+          const normStem = (n.stem || "").toLowerCase().replace(/\+/g, " ").replace(/\s+/g, " ");
+          return normId.includes(normQuery) || normStem.includes(normQuery);
+        });
+        if (found) targetNote = found.id;
+      }
+
+      if (targetNote) {
+        selectNote(targetNote, paramCue ? parseInt(paramCue, 10) : 0, paramTime ? parseInt(paramTime, 10) : null);
+      }
+
+      if (paramMode && ["sync", "quiz", "doc"].includes(paramMode)) {
+        switchViewMode(paramMode);
+      } else {
+        switchViewMode("doc");
+      }
+
+      updateProgressStats();
+      setupKeyboardShortcuts();
+      initVideoTimelineListeners();
+    }
+
+    function getNotesForCourse(courseId) {
+      if (!STUDY_DATA || !STUDY_DATA.notes) return [];
+      return Object.values(STUDY_DATA.notes).filter(n => n.course === courseId);
+    }
+
+    function onCourseSelectChange(newCourse) {
+      currentCourse = newCourse;
+      renderSidebarTree(currentCourse);
+      const notes = getNotesForCourse(currentCourse);
+      if (notes.length > 0) {
+        selectNote(notes[0].id);
+      }
+      updateProgressStats();
+    }
+
+    function getModuleSortKey(modName) {
+      const lower = (modName || '').toLowerCase();
+      if (lower.includes('overview') || lower.includes('syllabus') || lower.includes('intro') || lower.includes('start') || lower.includes('welcome')) return -1000;
+      if (lower.includes('orientation') || lower.includes('admin') || lower.includes('fluff') || lower.includes('policy')) return 950;
+      if (lower.includes('assignment') || lower.includes('project') || lower.includes('quiz') || lower.includes('practice') || lower.includes('exam')) return 900;
+      const match = lower.match(/(?:week|module|w|m)\s*(\d+)/i);
+      if (match) return parseInt(match[1], 10);
+      const anyNum = lower.match(/\d+/);
+      return anyNum ? parseInt(anyNum[0], 10) : 500;
+    }
+
+    function renderSidebarTree(courseId) {
+      const treeContainer = document.getElementById("sidebarTree");
+      treeContainer.innerHTML = "";
+
+      let notes = getNotesForCourse(courseId);
+      if (activeMaterialFilter === "cornell" || activeMaterialFilter === "study") {
+        notes = notes.filter(n => (n.cues && n.cues.length > 0) || (n.sections && n.sections.length > 0));
+      } else if (activeMaterialFilter === "video") {
+        notes = notes.filter(n => n.video_src || n.zoom_url);
+      } else if (activeMaterialFilter === "transcript") {
+        notes = notes.filter(n => n.asset_type === "transcript" || n.title.toLowerCase().includes("transcript") || n.id.toLowerCase().includes("transcript"));
+      } else if (activeMaterialFilter === "issues") {
+        notes = notes.filter(n => auditNote(n).some(d => d.severity === "CRITICAL" || d.severity === "DEFECT"));
+      }
+
+      if (activeMaterialFilter === "issues" && notes.length === 0) {
+        treeContainer.innerHTML = `
+          <div style="padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px;">
+            <div style="font-size: 28px; margin-bottom: 8px;">✅</div>
+            <strong style="color: #34d399; display: block; margin-bottom: 6px;">Zero Critical Defects</strong>
+            <span style="line-height:1.5;">No flawed sheets found in this course. Select another course above or run <code>./doctor.py --errors</code> in terminal.</span>
+          </div>
+        `;
+        return;
+      }
+
+      if (activeMaterialFilter === "issues" && notes.length > 0 && !notes.some(n => n.id === currentNoteId)) {
+        selectNote(notes[0].id);
+      }
+
+      // Group by module
+      const modulesMap = {};
+      notes.forEach(n => {
+        const mod = n.module || "General Modules";
+        if (!modulesMap[mod]) modulesMap[mod] = [];
+        modulesMap[mod].push(n);
+      });
+
+      // Sort module names chronologically
+      const sortedModNames = Object.keys(modulesMap).sort((a, b) => {
+        const keyA = getModuleSortKey(a);
+        const keyB = getModuleSortKey(b);
+        if (keyA !== keyB) return keyA - keyB;
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      sortedModNames.forEach(modName => {
+        const modNotes = modulesMap[modName];
+        if (!modNotes || modNotes.length === 0) return;
+        const groupEl = document.createElement("div");
+        groupEl.className = "module-group";
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "module-title";
+        titleEl.innerHTML = `<span>📅 ${modName}</span><span>${modNotes.length} Notes</span>`;
+        groupEl.appendChild(titleEl);
+
+        modNotes.forEach(n => {
+          const itemEl = document.createElement("div");
+          itemEl.className = `lecture-item ${n.id === currentNoteId ? 'active' : ''}`;
+          itemEl.id = `sidebar_item_${n.id}`;
+          itemEl.onclick = () => selectNote(n.id);
+
+          const cueCount = n.cues ? n.cues.length : 0;
+          const hasVideo = !!(n.video_src || n.zoom_url);
+          const noteDefects = auditNote(n).filter(d => d.severity === "CRITICAL" || d.severity === "DEFECT");
+          const defectBadge = noteDefects.length > 0 ? `<span class="badge-issues" title="${noteDefects.map(d=>d.msg).join('&#10;')}" style="background:rgba(248,81,73,0.2); color:#ff7b72; border:1px solid rgba(248,81,73,0.4); padding:1px 5px; border-radius:3px; font-size:10px; font-weight:700;">🚨 ${noteDefects.length}</span>` : "";
+
+          let assetIcon = "📄";
+          if (cueCount > 0) assetIcon = "⚡";
+          else if (n.asset_type === "transcript" || n.title.toLowerCase().includes("transcript")) assetIcon = "🎙️";
+          else if (n.asset_type === "spreadsheet" || n.title.toLowerCase().includes("excel")) assetIcon = "📊";
+          else if (hasVideo) assetIcon = "🎬";
+
+          itemEl.innerHTML = `
+            <div class="lecture-left">
+              <span>${assetIcon}</span>
+              <span style="overflow:hidden; text-overflow:ellipsis;">${n.title}</span>
+            </div>
+            <div class="lecture-badges">
+              ${defectBadge}
+              <span class="badge-cues">⚡ ${cueCount}</span>
+              ${hasVideo ? '<span class="badge-video">🎬</span>' : ''}
+            </div>
+          `;
+          groupEl.appendChild(itemEl);
+        });
+
+        treeContainer.appendChild(groupEl);
+      });
+    }
+
+    function selectNote(noteId, targetCueIndex = 0, targetTime = null) {
+      currentNoteId = noteId;
+      currentNoteData = STUDY_DATA.notes[noteId];
+      if (!currentNoteData) return;
+
+      // Update sidebar active highlights
+      document.querySelectorAll(".lecture-item").forEach(el => el.classList.remove("active"));
+      const activeSidebarItem = document.getElementById(`sidebar_item_${noteId}`);
+      if (activeSidebarItem) activeSidebarItem.classList.add("active");
+
+      // Update Header Breadcrumb
+      document.getElementById("breadcrumbCourse").textContent = currentNoteData.course || currentCourse;
+      document.getElementById("breadcrumbLecture").textContent = currentNoteData.title || "Lecture";
+
+      // Update Lecture Heading Area
+      document.getElementById("lectureTitle").textContent = currentNoteData.title;
+      document.getElementById("lectureCourseBadge").textContent = currentNoteData.course;
+      const cueCount = currentNoteData.cues ? currentNoteData.cues.length : 0;
+      document.getElementById("lectureCueCount").textContent = `${cueCount} Cues`;
+      document.getElementById("lectureSourcePath").textContent = currentNoteData.source || "";
+
+      // Update Quiz switcher button with badge count
+      const btnQuiz = document.getElementById("btnQuizView");
+      if (btnQuiz) {
+        btnQuiz.innerHTML = `<span>⚡</span> Active Recall Quiz <span style="font-size:11px; opacity:0.8; margin-left:3px;">(${cueCount})</span>`;
+        btnQuiz.style.opacity = cueCount === 0 ? "0.5" : "1";
+      }
+
+      // Update Doc/Cornell switcher button dynamically
+      const btnDoc = document.getElementById("btnDocView");
+      if (btnDoc) {
+        if (cueCount > 0) {
+          btnDoc.innerHTML = `<span>⚡</span> Cornell Sheet`;
+          btnDoc.title = "View structured Cornell Sheet with active-recall cue pairs";
+        } else {
+          btnDoc.innerHTML = `<span>📄</span> Document Reader`;
+          btnDoc.title = "View source Markdown document";
+        }
+      }
+      const brandBadge = document.querySelector(".brand-badge");
+      if (brandBadge && currentViewMode === "doc") {
+        brandBadge.textContent = cueCount > 0 ? "Cornell Sheet" : "Document Reader";
+      }
+
+      // Setup Video Player
+      setupVideoForNote(currentNoteData, targetTime);
+
+      // Render Cues & Notes
+      renderCornellNotesStage(currentNoteData);
+
+      // Render Active Evidence for first or target cue
+      activeCueIndex = targetCueIndex;
+      highlightActiveCue(activeCueIndex);
+
+      // Build Quiz Cards
+      buildQuizDeck(currentNoteData);
+
+      // Render Document Sheet
+      renderDocSheet(currentNoteData);
+
+      // Smart view routing: if note has NO video and NO cues, default to doc mode when in sync mode
+      const hasVideo = !!(currentNoteData.video_src || currentNoteData.zoom_url);
+      if (!hasVideo && cueCount === 0 && currentViewMode === "sync") {
+        switchViewMode("doc");
+      }
+
+      triggerMathRendering(document.body);
+    }
+
+    let currentTimelineAnchors = [];
+
+    function collectTimelineAnchors(note) {
+      const anchors = [];
+      let globalCueIdx = 0;
+      (note.sections || []).forEach(sec => {
+        (sec.entries || []).forEach(entry => {
+          const cueIdx = globalCueIdx++;
+          const ve = entry.video_evidence;
+          if (ve && ve.anchors && ve.anchors.length > 0) {
+            ve.anchors.forEach(a => {
+              if (typeof a.start_seconds === "number" && a.start_seconds >= 0) {
+                anchors.push({
+                  seconds: a.start_seconds,
+                  time_str: a.time_str || formatSeconds(a.start_seconds),
+                  cue: cleanCueText(entry.cue),
+                  badge: entry.badge || "CONCEPT",
+                  role: a.role || "concept_explanation",
+                  cueIdx: cueIdx
+                });
+              }
+            });
+          } else if (entry.video && typeof entry.video.seconds === "number" && entry.video.seconds >= 0) {
+            anchors.push({
+              seconds: entry.video.seconds,
+              time_str: entry.video.time_str || formatSeconds(entry.video.seconds),
+              cue: cleanCueText(entry.cue),
+              badge: entry.badge || "CONCEPT",
+              role: "concept_explanation",
+              cueIdx: cueIdx
+            });
+          }
+        });
+      });
+      return anchors;
+    }
+
+    function renderTimelinePips() {
+      const pipsContainer = document.getElementById("timelinePipsContainer");
+      if (!pipsContainer) return;
+      pipsContainer.innerHTML = "";
+
+      const videoEl = document.getElementById("activeVideoPlayer");
+      const duration = videoEl ? videoEl.duration : 0;
+      const countEl = document.getElementById("timelineCueCount");
+
+      if (countEl) {
+        countEl.textContent = `${currentTimelineAnchors.length} timestamp cue${currentTimelineAnchors.length === 1 ? '' : 's'}`;
+      }
+
+      if (!duration || isNaN(duration) || duration <= 0) {
+        return;
+      }
+
+      currentTimelineAnchors.forEach((anc) => {
+        const pct = Math.min(100, Math.max(0, (anc.seconds / duration) * 100));
+        const pip = document.createElement("div");
+        pip.className = `timeline-pip ${anc.role === 'worked_example' ? 'role-example' : 'role-theory'}`;
+        pip.style.left = `${pct}%`;
+        pip.setAttribute("data-seconds", anc.seconds);
+        pip.setAttribute("data-time", anc.time_str);
+        pip.setAttribute("data-cue", anc.cue);
+        pip.setAttribute("data-role", anc.role);
+        pip.setAttribute("data-idx", anc.cueIdx);
+
+        pip.addEventListener("mouseenter", () => {
+          showPipTooltip(anc, pip);
+        });
+        pip.addEventListener("mouseleave", hidePipTooltip);
+        pip.addEventListener("click", (e) => {
+          e.stopPropagation();
+          seekVideoAnchor(anc.seconds, anc.cueIdx, e);
+        });
+
+        pipsContainer.appendChild(pip);
+      });
+    }
+
+    function showPipTooltip(anchor, pipEl) {
+      const tooltip = document.getElementById("timelineTooltip");
+      const track = document.getElementById("timelineTrack");
+      if (!tooltip || !track) return;
+
+      const roleLabel = anchor.role === "worked_example" ? "Example" : (anchor.role === "concept_explanation" ? "Theory" : "Cue");
+      tooltip.innerHTML = `
+        <div class="tooltip-header">
+          <span class="tooltip-time">▶ ${anchor.time_str}</span>
+          <span class="tooltip-badge">${roleLabel}</span>
+          <span class="tooltip-badge">#${anchor.cueIdx + 1}</span>
+        </div>
+        <div class="tooltip-cue-text">${anchor.cue}</div>
+      `;
+      tooltip.style.display = "block";
+
+      const trackRect = track.getBoundingClientRect();
+      const pipRect = pipEl.getBoundingClientRect();
+      const offsetLeft = (pipRect.left - trackRect.left) + (pipRect.width / 2);
+      tooltip.style.left = `${offsetLeft}px`;
+    }
+
+    function hidePipTooltip() {
+      const tooltip = document.getElementById("timelineTooltip");
+      if (tooltip) tooltip.style.display = "none";
+    }
+
+    function onTimelineTrackClick(e) {
+      const video = document.getElementById("activeVideoPlayer");
+      const track = document.getElementById("timelineTrack");
+      if (!video || !video.duration || isNaN(video.duration) || !track) return;
+      const rect = track.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      video.currentTime = pos * video.duration;
+      video.play().catch(() => {});
+    }
+
+    function initVideoTimelineListeners() {
+      const videoEl = document.getElementById("activeVideoPlayer");
+      if (!videoEl || videoEl._timelineListenersBound) return;
+      videoEl._timelineListenersBound = true;
+
+      videoEl.addEventListener("timeupdate", () => {
+        const cur = videoEl.currentTime || 0;
+        const dur = videoEl.duration || 0;
+        const curEl = document.getElementById("timelineTimeCurrent");
+        const totEl = document.getElementById("timelineTimeTotal");
+        const progEl = document.getElementById("timelineProgress");
+
+        if (curEl) curEl.textContent = formatSeconds(cur);
+        if (totEl && dur > 0) totEl.textContent = formatSeconds(dur);
+        if (progEl && dur > 0) {
+          progEl.style.width = `${Math.min(100, (cur / dur) * 100)}%`;
+        }
+      });
+
+      videoEl.addEventListener("progress", () => {
+        const dur = videoEl.duration || 0;
+        const bufEl = document.getElementById("timelineBuffered");
+        if (bufEl && videoEl.buffered && videoEl.buffered.length > 0 && dur > 0) {
+          const bufEnd = videoEl.buffered.end(videoEl.buffered.length - 1);
+          bufEl.style.width = `${Math.min(100, (bufEnd / dur) * 100)}%`;
+        }
+      });
+
+      videoEl.addEventListener("loadedmetadata", () => {
+        const dur = videoEl.duration || 0;
+        const totEl = document.getElementById("timelineTimeTotal");
+        if (totEl && dur > 0) totEl.textContent = formatSeconds(dur);
+        renderTimelinePips();
+      });
+
+      videoEl.addEventListener("durationchange", () => {
+        renderTimelinePips();
+      });
+    }
+
+    function setupVideoForNote(note, targetTime = null) {
+      const videoEl = document.getElementById("activeVideoPlayer");
+      const zoomCard = document.getElementById("zoomCloudCard");
+      const videoViewport = document.getElementById("videoViewport");
+
+      currentTimelineAnchors = collectTimelineAnchors(note);
+      renderTimelinePips();
+
+      const vSrc = note.video_src || "";
+      const zUrl = note.zoom_url || "";
+      const zPass = note.passcode || "";
+      const mediaStage = document.querySelector(".media-stage");
+
+      if (vSrc && vSrc.endsWith(".mp4")) {
+        if (mediaStage) mediaStage.style.display = "flex";
+        zoomCard.style.display = "none";
+        videoViewport.style.display = "block";
+        const applySeek = () => {
+          renderTimelinePips();
+          if (targetTime !== null && targetTime >= 0) {
+            videoEl.currentTime = targetTime;
+            videoEl.play().catch(() => {});
+          }
+        };
+        if (!videoEl.src || !videoEl.src.endsWith(vSrc)) {
+          videoEl.src = vSrc;
+          videoEl.addEventListener("loadedmetadata", applySeek, { once: true });
+        } else {
+          applySeek();
+        }
+      } else if (zUrl) {
+        if (mediaStage) mediaStage.style.display = "flex";
+        videoViewport.style.display = "none";
+        zoomCard.style.display = "flex";
+        document.getElementById("zoomPasscodeText").textContent = zPass || "(No Passcode Required)";
+        document.getElementById("zoomTimeInfo").innerHTML = `Timestamp: <strong>${formatSeconds(targetTime || 0)}</strong>`;
+        window.currentZoomUrl = zUrl;
+        window.currentZoomPasscode = zPass;
+      } else {
+        if (mediaStage) mediaStage.style.display = "none";
+        videoViewport.style.display = "none";
+        zoomCard.style.display = "none";
+      }
+    }
+
+    function renderCornellNotesStage(note) {
+      const container = document.getElementById("notesContainer");
+      container.innerHTML = "";
+
+      if (!note.sections || note.sections.length === 0) {
+        if (note.markdown_content) {
+          let badgeHtml = '<span>📄</span> <span>Course Document</span>';
+          if (note.asset_type === "spreadsheet" || (note.title && note.title.toLowerCase().includes("excel"))) {
+            badgeHtml = '<span class="badge-spreadsheet">📊 Spreadsheet Workbook / Data Sheet</span>';
+          } else if (note.asset_type === "transcript" || (note.title && note.title.toLowerCase().includes("transcript"))) {
+            badgeHtml = '<span class="badge-transcript">🎙️ Audio Recording Transcript (ASR)</span>';
+          }
+
+          let content = note.markdown_content;
+          if (note.asset_type === "transcript" || (note.title && note.title.toLowerCase().includes("transcript"))) {
+            content = content.replace(/`\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?`/g, '<span class="transcript-timestamp">⏱ $1</span>')
+                             .replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, '<span class="transcript-timestamp">⏱ $1</span>');
+          }
+
+          container.innerHTML = `
+            <div class="raw-markdown-reader" style="padding:24px; background:var(--surface); border:1px solid var(--border); border-radius:10px; line-height:1.7; color:var(--text-main);">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); font-weight:600; font-size:14px;">
+                ${badgeHtml}
+              </div>
+              <div class="markdown-body-rendered">${renderMarkdownSafe(content)}</div>
+            </div>`;
+          triggerMathRendering(container);
+          return;
+        }
+        container.innerHTML = `<div style="color:var(--text-dim); padding:20px;">No Cornell sections or notes compiled for this note.</div>`;
+        return;
+      }
+
+      let globalCueIdx = 0;
+
+      note.sections.forEach((sec, sIdx) => {
+        const secEl = document.createElement("div");
+        secEl.className = "notes-section";
+
+        const secHeader = document.createElement("div");
+        secHeader.className = "section-header-title";
+        secHeader.innerHTML = `<span>📌</span> <span>${sec.heading}</span>`;
+        secEl.appendChild(secHeader);
+
+        (sec.entries || []).forEach((entry, eIdx) => {
+          const cueIdx = globalCueIdx++;
+          const cardEl = document.createElement("div");
+          cardEl.className = `cornell-cue-card ${cueIdx === activeCueIndex ? 'active-cue' : ''}`;
+          cardEl.id = `cue_card_${cueIdx}`;
+
+          // Rating state
+          const savedRate = localStorage.getItem(`${STORAGE_KEY_PREFIX}${note.id}_${cueIdx}`) || "";
+
+          // Video anchors list
+          let anchorsHtml = "";
+          const evidence = entry.video_evidence;
+          if (evidence && evidence.anchors && evidence.anchors.length > 0) {
+            evidence.anchors.forEach(a => {
+              const label = a.role === "concept_explanation" ? "Theory" : (a.role === "worked_example" ? "Example" : "Timestamp");
+              anchorsHtml += `<button class="cue-time-chip" onclick="seekVideoAnchor(${a.start_seconds}, ${cueIdx}, event)">▶ ${a.time_str || formatSeconds(a.start_seconds)} ${label}</button>`;
+            });
+          } else if (entry.video && typeof entry.video.seconds === "number" && entry.video.seconds >= 0) {
+            anchorsHtml += `<button class="cue-time-chip" onclick="seekVideoAnchor(${entry.video.seconds}, ${cueIdx}, event)">▶ ${entry.video.time_str || formatSeconds(entry.video.seconds)} Video</button>`;
+          }
+
+          // Format notes markdown
+          let parsedNotes = renderMarkdownSafe(entry.notes || "");
+
+          cardEl.innerHTML = `
+            <div class="cue-card-top" onclick="onCueCardClick(${cueIdx})">
+              <div class="cue-card-badges">
+                <span class="cue-type-tag">${entry.badge || 'CONCEPT'}</span>
+                <span style="font-size:11px; color:var(--text-sub);">Cue #${cueIdx + 1}</span>
+              </div>
+              <div class="cue-question-text">${cleanCueText(entry.cue)}</div>
+              <div class="cue-anchors-inline">${anchorsHtml}</div>
+            </div>
+            <div class="cue-card-body" id="cue_body_${cueIdx}">
+              ${parsedNotes}
+            </div>
+            <div class="cue-recall-actions">
+              <span style="color:var(--text-sub)">Rate Your Recall:</span>
+              <div class="recall-buttons">
+                <button class="btn-rate rate-again ${savedRate === 'again' ? 'active' : ''}" onclick="rateCue(${cueIdx}, 'again', event)">🔴 Again</button>
+                <button class="btn-rate rate-good ${savedRate === 'good' ? 'active' : ''}" onclick="rateCue(${cueIdx}, 'good', event)">🟡 Good</button>
+                <button class="btn-rate rate-easy ${savedRate === 'easy' ? 'active' : ''}" onclick="rateCue(${cueIdx}, 'easy', event)">🟢 Easy</button>
+              </div>
+            </div>
+          `;
+
+          secEl.appendChild(cardEl);
+        });
+
+        container.appendChild(secEl);
+      });
+    }
+
+    function onCueCardClick(cueIdx) {
+      activeCueIndex = cueIdx;
+      highlightActiveCue(cueIdx);
+
+      // Seek video to first anchor of this cue if available
+      const cue = getCueByIndex(cueIdx);
+      if (cue && cue.video_evidence && cue.video_evidence.anchors && cue.video_evidence.anchors.length > 0) {
+        const firstAnchor = cue.video_evidence.anchors[0];
+        seekVideoAnchor(firstAnchor.start_seconds, cueIdx);
+      }
+    }
+
+    function getCueByIndex(index) {
+      if (!currentNoteData || !currentNoteData.sections) return null;
+      let counter = 0;
+      for (const s of currentNoteData.sections) {
+        for (const e of (s.entries || [])) {
+          if (counter === index) return e;
+          counter++;
+        }
+      }
+      return null;
+    }
+
+    function highlightActiveCue(cueIdx) {
+      document.querySelectorAll(".cornell-cue-card").forEach(c => c.classList.remove("active-cue"));
+      const targetCard = document.getElementById(`cue_card_${cueIdx}`);
+      if (targetCard) {
+        targetCard.classList.add("active-cue");
+        targetCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      const cue = getCueByIndex(cueIdx);
+      if (!cue) return;
+
+      // Update Left Evidence Panel
+      const evidence = cue.video_evidence || {};
+      const roleBadge = document.getElementById("evidenceRoleBadge");
+      const chipsRow = document.getElementById("anchorChipsRow");
+      const quoteCard = document.getElementById("spokenQuoteCard");
+      const quoteText = document.getElementById("spokenQuoteText");
+      const slideCard = document.getElementById("slideKeyframeCard");
+      const slideImg = document.getElementById("slideKeyframeImg");
+
+      chipsRow.innerHTML = "";
+      const anchors = evidence.anchors || [];
+
+      if (anchors.length > 0) {
+        roleBadge.textContent = anchors[0].role ? anchors[0].role.replace("_", " ").toUpperCase() : "VERIFIED ANCHOR";
+        anchors.forEach((a, aIdx) => {
+          const btn = document.createElement("button");
+          btn.className = `anchor-chip ${aIdx === 0 ? 'active' : ''}`;
+          const label = a.role === "concept_explanation" ? "Concept Theory" : (a.role === "worked_example" ? "Worked Example" : "Anchor");
+          btn.innerHTML = `<span>▶</span> <span>${a.time_str || formatSeconds(a.start_seconds)}</span> &bull; <span>${label}</span>`;
+          btn.onclick = () => {
+            document.querySelectorAll(".anchor-chip").forEach(c => c.classList.remove("active"));
+            btn.classList.add("active");
+            seekVideoAnchor(a.start_seconds, cueIdx);
+            if (a.evidence_quote) {
+              quoteCard.style.display = "block";
+              quoteText.textContent = `"${a.evidence_quote}"`;
+            }
+          };
+          chipsRow.appendChild(btn);
+        });
+
+        // Show primary quote
+        if (anchors[0].evidence_quote) {
+          quoteCard.style.display = "block";
+          quoteText.textContent = `"${anchors[0].evidence_quote}"`;
+        } else {
+          quoteCard.style.display = "none";
+        }
+      } else {
+        roleBadge.textContent = "TEXT / SLIDE DERIVATION";
+        chipsRow.innerHTML = `<span style="font-size:12px; color:var(--text-sub);">No direct video timestamp for this card.</span>`;
+        quoteCard.style.display = "none";
+      }
+
+      // Check for slide image
+      const notesContent = cue.notes || "";
+      const imgMatch = notesContent.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+      if (imgMatch) {
+        slideCard.style.display = "block";
+        slideImg.src = imgMatch[2];
+        document.getElementById("slideKeyframeTitle").textContent = imgMatch[1] || "Slide Diagram";
+      } else {
+        slideCard.style.display = "none";
+      }
+    }
+
+    function seekVideoAnchor(seconds, cueIdx = null, event = null) {
+      if (event) event.stopPropagation();
+      if (cueIdx !== null && cueIdx !== activeCueIndex) {
+        activeCueIndex = cueIdx;
+        highlightActiveCue(cueIdx);
+      }
+
+      const video = document.getElementById("activeVideoPlayer");
+      if (video && video.src && !video.src.endsWith("#")) {
+        video.currentTime = seconds;
+        video.play().catch(() => {});
+      } else if (window.currentZoomUrl) {
+        document.getElementById("zoomTimeInfo").innerHTML = `Timestamp: <strong>${formatSeconds(seconds)}</strong>`;
+      }
+    }
+
+    function skipVideo(delta) {
+      const video = document.getElementById("activeVideoPlayer");
+      if (video) video.currentTime = Math.max(0, video.currentTime + delta);
+    }
+
+    function setVideoSpeed(speed, btn) {
+      const video = document.getElementById("activeVideoPlayer");
+      if (video) video.playbackRate = speed;
+      document.querySelectorAll(".speed-pills .speed-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    function launchZoomCloud() {
+      if (window.currentZoomPasscode) {
+        navigator.clipboard.writeText(window.currentZoomPasscode).catch(() => {});
+      }
+      if (window.currentZoomUrl) {
+        window.open(window.currentZoomUrl, "_blank");
+      }
+    }
+
+    function rateCue(cueIdx, rating, event) {
+      if (event) event.stopPropagation();
+      if (!currentNoteData) return;
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${currentNoteData.id}_${cueIdx}`, rating);
+
+      const card = document.getElementById(`cue_card_${cueIdx}`);
+      if (card) {
+        const btns = card.querySelectorAll(".btn-rate");
+        btns.forEach(b => b.classList.remove("active"));
+        const targetBtn = card.querySelector(`.rate-${rating}`);
+        if (targetBtn) targetBtn.classList.add("active");
+      }
+
+      updateProgressStats();
+    }
+
+    function updateProgressStats() {
+      if (!STUDY_DATA || !STUDY_DATA.notes) return;
+      const courseNotes = getNotesForCourse(currentCourse);
+      let totalCues = 0;
+      let masteredCues = 0;
+
+      courseNotes.forEach(n => {
+        const count = n.cues ? n.cues.length : 0;
+        totalCues += count;
+        for (let i = 0; i < count; i++) {
+          const rate = localStorage.getItem(`${STORAGE_KEY_PREFIX}${n.id}_${i}`);
+          if (rate === "good" || rate === "easy") {
+            masteredCues++;
+          }
+        }
+      });
+
+      const pct = totalCues > 0 ? Math.round((masteredCues / totalCues) * 100) : 0;
+      document.getElementById("progressText").textContent = `${masteredCues} / ${totalCues} Cues (${pct}%)`;
+      document.getElementById("progressBarFill").style.width = `${pct}%`;
+    }
+
+    function toggleAllAnswers() {
+      const bodies = document.querySelectorAll(".cue-card-body");
+      const btn = document.getElementById("btnToggleAllAnswers");
+      const isCurrentlyBlurred = Array.from(bodies).some(b => b.classList.contains("blurred"));
+
+      bodies.forEach(b => {
+        if (isCurrentlyBlurred) {
+          b.classList.remove("blurred");
+        } else {
+          b.classList.add("blurred");
+        }
+      });
+
+      btn.innerHTML = isCurrentlyBlurred ? "<span>🙈</span> Hide All" : "<span>👁️</span> Reveal All";
+    }
+
+    function switchViewMode(mode) {
+      currentViewMode = mode;
+      document.querySelectorAll(".view-switcher .view-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("viewSyncContainer").style.display = "none";
+      document.getElementById("viewQuizContainer").style.display = "none";
+      document.getElementById("viewDocContainer").style.display = "none";
+
+      const brandBadge = document.querySelector(".brand-badge");
+      if (mode === "sync") {
+        document.getElementById("btnSyncView").classList.add("active");
+        document.getElementById("viewSyncContainer").style.display = "flex";
+        if (brandBadge) brandBadge.textContent = "Lecture Sync";
+        triggerMathRendering(document.getElementById("notesContainer"));
+      } else if (mode === "quiz") {
+        document.getElementById("btnQuizView").classList.add("active");
+        document.getElementById("viewQuizContainer").style.display = "flex";
+        if (brandBadge) brandBadge.textContent = "Active Recall Quiz";
+        renderQuizCard(currentQuizIndex);
+      } else if (mode === "doc") {
+        document.getElementById("btnDocView").classList.add("active");
+        document.getElementById("viewDocContainer").style.display = "block";
+        const hasCues = currentNoteData && currentNoteData.cues && currentNoteData.cues.length > 0;
+        if (brandBadge) brandBadge.textContent = hasCues ? "Cornell Sheet" : "Document Reader";
+        triggerMathRendering(document.getElementById("docSheetPaper"));
+      }
+    }
+
+    // Active Recall Quiz Mode Logic
+    function buildQuizDeck(note) {
+      currentQuizCards = [];
+      if (!note || !note.sections) return;
+      note.sections.forEach(s => {
+        (s.entries || []).forEach(e => {
+          currentQuizCards.push(e);
+        });
+      });
+      currentQuizIndex = 0;
+    }
+
+    function renderQuizCard(idx) {
+      if (currentQuizCards.length === 0) {
+        document.getElementById("quizBadge").textContent = "NO CUES";
+        document.getElementById("quizCounter").textContent = "Card 0 of 0";
+        document.getElementById("quizQuestionHero").innerHTML = `
+          <div style="color:var(--text-dim); font-size:16px; padding:20px;">
+            This note does not have active recall cues compiled yet.<br>
+            <span style="font-size:13px; color:var(--text-sub);">Switch to Cornell Sync or Document view to read the source note.</span>
+          </div>`;
+        document.getElementById("quizAnswerHero").style.display = "none";
+        document.getElementById("btnQuizReveal").style.display = "none";
+        document.getElementById("quizRatingGroup").style.display = "none";
+        return;
+      }
+      const card = currentQuizCards[idx];
+      document.getElementById("quizBadge").textContent = card.badge || "CONCEPT";
+      document.getElementById("quizCounter").textContent = `Card ${idx + 1} of ${currentQuizCards.length}`;
+      document.getElementById("quizQuestionHero").innerHTML = cleanCueText(card.cue);
+
+      const ansEl = document.getElementById("quizAnswerHero");
+      ansEl.innerHTML = renderMarkdownSafe(card.notes || "");
+      ansEl.style.display = "none";
+
+      document.getElementById("btnQuizReveal").style.display = "inline-flex";
+      document.getElementById("quizRatingGroup").style.display = "none";
+
+      triggerMathRendering(document.getElementById("quizQuestionHero"));
+    }
+
+    function revealQuizAnswer() {
+      const ansEl = document.getElementById("quizAnswerHero");
+      ansEl.style.display = "block";
+      document.getElementById("btnQuizReveal").style.display = "none";
+      document.getElementById("quizRatingGroup").style.display = "flex";
+      triggerMathRendering(ansEl);
+    }
+
+    function rateQuizCard(rating) {
+      rateCue(currentQuizIndex, rating);
+      nextQuizCard();
+    }
+
+    function nextQuizCard() {
+      if (currentQuizIndex < currentQuizCards.length - 1) {
+        currentQuizIndex++;
+        renderQuizCard(currentQuizIndex);
+      } else {
+        alert("🎉 You finished reviewing this lecture's active recall cues!");
+        switchViewMode("sync");
+      }
+    }
+
+    function playQuizVideoAnchor() {
+      const card = currentQuizCards[currentQuizIndex];
+      if (card && card.video_evidence && card.video_evidence.anchors && card.video_evidence.anchors.length > 0) {
+        const anchor = card.video_evidence.anchors[0];
+        switchViewMode("sync");
+        seekVideoAnchor(anchor.start_seconds, currentQuizIndex);
+      } else {
+        alert("No video anchor attached to this cue.");
+      }
+    }
+
+    function toggleDocBlurAll() {
+      const boxes = document.querySelectorAll(".cornell-notes-box");
+      const hasBlurred = Array.from(boxes).some(b => b.classList.contains("blurred"));
+      boxes.forEach(b => {
+        if (hasBlurred) {
+          b.classList.remove("blurred");
+          b.classList.add("revealed");
+        } else {
+          b.classList.remove("revealed");
+          b.classList.add("blurred");
+        }
+      });
+      const btn = document.getElementById("btnDocBlurToggle");
+      if (btn) {
+        btn.innerHTML = hasBlurred ? "<span>🙈</span> Blur Answers (Self-Quiz)" : "<span>👁️</span> Reveal All Answers";
+      }
+    }
+    window.toggleDocBlurAll = toggleDocBlurAll;
+
+    function renderDocSheet(note) {
+      const paper = document.getElementById("docSheetPaper");
+      const cueCount = (note.cues || []).length;
+      const secCount = (note.sections || []).length;
+      const htmlRel = note.html_path || "";
+
+      let printLinkHtml = "";
+      if (htmlRel && htmlRel !== "#") {
+        printLinkHtml = `<a href="${htmlRel}" target="_blank" class="cornell-doc-btn" title="Open print-ready standalone HTML sheet"><span>📄</span> Standalone Sheet ↗</a>`;
+      }
+
+      let statsHtml = "";
+      let typeBadge = "";
+      if (cueCount > 0 || secCount > 0) {
+        statsHtml = `
+          <div class="cornell-doc-stats">
+            <span>⚡ ${cueCount} Active Recall Cues</span> &bull; 
+            <span>📂 ${secCount} Core Sections</span> &bull; 
+            <span style="color:#a6e3a1;">Interactive Cornell Notes Sheet</span>
+          </div>`;
+        typeBadge = '<span class="badge-cornell" style="background:rgba(166,227,161,0.15); color:#a6e3a1; border:1px solid rgba(166,227,161,0.3); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;">⚡ Cornell Sheet</span>';
+      } else {
+        const typeLabel = note.asset_type === "spreadsheet" ? "Spreadsheet Workbook" : (note.asset_type === "transcript" ? "Audio Recording Transcript" : "Course Markdown Document");
+        const typeColor = note.asset_type === "spreadsheet" ? "#fab387" : (note.asset_type === "transcript" ? "#fbbf24" : "#89b4fa");
+        statsHtml = `
+          <div class="cornell-doc-stats">
+            <span style="color:${typeColor};">📄 ${typeLabel}</span> &bull; 
+            <span style="color:var(--text-dim); font-size:12px;">Reference Document (No active-recall cue pairs compiled)</span>
+          </div>`;
+        typeBadge = '<span style="background:rgba(137,180,250,0.15); color:#89b4fa; border:1px solid rgba(137,180,250,0.3); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;">📄 Source Document</span>';
+      }
+
+      let headerHtml = `
+        <div class="cornell-doc-header">
+          <div class="cornell-doc-meta">
+            <div class="cornell-doc-pills">
+              <span class="cornell-doc-course-pill">${note.course}</span>
+              <span class="cornell-doc-module-pill">📅 ${note.module || "Module"}</span>
+              ${typeBadge}
+              ${note.asset_type === "spreadsheet" ? '<span class="badge-spreadsheet">📊 Spreadsheet Workbook</span>' : ''}
+              ${note.asset_type === "transcript" ? '<span class="badge-transcript">🎙️ Audio Recording Transcript</span>' : ''}
+            </div>
+            <div class="cornell-doc-actions">
+              ${secCount > 0 ? '<button class="cornell-doc-btn" id="btnDocBlurToggle" onclick="toggleDocBlurAll()"><span>🙈</span> Blur Answers (Self-Quiz)</button>' : ''}
+              ${printLinkHtml}
+              <button class="cornell-doc-btn" onclick="window.print()"><span>🖨️</span> Print</button>
+            </div>
+          </div>
+          <div class="cornell-doc-title">${note.title}</div>
+          ${statsHtml}
+        </div>
+      `;
+
+      const noteIssues = auditNote(note).filter(d => d.severity === "CRITICAL" || d.severity === "DEFECT" || d.severity === "WARNING");
+      let defectBannerHtml = "";
+      if (noteIssues.length > 0) {
+        defectBannerHtml = `
+          <div class="note-defect-banner">
+            <div class="defect-header">
+              <span>🚨 Ground-Truth Note Defects (${noteIssues.length})</span>
+              <span style="font-size:11px; font-weight:normal; color:var(--text-dim);">Run <code>./doctor.py --errors</code> in terminal to verify</span>
+            </div>
+            <ul>
+              ${noteIssues.map(d => `<li class="sev-${d.severity.toLowerCase()}"><strong>[${d.severity}]</strong> ${d.msg}</li>`).join("")}
+            </ul>
+            <div class="defect-source">Raw File: <code>${note.source || note.id}</code></div>
+          </div>
+        `;
+      }
+
+      if (!note.sections || note.sections.length === 0) {
+        if (note.markdown_content) {
+          let content = note.markdown_content;
+          if (note.asset_type === "transcript" || (note.title && note.title.toLowerCase().includes("transcript"))) {
+            content = content.replace(/`\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?`/g, '<span class="transcript-timestamp">⏱ $1</span>')
+                             .replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, '<span class="transcript-timestamp">⏱ $1</span>');
+          }
+          paper.innerHTML = `
+            ${headerHtml}
+            ${defectBannerHtml}
+            <div style="line-height:1.7; font-size:14px; color:var(--text-main);" class="doc-markdown-body">
+              ${renderMarkdownSafe(content)}
+            </div>`;
+        } else {
+          paper.innerHTML = `
+            ${headerHtml}
+            ${defectBannerHtml}
+            <div style="color:var(--text-dim); font-style:italic; padding:20px;">No content recorded for this note.</div>`;
+        }
+      } else {
+        let sectionsHtml = "";
+        let globalCueIdx = 0;
+
+        note.sections.forEach((sec, sIdx) => {
+          let rowsHtml = "";
+          (sec.entries || []).forEach((e, eIdx) => {
+            const cueIdx = globalCueIdx++;
+            const cueBadge = e.badge || "CONCEPT";
+            const parsedNotes = renderMarkdownSafe(e.notes || "");
+
+            let videoBtnHtml = "";
+            let timeSeconds = e.seconds;
+            let timeStr = e.timestamp;
+            const evidence = e.video_evidence;
+            if (evidence && evidence.anchors && evidence.anchors.length > 0) {
+              const a = evidence.anchors[0];
+              timeSeconds = a.start_seconds;
+              timeStr = a.time_str;
+            } else if (e.video && typeof e.video.seconds === "number") {
+              timeSeconds = e.video.seconds;
+              timeStr = e.video.time_str;
+            }
+
+            if (typeof timeSeconds === "number" && timeSeconds >= 0) {
+              videoBtnHtml = `
+                <button class="cornell-cue-video-btn" onclick="event.stopPropagation(); switchViewMode('sync'); seekVideoAnchor(${timeSeconds}, ${cueIdx})" title="Jump to timestamp in Lecture Sync">
+                  <span>▶</span> ${timeStr || formatSeconds(timeSeconds)}
+                </button>
+              `;
+            }
+
+            rowsHtml += `
+              <div class="cornell-entry-pair">
+                <div class="cornell-cue-box">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                    <span class="cornell-cue-badge">${cueBadge}</span>
+                    ${videoBtnHtml}
+                  </div>
+                  <div class="cornell-cue-text">${cleanCueText(e.cue)}</div>
+                </div>
+                <div class="cornell-notes-box revealed" onclick="this.classList.toggle('blurred')">
+                  ${parsedNotes}
+                </div>
+              </div>
+            `;
+          });
+
+          let summaryHtml = "";
+          if (sec.summary) {
+            summaryHtml = `
+              <div class="cornell-sec-summary">
+                <span style="font-size:15px;">💡</span>
+                <div><strong>Summary:</strong> ${sec.summary}</div>
+              </div>
+            `;
+          }
+
+          sectionsHtml += `
+            <div class="cornell-section-block">
+              <div class="cornell-sec-heading">
+                <span>📂</span> ${sec.heading || `Section ${sIdx + 1}`}
+              </div>
+              <div class="cornell-entries-list">
+                ${rowsHtml}
+              </div>
+              ${summaryHtml}
+            </div>
+          `;
+        });
+
+        paper.innerHTML = `
+          ${headerHtml}
+          ${defectBannerHtml}
+          ${sectionsHtml}
+        `;
+      }
+      triggerMathRendering(paper);
+    }
+
+    function formatSeconds(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function onSearchFilter(query) {
+      const q = query.toLowerCase().trim();
+      const treeContainer = document.getElementById("sidebarTree");
+      if (!treeContainer) return;
+      const existingEmpty = treeContainer.querySelector(".sidebar-empty-state");
+      if (existingEmpty) existingEmpty.remove();
+
+      let totalVisible = 0;
+
+      document.querySelectorAll("#sidebarTree .module-group").forEach(groupEl => {
+        let visibleInGroup = 0;
+        groupEl.querySelectorAll(".lecture-item").forEach(itemEl => {
+          const noteId = itemEl.id.replace("sidebar_item_", "");
+          const note = (typeof STUDY_DATA !== "undefined" && STUDY_DATA.notes) ? STUDY_DATA.notes[noteId] : null;
+
+          if (!note) return;
+
+          // Enforce active material filter
+          let matchesFilter = true;
+          if (activeMaterialFilter === "cornell" || activeMaterialFilter === "study") {
+            matchesFilter = (note.cues && note.cues.length > 0) || (note.sections && note.sections.length > 0);
+          } else if (activeMaterialFilter === "video") {
+            matchesFilter = !!(note.video_src || note.zoom_url);
+          } else if (activeMaterialFilter === "transcript") {
+            matchesFilter = (note.asset_type === "transcript" || (note.title && note.title.toLowerCase().includes("transcript")) || (note.id && note.id.toLowerCase().includes("transcript")));
+          }
+
+          if (!matchesFilter) {
+            itemEl.style.display = "none";
+            return;
+          }
+
+          if (!q) {
+            itemEl.style.display = "flex";
+            visibleInGroup++;
+            totalVisible++;
+            return;
+          }
+
+          let match = false;
+          // Check title & stem
+          if (note && note.title && note.title.toLowerCase().includes(q)) match = true;
+          else if (note && note.stem && note.stem.toLowerCase().includes(q)) match = true;
+          // Check Cornell cues (question, notes, section)
+          else if (note && Array.isArray(note.cues) && note.cues.some(c => 
+            (c.cue && c.cue.toLowerCase().includes(q)) ||
+            (c.notes && c.notes.toLowerCase().includes(q)) ||
+            (c.section && c.section.toLowerCase().includes(q))
+          )) match = true;
+          // Check sections & markdown content
+          else if (note && Array.isArray(note.sections) && note.sections.some(s => 
+            (s.title && s.title.toLowerCase().includes(q)) ||
+            (s.summary && s.summary.toLowerCase().includes(q)) ||
+            (Array.isArray(s.entries) && s.entries.some(e => 
+              (e.cue && e.cue.toLowerCase().includes(q)) ||
+              (e.notes && e.notes.toLowerCase().includes(q))
+            ))
+          )) match = true;
+          else if (note && note.markdown_content && note.markdown_content.toLowerCase().includes(q)) match = true;
+          else if (itemEl.textContent.toLowerCase().includes(q)) match = true;
+
+          itemEl.style.display = match ? "flex" : "none";
+          if (match) {
+            visibleInGroup++;
+            totalVisible++;
+          }
+        });
+
+        // Hide empty module groups when filtering
+        groupEl.style.display = (visibleInGroup > 0 || !q) ? "" : "none";
+
+        // Update module note counter badge dynamically
+        const counterSpan = groupEl.querySelector(".module-title span:last-child");
+        if (counterSpan) {
+          const totalInGroup = groupEl.querySelectorAll(".lecture-item").length;
+          counterSpan.textContent = q ? `${visibleInGroup} / ${totalInGroup} Notes` : `${totalInGroup} Notes`;
+        }
+      });
+
+      if (q && totalVisible === 0) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.className = "sidebar-empty-state";
+        emptyDiv.style.cssText = "padding: 24px 16px; text-align: center; color: var(--text-muted, #94a3b8); font-size: 0.85rem;";
+        emptyDiv.innerHTML = `🔍 No notes, cues, or formulas matching "<strong>${q}</strong>" in this course.`;
+        treeContainer.appendChild(emptyDiv);
+      }
+    }
+
+    function setupKeyboardShortcuts() {
+      document.addEventListener("keydown", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+        if (currentViewMode === "quiz") {
+          if (e.code === "Space") {
+            e.preventDefault();
+            revealQuizAnswer();
+          } else if (e.key === "1") {
+            rateQuizCard("again");
+          } else if (e.key === "2") {
+            rateQuizCard("good");
+          } else if (e.key === "3") {
+            rateQuizCard("easy");
+          } else if (e.key === "ArrowRight") {
+            nextQuizCard();
+          }
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", initWorkspace);
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>glitch-console · spawn states</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-end; }
+  figure { margin: 0; }
+  figcaption { color: var(--dim); font-size: var(--fs-2xs); margin-top: 8px; letter-spacing: var(--track-label); }
+  .sprite { --sprite-scale: 10px; }
+  h1 { width: 100%; font-size: var(--fs-sm); letter-spacing: var(--track-label); text-transform: uppercase; }
+  h1 span { color: var(--yellow); }
+</style>
+</head>
+<body>
+<h1><span>◆</span> spawn · five hard frames · nothing eases</h1>
+
+<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>1 · flash · 90ms · 1.0×</figcaption></figure>
+<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>2 · flash · 90ms · 1.35×</figcaption></figure>
+<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>3 · squash · 90ms · 1.2×</figcaption></figure>
+<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>4 · colour · 90ms · 1.05×</figcaption></figure>
+<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>5 · settle · 90ms · 1.0×</figcaption></figure>
+
+<script src="sprites.js"></script>
+<script>
+  const poses = [["flash", 1], ["flash", 1.35], ["squash", 1.2], ["rest", 1.05], ["rest", 1]];
+  document.querySelectorAll("canvas[data-static]").forEach((c, i) => Pixels.pose(c, ...poses[i]));
+</script>
+</body>
+</html>

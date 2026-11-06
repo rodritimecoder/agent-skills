@@ -1,0 +1,45 @@
+  <div id="detailsDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title" id="dTitle">Concept Title</div>
+      <button class="drawer-close" id="drawerClose">&times;</button>
+    </div>
+
+    <div id="dCourseBadge" class="course-badge">Course Name</div>
+
+    <div class="action-block" id="dStudyWorkspaceBlock" style="margin: 4px 0 6px 0;">
+      <a id="dStudyWorkspaceLink" href="study.html" target="_blank" class="study-workspace-btn" style="display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #1f6feb, #238636); color:#ffffff; padding:10px 14px; border-radius:8px; font-weight:600; font-size:13px; text-decoration:none; border:1px solid rgba(255,255,255,0.2); box-shadow:0 2px 8px rgba(0,0,0,0.4); transition:all 0.2s ease;">
+        <span>📖</span> Open in Study Workspace &rsaquo;
+      </a>
+    </div>
+
+    <div class="action-block" id="dCornellBlock" style="display:none; margin: 4px 0 6px 0;">
+      <a id="dCornellLink" href="#" target="_blank" class="cornell-action-btn" style="display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(166,227,161,0.12); color:#a6e3a1; border:1px solid rgba(166,227,161,0.3); padding:8px 12px; border-radius:6px; font-size:12px; text-decoration:none;">
+        <span>📝</span> View Cornell Notes (<span id="dCornellCues">0</span> Cues) &rsaquo;
+      </a>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-tag">Concept ID & Path</div>
+      <div class="meta-content" id="dId" style="font-family: monospace; font-size: 11px; color: var(--accent);">id</div>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-tag">Trust Tier</div>
+      <div class="meta-content" id="dTrust">Human-Reviewed</div>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-tag">Description</div>
+      <div class="meta-content" id="dDesc">Description goes here...</div>
+    </div>
+
+    <div class="meta-block" id="tagsContainer">
+      <div class="meta-tag">Tags</div>
+      <div class="tag-container" id="dTags"></div>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-tag">Connected Edges (<span id="dLinkCount">0</span>)</div>
+      <ul class="connections-list" id="dLinks"></ul>
+    </div>
+  </div>

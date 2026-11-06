@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>glitch-console · terminal</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body {
+    display: grid;
+    place-items: start center;
+    padding: var(--s-9);
+    background: var(--ink-900);
+  }
+  .win--paper { width: min(900px, 100%); }
+  .win__body { padding: var(--s-6) var(--s-8) var(--s-8); }
+  .spacer { height: calc(var(--s-10) * 2.4); }
+  .spacer--foot { height: calc(var(--s-10) * 1.2); }
+</style>
+</head>
+<body>
+
+<div class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path"><b>/glitch-orchestra</b></span>
+    <span class="win__chip">♪ orchestrator</span>
+  </div>
+
+  <div class="win__body">
+    <div class="spacer"></div>
+
+    <div class="log">
+      <p class="log__line log__line--cmd">&gt; /glitch-orchestra</p>
+      <p class="log__line"><span class="log__bullet">●</span>Started. A pane per worker.</p>
+      <p class="log__line"><span class="log__bullet">●</span>Three briefs out.</p>
+    </div>
+
+    <div class="stage">
+      <figure class="bot">
+        <canvas data-sprite="conductor" data-mood="outputting"></canvas>
+        <figcaption>
+          <div class="bot__name">conductor</div>
+          <div class="bot__note">✳ the plan</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--blue">
+        <canvas data-sprite="frontend" data-mood="thinking"></canvas>
+        <figcaption>
+          <div class="bot__name">frontend</div>
+          <div class="bot__note">✳ the world</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--pink">
+        <canvas data-sprite="copy" data-mood="outputting" data-offset="900"></canvas>
+        <figcaption>
+          <div class="bot__name">copy</div>
+          <div class="bot__note">· the words</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--mint">
+        <canvas data-sprite="tests" data-mood="thinking" data-offset="1600"></canvas>
+        <figcaption>
+          <div class="bot__name">tests</div>
+          <div class="bot__note">· the holdout</div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="spacer spacer--foot"></div>
+  </div>
+
+  <div class="win__foot">&gt;</div>
+</div>
+
+<script src="../sprites.js"></script>
+</body>
+</html>

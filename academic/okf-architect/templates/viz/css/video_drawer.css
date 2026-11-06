@@ -1,0 +1,155 @@
+    /* ============================================================
+       FLOATING SOLUTION VIDEO DRAWER (PiP PLAYER)
+       ============================================================ */
+    .video-drawer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 440px;
+      max-width: calc(100vw - 48px);
+      background: rgba(17, 20, 29, 0.96);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(137, 180, 250, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(137, 180, 250, 0.15);
+      z-index: 999999;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .video-drawer.minimized {
+      width: 320px;
+    }
+    .video-drawer.minimized .video-drawer-body {
+      display: none !important;
+    }
+    .video-drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: default;
+      user-select: none;
+    }
+    .video-drawer-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #cdd6f4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .video-drawer-time-pill {
+      font-size: 11px;
+      font-family: monospace;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(137, 180, 250, 0.2);
+      color: #89b4fa;
+      border: 1px solid rgba(137, 180, 250, 0.35);
+    }
+    .video-drawer-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .video-drawer-ctrl-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #a6adc8;
+      border-radius: 6px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+    .video-drawer-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+    .video-drawer-body {
+      padding: 10px;
+      background: #0d0f17;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Cue Video Badge */
+    .cornell-cue-video-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(243, 139, 168, 0.2), rgba(203, 166, 247, 0.2));
+      border: 1px solid rgba(243, 139, 168, 0.45);
+      color: #f5c2e7;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      width: fit-content;
+      text-decoration: none;
+    }
+    .cornell-cue-video-btn:hover {
+      background: linear-gradient(135deg, rgba(243, 139, 168, 0.35), rgba(203, 166, 247, 0.35));
+      border-color: #f38ba8;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(243, 139, 168, 0.3);
+    }
+
+    /* Anki Flashcard Video Button */
+    .anki-video-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(137, 180, 250, 0.2), rgba(203, 166, 247, 0.25));
+      border: 1px solid rgba(137, 180, 250, 0.5);
+      color: #cdd6f4;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .anki-video-btn:hover {
+      background: linear-gradient(135deg, rgba(137, 180, 250, 0.35), rgba(203, 166, 247, 0.4));
+      border-color: #89b4fa;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(137, 180, 250, 0.3);
+      transform: translateY(-1px);
+    }
+    .zoom-launch-btn {
+      background: linear-gradient(135deg, #2d8cf0, #1b62cc);
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(45, 140, 240, 0.35);
+      transition: all 0.15s ease;
+    }
+    .zoom-launch-btn:hover {
+      background: linear-gradient(135deg, #3d9af0, #2272e2);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(45, 140, 240, 0.5);
+    }
+

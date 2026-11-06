@@ -1,0 +1,46 @@
+{
+  "title": "Memory Hierarchy & CPU Caches",
+  "source": "examples/input.md",
+  "sections": [
+    {
+      "heading": "Cache Organization & Mapping",
+      "entries": [
+        {
+          "cue": "Why do architectures use a memory hierarchy?",
+          "notes": "To balance trade-offs between access speed, storage capacity, and cost. High-speed SRAM caches sit close to CPU registers while slower, high-capacity DRAM acts as main storage."
+        },
+        {
+          "cue": "What is the penalty of a cache miss vs cache hit?",
+          "notes": "Cache hits resolve in sub-nanosecond to a few nanoseconds (4-5 CPU cycles for L1). Cache misses require fetching from DRAM across the memory bus, taking 50–100 nanoseconds (~200+ cycles)."
+        },
+        {
+          "cue": "Compare the 3 cache placement policies",
+          "notes": "- Direct Mapped: Each block maps to exactly 1 cache line; simple and fast hardware, but prone to frequent conflict misses.\n- Fully Associative: Blocks can reside in any line; eliminates conflict misses but requires complex, expensive parallel search hardware.\n- Set Associative: Balanced hybrid where cache is split into sets with N ways (e.g., 8-way set associative)."
+        },
+        {
+          "cue": "Summary of cache levels, sizes, and latencies",
+          "notes": "| Cache Level | Typical Size | Typical Latency | Location |\n| :--- | :--- | :--- | :--- |\n| L1 Cache | 32 KB - 64 KB per core | 1 - 2 ns (4-5 cycles) | On-chip (Core) |\n| L2 Cache | 512 KB - 1 MB per core | 3 - 5 ns (12-14 cycles) | On-chip (Core) |\n| L3 Cache | 16 MB - 64 MB shared | 10 - 20 ns (40-60 cycles) | On-chip (Shared) |\n| Main DRAM | 16 GB - 128 GB | 60 - 100 ns | Off-chip DIMMs |"
+        }
+      ],
+      "summary": "CPU caches bridge the multi-order-of-magnitude speed disparity between fast processor cores and high-capacity DRAM using multi-tier L1/L2/L3 caches with set-associative placement."
+    },
+    {
+      "heading": "Locality Principles & Optimization",
+      "entries": [
+        {
+          "cue": "What are Temporal vs Spatial Locality?",
+          "notes": "1. Temporal Locality: Memory accessed once is likely to be accessed again soon (e.g. loop index variables, repeated functions).\n2. Spatial Locality: Memory items physically adjacent to recently accessed items are likely to be accessed soon (e.g. contiguous arrays)."
+        },
+        {
+          "cue": "How does loop ordering impact spatial locality in C?",
+          "notes": "Since C stores matrices in row-major order, traversing row-by-row maximizes cache line hits:\n```c\n// Good spatial locality (row-major order in C)\nfor (int i = 0; i < N; i++) {\n    for (int j = 0; j < N; j++) {\n        sum += matrix[i][j];\n    }\n}\n```\nTraversing column-first (`matrix[j][i]`) causes stride misses on every iteration once the matrix exceeds cache capacity."
+        },
+        {
+          "cue": "Reference text & authoritative documentation",
+          "notes": "For in-depth explanations and benchmarks, consult the [Computer Systems: A Programmer's Perspective Reference](https://csapp.cs.cmu.edu/)."
+        }
+      ],
+      "summary": "Exploiting hardware cache line prefetching through row-major data layout and sequential access patterns dramatically boosts execution speed by preventing high-latency DRAM misses."
+    }
+  ]
+}

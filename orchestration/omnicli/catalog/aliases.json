@@ -1,0 +1,716 @@
+{
+  "local": {
+    "aliases": [
+      "llm",
+      "local model",
+      "on device model",
+      "offline model",
+      "run a model locally",
+      "text generation",
+      "chat completion",
+      "servers on this machine",
+      "local endpoints",
+      "speech to text locally",
+      "read text from an image locally",
+      "what is running locally",
+      "local llm",
+      "local llm chat completion",
+      "run the local llm"
+    ],
+    "tags": [
+      "inference",
+      "endpoints",
+      "online",
+      "offline",
+      "running",
+      "status",
+      "servers"
+    ]
+  },
+  "local-hub": {
+    "aliases": [
+      "llm",
+      "local model",
+      "servers on this machine",
+      "health check endpoints",
+      "port status",
+      "tool registry",
+      "find a tool",
+      "search skills",
+      "run a skill",
+      "gateway"
+    ],
+    "tags": [
+      "gateway",
+      "inference",
+      "discovery"
+    ]
+  },
+  "academic-icm": {
+    "aliases": [
+      "course hub",
+      "canvas zoom cornell",
+      "lecture study pipeline",
+      "academic orchestrator"
+    ],
+    "tags": [
+      "education",
+      "orchestrator"
+    ]
+  },
+  "agent-reach": {
+    "aliases": [
+      "research",
+      "look up online",
+      "internet search",
+      "scrape",
+      "social media posts",
+      "reddit twitter youtube bilibili xiaohongshu",
+      "调研",
+      "搜索",
+      "查一下",
+      "网上"
+    ],
+    "tags": [
+      "research",
+      "web"
+    ]
+  },
+  "agentic-engineering": {
+    "aliases": [
+      "software factory",
+      "autonomous pipeline",
+      "kanban board",
+      "build feature end to end",
+      "event listener",
+      "task splitter"
+    ],
+    "tags": [
+      "engineering",
+      "autonomy"
+    ]
+  },
+  "audiocpp": {
+    "aliases": [
+      "audio",
+      "speech",
+      "asr",
+      "tts",
+      "voice",
+      "podcast",
+      "recording",
+      "transcribe",
+      "whisper",
+      "speak",
+      "sound",
+      "audiobook",
+      "dictation",
+      "voice clone",
+      "align audio to text",
+      "speech to text",
+      "text to speech",
+      "narrate",
+      "word timestamps",
+      "subtitle timing",
+      "millisecond word boundaries",
+      "read this audio out loud",
+      "out loud",
+      "say this in my voice",
+      "text into a voice",
+      "voice over",
+      "narrate this",
+      "offline speech synthesis",
+      "local tts"
+    ],
+    "tags": [
+      "audio",
+      "speech",
+      "tts",
+      "asr"
+    ]
+  },
+  "canvas-cli": {
+    "aliases": [
+      "canvas",
+      "lms",
+      "homework",
+      "assignments",
+      "grades",
+      "due dates",
+      "announcements",
+      "syllabus",
+      "course materials",
+      "transcript",
+      "course content",
+      "modules",
+      "gradebook",
+      "submission status",
+      "reading list",
+      "course files",
+      "what is due",
+      "unit assessment"
+    ],
+    "tags": [
+      "education",
+      "lms"
+    ]
+  },
+  "cornell-notes": {
+    "aliases": [
+      "revision notes",
+      "study guide",
+      "active recall",
+      "cue notes",
+      "exam prep",
+      "anki export",
+      "printable notes",
+      "summary sheet",
+      "spaced repetition",
+      "cue note pairs"
+    ],
+    "tags": [
+      "education",
+      "notes"
+    ]
+  },
+  "edstem-cli": {
+    "aliases": [
+      "ed discussion",
+      "forum threads",
+      "classmates answers",
+      "tutor answers",
+      "course forum",
+      "ask a question",
+      "read a discussion post",
+      "reply to a thread",
+      "class forum",
+      "cloud ide workspace",
+      "course lessons",
+      "code review thread"
+    ],
+    "tags": [
+      "education",
+      "forum"
+    ]
+  },
+  "gh-action-subagent": {
+    "aliases": [
+      "github actions",
+      "ci runner",
+      "cloud sandbox",
+      "spawn agent in cloud",
+      "pull request from agent"
+    ],
+    "tags": [
+      "github",
+      "cloud",
+      "autonomy"
+    ]
+  },
+  "github-architect": {
+    "aliases": [
+      "git sync",
+      "sync repos",
+      "fleet",
+      "multiple machines",
+      "bootstrap",
+      "secrets shield",
+      "blob guard",
+      "multi repo",
+      "commit without a blanket git add",
+      "quality gate before push",
+      "rebase my branch before pushing",
+      "no secrets get committed",
+      "block secrets from a commit",
+      "prevent a token leak",
+      "secret scanning before a push",
+      "committed credentials",
+      "guard the commit against secrets"
+    ],
+    "tags": [
+      "git",
+      "github",
+      "sync"
+    ]
+  },
+  "graph-memory": {
+    "aliases": [
+      "knowledge graph",
+      "rag",
+      "vector search",
+      "bm25",
+      "embeddings recall",
+      "entity dedup",
+      "knowledge base search",
+      "what do we know about"
+    ],
+    "tags": [
+      "memory",
+      "retrieval"
+    ]
+  },
+  "guard-hooks": {
+    "aliases": [
+      "safety",
+      "guardrails",
+      "destructive command",
+      "rm rf",
+      "is this destructive",
+      "force push",
+      "drop table",
+      "protected file",
+      "stop the agent from deleting my notes",
+      "make this command safe before running it",
+      "lock down a file"
+    ],
+    "tags": [
+      "safety",
+      "guardrails"
+    ]
+  },
+  "icm-architect": {
+    "aliases": [
+      "design a folder structure",
+      "lay out a knowledge base",
+      "workspace architecture",
+      "context map",
+      "restructure a repo into folders",
+      "agent navigable structure",
+      "folders as orchestration",
+      "cold read by an agent"
+    ],
+    "tags": [
+      "architecture",
+      "organisation"
+    ],
+    "body_budget": 900
+  },
+  "jev-decision": {
+    "aliases": [
+      "classify",
+      "probability",
+      "confidence score",
+      "binary gate",
+      "choose between options",
+      "multiple choice",
+      "argmax over labels",
+      "how likely",
+      "calibrated",
+      "front end visual test"
+    ],
+    "tags": [
+      "classification",
+      "decision"
+    ]
+  },
+  "model-layer": {
+    "aliases": [
+      "gpu memory",
+      "vram",
+      "how much gpu is free",
+      "swap model",
+      "ollama",
+      "model server management",
+      "thermal",
+      "unload the models i don't need",
+      "free up headroom",
+      "which model is resident",
+      "which model is loaded",
+      "weights",
+      "launcher",
+      "ports manifest"
+    ],
+    "tags": [
+      "gpu",
+      "servers"
+    ]
+  },
+  "markitdown-cli": {
+    "aliases": [
+      "convert to markdown",
+      "pdf to markdown",
+      "docx to text",
+      "extract text from document",
+      "spreadsheet to markdown",
+      "slides to markdown",
+      "read attachment",
+      "word document to text",
+      "powerpoint to markdown",
+      "excel spreadsheet",
+      "unreadable binary office file"
+    ],
+    "tags": [
+      "documents",
+      "conversion"
+    ]
+  },
+  "nvidia-nim": {
+    "aliases": [
+      "nvidia api",
+      "nim",
+      "cloud inference",
+      "deepseek",
+      "qwen api",
+      "batched embeddings",
+      "api key pooling"
+    ],
+    "tags": [
+      "cloud",
+      "inference"
+    ]
+  },
+  "ocr": {
+    "aliases": [
+      "read text in image",
+      "screenshot text",
+      "scan a document",
+      "extract text from picture",
+      "recognise handwriting",
+      "slide text",
+      "screenshot to markdown"
+    ],
+    "tags": [
+      "vision",
+      "ocr"
+    ]
+  },
+  "okf-architect": {
+    "aliases": [
+      "knowledge bundle",
+      "provenance",
+      "validate schema",
+      "open knowledge format",
+      "trust tier"
+    ],
+    "tags": [
+      "knowledge",
+      "schema"
+    ]
+  },
+  "openrouter-free": {
+    "aliases": [
+      "free model",
+      "delegate to cloud",
+      "compound bash batch",
+      "text embeddings api",
+      "speech synthesis api",
+      "cheap subagent"
+    ],
+    "tags": [
+      "cloud",
+      "free",
+      "subagent"
+    ]
+  },
+  "review-hub": {
+    "aliases": [
+      "code review",
+      "review my code",
+      "quality rules",
+      "coding standards",
+      "architecture audit",
+      "style guide",
+      "review my diff",
+      "audit my code",
+      "pre commit review",
+      "quality rules",
+      "rules before pushing code",
+      "pre push review",
+      "code review before commit"
+    ],
+    "tags": [
+      "code",
+      "quality",
+      "review",
+      "rules",
+      "standards",
+      "pre-push",
+      "commit",
+      "guidelines"
+    ]
+  },
+  "subagent-spaces": {
+    "aliases": [
+      "isolated sandbox",
+      "container",
+      "podman",
+      "cpu pinned",
+      "blast radius",
+      "run untrusted code safely"
+    ],
+    "tags": [
+      "sandbox",
+      "isolation"
+    ]
+  },
+  "tailscale-ops": {
+    "aliases": [
+      "expose over network",
+      "private https",
+      "tailnet",
+      "mesh",
+      "funnel",
+      "webhook endpoint",
+      "remote access"
+    ],
+    "tags": [
+      "network"
+    ]
+  },
+  "video-miner": {
+    "aliases": [
+      "video",
+      "youtube",
+      "transcribe a video",
+      "key frames",
+      "summarise a recording",
+      "slides from video",
+      "video knowledge notes"
+    ],
+    "tags": [
+      "video",
+      "media"
+    ]
+  },
+  "worktree-harness": {
+    "aliases": [
+      "git worktree",
+      "parallel agents",
+      "branch per agent",
+      "swarm",
+      "merge conflicts",
+      "quality gate",
+      "spawn parallel coders",
+      "isolated worktree",
+      "reserve a file range",
+      "claims json",
+      "integrate the branches that passed",
+      "several agents one repo",
+      "same repo different branches",
+      "no two agents write the same file"
+    ],
+    "tags": [
+      "git",
+      "parallelism",
+      "agents"
+    ]
+  },
+  "zoom-recorder": {
+    "aliases": [
+      "zoom",
+      "zoom recording",
+      "lecture recording",
+      "cloud recording",
+      "download transcript",
+      "keyframe slides",
+      "recording slides",
+      "lecture slides",
+      "speaker transcript",
+      "slide deck from a talk",
+      "recorded talk"
+    ],
+    "tags": [
+      "education",
+      "media"
+    ]
+  },
+  "eval-pipeline": {
+    "aliases": [
+      "step risk tagging",
+      "deterministic or probabilistic step",
+      "propagation risk between steps",
+      "artifact ledger",
+      "halt downstream failures",
+      "assertion gate between steps",
+      "step ledger",
+      "which steps are risky"
+    ],
+    "tags": [
+      "risk",
+      "pipeline",
+      "provenance"
+    ]
+  },
+  "eval-router": {
+    "aliases": [
+      "route a request",
+      "route this prompt",
+      "prompt complexity tier",
+      "prompt difficulty classification",
+      "shadow verification",
+      "failure harvesting",
+      "harvest failures",
+      "dispatch to a cheaper tier",
+      "self calibrating router",
+      "route this prompt to the right model",
+      "decide which model should answer",
+      "choose the model for this prompt",
+      "model routing decision"
+    ],
+    "tags": [
+      "routing",
+      "cost",
+      "tier"
+    ]
+  },
+  "glitch-orchestra": {
+    "aliases": [
+      "terminal conductor",
+      "supervise concurrent sessions",
+      "dispatch to child sessions",
+      "track session progress",
+      "completion chime",
+      "claude code mods",
+      "multi session supervision"
+    ],
+    "tags": [
+      "orchestration",
+      "sessions"
+    ]
+  },
+  "parallel-test-lane": {
+    "aliases": [
+      "split the test suite",
+      "run tests in parallel workers",
+      "sequential versus parallel lanes",
+      "faster regression suite",
+      "partition tests by isolation",
+      "test lane partition",
+      "aggregate pass fail report",
+      "cpu cores for the test suite"
+    ],
+    "tags": [
+      "testing",
+      "parallelism",
+      "cpu"
+    ]
+  },
+  "projects-harness": {
+    "aliases": [
+      "three way message routing",
+      "throttled task queue",
+      "memory load cap",
+      "rule clash detection",
+      "dual provenance envelope",
+      "cap on concurrent tasks",
+      "coordinator brief versus owner instructions",
+      "atomic fact update"
+    ],
+    "tags": [
+      "coordination",
+      "multi-agent",
+      "queue"
+    ]
+  },
+  "semantic-cache": {
+    "aliases": [
+      "cache repeated questions",
+      "answer a repeat question instantly",
+      "cosine similarity cache",
+      "skip the expensive retrieval",
+      "instant repeat answer",
+      "verified response cache"
+    ],
+    "tags": [
+      "caching",
+      "rag",
+      "similarity"
+    ]
+  },
+  "state-compactor": {
+    "aliases": [
+      "context rot",
+      "compact long context",
+      "context poisoning",
+      "gated code retrieval",
+      "cgate query projection",
+      "subagent handoff context",
+      "agent state json",
+      "compaction harness"
+    ],
+    "tags": [
+      "context",
+      "compaction",
+      "ledger"
+    ]
+  },
+  "swarm-contract": {
+    "aliases": [
+      "swarm contract",
+      "token budget ceiling",
+      "scorecard schema for workers",
+      "hit list goals",
+      "hard spending limit",
+      "immutable budget cap"
+    ],
+    "tags": [
+      "budget",
+      "governance",
+      "workers"
+    ]
+  },
+  "verification": {
+    "aliases": [
+      "verify a ui change",
+      "prove the ui change works",
+      "check the console for errors",
+      "before and after screenshots",
+      "does the button actually work",
+      "browser verification",
+      "check for failed requests",
+      "confirm the app still works",
+      "hands and eyes verification",
+      "verify a frontend change",
+      "check the page for errors",
+      "prove it works in the browser"
+    ]
+  },
+  "frontend-uat": {
+    "aliases": [
+      "click through the app",
+      "browser journey test",
+      "uat",
+      "drive the page by intent",
+      "click a target by intent",
+      "sub second browser test",
+      "test the checkout flow",
+      "walk the login flow",
+      "interact with the page",
+      "click the right button"
+    ]
+  },
+  "playwright": {
+    "aliases": [
+      "browse a website",
+      "browse a web page",
+      "take a screenshot of a website",
+      "screenshot a web page",
+      "open a url and take a screenshot",
+      "browser automation",
+      "drive a browser",
+      "capture a screenshot of a page",
+      "cdp browser control",
+      "playwright"
+    ]
+  },
+  "omnicli": {
+    "aliases": [
+      "tool registry",
+      "find a tool",
+      "search skills",
+      "run a skill",
+      "gateway",
+      "omnicli",
+      "discover a tool",
+      "tool contract",
+      "what can this machine do",
+      "list my tools"
+    ],
+    "tags": [
+      "gateway",
+      "discovery"
+    ],
+    "index_body": false,
+    "index_tools": false
+  }
+}

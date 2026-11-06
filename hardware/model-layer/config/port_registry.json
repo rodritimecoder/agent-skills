@@ -1,0 +1,106 @@
+{
+  "total_vram_budget_mb": 32000,
+  "pinned_port": "8080",
+  "port_range": [
+    8080,
+    8091
+  ],
+  "models": {
+    "8080": {
+      "alias": "local-coder-genesis",
+      "vram_mb": 20500,
+      "pinned": true,
+      "name": "Qwen3.6-35B-A3B-Uncensored-Genesis-Final",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/luffy_nothink.sh",
+      "role": "Primary generative LLM \u2014 chat, code, long-form writing, prose projection"
+    },
+    "8081": {
+      "alias": "local-audio-audiocpp",
+      "vram_mb": 2500,
+      "pinned": false,
+      "name": "nemotron-asr",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/run-audiocpp.sh",
+      "role": "Speech-to-text, text-to-speech, forced alignment, voice cloning"
+    },
+    "8083": {
+      "alias": "local-decide",
+      "vram_mb": 3600,
+      "pinned": false,
+      "name": "h2o-lightning-4b",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/h2o.sh",
+      "role": "The decision engine slot - bool / choice / score primitives"
+    },
+    "8082": {
+      "alias": "local-decide-engine",
+      "vram_mb": 0,
+      "pinned": false,
+      "name": "StartLux-Decision-v1.1-4B-Instant",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/startlux-decision.sh",
+      "role": "Experimental StartLux backend; not the h2o-lightning-4b JEV endpoint"
+    },
+    "8089": {
+      "alias": "local-decide-fallback",
+      "vram_mb": 0,
+      "pinned": false,
+      "name": "Imajev-4B",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/imajev-decider.sh",
+      "role": "Secondary decision engine \u2014 Imajev-4B chat path, or letter/readout with READOUT=1"
+    },
+    "8084": {
+      "alias": "local-ocr-crispembed",
+      "vram_mb": 6300,
+      "pinned": false,
+      "name": "CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec)",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/crispembed-ocr.sh",
+      "role": "Documents & scene text \u2014 OXR-1.0 layout-aware Markdown, PP-OCRv6 bounding boxes"
+    },
+    "8085": {
+      "alias": "local-ocr-lighton",
+      "vram_mb": 1500,
+      "pinned": false,
+      "name": "LightOnOCR-3-0.8B",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/lighton-ocr.sh",
+      "role": "Documents, PDFs and slides \u2014 fast prefill, high-throughput markdown"
+    },
+    "8086": {
+      "alias": "local-rerank-jina",
+      "vram_mb": null,
+      "pinned": false,
+      "name": "jina-reranker-v2-base-multilingual",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/jina-reranker.sh",
+      "role": "Cross-encoder reranking for RAG"
+    },
+    "8087": {
+      "alias": "local-embed-bge",
+      "vram_mb": null,
+      "pinned": false,
+      "name": "bge-small-en-v1.5",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/bge-small.sh",
+      "role": "Vector embeddings for RAG and semantic caching"
+    },
+    "8088": {
+      "alias": "local-grounding-wevisone",
+      "vram_mb": 3300,
+      "pinned": false,
+      "name": "WeVisOne-VL-4B",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/wevisone-vl.sh",
+      "role": "Word-level OCR boxes, open-vocab detection, referring localization, pointing, counting"
+    },
+    "8090": {
+      "alias": "local-ocr-jev",
+      "vram_mb": 5300,
+      "pinned": false,
+      "name": "MiniCPM-OCR-Jev",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/minicpm-ocr-jev.sh",
+      "role": "OCR consistency gate \u2014 scores a candidate transcription against the source image in one forward pass"
+    },
+    "8091": {
+      "alias": "local-rp-lfm3",
+      "vram_mb": 2200,
+      "pinned": false,
+      "name": "LFM3-1.7B-Uncensored-AD",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/lfm3-1.7b-uncensored.sh",
+      "role": "Secondary generative LLM \u2014 uncensored roleplay and short-form creative, runs beside the primary :8080 slot instead of swapping it out"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=E2x2 Mic — mono source carrying only the interface's input 1 (AUX0)
+Documentation=file://%h/src/my-agent-skills/orchestration/companion/SKILL.md
+After=pipewire.service wireplumber.service
+Wants=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pw-loopback -n e2x2-mic -g e2x2-mic -m "[ MONO ]" -C alsa_input.usb-Topping_E2x2_OTG-00.multichannel-input -i "audio.position=[ AUX0 ] node.passive=true" -o "media.class=Audio/Source node.name=e2x2_mic node.description=\"E2x2 Mic (input 1)\""
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

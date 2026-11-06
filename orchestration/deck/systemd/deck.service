@@ -1,0 +1,17 @@
+[Unit]
+Description=deck — read-only homelab activity page
+Documentation=file://%h/src/my-agent-skills/orchestration/deck/SKILL.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/deck serve --host 127.0.0.1 --port 7777
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

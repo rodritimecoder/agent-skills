@@ -1,0 +1,61 @@
+  <!-- Study & Retention Kanban Board Container -->
+  <div id="kanbanContainer" class="kanban-view" style="display:none;">
+    <div class="kanban-toolbar">
+      <div class="kanban-filters">
+        <div class="kanban-course-pills" id="kanbanCoursePills"></div>
+      </div>
+      <div class="glass-card search-wrapper" style="max-width:320px; flex:1;">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="kanbanSearchInput" class="search-input" placeholder="Search topics in pipeline..." oninput="renderKanbanBoard()">
+      </div>
+      <div class="kanban-stats-summary" id="kanbanStatsSummary"></div>
+    </div>
+
+    <!-- 4 Kanban Columns -->
+    <div class="kanban-columns-grid">
+      <!-- Col 1: Ingestion -->
+      <div class="kanban-column" id="colIngestion">
+        <div class="kanban-col-header col-ingestion-hdr">
+          <div class="kanban-col-title">
+            <span>📥</span> 1. Ingestion / Backlog
+          </div>
+          <span class="kanban-col-count" id="countIngestion">0</span>
+        </div>
+        <div class="kanban-col-body" id="bodyIngestion"></div>
+      </div>
+
+      <!-- Col 2: Cornell Synthesized -->
+      <div class="kanban-column" id="colSynthesis">
+        <div class="kanban-col-header col-synthesis-hdr">
+          <div class="kanban-col-title">
+            <span>📝</span> 2. Cornell Synthesized
+          </div>
+          <span class="kanban-col-count" id="countSynthesis">0</span>
+        </div>
+        <div class="kanban-col-body" id="bodySynthesis"></div>
+      </div>
+
+      <!-- Col 3: In Review -->
+      <div class="kanban-column" id="colReview">
+        <div class="kanban-col-header col-review-hdr">
+          <div class="kanban-col-title">
+            <span>🎴</span> 3. Active SRS Review
+          </div>
+          <span class="kanban-col-count" id="countReview">0</span>
+        </div>
+        <div class="kanban-col-body" id="bodyReview"></div>
+      </div>
+
+      <!-- Col 4: Mastered -->
+      <div class="kanban-column" id="colMastered">
+        <div class="kanban-col-header col-mastered-hdr">
+          <div class="kanban-col-title">
+            <span>🏆</span> 4. Mastered &amp; Exam-Ready
+          </div>
+          <span class="kanban-col-count" id="countMastered">0</span>
+        </div>
+        <div class="kanban-col-body" id="bodyMastered"></div>
+      </div>
+    </div>
+  </div>
+

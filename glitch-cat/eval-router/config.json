@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "name": "eval-router",
+  "description": "Kem Glitch self-calibrating request router with speculative shadow evaluation and failure harvesting",
+  "tiers": {
+    "easy": {
+      "label": "Local / Free Zero-Cost",
+      "model": "nvidia/nemotron-3.5-lightning:free",
+      "provider": "openrouter",
+      "cost_per_m_input": 0.0,
+      "cost_per_m_output": 0.0,
+      "local_url": "http://127.0.0.1:8080/completion",
+      "prefer_local": true
+    },
+    "moderate": {
+      "label": "High-Efficiency Reasoner",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "provider": "openrouter",
+      "cost_per_m_input": 0.15,
+      "cost_per_m_output": 0.60
+    },
+    "hard": {
+      "label": "Frontier Anchor",
+      "model": "anthropic/claude-3.7-sonnet",
+      "provider": "frontier",
+      "cost_per_m_input": 3.00,
+      "cost_per_m_output": 15.00
+    }
+  },
+  "classifier": {
+    "engine": "jev",
+    "port": 8083,
+    "confidence_gate": 0.45,
+    "fallback_tier": "moderate"
+  },
+  "speculative_eval": {
+    "enabled": true,
+    "mode": "shadow",
+    "judge_engine": "jev",
+    "criteria": "Does the response accurately, safely, and completely fulfill the user prompt without hallucinations or truncation?"
+  },
+  "storage": {
+    "db_path": "/home/rodri/.config/eval-router/evals.db",
+    "harvest_jsonl": "/home/rodri/.config/eval-router/harvest.jsonl"
+  }
+}

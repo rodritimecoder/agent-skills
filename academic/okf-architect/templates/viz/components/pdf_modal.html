@@ -1,0 +1,21 @@
+  <!-- Inlined PDF Viewer Modal -->
+  <div id="pdfModal" class="pdf-modal-overlay">
+    <div class="pdf-modal-container">
+      <div class="pdf-modal-header">
+        <div class="pdf-modal-title">
+          <span>📄</span>
+          <span id="pdfModalTitleText">Problem Sheet (PDF)</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <a id="pdfModalPopoutBtn" href="#" target="_blank" rel="noopener noreferrer" class="cornell-popout-btn" title="Open in browser tab">
+            <span>↗</span> Open in Tab
+          </a>
+          <button id="pdfModalClose" class="cornell-modal-close-btn" onclick="closePdfModal()" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div style="flex:1; width:100%; height:100%; position:relative;">
+        <iframe id="pdfModalFrame" src="" style="width:100%; height:100%; border:none; background:#222;"></iframe>
+      </div>
+    </div>
+  </div>
+

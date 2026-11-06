@@ -1,0 +1,153 @@
+  <!-- Anki Spaced Repetition Modal (Obsidian-Style Decks & 3D Cards) -->
+  <div id="ankiModal" class="anki-modal" style="display:none;">
+    <!-- View 1: Deck Hub -->
+    <div id="ankiDeckHub" class="anki-hub-container">
+      <div class="anki-hub-header">
+        <div class="anki-hub-title">
+          <span style="font-size:32px;">🎴</span>
+          <div>
+            <h2>Neural Decks & Spaced Repetition</h2>
+            <p>Obsidian-style active recall flashcards across 4 course galaxies</p>
+          </div>
+        </div>
+        <button class="anki-close-btn" onclick="closeAnkiModal()" title="Return to Knowledge Cosmos (Esc)">&times;</button>
+      </div>
+
+      <!-- Stats & Quick Study Banner -->
+      <div class="anki-stats-banner">
+        <div class="anki-stat-pills">
+          <div class="anki-stat-pill anki-pill-new">
+            <span>✨</span> <span id="ankiStatNew">0</span> New
+          </div>
+          <div class="anki-stat-pill anki-pill-learn">
+            <span>🔥</span> <span id="ankiStatLearn">0</span> In Review
+          </div>
+          <div class="anki-stat-pill anki-pill-master">
+            <span>🏆</span> <span id="ankiStatMaster">0</span> Mastered
+          </div>
+          <div class="anki-stat-pill" style="color:var(--text-muted);">
+            <span>📚</span> <span id="ankiStatTotal">0</span> Total Cards
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn-study-all" onclick="startAnkiSession('all')">
+            <span>⚡</span> Review All Decks (Shuffle)
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div style="display:flex; gap:12px; margin-bottom:18px;">
+        <div class="glass-card search-wrapper" style="flex:1;">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" id="ankiSearchInput" class="search-input" placeholder="Search flashcards, topics, formulas..." oninput="filterAnkiDecks(this.value)">
+        </div>
+      </div>
+
+      <!-- Course Decks Grid -->
+      <div class="anki-deck-grid" id="ankiCourseGrid"></div>
+    </div>
+
+    <!-- View 2: 3D Flashcard Study Arena -->
+    <div id="ankiStudyArena" class="anki-study-view" style="display:none;">
+      <div class="anki-study-topbar">
+        <div class="anki-progress-track">
+          <div id="ankiProgressFill" class="anki-progress-fill"></div>
+        </div>
+        <button class="cornell-back-btn" onclick="exitAnkiStudyToDecks()" title="Back to Decks">
+          <span>←</span> Decks
+        </button>
+        <div class="anki-study-deck-title" id="ankiDeckTitle">
+          <span>🎴</span> 48521 FoEET &bull; Topic 1B
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="anki-study-counter" id="ankiCardCounter">Card 1 / 10</div>
+          <button class="anki-close-btn" onclick="closeAnkiModal()" title="Close to Cosmos (Esc)">&times;</button>
+        </div>
+      </div>
+
+      <!-- Center 3D Flip Card Arena -->
+      <div class="anki-arena-content" id="ankiArenaBody">
+        <div class="anki-card-3d" id="ankiCardElement" onclick="flipCurrentCard()">
+          <!-- Front Face -->
+          <div class="anki-card-face anki-card-front">
+            <div class="anki-face-meta">
+              <span class="anki-badge-tag" id="ankiFrontBadge">DEFINITION</span>
+              <span class="anki-section-tag" id="ankiFrontSection">Module Section</span>
+            </div>
+            <div class="anki-question-text" id="ankiFrontQuestion">
+              Question loading...
+            </div>
+            <div class="anki-card-hint">
+              <span>💡 Tap card or press <kbd style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">Space</kbd> to reveal answer</span>
+            </div>
+          </div>
+
+          <!-- Back Face -->
+          <div class="anki-card-face anki-card-back">
+            <div class="anki-face-meta">
+              <span class="anki-badge-tag" style="background:rgba(166,227,161,0.15); border-color:rgba(166,227,161,0.3); color:#a6e3a1;">ANSWER &amp; EXPLANATION</span>
+              <span class="anki-section-tag" id="ankiBackSection">Module Section</span>
+            </div>
+            <div class="anki-answer-text" id="ankiBackAnswer">
+              Answer loading...
+            </div>
+            <div id="ankiVideoActionBox" style="display:none; margin: 12px 0 6px 0; text-align:center;">
+              <button id="ankiBtnWatchSolution" class="anki-video-btn" onclick="event.stopPropagation();" title="Watch solution video at this timestamp">
+                <span>🎬</span> Watch Solution (<span id="ankiVideoTimestamp">--:--</span>)
+              </button>
+            </div>
+            <div class="anki-card-hint" style="color:var(--text-muted);">
+              <span>Rate your recall to schedule next interval:</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session Completion Overlay (shown at deck end) -->
+        <div id="ankiCompletionScreen" class="anki-completion-screen" style="display:none;">
+          <div style="font-size:56px;">🎉</div>
+          <h2>Deck Completed!</h2>
+          <p id="ankiCompletionSummary" style="color:var(--text-muted); font-size:14px; line-height:1.5;">
+            You reviewed 12 cards with an active recall retention rate of 92%.
+          </p>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <button class="btn-study-all" onclick="restartCurrentSession()">
+              <span>🔄</span> Review Deck Again
+            </button>
+            <button class="cornell-back-btn" onclick="exitAnkiStudyToDecks()">
+              <span>🎴</span> Back to Decks
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Grading & Flip Bar -->
+      <div class="anki-bottom-bar">
+        <!-- Before Flip Button -->
+        <button id="ankiFlipActionBtn" class="btn-anki-flip" onclick="flipCurrentCard()">
+          <span>Show Answer</span> <kbd style="font-size:11px; opacity:0.8; background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px;">Space</kbd>
+        </button>
+
+        <!-- After Flip Rating Buttons -->
+        <div id="ankiGradeActionRow" class="anki-grade-buttons" style="display:none;">
+          <button class="btn-anki-grade btn-grade-again" onclick="gradeCurrentCard(1)">
+            <span>[1] Again</span>
+            <span class="interval">&lt; 1 min</span>
+          </button>
+          <button class="btn-anki-grade btn-grade-hard" onclick="gradeCurrentCard(2)">
+            <span>[2] Hard</span>
+            <span class="interval">1 day</span>
+          </button>
+          <button class="btn-anki-grade btn-grade-good" onclick="gradeCurrentCard(3)">
+            <span>[3] Good</span>
+            <span class="interval">3 days</span>
+          </button>
+          <button class="btn-anki-grade btn-grade-easy" onclick="gradeCurrentCard(4)">
+            <span>[4] Easy</span>
+            <span class="interval">7 days</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
