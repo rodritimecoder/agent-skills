@@ -2,191 +2,161 @@
 name: agent-reach
 
 description: >
-  MUST USE when user wants to 调研/research/搜索/search/查/找/look up anything
-  on the internet — e.g. 全网调研 X / 帮我调研一下 X / 查一下 X / 搜搜 X /
-  看看大家怎么评价 X / X 上有什么讨论 / research this topic。
+  Internet and social media research router. MUST USE to search, look up, research, scrape, or
+  gather intelligence across 16 web platforms — including auth-walled sites, video transcripts,
+  and structured feeds: Reddit, Twitter/X, LinkedIn, Boss Zhipin (招聘/求职), YouTube captions,
+  Bilibili (B站), Xiaohongshu (小红书/RED), V2EX, Xueqiu (雪球 finance/stocks), GitHub code/repos,
+  RSS feeds, and web articles (via Jina Reader).
 
-  Also MUST USE when user mentions any platform or shares any URL/链接:
-  小红书/xiaohongshu/xhs, Twitter/推特/X, B站/bilibili, Reddit, Facebook,
-  Instagram, V2EX, LinkedIn/领英/Boss直聘/招聘/求职/jobs, YouTube, GitHub code search, 小宇宙播客,
-  雪球/股票行情, RSS feeds, or any web URL.
+  Features deterministic token shielding and table projection via reach_filter.py (CLI and Python
+  Code Mode API for omnicli). Zero config for 6 public channels.
+  Run `agent-reach doctor --json` to verify active backends before dispatching.
 
-  16 platforms, multi-backend routing (OpenCLI / per-platform CLIs / APIs).
-  Zero config for 6 channels. Run `agent-reach doctor --json` to see which
-  backend serves each platform right now.
+  NOT for: Writing reports, translation, data analysis (use agent compute); posting/commenting/liking
+  (read-only).
 
-  NOT for: 写报告/数据分析/翻译等内容加工（本 skill 只负责从互联网获取内容）；
-  发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）。
+  [Routing]: SKILL.md contains routing tables and quick recipes. Load specialized reference runbooks
+  on-demand: references/{search,social,career,dev,web,video,finance}.md.
 
-  【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
-  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn/Boss直聘) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
-
-compatibility: "Requires network access. Which platforms work depends on the third-party CLIs installed on the machine."
-allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Read"
+compatibility: "Requires network access. Multi-backend routing via OpenCLI, dedicated CLIs, or direct APIs."
+allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Bash(opencli:*) Bash(rdt:*) Bash(twitter:*) Read"
 ---
 
-# Agent Reach — 互联网能力路由器
+# Agent Reach — Internet Capability Router
 
-16 平台、多后端。**本 skill 存在时必须用它访问这些平台，不要自己发明方案。**
+16 platforms, multi-backend routing. **When this skill is present, use it for internet research rather than improvising.**
 
-## 常驻规则（全程适用）
+---
 
-1. **动手前先体检**：多后端/登录态平台（小红书/Reddit/B站/Twitter/Facebook/Instagram/Boss直聘）先跑
-   `agent-reach doctor --json`。`active_backend` 有值时按它选命令组；`active_backend: null`
-   表示 Doctor 为避免触发浏览器 Cookie 读取或远端写入而没有做实时验证，不代表后端不存在。
-   Doctor 结果是「某一时刻的快照」，通道/登录态可能已变化；执行只读命令前若怀疑失效，
-   按对应 reference 的「体检与恢复」runbook 重新确认（如 career.md 的 Boss直聘 CDP 排查）。
-2. **声明你在用什么**：开始干活前说一句「使用 agent-reach 的 X 平台 / Y 后端」。
-3. **失败按 references 里的重试链处理**，不要瞎猜命令。
-4. **全网调研类任务**：组合多平台（Exa 搜索 + Twitter/Reddit 看讨论 + 小红书/B站看中文场景），并行收集再汇总。
-5. **替用户盯版本**：完成一次较大的调研/多平台任务后，顺手跑
-   `agent-reach check-update`（很快，一个 API 调用）。有新版就在收尾汇报里附一句：
-   「Agent Reach 有新版 vX.Y.Z，复制这句话给我即可更新：帮我更新 Agent Reach：
-   https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md」。
-   不要中断当前任务去更新，也不要重复提醒同一个版本。
+## 🏛️ Core Operating Rules
 
-## 路由表
+1. **Check Health First**: For auth-gated or multi-backend platforms (Reddit, Twitter/X, Xiaohongshu, Bilibili, Facebook, Instagram, Boss Zhipin), check `agent-reach doctor --json`.
+   - If `active_backend` is set, use its command suite.
+   - If `active_backend: null`, Doctor avoided live browser cookie reads to prevent remote lockouts; see the corresponding reference runbook for inspection.
+2. **State Your Tool**: Prepend actions with `"Using agent-reach platform X via backend Y"`.
+3. **Handle Errors via Reference Runbooks**: Follow the fallback chains in `references/*.md` instead of guessing commands.
+4. **Multi-Source Research**: Combine platforms (Exa Search + Twitter/Reddit community sentiment + Xiaohongshu/Bilibili regional context), collect in parallel, and synthesize.
+5. **Check for Updates**: After large multi-platform jobs, run `agent-reach check-update`. If an update is available, inform the user with the official update link without interrupting current execution.
 
-| 用户意图 | 分类 | 详细文档 |
-|---------|------|---------|
-| 网页搜索/代码搜索 | search | [references/search.md](references/search.md) |
-| 小红书/推特/B站/V2EX/Reddit/Facebook/Instagram | social | [references/social.md](references/social.md) |
-| 招聘/职位/LinkedIn/Boss直聘 | career | [references/career.md](references/career.md) |
-| GitHub/代码 | dev | [references/dev.md](references/dev.md) |
-| 网页/文章/RSS | web | [references/web.md](references/web.md) |
-| YouTube/B站/播客字幕 | video | [references/video.md](references/video.md) |
-| 雪球/股票行情 | finance | [references/finance.md](references/finance.md) |
+---
 
-## 零配置快速命令
+## 🧭 Routing Table
+
+| Intent & Platform | Category | Reference Runbook |
+| :--- | :--- | :--- |
+| Web search / AI search / Technical docs | `search` | [references/search.md](references/search.md) |
+| Reddit / Twitter (X) / Xiaohongshu / Bilibili / V2EX / Facebook / Instagram | `social` | [references/social.md](references/social.md) |
+| Jobs / Recruitment / LinkedIn / Boss Zhipin | `career` | [references/career.md](references/career.md) |
+| GitHub repos / Code search | `dev` | [references/dev.md](references/dev.md) |
+| Web page extraction / Articles / RSS | `web` | [references/web.md](references/web.md) |
+| YouTube captions / Video transcription / Xiaoyuzhou podcast ASR | `video` | [references/video.md](references/video.md) |
+| Xueqiu / Stocks / Financial quotes & sentiment | `finance` | [references/finance.md](references/finance.md) |
+
+---
+
+## ⚡ Zero-Config Quick Commands
 
 ```bash
-# Exa 网页搜索
+# 1. Exa AI web search
 mcporter call exa.web_search_exa query="query" numResults=5
 
-# 通用网页阅读
-curl -s "https://r.jina.ai/URL"
+# 2. Universal web reader (Jina Reader Markdown)
+curl -s "https://r.jina.ai/https://example.com/article"
 
-# GitHub 搜索（带表格投影过滤）
+# 3. GitHub repository search with high-density table projection
 gh search repos "query" --sort stars --limit 10 --json name,stargazersCount,description,url | \
   python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py github --table
 
-# V2EX 热门（直出紧凑 Markdown 表格，仅 ~150 tokens）
+# 4. V2EX Hot topics (direct fetch, compact table, ~150 tokens)
 python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py --fetch v2ex-hot -n 10
 
-# B站搜索（带表格投影过滤）
+# 5. Bilibili video search with table projection
 bili search "query" --type video -n 5 | \
   python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py bilibili --table
 ```
 
-## 🛡️ Token 护盾与表格投影 (Glitch Cat / Kem 架构)
+---
 
-所有平台（V2EX, Twitter, Reddit, B站, 小红书, GitHub）返回的 20KB-50KB JSON/YAML 原始输出，严禁裸输出至 Agent 上下文。使用 `reach_filter.py` 进行确定性过滤与表格投影：
+## 🛡️ Token Shield & Table Projection (Kem Architecture)
 
+Raw JSON/YAML platform payloads (20KB–50KB) must never be dumped raw into the agent context. Use `reach_filter.py` for deterministic field projection, row capping, and disk buffering:
+
+### CLI Piping
 ```bash
 FILTER=~/.gemini/config/skills/agent-reach/scripts/reach_filter.py
 
-# 1. V2EX 热门/节点 (过滤为 5 行紧凑表格，省 98% token):
-curl -s "https://www.v2ex.com/api/topics/hot.json" | python3 $FILTER v2ex --table -n 10
+# Reddit search (sub, score, comments, title projection)
+rdt search "query" --json | python3 $FILTER reddit -p sub,score,comments,title -n 10
 
-# 2. Reddit 搜索 / 讨论 (字段投影 + 截断):
-rdt search "rust" --json | python3 $FILTER reddit -p sub,score,comments,title -n 10
-
-# 3. Twitter / X 时间线:
+# Twitter / X timeline
 twitter feed -n 20 --json | python3 $FILTER twitter -p author,likes,text -n 10
 
-# 4. 小红书笔记搜索:
+# Xiaohongshu notes search
 opencli xiaohongshu search "query" -f json | python3 $FILTER xhs -p title,author,likes -n 5
 
-# 5. 落盘缓冲与回执输出 (不污染上下文，生成完整 json 磁盘缓存并返回表格预览):
+# Disk buffering (caches raw JSON to disk, emits 1-line receipt + compact table)
 curl -s "https://www.v2ex.com/api/topics/hot.json" | python3 $FILTER v2ex -o /tmp/v2ex_hot.json -n 10
 ```
 
-## 需登录态的平台（按 doctor 的 active_backend 选命令）
+### Omnicli Code Mode (`omnicli exec` Python API)
+Inside `omnicli exec` sandboxes, invoke `reach_filter.filter_data` directly as Python code:
+```python
+import sys
+sys.path.insert(0, "/home/rodri/.gemini/config/skills/agent-reach/scripts")
+import reach_filter
 
-Twitter 注意：`agent-reach configure twitter-cookies` 保存的 Cookie 只供
-`doctor` 检查配置是否齐全；`doctor` 不执行 `twitter status`，也不会设置当前
-Shell。直接运行 `twitter` 前，必须在子进程环境中显式提供
-`TWITTER_AUTH_TOKEN` 和 `TWITTER_CT0`，不得在日志或命令回显中暴露值。
-
-小红书注意：Agent Reach 不替用户登录，也不读取浏览器 Cookie。OpenCLI 只用
-用户已有且明确控制的 Chrome 会话；没有现成会话时不要自动登录，改用
-Cookie-Editor 手工导出后配置 xiaohongshu-mcp / 存量工具。
-
-Boss直聘配置触发：当用户说“帮我配 Boss直聘”时，先读取 `references/career.md`
-的 Boss 章节，然后在获得安装授权后运行
-`agent-reach install --env=local --system --channels=boss`。Agent 负责按系统启动
-只绑定 `127.0.0.1:9222` 的专用 Chrome；**拉起后第一步是暂停并让用户肉眼确认**
-窗口内是已登录状态（右上角有头像），未登录则让用户登录/扫码，用户确认后再运行
-`boss --cdp-url http://localhost:9222 login --cdp` 和 `agent-reach doctor` 验收。
-不要让用户自己研究端口参数。
-专用 Chrome profile 必须长期复用，不要每次创建，也不要默认改用日常主 Chrome。
-
-判断 CDP 浏览器登录态**不要信 `boss status`**（它只校验本地 session.enc，与
-浏览器登录态互不代表），以 `agent-reach doctor` 的浏览器 cookie 探测（wt2）
-为准，并配合用户肉眼确认。绝不用当前页 URL 判断登录态：
-`security-check` / `zhipin-security` / `_security_check` 安全校验页是 Boss 反爬挑战，
-与登录无关——已登录也会出现（带 CDP 调试端口的 Chrome 几乎必现）。看到它不要
-当成“未登录”，先跑 `agent-reach doctor` 看浏览器 cookie，再决定是否需要用户登录。
-搜索报 `AUTH_EXPIRED` 即浏览器未登录的 ground truth：直接走登录流程 + `login --cdp`，
-不要往安全校验方向解释。
-
-执行搜索时必须使用
-`boss --browser-source existing-browser --cdp-url http://localhost:9222 search ...`；
-遇到 `ENVIRONMENT_RISK` 立即停止，不刷新、不重新登录、不自动重试。
-
-```bash
-# Twitter 搜索（twitter-cli 首选；失败重试链见 social.md）
-twitter search "query" -n 10
-
-# Reddit（无零配置路径：OpenCLI 或 rdt-cli，必须登录态）
-opencli reddit search "query" -f yaml   # 桌面
-rdt search "query" --limit 10            # 存量/服务器
-
-# 小红书（桌面首选 OpenCLI）
-opencli xiaohongshu search "query" -f yaml
-
-# Facebook / Instagram（桌面 OpenCLI，复用浏览器登录态）
-opencli facebook search "query" -f yaml
-opencli facebook groups -f yaml
-opencli instagram search "query" -f yaml       # 搜用户
-opencli instagram user USERNAME -f yaml        # 读指定用户最近帖子
+# Filter raw data into a clean tuple: (rows_list, markdown_table_str)
+rows, table = reach_filter.filter_data(
+    raw_payload,
+    platform="reddit",
+    project=["sub", "score", "comments", "title"],
+    limit=10,
+    out="/tmp/reddit_results.json"
+)
+print(table)
 ```
 
-## 环境检查
+---
 
-> 本机 Python 环境默认是 conda `dl`；若 `agent-reach` 不在 PATH，用
-> `conda run -n dl agent-reach ...` 前缀。
+## 🔑 Authenticated Platforms
+
+Check `agent-reach doctor --json` to determine the active backend:
 
 ```bash
-# 检查可用 channel 与每个平台当前激活的后端
+# Twitter search (twitter-cli preferred; see references/social.md for fallbacks)
+twitter search "query" -n 10
+
+# Reddit (OpenCLI or rdt-cli)
+opencli reddit search "query" -f yaml   # desktop
+rdt search "query" --limit 10           # server / CLI
+
+# Xiaohongshu (OpenCLI with existing Chrome session)
+opencli xiaohongshu search "query" -f yaml
+
+# Facebook & Instagram (OpenCLI)
+opencli facebook search "query" -f yaml
+opencli instagram search "query" -f yaml
+opencli instagram user USERNAME -f yaml
+
+# Boss Zhipin (Dedicated Chrome CDP on :9222)
+boss --browser-source existing-browser --cdp-url http://localhost:9222 search "query"
+```
+
+---
+
+## 💻 Environment Diagnostics
+
+> Default workstation Python environment is conda `dl`; if `agent-reach` is not on standard PATH, prefix with `conda run -n dl agent-reach`.
+
+```bash
+# Check channels and active backends
 conda run -n dl agent-reach doctor --json
 ```
 
-## OpenCLI 适配器发现
+---
 
-路由表没有覆盖用户需要的平台或命令时，先用 `opencli list` 查已有适配器，再用
-`opencli <平台> --help` 查看公开命令。发现适配器只证明命令存在，不证明登录态或
-目标内容可用；仅在用户任务明确需要该平台时执行只读命令，并以实际非空内容验收。
+## 📂 Workspace Rules
 
-## 工作区规则
-
-**不要在 agent workspace 创建文件。** 使用 `/tmp/` 存放临时输出，`~/.agent-reach/` 存放持久数据。
-
-## 详细文档
-
-根据用户需求，阅读对应的详细文档：
-
-- [搜索工具](references/search.md) — Exa AI 搜索
-- [社交媒体](references/social.md) — 小红书, Twitter, B站, V2EX, Reddit, Facebook, Instagram（多后端/登录态命令组）
-- [职场招聘](references/career.md) — LinkedIn, Boss直聘
-- [开发工具](references/dev.md) — GitHub CLI
-- [网页阅读](references/web.md) — Jina Reader, RSS
-- [视频播客](references/video.md) — YouTube, B站, 小宇宙
-- [金融行情](references/finance.md) — 雪球股票行情、搜索、热门内容
-
-## 配置渠道
-
-如果某个 channel 需要配置，获取安装指南：
-https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
-
-用户只需提供 cookies，其他配置由 agent 完成。
+**Do not write scrapers or raw output in the project repository.**
+- Use `/tmp/` for temporary JSON cache buffers.
+- Use `~/.agent-reach/` for persistent credentials and session configurations.

@@ -143,15 +143,22 @@ class TestReachFilter(unittest.TestCase):
         lines = [l for l in res.stdout.strip().splitlines() if l.startswith("|")]
         self.assertEqual(len(lines), 4)
 
-    def test_cli_disk_buffering(self):
-        sample = [{"id": "1", "title": "Topic 1", "replies": 10, "node": {"title": "tech"}, "member": {"username": "u1"}}]
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            out_file = os.path.join(tmp_dir, "feed.json")
-            cmd = [sys.executable, os.path.join(os.path.dirname(__file__), "reach_filter.py"), "v2ex", "-o", out_file]
-            res = subprocess.run(cmd, input=json.dumps(sample), capture_output=True, text=True)
-            self.assertEqual(res.returncode, 0)
-            self.assertTrue(os.path.exists(out_file))
-            self.assertIn(f"Buffered 1 v2ex records to `{out_file}`", res.stdout)
+    def test_filter_data_programmatic_api(self):
+        sample = [
+            {"id": "1", "title": "Topic 1", "replies": 10, "node": {"title": "tech"}, "member": {"username": "u1"}},
+            {"id": "2", "title": "Topic 2", "replies": 20, "node": {"title": "life"}, "member": {"username": "u2"}},
+        ]
+        rows, table_str = rf.filter_data(sample, platform="v2ex", project=["title", "replies"], limit=1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["title"], "Topic 1")
+        self.assertIn("| Title", table_str)
+        self.assertIn("| Replies |", table_str)
+
+        # JSON mode
+        rows_json, json_str = rf.filter_data(sample, platform="v2ex", as_json=True)
+        self.assertEqual(len(rows_json), 2)
+        parsed = json.loads(json_str)
+        self.assertEqual(len(parsed), 2)
 
 
 if __name__ == "__main__":

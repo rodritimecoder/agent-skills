@@ -113,8 +113,12 @@ a needless plan review costs minutes, a skipped one costs intent.
    Infinite critic-writer loops burn context and money. Every validation rejection must carry hard serialized failure evidence (screenshots, stdout/stderr, traces) back to the builder with strict retry caps (max 2 iterations).
 4. **Human Retains the "Why and Why Not":**
    Models excel at building but naturally drift away from business constraints. The human explicitly approves `plan.md` upfront on complex work, and validates intent at the finish line.
+5. **Conductor vs. Builder Separation (Non-Dying Subagents):**
+   When dispatching subagents for Phase 3, the Parent Agent remains the Conductor (running gates and interacting with the human). Subagents are strictly bounded Vertical Slice Builders—they never talk to the human, never spawn recursive subagents, and never see holdout scenarios. (See [`references/subagent-dispatch-playbook.md`](references/subagent-dispatch-playbook.md)).
 
 ---
 
 ## 📚 References
 - [`references/architecture.md`](references/architecture.md) — Complete blueprint, Mermaid diagrams, and reel transcript notes.
+- [`references/subagent-dispatch-playbook.md`](references/subagent-dispatch-playbook.md) — Operational playbook on dispatching subagents without dying, crash post-mortem, conductor/builder separation, and prompt templates.
+

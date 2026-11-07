@@ -272,6 +272,55 @@ def fetch_v2ex(endpoint: str = "hot") -> Any:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def filter_data(
+    data: Any,
+    platform: str = "auto",
+    project: Optional[List[str]] = None,
+    limit: int = 0,
+    out: Optional[str] = None,
+    as_table: bool = True,
+    as_json: bool = False,
+) -> Tuple[List[Dict[str, Any]], str]:
+    """
+    Core functional entrypoint for filtering platform data.
+    Designed for omnicli Code Mode (omnicli exec) and programmatic use.
+
+    Returns: (filtered_rows, rendered_text)
+    """
+    resolved_platform = platform if platform != "auto" else auto_detect_platform(data)
+    handler = PLATFORM_MAP.get(resolved_platform, filter_generic)
+    rows = handler(data)
+
+    if limit and limit > 0:
+        rows = rows[:limit]
+
+    # Optional disk buffering
+    if out:
+        out_path = os.path.expanduser(out)
+        os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(rows, f, ensure_ascii=False, indent=2)
+
+    project_cols = [k.strip().lower() for k in project if k.strip()] if project else None
+    if project_cols and rows:
+        available_cols = list(rows[0].keys())
+        active_cols = [c for c in available_cols if c.lower() in project_cols] or available_cols
+        rows = [{k: r[k] for k in active_cols if k in r} for r in rows]
+    else:
+        active_cols = list(rows[0].keys()) if rows else []
+
+    rendered_parts = []
+    if out:
+        rendered_parts.append(f"### Buffered {len(rows)} {resolved_platform} records to `{out}`\n")
+
+    if as_json:
+        rendered_parts.append(json.dumps(rows, ensure_ascii=False, indent=2))
+    elif as_table:
+        rendered_parts.append(render_table(rows, active_cols))
+
+    return rows, "".join(rendered_parts)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Filter and format Agent Reach platform payloads into high-density Markdown tables.")
     parser.add_argument("platform", nargs="?", default="auto", choices=["auto", "v2ex", "twitter", "reddit", "bilibili", "xhs", "xiaohongshu", "github", "generic"], help="Target platform adapter (default: auto)")
@@ -314,34 +363,17 @@ def main():
 
         platform = args.platform if args.platform != "auto" else auto_detect_platform(data)
 
-    handler = PLATFORM_MAP.get(platform, filter_generic)
-    rows = handler(data)
-
-    if args.limit and args.limit > 0:
-        rows = rows[:args.limit]
-
-    # Optional disk buffering
-    if args.out:
-        out_path = os.path.expanduser(args.out)
-        os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(rows, f, ensure_ascii=False, indent=2)
-
-    project_cols = [k.strip().lower() for k in args.project.split(",") if k.strip()] if args.project else None
-    if project_cols and rows:
-        available_cols = list(rows[0].keys())
-        active_cols = [c for c in available_cols if c.lower() in project_cols] or available_cols
-        rows = [{k: r[k] for k in active_cols if k in r} for r in rows]
-    else:
-        active_cols = list(rows[0].keys()) if rows else []
-
-    if args.out:
-        print(f"### Buffered {len(rows)} {platform} records to `{args.out}`\n")
-
-    if args.json:
-        print(json.dumps(rows, ensure_ascii=False, indent=2))
-    else:
-        print(render_table(rows, active_cols))
+    project_cols = [k.strip() for k in args.project.split(",") if k.strip()] if args.project else None
+    _, rendered = filter_data(
+        data=data,
+        platform=platform,
+        project=project_cols,
+        limit=args.limit,
+        out=args.out,
+        as_table=args.table,
+        as_json=args.json,
+    )
+    sys.stdout.write(rendered)
 
 
 if __name__ == "__main__":
