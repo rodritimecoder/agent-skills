@@ -212,7 +212,7 @@ def main():
     p_listen = sub.add_parser("listen", help="Run the Event Listener on 01_new/ cards")
     p_listen.add_argument("target", nargs="?", default=".", help="Target project directory")
     p_listen.add_argument("--once", action="store_true", help="Run single poll pass")
-    p_listen.add_argument("--interval", type=int, default=5, help="Polling interval in seconds")
+    p_listen.add_argument("--interval", type=int, metavar="N", default=5, help="Polling interval in seconds")
     p_listen.add_argument("--worker", default=None, help="Command to run when card is claimed")
 
     # judge

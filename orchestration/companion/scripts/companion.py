@@ -796,19 +796,34 @@ def serve(host: str, port: int, verbose: bool) -> int:
     return 0
 
 
-def doctor() -> int:
+def doctor(as_json: bool = False) -> int:
     ok = True
+    checks: List[Dict[str, Any]] = []
+
+    def _check(name: str, passed: bool, detail: str, line: str) -> None:
+        nonlocal ok
+        ok &= bool(passed)
+        checks.append({"name": name, "ok": bool(passed), "detail": detail})
+        if not as_json:
+            print(line)
+
+    # In JSON mode stdout is reserved for the single result object; log() and any
+    # stray print from the live probe are diagnostics and belong on stderr.
+    stdout = sys.stdout
+    if as_json:
+        sys.stdout = sys.stderr
+
     print("companion doctor")
 
     ffmpeg = shutil.which("ffmpeg")
-    print(f"  {'ok  ' if ffmpeg else 'FAIL'} ffmpeg           {ffmpeg or 'not on PATH'}")
-    ok &= bool(ffmpeg)
+    _check("ffmpeg", bool(ffmpeg), ffmpeg or "not on PATH",
+           f"  {'ok  ' if ffmpeg else 'FAIL'} ffmpeg           {ffmpeg or 'not on PATH'}")
 
     probe = health()
     for key, label in (("asr", "audio.cpp :8081"), ("llm", "llama-server :8080")):
         state = "ok  " if probe[key] else "FAIL"
-        print(f"  {state} {label:<16} {'up' if probe[key] else 'unreachable'}")
-        ok &= bool(probe[key])
+        _check(label, bool(probe[key]), "up" if probe[key] else "unreachable",
+               f"  {state} {label:<16} {'up' if probe[key] else 'unreachable'}")
 
     try:
         with urllib.request.urlopen(f"{AUDIO}/v1/models", timeout=5) as resp:
@@ -816,11 +831,10 @@ def doctor() -> int:
         ids = {m.get("id") for m in data.get("data") or []}
         for model in (ASR_MODEL, TTS_MODEL):
             present = model in ids
-            print(f"  {'ok  ' if present else 'FAIL'} model {model:<12} {'installed' if present else 'missing'}")
-            ok &= present
+            _check(f"model {model}", present, "installed" if present else "missing",
+                   f"  {'ok  ' if present else 'FAIL'} model {model:<12} {'installed' if present else 'missing'}")
     except Exception as exc:  # noqa: BLE001
-        print(f"  FAIL models           {exc}")
-        ok = False
+        _check("models", False, str(exc), f"  FAIL models           {exc}")
 
     if ASR_LIVE:
         try:
@@ -828,18 +842,24 @@ def doctor() -> int:
             result = session.finish()
             live_drop(session.id)
             state = "ok  " if result["final"] or not result["error"] else "warn"
-            print(f"  {state} live asr         {ASR_MODEL} · {ASR_LANG} · empty pass {result['total_ms']:.0f} ms")
-            ok &= not result["error"]
+            _check("live asr", not result["error"],
+                   f"{ASR_MODEL} · {ASR_LANG} · empty pass {result['total_ms']:.0f} ms",
+                   f"  {state} live asr         {ASR_MODEL} · {ASR_LANG} · empty pass {result['total_ms']:.0f} ms")
         except Exception as exc:  # noqa: BLE001
-            print(f"  FAIL live asr          {exc}")
-            ok = False
+            _check("live asr", False, str(exc), f"  FAIL live asr          {exc}")
     else:
-        print("  idle live asr          disabled (COMPANION_ASR_LIVE=0)")
+        _check("live asr", True, "disabled (COMPANION_ASR_LIVE=0)",
+               "  idle live asr          disabled (COMPANION_ASR_LIVE=0)")
 
     avatar = ASSETS / "avatar" / "orchid_girl"
     frames = list(avatar.glob("*/*.png")) if avatar.is_dir() else []
-    print(f"  {'ok  ' if len(frames) >= 10 else 'FAIL'} avatar           {len(frames)} frames in {avatar.name}")
-    ok &= len(frames) >= 10
+    _check("avatar", len(frames) >= 10, f"{len(frames)} frames in {avatar.name}",
+           f"  {'ok  ' if len(frames) >= 10 else 'FAIL'} avatar           {len(frames)} frames in {avatar.name}")
+
+    if as_json:
+        sys.stdout = stdout
+        print(json.dumps({"ok": bool(ok), "checks": checks}))
+        return 0 if ok else 1
 
     print("  ready" if ok else "  not ready")
     return 0 if ok else 1
@@ -854,11 +874,12 @@ def main() -> int:
     p_serve.add_argument("--port", type=int, metavar="PORT", default=int(os.environ.get("COMPANION_PORT", "7778")))
     p_serve.add_argument("--verbose", action="store_true")
 
-    sub.add_parser("doctor", help="check ffmpeg, upstreams, models and avatar assets")
+    p_doctor = sub.add_parser("doctor", help="check ffmpeg, upstreams, models and avatar assets")
+    p_doctor.add_argument("--json", action="store_true", help="emit one JSON object")
 
     args = parser.parse_args()
     if args.cmd == "doctor":
-        return doctor()
+        return doctor(args.json)
     if args.cmd == "serve":
         return serve(args.host, args.port, args.verbose)
     parser.print_help()

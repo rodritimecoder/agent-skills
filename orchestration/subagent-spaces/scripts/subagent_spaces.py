@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,7 @@ FALLBACK_IMAGE = "docker.io/library/ubuntu:24.04"
 
 WORKER_CORES = list(range(4, 16))
 HOST_RESERVE_CORES = list(range(0, 4))
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 SLOT_TOPOLOGY = {
     "1": {"cpus": "4-7", "memory": "4g", "threads": 4},
@@ -50,6 +52,10 @@ def format_cores(core_list: List[int]) -> str:
     if core_list == list(range(core_list[0], core_list[-1] + 1)):
         return f"{core_list[0]}-{core_list[-1]}"
     return ",".join(str(c) for c in core_list)
+
+
+def strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def get_active_containers() -> List[Dict]:
@@ -148,9 +154,41 @@ def cmd_doctor() -> None:
     print("\n✅ System is fully capable of running granular 1-to-12 thread subagent spaces.")
 
 
-def cmd_slots() -> None:
+def cmd_slots(as_json: bool = False) -> None:
     active = get_active_containers()
     occupied_cores = get_occupied_cores(active)
+
+    if as_json:
+        core_states = []
+        for c in range(16):
+            if c in HOST_RESERVE_CORES:
+                state = "host"
+            elif c in occupied_cores:
+                state = "busy"
+            else:
+                state = "idle"
+            core_states.append({"core": c, "state": state})
+        slots = []
+        for slot_id in ["1", "2", "3"]:
+            topo = SLOT_TOPOLOGY[slot_id]
+            slot_cores = set(parse_cores(topo["cpus"]))
+            overlap = slot_cores.intersection(occupied_cores)
+            if len(overlap) == len(slot_cores):
+                slot_state = "full"
+            elif overlap:
+                slot_state = "partial"
+            else:
+                slot_state = "idle"
+            slots.append({
+                "slot": slot_id,
+                "cores": topo["cpus"],
+                "memory": topo["memory"],
+                "threads": topo["threads"],
+                "state": slot_state,
+                "busy_cores": len(overlap),
+            })
+        print(json.dumps({"ok": True, "cores": core_states, "slots": slots}))
+        return
 
     print("\n🖥️  [subagent-spaces] Thread & Slot Topology (16-Thread Ryzen Substrate)\n")
 
@@ -290,8 +328,24 @@ def cmd_run(args: argparse.Namespace) -> None:
     sys.exit(res.returncode)
 
 
-def cmd_ps() -> None:
+def cmd_ps(as_json: bool = False) -> None:
     active = get_active_containers()
+
+    if as_json:
+        spaces = []
+        for c in active:
+            labels = c.get("Labels") or {}
+            spaces.append({
+                "id": strip_ansi(c.get("Id", "")[:12]),
+                "cores": strip_ansi(str(labels.get("cores", labels.get("slot", "?")))),
+                "threads": strip_ansi(str(labels.get("threads", "1"))),
+                "status": strip_ansi(str(c.get("Status", "Running"))),
+                "workspace": strip_ansi(str(labels.get("workspace", "-"))),
+                "names": [strip_ansi(n) for n in (c.get("Names") or [])],
+            })
+        print(json.dumps({"ok": True, "spaces": spaces}))
+        return
+
     if not active:
         print("No active subagent-spaces containers running.")
         return
@@ -382,8 +436,12 @@ def main():
     subparsers = parser.add_subparsers(dest="action")
 
     subparsers.add_parser("doctor", help="Run diagnostic health checks on host capabilities")
-    subparsers.add_parser("slots", help="Show CPU core topology and slot occupancy")
-    subparsers.add_parser("ps", help="List active subagent space containers")
+    slots_p = subparsers.add_parser("slots", help="Show CPU core topology and slot occupancy")
+    slots_p.add_argument("--json", action="store_true",
+                         help="Emit machine-readable JSON on stdout")
+    ps_p = subparsers.add_parser("ps", help="List active subagent space containers")
+    ps_p.add_argument("--json", action="store_true",
+                      help="Emit machine-readable JSON on stdout")
     subparsers.add_parser("build", help="Build optimized local subagent-space image")
     subparsers.add_parser("prune", help="Clean up all active subagent spaces")
 
@@ -395,7 +453,7 @@ def main():
 
     run_p = subparsers.add_parser("run", help="Run a command or spawn a subagent space")
     run_p.add_argument("--cores", "-c", help="Exact CPU core(s) to pin (e.g. '4', '4-5', '4,6,8')")
-    run_p.add_argument("--cpus", "-n", type=int, help="Number of CPU threads to auto-allocate (e.g. 1, 2, 4)")
+    run_p.add_argument("--cpus", "-n", type=int, metavar="N", help="Number of CPU threads to auto-allocate (e.g. 1, 2, 4)")
     run_p.add_argument("--slot", choices=["1", "2", "3", "all"], help="Predefined worker slot")
     run_p.add_argument("--memory", "-m", help="Memory quota (e.g. '1g', '512m', '4g')")
     run_p.add_argument("--workspace", "-w", help="Workspace directory to mount into /workspace")
@@ -414,9 +472,21 @@ def main():
     if args.action == "doctor":
         cmd_doctor()
     elif args.action == "slots":
-        cmd_slots()
+        try:
+            cmd_slots(as_json=args.json)
+        except Exception as exc:
+            if not args.json:
+                raise
+            print(f"subagent-spaces slots failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            sys.exit(2)
     elif args.action == "ps":
-        cmd_ps()
+        try:
+            cmd_ps(as_json=args.json)
+        except Exception as exc:
+            if not args.json:
+                raise
+            print(f"subagent-spaces ps failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            sys.exit(2)
     elif args.action == "build":
         cmd_build()
     elif args.action == "enter":

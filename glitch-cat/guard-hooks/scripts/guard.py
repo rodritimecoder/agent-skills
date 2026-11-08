@@ -154,16 +154,32 @@ def protect_file(file_name: str, workspace_dir: Optional[str] = None):
 
     print(f"[guard-hooks] Added '{file_name}' to local protection list at {cfg_path}")
 
+def emit(payload: dict, ok: bool) -> None:
+    """The JSON face: one object on stdout when allowed, nothing when blocked.
+
+    A block keeps exit 1 rather than the guide's 2: guard-hooks is wired into
+    git pre-commit hooks and existing callers test for a non-zero status, so
+    the status is part of the contract and changing it is not this change's to
+    make.
+    """
+    if not ok:
+        print(payload.get("reason", "blocked"), file=sys.stderr)
+        sys.exit(1)
+    print(json.dumps(payload))
+
+
 def main():
     p = argparse.ArgumentParser(description="Deterministic Guard Hooks (Kem Glitch Architecture)")
     sub = p.add_subparsers(dest="cmd")
 
     chk_p = sub.add_parser("check", help="Check command or file action against deterministic guardrails")
     chk_p.add_argument("command", help="Shell command to validate")
+    chk_p.add_argument("--json", action="store_true", help="Emit one JSON object instead of prose")
 
     act_p = sub.add_parser("check-file", help="Check file action safety (delete/overwrite)")
     act_p.add_argument("action", choices=["delete", "overwrite", "truncate"], help="Action type")
     act_p.add_argument("file", help="Target file path")
+    act_p.add_argument("--json", action="store_true", help="Emit one JSON object instead of prose")
 
     wrap_p = sub.add_parser("wrap", help="Wrap and execute command with pre-execution safety gate")
     wrap_p.add_argument("command", nargs=argparse.REMAINDER, help="Command to safely execute")
@@ -177,12 +193,19 @@ def main():
     args = p.parse_args()
     if args.cmd == "check":
         ok, msg = check_command(args.command)
+        if args.json:
+            emit({"command": args.command, "allowed": ok, "reason": msg if not ok else "permitted"}, ok)
+            return
         if not ok:
             print(msg, file=sys.stderr)
             sys.exit(1)
         print("✅ [guard-hooks] Command permitted.")
     elif args.cmd == "check-file":
         ok, msg = check_file_action(args.action, args.file)
+        if args.json:
+            emit({"action": args.action, "file": args.file, "allowed": ok,
+                  "reason": msg if not ok else "permitted"}, ok)
+            return
         if not ok:
             print(msg, file=sys.stderr)
             sys.exit(1)

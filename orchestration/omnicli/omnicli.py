@@ -1612,7 +1612,7 @@ def main():
     p.add_argument("--omni-project", default=None, help="Comma-separated fields to keep from JSON output")
     p.add_argument("--omni-jq", default=None, help="JQ filter expression")
     p.add_argument("--omni-grep", default=None, help="Keep only lines matching this regex")
-    p.add_argument("--omni-max-bytes", type=int, default=DEFAULT_MAX_BYTES,
+    p.add_argument("--omni-max-bytes", type=int, metavar="N", default=DEFAULT_MAX_BYTES,
                    help=f"Hard cap on returned bytes (default {DEFAULT_MAX_BYTES})")
     p.add_argument("--omni-json", action="store_true")
     p.add_argument("--omni-timeout", type=float, default=300.0)
@@ -1676,7 +1676,7 @@ def main():
     p.add_argument("--enabled", action="store_true", help="Only tools that passed the gate")
     p.add_argument("--stubs", action="store_true", help="Print annotated signatures instead of ids")
     p.add_argument("--limit", type=int, default=None)
-    p.add_argument("--omni-max-bytes", type=int, default=DEFAULT_MAX_BYTES)
+    p.add_argument("--omni-max-bytes", type=int, metavar="N", default=DEFAULT_MAX_BYTES)
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("bindings", help="Write the Python bindings used by `omnicli exec`")

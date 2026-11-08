@@ -88,11 +88,21 @@ Present the **Why and Why Not** to the human:
 2. What are we explicitly *not* building (anti-goals)?
 3. What is the contract?
 
-Once approved by the human, write 1–3 **hidden holdout tests** in `.kem-loop/auth-rate-limiter/holdouts/`.
-> ⚠️ **CRITICAL INVARIANT:** Do NOT mention these holdout files, their file paths, or their assertions in the subagent prompt. This prevents test sycophancy.
+Once approved by the human, write 1–3 **hidden holdout tests** in `.kem-loop/auth-rate-limiter/holdouts/`, then register them:
+```bash
+kem-dev-loop approve auth-rate-limiter --by human
+kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_expiry.py  --kind pass
+kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_control.py --kind control
+```
+> ⚠️ **CRITICAL INVARIANT:** Do NOT mention these holdout files, their file paths, or their assertions in the subagent prompt. This prevents test sycophancy. `dispatch` refuses until both a `pass` and a `control` gate are registered, and `validate` refuses any gate registered or modified after the dispatch.
 
 ### Step 3: Launching the Builder Subagent (Parent Agent)
-When calling `invoke_subagent` (or your harness equivalent):
+Dispatch through the CLI so the task file, the buffered log, and the dispatch timestamp are recorded:
+```bash
+kem-dev-loop dispatch auth-rate-limiter --task /tmp/task_auth.txt
+# DISPATCH ok exit=0 62.4s log=.kem-loop/auth-rate-limiter/dispatch/builder_....log
+```
+When your harness offers only a native subagent tool (not a headless CLI), `--cmd` still takes the harness's headless entry point; the point is that `dispatch` stays the single seam that records the task file, the log, and the timestamp. Never bypass it.
 - **Role:** `"Vertical Slice Builder"`
 - **TypeName:** `"self"` (or your platform's coding subagent type)
 - **Model:** `"inherit"`

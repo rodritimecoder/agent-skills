@@ -496,12 +496,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_serve = sub.add_parser("serve", help="run the collector and web server")
     p_serve.add_argument("--host", default=os.environ.get("DECK_HOST", "127.0.0.1"))
     p_serve.add_argument("--port", type=int, default=int(os.environ.get("DECK_PORT", "7777")))
-    sub.add_parser("snapshot", help="collect once and print JSON")
+    p_snapshot = sub.add_parser("snapshot", help="collect once and print JSON")
+    p_snapshot.add_argument("--json", action="store_true",
+                            help="explicit alias for the default JSON output")
     args = parser.parse_args(argv)
     if args.command == "serve":
         return serve(args.host, args.port)
     if args.command == "snapshot":
-        return snapshot_once()
+        try:
+            return snapshot_once()
+        except Exception as exc:
+            if not args.json:
+                raise
+            print(f"deck snapshot failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 2
     return 2
 
 

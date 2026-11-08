@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "why": "Every numeric-named flag is either typed int/float in the binding, or listed here with the reason it is genuinely text. Keys are flag names, or '<tool id>|<flag>' when the reason is specific to one tool. The list is the reviewable record of that judgement: a builder that 'fixes' --worker into an int has to edit this file, so the decision shows up in the diff.",
+  "allow_str": {
+    "--worker": "worker/session name, not a count (worktree-harness, agentic-engineering)",
+    "--workers": "list of worker names, argparse nargs='+'",
+    "--lines": "line-range spec such as '10-45', not a count",
+    "--pages": "page-range spec, already declared metavar='SPEC' (doc-layout)",
+    "--cores": "CPU pin spec such as '4-5' or '4,6,8' (subagent-spaces)",
+    "--memory": "quota string such as '1g' or '512m' (subagent-spaces)",
+    "--token": "session/API token, never a count",
+    "--topic-id": "Canvas topic id, string-safe",
+    "--export": "output path",
+    "--scorecard": "output path",
+    "--batch": "path to a batch JSON file (decide)",
+    "--viewport": "geometry string such as '1280x720' (verification)",
+    "companion/scripts/companion:doctor|--port": "inherited root flag that doctor does not accept; contract-extraction leak, tracked in tier-c"
+  },
+  "deferred": {
+    "tailscale-ops": "scripts/ts_ops.sh is a bash script with no argparse; --json needs a JSON emitter or a rewrite, not a flag",
+    "guard-hooks": "the routable command is a compiled Rust binary (guard-rs/bin/guard-hooks); the Python scripts/guard.py is not what runs, so --json needs a Rust change and a rebuild"
+  },
+  "tiers": {
+    "b2a": [
+      "companion",
+      "deck",
+      "eval-router",
+      "guard-hooks",
+      "kem-dev-loop",
+      "state-compactor",
+      "subagent-spaces",
+      "tailscale-ops"
+    ],
+    "b2b": [
+      "cf-architect",
+      "clip-box",
+      "decision-model",
+      "eval-pipeline",
+      "glitch-orchestra",
+      "icm-architect",
+      "notes-index",
+      "ocr",
+      "okf-architect",
+      "worktree-harness"
+    ]
+  }
+}

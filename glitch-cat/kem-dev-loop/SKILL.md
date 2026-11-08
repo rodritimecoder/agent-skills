@@ -2,123 +2,121 @@
 name: kem-dev-loop
 description: >
   Kem Glitch's 6-phase autonomous AI development lifecycle (Glitch Cat Club; Reel DemLMidtxxj).
-  Enforces: (1) upfront complexity classification (Fast vs Full route), (2) human plan approval
-  for intent, (3) hidden anti-sycophancy holdouts, (4) parallel vertical slices, (5) grounded
-  human-persona validation before code review, and (6) final human intent check.
+  The CLI is the state machine: it refuses to dispatch a builder before hidden holdouts
+  exist, refuses to validate an undispatched or tampered run, and refuses code review
+  before a passing validation. Use for FULL_ROUTE work that needs plan approval,
+  anti-sycophancy holdouts, and grounded evidence.
 compatibility: "Requires python3, git, and local decision model (:8083)."
 allowed-tools: "Bash(kem-dev-loop:*) Bash(jev:*) Bash(review-hub:*) Bash(git:*) Read Write"
 ---
 
-# Kem Dev Loop (`kem-dev-loop`)
+# Kem Dev Loop
 
-> **Kem Glitch's 6-phase production engineering lifecycle from Glitch Cat Club (Reel `DemLMidtxxj`).**  
-> Acts as the master orchestrator coordinating `eval-router`, `worktree-harness`, `frontend-uat`, and `review-hub` into a repeatable, anti-sycophantic development system.
+Six phases. **The CLI enforces the order; the prose below does not.** There are five
+commands and you run them in sequence. Each one refuses if you skipped the one before.
 
----
-
-## 🏛️ The 6-Phase Lifecycle
-
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  1. CLASSIFY     │ ──> │  2. INTENT &     │ ──> │  3. PARALLEL     │
-│  Fast vs Full    │     │     HOLDOUTS     │     │     BUILD        │
-└──────────────────┘     └──────────────────┘     └──────────────────┘
-     eval-router             plan.md approval         worktree-harness
-                                                             │
-                                                             ▼
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  6. PRODUCTION   │ <── │  5. CODE REVIEW  │ <── │  4. GROUNDED     │
-│     & INTENT     │     │     (Decoupled)  │     │     VALIDATE     │
-└──────────────────┘     └──────────────────┘     └──────────────────┘
-     human gate              review-hub               verification / CDP
-```
-
----
-
-## 🛠️ CLI Quickstart
+## The whole loop
 
 ```bash
-# 1. Classify an incoming task (Fast Route vs Full Route)
-kem-dev-loop route "Refactor auth middleware to use JWT with Redis sessions"
+# 1. Route: deterministic pre-screen, then the calibrated model on :8083
+kem-dev-loop route "Add --json to the okf-architect validate subcommand"
 
-# 2. Initialize a feature run with isolated plan and hidden holdouts
-kem-dev-loop init user-auth-refactor
+# 2. Plan, approve, gate -- BEFORE any builder exists
+kem-dev-loop init okf-json
+$EDITOR .kem-loop/okf-json/plan.md                      # fill in Why / Why Not
+kem-dev-loop approve okf-json --by human
+kem-dev-loop holdout add okf-json .kem-loop/okf-json/holdouts/test_pass.py    --kind pass
+kem-dev-loop holdout add okf-json .kem-loop/okf-json/holdouts/test_control.py --kind control
 
-# 3. Add hidden holdout scenarios (builders NEVER see these)
-cat << 'EOF' > .kem-loop/user-auth-refactor/holdouts/test_expired_session.py
-def test_expired_session():
-    # builder agent cannot inspect or game this
-    ...
-EOF
+# 3. Dispatch ONE builder from ONE task file. All output goes to disk.
+kem-dev-loop dispatch okf-json --task /tmp/task_okf.txt
+#   DISPATCH ok exit=0 62.4s log=.kem-loop/okf-json/dispatch/builder_....log
 
-# 4. Run grounded validation (runs your suite + every holdout; logs evidence per gate)
-kem-dev-loop validate user-auth-refactor --test "pytest tests/test_auth.py"
+# 4. Validate: the only place assertions run
+kem-dev-loop validate okf-json --test "python3 academic/okf-architect/scripts/okf_architect.py validate . --json"
 
-# 4b. UI work: prove the app with hands and eyes, not a screenshot claim
-verify-app doctor --json
-verify-app run --pass .verify/pass.json
-
-# 5. Decoupled code review (refuses until phase 4 has actually passed)
-kem-dev-loop review --suite ponytail src/auth/
-kem-dev-loop review --suite unslop src/auth/
-
-# 6. Human evaluates alignment with original 'Why & Why Not' before git push
+# 5. Review the passing code, then hand the diff to the human
+kem-dev-loop review okf-json --suite ponytail src/
 ```
 
-### Routing fails closed
+Holdouts run from the invocation directory (the project root), with `KEM_RUN_DIR`
+pointing at `.kem-loop/<run>/` for fixtures. `.py` runs under pytest when it is
+installed, otherwise as a plain script (so give it an `if __name__ == "__main__"`
+block); `.sh` runs via bash, `.js` via node. Each gate's stdout, stderr and exit
+code lands in `.kem-loop/<run>/evidence/`.
 
-`route` runs a deterministic pre-screen before it spends a model call. Any
-cross-cutting surface (`auth`, `session`, `jwt`, `migration`, `schema`, `api`,
-`payment`, `security`, `refactor`, `deploy`, …) forces `FULL_ROUTE` with no model
-consulted.
+A missing runner is an environment fault, not a failed build: `validate` says so
+and does not spend a retry.
 
-Only genuinely ambiguous tasks reach the decision model, and a task is granted
-autonomy (`FAST_ROUTE`) only when the model picks *small* at **≥75 % confidence**
-from a live server. Everything else routes to the human gate:
+`route` prints `FAST_ROUTE` or `FULL_ROUTE`. Only `FULL_ROUTE` uses this loop; a
+`FAST_ROUTE` change is executed directly with normal verification.
 
-| Condition | Route | Reported as |
+## What the CLI refuses
+
+| Command | Refuses when | Because |
 | :--- | :--- | :--- |
-| Cross-cutting keyword hit | `FULL_ROUTE` | `deterministic` |
-| Model says *complex* | `FULL_ROUTE` | `jev` |
-| Model says *small* below 75 % | `FULL_ROUTE` | `jev` |
-| Decision server down (keyword fallback) | `FULL_ROUTE` | `degraded` ⚠️ |
-| `jev` not installed | `FULL_ROUTE` | `unavailable` ⚠️ |
+| `approve` | `plan.md` still has empty **Why** / **Why Not** | A plan with no stated intent approves nothing. |
+| `holdout add` | the file is not inside `.kem-loop/<run>/holdouts/` | Holdouts must stay where a builder cannot see them in-tree. |
+| `dispatch` | plan not approved | Phase 2 is a human gate, not a formality. |
+| `dispatch` | no holdouts registered | A builder with no gate can only be graded on its own opinion. |
+| `dispatch` | no `--kind control` holdout (`--allow-no-control` records a waiver) | A gate that cannot fail is not a gate. |
+| `dispatch` | a registered holdout's hash changed | The gate was edited after being written. |
+| `dispatch` | already dispatched successfully (`--redispatch` to override) | Stops accidental double builds. |
+| `validate` | no dispatch recorded (`--local` if you wrote it yourself) | Phase 3 happened, or it did not. |
+| `validate` | the builder exited non-zero | The slice never landed; it prints `tail -n 25` of the log. |
+| `validate` | a holdout was registered or modified **after** dispatch | This is the sycophancy breach the loop exists to prevent. |
+| `validate` | a holdout hash changed after registration | A gate edited to fit the code is not a gate. |
+| `validate` | an unregistered file sits in `holdouts/` | Every gate must be declared before the build. |
+| `validate` | no control was registered (`--allow-no-control` records a waiver) | Proves the gate can fail. |
+| `review` | `validation_passed` is false | Review checks whether code is clean, not whether it works. |
 
-A dead server never reads as a calibrated decision. The output names its source
-and confidence, and `DEGRADED` says so out loud. The asymmetry is deliberate:
-a needless plan review costs minutes, a skipped one costs intent.
+Every refusal exits non-zero and says what to run next. A refusal is a bug in the
+process, not an obstacle to route around.
 
-### Gates that can actually fail
+## Rules that make it work
 
-- `validate` **executes** every file in `holdouts/` (`.py` via pytest, `.sh` via
-  bash, `.js` via node) and records stdout, stderr and exit code per gate.
-- No `--test` and no holdouts is a **refusal**, not a pass. There is nothing to fail.
-- A missing pytest is reported as an environment fault and does not burn a retry.
-- Two failed validations is the cap; a third needs `--force`, because adversarial
-  death loops are the thing this loop exists to avoid.
-- `review` refuses to run against a run whose `meta.json` has
-  `validation_passed: false`. Pass `--run <name>` when `.kem-loop/` holds more than
-  one run.
+1. **Holdouts first.** Write the positive gate *and* the negative control before
+   dispatch. `validate` compares timestamps and hashes; you cannot backfill.
+2. **One Conductor, bounded builders.** You orchestrate and run gates. The builder
+   never talks to the human, never spawns subagents, never sees `holdouts/`.
+3. **One task file.** `dispatch --task` takes a single file with the contract: exact
+   target file, exact arguments, exact return schema. No "audit the codebase".
+4. **Disk owns the logs.** `dispatch` already buffers to
+   `.kem-loop/<run>/dispatch/*.log` and prints one receipt line. Never stream raw
+   builder output into chat; read `tail -n 25` only when it failed.
+5. **Validate, then review.** Functional proof precedes style and type review.
+6. **Two attempts, then stop.** The retry cap is enforced in `meta.json`; a third
+   validation needs `--force` and a human decision.
+7. **The human keeps the Why and Why Not.** Phase 6 shows evidence and the minimal
+   diff; the human decides whether it still matches the original intent.
 
+## Phase map
 
----
+| Phase | Owner | Command | Artifact |
+| :--- | :--- | :--- | :--- |
+| 1. Classify | Conductor | `route` | route + source + confidence |
+| 2. Intent & holdouts | Human + Conductor | `init`, `approve`, `holdout add` | `plan.md`, registered holdouts |
+| 3. Build | Builder (dispatched) | `dispatch` | `dispatch/task_*.md`, `dispatch/builder_*.log` |
+| 4. Validate | Conductor | `validate`, `verify-app run` for UI | `evidence/validation_*.json` |
+| 5. Review | Conductor | `review` | `review-hub` suite output |
+| 6. Intent check | Human | — | approved diff |
 
-## 🛡️ Key Architectural Invariants
+Run state lives in `.kem-loop/<run>/meta.json`:
 
-1. **Anti-Sycophancy via Holdouts:**
-   When coding agents inspect their own test assertions during authoring, they exhibit sycophancy—hardcoding dummy mocks and fragile heuristics to pass the test. Holdout scenarios are isolated in `.kem-loop/<run>/holdouts/` and executed strictly at validation time.
-2. **Validation First, Code Review Second:**
-   Never mix code review into functional testing. Prove that software works for a real human persona first by driving the live app (`verify-app run` from the `verification` skill: real viewport, console, network, latency and pixels). `frontend-uat` is the sub-second click loop; `verification` is the durable PASS/FAIL artifact. Once proven functional, run `review-hub` for type discipline and clean architecture.
-3. **No Adversarial Death Loops:**
-   Infinite critic-writer loops burn context and money. Every validation rejection must carry hard serialized failure evidence (screenshots, stdout/stderr, traces) back to the builder with strict retry caps (max 2 iterations).
-4. **Human Retains the "Why and Why Not":**
-   Models excel at building but naturally drift away from business constraints. The human explicitly approves `plan.md` upfront on complex work, and validates intent at the finish line.
-5. **Conductor vs. Builder Separation (Non-Dying Subagents):**
-   When dispatching subagents for Phase 3, the Parent Agent remains the Conductor (running gates and interacting with the human). Subagents are strictly bounded Vertical Slice Builders—they never talk to the human, never spawn recursive subagents, and never see holdout scenarios. (See [`references/subagent-dispatch-playbook.md`](references/subagent-dispatch-playbook.md)).
+```json
+{
+  "plan_approved": true,
+  "holdouts": {"test_pass.py": {"kind": "pass", "sha256": "…"},
+               "test_control.py": {"kind": "control", "sha256": "…"}},
+  "dispatch": {"started_at_epoch": 1762…, "exit_code": 0, "log": ".kem-loop/…/builder_….log"},
+  "validation_passed": true,
+  "validation_attempts": 0,
+  "waivers": []
+}
+```
 
----
+## References
 
-## 📚 References
-- [`references/architecture.md`](references/architecture.md) — Complete blueprint, Mermaid diagrams, and reel transcript notes.
-- [`references/subagent-dispatch-playbook.md`](references/subagent-dispatch-playbook.md) — Operational playbook on dispatching subagents without dying, crash post-mortem, conductor/builder separation, and prompt templates.
-
+- [`references/subagent-dispatch-playbook.md`](references/subagent-dispatch-playbook.md) —
+  conductor/builder separation, the "dead subagent" post-mortem, and prompt templates.
+- [`references/architecture.md`](references/architecture.md) — full blueprint and reel notes.

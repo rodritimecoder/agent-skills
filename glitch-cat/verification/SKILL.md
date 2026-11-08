@@ -14,6 +14,8 @@ description: >
   the gate can fail by breaking one feature on purpose (`control`). Complements frontend-uat
   (single sub-second journey) and playwright (the driver underneath).
 
+metadata:
+  bins: verify-app
 compatibility: "Needs a Chromium CDP endpoint on :9222 (playwright-rs daemon start) for the hands and eyes layers, ffmpeg for the pixel layer, and optionally a running Storybook plus SENTRY_AUTH_TOKEN. Python 3.10+; no third-party Python packages."
 allowed-tools: "Bash(verify-app:*) Bash(python3:*) Bash(playwright-rs:*) Bash(ffmpeg:*) Read Write"
 ---

@@ -613,7 +613,7 @@ if __name__ == "__main__":
     p_disp.add_argument("--verify", default=None, help="Global app verification command")
     p_disp.add_argument("--run-name", default=None, help="Optional custom run ID")
     p_disp.add_argument("--max-turns", type=int, default=6, metavar="LIMIT", help="Maximum turns per subagent")
-    p_disp.add_argument("--timeout", type=int, default=300, metavar="TIMEOUT", help="Per-worker timeout in seconds")
+    p_disp.add_argument("--timeout", type=int, default=300, metavar="N", help="Per-worker timeout in seconds")
     p_disp.add_argument("--model", default=None, help="Model override for all workers")
 
     args = parser.parse_args()

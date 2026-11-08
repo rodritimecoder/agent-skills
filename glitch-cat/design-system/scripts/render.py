@@ -148,6 +148,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--look",
+        choices=tuple(LOOKS),
         default=DEFAULT_LOOK,
         help=f"one of: {', '.join(LOOKS)} (default: {DEFAULT_LOOK})",
     )

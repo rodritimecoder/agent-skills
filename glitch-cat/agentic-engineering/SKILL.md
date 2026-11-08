@@ -6,6 +6,8 @@ description: >
   Reel DehIT3lNgHC). Operates target-local Markdown Kanban boards (.kanban/), event-driven Listeners,
   Fresh-Context Unbiased Judges, Task Splitters, and multi-model parallel sandboxes.
 
+metadata:
+  bins: agentic
 compatibility: "Requires git. Uses a local model runner for the judge and sandbox tiers."
 allowed-tools: "Bash(python3:*) Bash(git:*) Read Write"
 ---

@@ -803,7 +803,7 @@ def build_parser() -> argparse.ArgumentParser:
                           help="open the app, drive it, and report what the browser did")
     eyes.add_argument("--url", required=True)
     eyes.add_argument("--viewport", default=None)
-    eyes.add_argument("--settle", type=int, default=800, metavar="TIMEOUT")
+    eyes.add_argument("--settle", type=int, default=800, metavar="N")
     eyes.add_argument("--click", action="append", default=[])
     eyes.add_argument("--fill", action="append", nargs=2, metavar=("SELECTOR", "VALUE"), default=[])
     eyes.add_argument("--expect-text", default=None)

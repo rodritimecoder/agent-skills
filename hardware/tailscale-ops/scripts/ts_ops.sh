@@ -117,7 +117,7 @@ except Exception as e:
     
 # ports:begin
 SERVICES=(
-  "8080:llm — Qwen3.6-35B-A3B-Uncensored-Genesis-Final"
+  "8080:llm — Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP"
   "8081:audio — nemotron-asr"
   "8083:decision — h2o-lightning-4b"
   "8082:decision-engine — StartLux-Decision-v1.1-4B-Instant"

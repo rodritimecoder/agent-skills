@@ -1,6 +1,8 @@
 ---
 name: model-layer
 description: "The model layer of this machine: every local model server — llm (:8080), audio (:8081), decision (:8083/:8089), ocr (:8084/:8085), rerank + embed (:8086/:8087), grounding (:8088), ocr-jev (:8090) — with its launcher script, weights files, health check, quirks and the skills that consume it, plus the llama-swap rig (:8000) via vram-rig-ctl. MUST READ before starting, stopping, swapping or debugging any local model server, or before writing code that calls one. The roster is generated from ports.json; a model swap edits the manifest and re-renders — never this file."
+metadata:
+  bins: vram-rig-ctl
 allowed-tools: "Bash(vram-rig-ctl:*) Bash(python3:*) Bash(ports.py:*) Read"
 ---
 
@@ -50,13 +52,13 @@ Beyond the slots sits the swapping rig, operated by `vram-rig-ctl`
   llm slot's king holds the VRAM); auxiliary models are evicted and restored on
   demand. Start/inspect/stop with `vram-rig-ctl llama-swap-up | llama-swap-status
   | llama-swap-down`; it watches [config/llama-swap.yaml](config/llama-swap.yaml).
-- **Headroom:** `vram-rig-ctl status` (VRAM + every slot's state),
-  `evict-all` (free every non-pinned port), `kill --port N`, `swap --port N`.
+- **Headroom & Dynamic Swapping:** `vram-rig-ctl status` (VRAM + every slot's state),
+  `vram-rig-ctl up <slot|port>` (or `swap`), `vram-rig-ctl down <slot|port>` (or `kill`),
+  and `vram-rig-ctl evict-all` (free every non-pinned port to reclaim headroom). Target
+  can be a slot id (`ocr`, `asr`, `decision`, `llm`), alias, or numeric port.
 
 The rig is `infra` in `ports.json` (owned by this skill); the slots above are
-the models it swaps. Note: the rig config's `qwen3.6-35b` entry names the
-deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
-(`ports.py swap` covers the slots; `llama-swap.yaml` needs a matching edit).
+the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weights on the AI volume.
 
 ## Rules
 
@@ -69,7 +71,7 @@ deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
 <!-- ports:begin -->
 | Slot | Port | Alias | Default launcher | Model | Weights | Used by |
 |---|---|---|---|---|---|---|
-| `llm` | `:8080` | `local-coder-genesis` | `luffy_nothink.sh` | Qwen3.6-35B-A3B-Uncensored-Genesis-Final (Q4_K_M) **(retired)** | `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-GGUF/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-Q4_K_M.gguf` | local-llm, omnicli |
+| `llm` | `:8080` | `local-coder-genesis` | `luffy-hermes-mtp-vulkan.sh` | Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft) **(candidate)** | `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf`<br>`models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf` | local-llm, omnicli |
 | `audio` | `:8081` | `local-audio-audiocpp` | `run-audiocpp.sh` | nemotron-asr | — | audiocpp, companion, video-miner |
 | `decision` | `:8083` | `local-decide` | `h2o.sh` | h2o-lightning-4b (Q4_K_M + mmproj F16) | — | jev-decision, decision-model, clip-box, frontend-uat, eval-router |
 | `decision-engine` | `:8082` | `local-decide-engine` | `startlux-decision.sh` | StartLux-Decision-v1.1-4B-Instant (Q4_K_M + mmproj F16) **(candidate)** | `models/startlux-models/StartLux-Decision-v1.1-4B-Instant-GGUF/StartLux-Decision-v1.1-4B-Instant-Q4_K_M.gguf`<br>`models/startlux-models/StartLux-Decision-v1.1-4B-Instant-GGUF/mmproj-StartLux-Decision-v1.1-4B-Instant-F16.gguf` | jev-decision |
@@ -86,12 +88,12 @@ deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
 
 - **Role:** Primary generative LLM — chat, code, long-form writing, prose projection
 - **Service:** llama-server (Vulkan)
-- **Start:** `luffy_nothink.sh` (volume `sh/`; in-repo copy `launchers/luffy_nothink.sh`)
+- **Start:** `luffy-hermes-mtp-vulkan.sh` (volume `sh/`; in-repo copy `launchers/luffy-hermes-mtp-vulkan.sh`)
 - **Health:** `curl -s http://127.0.0.1:8080/health`
 - **API:** `/v1/chat/completions`
 - **Owner:** `local-llm` · **Used by:** local-llm, omnicli
-- **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-GGUF/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-Q4_K_M.gguf`
-- **Quirks:** WEIGHTS DELETED by owner 2026-11-01 — deliberate, not coming back; only the Q8_K_P build remains on the volume.
+- **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf` · `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf`
+- **Quirks:** 131072 context, nextn head, --spec-type draft-mtp (n-max 4), dual-GPU 50/50 on the upstream Vulkan build.
 - **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, retired) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M + mmproj F16, retired) · `Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-TTQ` (4.51bpw IQ4_NL, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, candidate) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate)
 
 ### `:8081` audio — `local-audio-audiocpp`

@@ -542,7 +542,7 @@ def main() -> int:
     r.add_argument("--screenshot", help="Where to save the evidence screenshot")
     r.add_argument("--plan", help="Execute a plan produced by `plan` instead of deciding again")
     r.add_argument("--min-p", type=float, default=0.0, metavar="SCORE", help="Refuse to click below this probability")
-    r.add_argument("--timeout", type=int, default=5000, metavar="TIMEOUT", help="Action timeout in ms (default 5000)")
+    r.add_argument("--timeout", type=int, default=5000, metavar="N", help="Action timeout in ms (default 5000)")
     r.add_argument("--workdir", help="Serialize each step to disk here (step_01_candidates.json, …)")
     r.add_argument("--out", help="Write the full report JSON here; stdout stays one line")
     r.add_argument("--json", action="store_true", help="Print the full report JSON")

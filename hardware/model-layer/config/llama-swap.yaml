@@ -25,7 +25,7 @@ models:
       - "luffy"
     cmd: >
       ${server_upstream_vulkan}
-      -m /run/media/rodri/AI/models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-GGUF/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-Q4_K_M.gguf
+      -m /run/media/rodri/AI/models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf
       --jinja
       --chat-template-file ${qwen_template}
       --reasoning on

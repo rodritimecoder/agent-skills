@@ -854,7 +854,7 @@ def main():
     p_agent = sub.add_parser("agent", help="Run autonomous subagent loop with compound bash batching")
     p_agent.add_argument("--prompt", required=True, help="Task instructions")
     p_agent.add_argument("--model", default=None, help="Specific model override")
-    p_agent.add_argument("--max-turns", type=int, default=12, help="Maximum conversation turns")
+    p_agent.add_argument("--max-turns", type=int, metavar="LIMIT", default=12, help="Maximum conversation turns")
     p_agent.add_argument("--out", default=None, help="Save final subagent report to file")
 
     p_chat = sub.add_parser("chat", help="Single-turn completion or code review")

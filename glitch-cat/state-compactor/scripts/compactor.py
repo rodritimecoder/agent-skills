@@ -214,6 +214,29 @@ def check_compaction(target_dir: Optional[str] = None, transcript_path: Optional
         "open_tasks_count": len(data.get("tasks_open", []))
     }
 
+def check_report(target_dir: Optional[str] = None, transcript_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    res = check_compaction(target_dir=target_dir, transcript_path=transcript_path)
+    if "estimated_tokens" not in res:
+        return [{
+            "name": "state_file",
+            "ok": False,
+            "detail": f"{res.get('reason', 'no state file')}: {_find_state_file(target_dir)}",
+        }]
+    limit = res["token_limit"]
+    turns = res["turns"]
+    return [
+        {
+            "name": "token_budget",
+            "ok": res["estimated_tokens"] < limit,
+            "detail": f"{res['estimated_tokens']} estimated tokens / {limit} limit",
+        },
+        {
+            "name": "turn_budget",
+            "ok": turns < 40,
+            "detail": f"{turns} turns / 40 max",
+        },
+    ]
+
 def generate_handover(target_dir: Optional[str] = None, out_path: Optional[str] = None) -> str:
     json_path = _find_state_file(target_dir)
     if not json_path.is_file():
@@ -265,14 +288,21 @@ def generate_handover(target_dir: Optional[str] = None, out_path: Optional[str] 
 
     return content
 
-def inspect_state(target_dir: Optional[str] = None):
+def inspect_state(target_dir: Optional[str] = None, as_json: bool = False):
     json_path = _find_state_file(target_dir)
     if not json_path.is_file():
+        if as_json:
+            print(json.dumps({"ok": False, "state": {}}))
+            return
         print(f"[state-compactor] No state file found in {Path.cwd()} or parent directories.")
         return
 
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
+
+    if as_json:
+        print(json.dumps({"ok": True, "state": data}))
+        return
 
     print("\n" + "=" * 60)
     print(f" 📂 AGENT STATE LEDGER: {data.get('goal')}")
@@ -332,6 +362,8 @@ def main():
     chk_p = sub.add_parser("check", help="Check if context has crossed compaction threshold")
     chk_p.add_argument("--transcript", help="Optional transcript log file path")
     chk_p.add_argument("--dir", help="Target directory")
+    chk_p.add_argument("--json", action="store_true",
+                       help="Emit machine-readable JSON on stdout")
 
     comp_p = sub.add_parser("compact", help="Generate zero-loss handover prompt from state ledger")
     comp_p.add_argument("--out", help="Write handover prompt to file")
@@ -339,6 +371,8 @@ def main():
 
     ins_p = sub.add_parser("inspect", help="Display current state ledger")
     ins_p.add_argument("--dir", help="Target directory")
+    ins_p.add_argument("--json", action="store_true",
+                       help="Emit machine-readable JSON on stdout")
 
     args = p.parse_args()
     if args.cmd == "init":
@@ -370,18 +404,35 @@ def main():
         )
         sys.exit(ret)
     elif args.cmd == "check":
-        res = check_compaction(target_dir=args.dir, transcript_path=args.transcript)
-        print(json.dumps(res, indent=2))
-        if res["needs_compaction"]:
-            print(f"\n⚠️  [state-compactor] COMPACTION TRIGGERED! (Estimated tokens: {res['estimated_tokens']}/{res['token_limit']})",
-                  file=sys.stderr)
-            sys.exit(2)
+        if args.json:
+            try:
+                checks = check_report(target_dir=args.dir, transcript_path=args.transcript)
+            except Exception as exc:
+                print(f"[state-compactor] check failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+                sys.exit(2)
+            ok = all(c["ok"] for c in checks)
+            print(json.dumps({"ok": ok, "checks": checks}))
+            if not ok:
+                print("\n⚠️  [state-compactor] COMPACTION TRIGGERED!", file=sys.stderr)
+        else:
+            res = check_compaction(target_dir=args.dir, transcript_path=args.transcript)
+            print(json.dumps(res, indent=2))
+            if res["needs_compaction"]:
+                print(f"\n⚠️  [state-compactor] COMPACTION TRIGGERED! (Estimated tokens: {res['estimated_tokens']}/{res['token_limit']})",
+                      file=sys.stderr)
+                sys.exit(2)
     elif args.cmd == "compact":
         out = generate_handover(target_dir=args.dir, out_path=args.out)
         if not args.out:
             print(out)
     elif args.cmd == "inspect":
-        inspect_state(target_dir=args.dir if hasattr(args, "dir") else None)
+        try:
+            inspect_state(target_dir=args.dir if hasattr(args, "dir") else None, as_json=args.json)
+        except Exception as exc:
+            if not args.json:
+                raise
+            print(f"[state-compactor] inspect failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            sys.exit(2)
     else:
         p.print_help()
 

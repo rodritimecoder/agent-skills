@@ -208,6 +208,58 @@ def parse_doc_globs(content: str) -> list[str]:
     return globs
 
 
+def parse_bins(content: str) -> list[str]:
+    """Return the extra command names declared by ``metadata.bins``.
+
+    A skill whose command is not named after the skill (``model-layer`` ships
+    ``vram-rig-ctl``) cannot be found by ``_resolve_shim`` today. The alias is
+    a property of the skill, so it lives in the skill's frontmatter — inside
+    the ``metadata`` map, which the collection already uses and the spec audit
+    already allows, rather than as a new top-level key.
+
+    Deliberately not a YAML parser, in line with the rest of this module. Both
+    an inline list, a comma/space separated scalar and a block list are read.
+    """
+    m = _METADATA_BLOCK_RE.search(content)
+    if not m:
+        return []
+    meta = m.group("meta")
+
+    d = re.search(r"^[ \t]+bins:[ \t]*(?P<inline>\[[^\]]*\])?[ \t]*(?P<scalar>[^\n]*)$", meta, re.MULTILINE)
+    if not d:
+        return []
+
+    names: list[str] = []
+
+    def add(values) -> None:
+        for value in values:
+            name = value.strip().strip("\"'")
+            if name and name not in names:
+                names.append(name)
+
+    inline = d.group("inline")
+    if inline:
+        add(inline.strip("[]").split(","))
+        return names
+
+    scalar = (d.group("scalar") or "").strip().strip("\"'")
+    if scalar:
+        add(re.split(r"[,\s]+", scalar))
+        return names
+
+    tail = meta[d.end():]
+    key_indent = len(re.match(r"[ \t]*", d.group(0)).group(0))
+    for line in tail.splitlines():
+        if not line.strip():
+            continue
+        if len(line) - len(line.lstrip()) <= key_indent:
+            break
+        item = re.match(r"^[ \t]*-[ \t]*(.+?)[ \t]*$", line)
+        if item:
+            add([item.group(1)])
+    return names
+
+
 def _iter_skill_dirs(root: Path, include_sidelined: bool):
     if not root.is_dir():
         return
@@ -254,7 +306,7 @@ def load_all_skills(include_sidelined: bool = False) -> dict[str, dict[str, Any]
             continue
         name, desc = parse_frontmatter(content)
         name = name or item.name
-        shim = _resolve_shim(name, item.name)
+        shim = _resolve_shim(name, item.name, *parse_bins(content))
         skills[name] = {
             "name": name,
             "dir_name": item.name,
@@ -270,9 +322,14 @@ def load_all_skills(include_sidelined: bool = False) -> dict[str, dict[str, Any]
     return skills
 
 
-def _resolve_shim(*names: str) -> str | None:
-    """Find a ~/.local/bin shim for a skill, if one exists."""
-    bindir = Path.home() / ".local" / "bin"
+def _resolve_shim(*names: str, bindir: Path | None = None) -> str | None:
+    """Find a ~/.local/bin shim for a skill, if one exists.
+
+    ``names`` is the skill name, its directory name, and any
+    ``metadata.bins`` aliases, in that order. ``bindir`` exists so the
+    resolver can be tested against a fixture instead of this machine.
+    """
+    bindir = bindir or (Path.home() / ".local" / "bin")
     for n in names:
         if not n:
             continue

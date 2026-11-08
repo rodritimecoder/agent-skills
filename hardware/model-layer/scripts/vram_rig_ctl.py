@@ -160,8 +160,75 @@ def is_port_open(port):
     return res == 0
 
 
-def kill_port(port_str):
-    p_int = int(port_str)
+SLOT_SYNONYMS = {
+    "llm": "8080",
+    "coder": "8080",
+    "genesis": "8080",
+    "luffy": "8080",
+    "audio": "8081",
+    "asr": "8081",
+    "tts": "8081",
+    "audiocpp": "8081",
+    "decision": "8083",
+    "decide": "8083",
+    "jev": "8083",
+    "h2o": "8083",
+    "decision-engine": "8082",
+    "startlux": "8082",
+    "decision-fallback": "8089",
+    "imajev": "8089",
+    "ocr-crispembed": "8084",
+    "crispembed": "8084",
+    "ocr": "8085",
+    "ocr-lighton": "8085",
+    "lighton": "8085",
+    "reranker": "8086",
+    "rerank": "8086",
+    "jina": "8086",
+    "embed": "8087",
+    "bge": "8087",
+    "grounding": "8088",
+    "wevisone": "8088",
+    "ocr-jev": "8090",
+    "minicpm": "8090",
+    "llm-rp": "8091",
+    "rp": "8091",
+    "lfm3": "8091",
+}
+
+
+def resolve_target(target: str, models: dict = None) -> str:
+    """Resolve port number, slot ID, alias, or friendly synonym to a port string."""
+    if not target:
+        return ""
+    clean = str(target).strip().lower().lstrip(":")
+    if models and clean in models:
+        return clean
+    if clean in SLOT_SYNONYMS:
+        syn = SLOT_SYNONYMS[clean]
+        if not models or syn in models:
+            return syn
+    if models:
+        for p_str, meta in models.items():
+            alias = str(meta.get("alias", "")).lower()
+            name = str(meta.get("name", "")).lower()
+            if clean == alias or clean in alias:
+                return p_str
+            if clean in name:
+                return p_str
+    return clean
+
+
+def kill_port(target_arg):
+    registry = load_registry()
+    models = registry.get("models", {})
+    port_str = resolve_target(target_arg, models)
+    try:
+        p_int = int(port_str)
+    except ValueError:
+        print(f"❌ Error: Cannot resolve '{target_arg}' to a valid port.")
+        return False
+
     active = get_listening_ports(p_int, p_int)
     info = active.get(str(port_str))
     if not info and not is_port_open(p_int):
@@ -301,11 +368,13 @@ def cmd_llama_swap_status(port=8000):
     print(json.dumps(info, indent=2))
 
 
-def cmd_swap(target_port):
+def cmd_swap(target_arg):
     registry = load_registry()
     models = registry.get("models", {})
+    target_port = resolve_target(target_arg, models)
     if str(target_port) not in models:
-        sys.exit(f"❌ Error: Port {target_port} is not defined in {REGISTRY_PATH}")
+        available = ", ".join([f"{p} ({m.get('alias', '')})" for p, m in models.items()])
+        sys.exit(f"❌ Error: Target '{target_arg}' could not be resolved to a registered port.\nAvailable: {available}")
 
     target_meta = models[str(target_port)]
     active = get_listening_ports(8080, 8090)
@@ -364,17 +433,30 @@ if __name__ == "__main__":
     p_swap_status = sub.add_parser("llama-swap-status")
     p_swap_status.add_argument("--port", type=int, default=8000)
 
-    p_kill = sub.add_parser("kill")
-    p_kill.add_argument("--port", required=True)
+    p_kill = sub.add_parser("kill", help="Stop a service by port, slot id, or alias (e.g. 8085, ocr, asr)")
+    p_kill.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_kill.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
-    p_swap = sub.add_parser("swap")
-    p_swap.add_argument("--port", required=True)
+    p_down = sub.add_parser("down", help="Alias for kill (e.g. vram-rig-ctl down ocr)")
+    p_down.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_down.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
+
+    p_swap = sub.add_parser("swap", help="Start/swap a service by port, slot id, or alias (e.g. 8085, ocr, asr)")
+    p_swap.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_swap.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
+
+    p_up = sub.add_parser("up", help="Alias for swap (e.g. vram-rig-ctl up ocr)")
+    p_up.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_up.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
     args = parser.parse_args()
     if args.action == "status":
         cmd_status()
-    elif args.action == "kill":
-        kill_port(str(args.port))
+    elif args.action in ("kill", "down"):
+        target = args.target or getattr(args, "opt_port", None)
+        if not target:
+            sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl kill ocr)")
+        kill_port(target)
     elif args.action == "evict-all":
         reg = load_registry()
         pinned = reg.get("pinned_port", "8080")
@@ -382,8 +464,11 @@ if __name__ == "__main__":
             if p != pinned:
                 kill_port(p)
         print("✅ Evicted auxiliary ports. Headroom reclaimed.")
-    elif args.action == "swap":
-        cmd_swap(str(args.port))
+    elif args.action in ("swap", "up"):
+        target = args.target or getattr(args, "opt_port", None)
+        if not target:
+            sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl swap ocr)")
+        cmd_swap(target)
     elif args.action == "llama-swap-up":
         cmd_llama_swap_up(args.port)
     elif args.action == "llama-swap-down":

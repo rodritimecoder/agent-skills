@@ -64,7 +64,7 @@ def main():
     parser = argparse.ArgumentParser(prog="agentic-listener", description="The Event Listener & Auto-Dispatcher")
     parser.add_argument("target", nargs="?", default=".", help="Target project directory")
     parser.add_argument("--once", action="store_true", help="Run single poll pass and exit")
-    parser.add_argument("--interval", type=int, default=5, metavar="TIMEOUT", help="Polling interval in seconds")
+    parser.add_argument("--interval", type=int, default=5, metavar="N", help="Polling interval in seconds")
     parser.add_argument("--worker", default=None, help="Command to run when card is picked up (e.g. 'agentic run {CARD_ID}')")
 
     args = parser.parse_args()

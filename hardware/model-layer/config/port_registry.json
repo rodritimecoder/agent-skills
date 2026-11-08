@@ -10,8 +10,8 @@
       "alias": "local-coder-genesis",
       "vram_mb": 20500,
       "pinned": true,
-      "name": "Qwen3.6-35B-A3B-Uncensored-Genesis-Final",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/luffy_nothink.sh",
+      "name": "Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP",
+      "cmd": "sh $HOME/src/my-agent-skills/launchers/luffy-hermes-mtp-vulkan.sh",
       "role": "Primary generative LLM \u2014 chat, code, long-form writing, prose projection"
     },
     "8081": {

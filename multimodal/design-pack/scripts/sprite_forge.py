@@ -760,7 +760,7 @@ def main() -> int:
 
     p = sub.add_parser("motion-verify", help="replay the tracks against the measurement")
     p.add_argument("stage")
-    p.add_argument("--max-rows", type=float, default=0.5)
+    p.add_argument("--max-rows", type=float, metavar="SCORE", default=0.5)
     p.add_argument("--max-tint", type=int, default=12)
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_motion_verify)

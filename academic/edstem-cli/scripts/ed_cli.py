@@ -890,7 +890,7 @@ def main():
 
     p_threads = subparsers.add_parser("threads", help="List threads in a course", parents=[common_parser])
     p_threads.add_argument("course_id", type=int, help="Course ID")
-    p_threads.add_argument("--offset", type=int, default=0, help="Pagination offset")
+    p_threads.add_argument("--offset", type=int, metavar="LIMIT", default=0, help="Pagination offset")
     p_threads.add_argument("--sort", default="new", choices=["new", "top", "unanswered"], help="Sort order")
     p_threads.add_argument("--filter", help="Thread filter (e.g. unread, starred)")
     p_threads.add_argument("--search", help="Search keyword in titles and content")
@@ -899,7 +899,7 @@ def main():
     p_thread = subparsers.add_parser("thread", help="View thread and its replies", parents=[common_parser])
     p_thread.add_argument("thread_id", type=int, nargs="?", help="Global thread ID")
     p_thread.add_argument("--course-id", type=int, help="Course ID (when using with --number)")
-    p_thread.add_argument("--number", type=int, help="Course-relative thread number")
+    p_thread.add_argument("--number", type=int, metavar="N", help="Course-relative thread number")
     p_thread.add_argument("--text-only", action="store_true", help="Render as clean plain text")
 
     p_post = subparsers.add_parser("post", help="Create a new thread")

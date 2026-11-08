@@ -272,14 +272,25 @@ def execute_request(prompt: str, mode: str = "blocking", system_prompt: Optional
         "cost_saved_usd": round(saved_usd, 5)
     }
 
-def print_stats():
+def print_stats(as_json: bool = False):
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*), AVG(latency_ms), SUM(cost_saved_usd) FROM evals")
     total, avg_lat, total_saved = cur.fetchone()
     if not total:
-        print("\n[eval-router] No requests recorded yet. Run `eval-router exec '<prompt>'` to begin.")
+        if as_json:
+            print(json.dumps({"ok": True, "stats": {
+                "total_executed_requests": 0,
+                "requests_tier_breakdown": {"easy": 0, "moderate": 0, "hard": 0},
+                "shadow_quality_pass_rate": 0.0,
+                "shadow_quality_passed": 0,
+                "speculative_swaps_saved": 0,
+                "cumulative_money_saved_usd": 0.0,
+                "average_latency_ms": 0.0,
+            }}))
+        else:
+            print("\n[eval-router] No requests recorded yet. Run `eval-router exec '<prompt>'` to begin.")
         conn.close()
         return
 
@@ -292,6 +303,22 @@ def print_stats():
     cur.execute("SELECT COUNT(*) FROM evals WHERE fallback_model IS NOT NULL")
     fallback_count = cur.fetchone()[0]
     conn.close()
+
+    if as_json:
+        print(json.dumps({"ok": True, "stats": {
+            "total_executed_requests": total,
+            "requests_tier_breakdown": {
+                "easy": tier_counts.get("easy", 0),
+                "moderate": tier_counts.get("moderate", 0),
+                "hard": tier_counts.get("hard", 0),
+            },
+            "shadow_quality_pass_rate": passed_count / total * 100,
+            "shadow_quality_passed": passed_count,
+            "speculative_swaps_saved": fallback_count,
+            "cumulative_money_saved_usd": total_saved or 0.0,
+            "average_latency_ms": avg_lat or 0.0,
+        }}))
+        return
 
     print("\n" + "=" * 50)
     print(" ⚡ KEM GLITCH EVAL ROUTER — METRICS & SAVINGS")
@@ -328,7 +355,8 @@ def main():
     e_p.add_argument("--mode", default="blocking", choices=["blocking", "shadow"], help="Speculative evaluation mode")
     e_p.add_argument("--out", help="Write result content to output file")
 
-    sub.add_parser("stats", help="Display performance, accuracy, and dollar savings metrics")
+    s_p = sub.add_parser("stats", help="Display performance, accuracy, and dollar savings metrics")
+    s_p.add_argument("--json", action="store_true", help="emit one JSON object")
     sub.add_parser("harvest", help="Inspect harvested evaluation failures for calibration")
 
     args = p.parse_args()
@@ -346,11 +374,17 @@ def main():
         if res["fallback_model"]:
             print(f"[eval-router] ⚠️ Speculative replacement triggered -> Replaced with {res['fallback_model']}")
     elif args.cmd == "stats":
-        print_stats()
+        try:
+            print_stats(args.json)
+        except Exception as exc:
+            if not args.json:
+                raise
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     elif args.cmd == "harvest":
         print_harvest()
     else:
         p.print_help()
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
