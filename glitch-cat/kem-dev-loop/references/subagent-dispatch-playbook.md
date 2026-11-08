@@ -88,13 +88,11 @@ Present the **Why and Why Not** to the human:
 2. What are we explicitly *not* building (anti-goals)?
 3. What is the contract?
 
-Once approved by the human, write 1–3 **hidden holdout tests** in `.kem-loop/auth-rate-limiter/holdouts/`, then register them:
+Once approved by the human, write 1–3 **hidden holdout scripts** in `.kem-loop/auth-rate-limiter/holdouts/`, each carrying its own positive case and negative control, then register them:
 ```bash
-kem-dev-loop approve auth-rate-limiter --by human
-kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_expiry.py  --kind pass
-kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_control.py --kind control
+kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_expiry.py
 ```
-> ⚠️ **CRITICAL INVARIANT:** Do NOT mention these holdout files, their file paths, or their assertions in the subagent prompt. This prevents test sycophancy. `dispatch` refuses until both a `pass` and a `control` gate are registered, and `validate` refuses any gate registered or modified after the dispatch.
+> ⚠️ **CRITICAL INVARIANT:** Do NOT mention these holdout files, their file paths, or their assertions in the subagent prompt. This prevents test sycophancy. `dispatch` refuses until a holdout is registered, and `validate` refuses any gate registered or modified after the dispatch.
 
 ### Step 3: Launching the Builder Subagent (Parent Agent)
 Dispatch through the CLI so the task file, the buffered log, and the dispatch timestamp are recorded:
