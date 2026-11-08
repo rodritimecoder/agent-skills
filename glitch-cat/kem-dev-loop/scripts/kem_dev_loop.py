@@ -240,6 +240,18 @@ def cmd_init(args):
     return 0
 
 
+def cmd_approve(args):
+    run_dir = require_run(args.name)
+    if not run_dir:
+        return 1
+    meta = load_meta(run_dir)
+    meta["plan_approved"] = True
+    meta["approved_at"] = _now()
+    save_meta(run_dir, meta)
+    print(f"✅ Plan approved for '{run_dir.name}'. Next: holdout add, then dispatch.")
+    return 0
+
+
 def cmd_holdout(args):
     run_dir = require_run(args.name)
     if not run_dir:
@@ -291,6 +303,14 @@ def cmd_dispatch(args):
     if not run_dir:
         return 1
     meta = load_meta(run_dir)
+    if not meta.get("plan_approved") and not args.skip_plan_review:
+        print("❌ Refusing to dispatch: the plan was never approved.")
+        print(f"   Read .kem-loop/{run_dir.name}/plan.md, then: kem-dev-loop approve {run_dir.name}")
+        print("   On a throwaway MVP the plan gets skipped unread; say so: --skip-plan-review")
+        return 1
+    if args.skip_plan_review:
+        meta["plan_review"] = "skipped"
+
     registered = meta.get("holdouts") or {}
     if not registered:
         print("❌ Refusing to dispatch: this run has no hidden holdouts.")
@@ -558,6 +578,9 @@ def main():
     p_init = subparsers.add_parser("init", help="Initialize a feature run with hidden holdouts and plan")
     p_init.add_argument("name", help="Feature or run name")
 
+    p_ok = subparsers.add_parser("approve", help="Record human approval of plan.md (Phase 2)")
+    p_ok.add_argument("name", help="Feature run name")
+
     p_ho = subparsers.add_parser("holdout", help="Register hidden holdout gates (Phase 2)")
     p_ho.add_argument("action", choices=["add", "list"])
     p_ho.add_argument("name", help="Feature run name")
@@ -569,6 +592,8 @@ def main():
     p_dis.add_argument("--cmd", default=DEFAULT_BUILDER_CMD,
                        help=f"Builder command; {{task}} is the task file (default: {DEFAULT_BUILDER_CMD})")
     p_dis.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
+    p_dis.add_argument("--skip-plan-review", action="store_true",
+                       help="MVP-scale slice: the plan was deliberately not read")
 
     # validate
     p_val = subparsers.add_parser("validate", help="Run grounded persona validation & holdout suite")
@@ -593,6 +618,8 @@ def main():
         return cmd_route(args)
     elif args.command == "init":
         return cmd_init(args)
+    elif args.command == "approve":
+        return cmd_approve(args)
     elif args.command == "holdout":
         return cmd_holdout(args)
     elif args.command == "dispatch":

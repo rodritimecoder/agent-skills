@@ -20,17 +20,19 @@ Six phases. The CLI holds the order so the prose does not have to be trusted.
 # 1. Route (deterministic pre-screen, then the model on :8083 if it is up)
 kem-dev-loop route "Add --json to the okf-architect validate subcommand"
 
-# 2. Plan approved in chat, then the gates -- BEFORE any builder exists
+# 2. The human approves the plan, then the gates -- BEFORE any builder exists
 kem-dev-loop init okf-json
-$EDITOR .kem-loop/okf-json/plan.md      # Why / Why Not, status APPROVED
+$EDITOR .kem-loop/okf-json/plan.md      # Why / Why Not
+kem-dev-loop approve okf-json           # he reads it on serious work; MVPs pass --skip-plan-review
 kem-dev-loop holdout add okf-json .kem-loop/okf-json/holdouts/test_validate.py
 
 # 3. One builder, one task file, all output on disk
 kem-dev-loop dispatch okf-json --task /tmp/task_okf.txt
 #   DISPATCH ok exit=0 62.4s log=.kem-loop/okf-json/dispatch/builder_....log
 
-# 4. Validate: the only place assertions run
+# 4. Validate: holdouts, plus the app as a user for UI slices
 kem-dev-loop validate okf-json --test "python3 academic/okf-architect/scripts/okf_architect.py validate . --json"
+verify-app run --pass .verify/pass.json      # click, type, see the screens -- not a screenshot claim
 
 # 5. Review the passing code, then hand the diff to the human
 kem-dev-loop review okf-json --suite ponytail src/
@@ -69,6 +71,7 @@ print("PASS: validate holdout + control")
 | :--- | :--- | :--- |
 | `holdout add` | file is outside `.kem-loop/<run>/holdouts/` | a builder must not read the gate |
 | `holdout add` | `.py` is pytest-style with no `__main__` | it would pass vacuously |
+| `dispatch` | the plan was not approved (`--skip-plan-review` for an MVP) | the human approves before anything is built |
 | `dispatch` | no holdout registered, or one changed since registration | the gate predates the build |
 | `dispatch` | `--task` is a directory or missing | one bounded slice per dispatch |
 | `validate` | holdout registered or modified **after** dispatch | this is the sycophancy breach |
@@ -81,7 +84,9 @@ A refusal is a bug in the process, not an obstacle.
 
 ## Rules
 
-1. **Holdouts first.** Write and register the gate before dispatch. Ordering is
+1. **Approve, then holdouts, then build.** The human reads `plan.md` before
+   anything is built; on a quick MVP it is skipped unread, and `dispatch` records
+   which one happened. Holdouts are written and registered next. Ordering is
    checked by timestamp and hash; you cannot backfill.
 2. **One Conductor, bounded builders.** You run gates. The builder never talks to
    the human, never spawns subagents, never sees `holdouts/`.
