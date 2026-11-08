@@ -333,7 +333,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
             warnings += 1
 
     print(f"\nAudit complete: {issues} critical errors, {warnings} naming/depth warnings.")
-    return 1 if issues > 0 else 0
+    return 2 if issues > 0 else 0
 
 # ==============================================================================
 # SUBCOMMAND: scaffold

@@ -184,10 +184,48 @@ def cap(text: str, max_bytes: int = DEFAULT_MAX_BYTES) -> tuple[str, bool, int]:
 # execution
 # --------------------------------------------------------------------------
 
+def _split_parent_args(extra_args: list[str], parent_params: list[dict]) -> tuple[list[str], list[str]]:
+    """Split args into the parent parser's globals and everything else.
+
+    argparse resolves options before the subcommand through the parent parser
+    and everything after it through the subparser. A subparser only knows its
+    own options, so ``script stats --db x --json`` fails with "unrecognized
+    arguments" even though ``script --db x --json stats`` is the same call.
+    The bindings expose the parent globals as plain parameters, so without this
+    reorder every subcommand tool that keeps its globals on the root parser was
+    unrunnable through `omnicli invoke`.
+    """
+    kinds = {str(p.get("flag")): (p.get("kind") or "str")
+             for p in parent_params or [] if p.get("flag")}
+    before: list[str] = []
+    after: list[str] = []
+    index = 0
+    while index < len(extra_args):
+        arg = str(extra_args[index])
+        name = arg.split("=", 1)[0]
+        if name in kinds:
+            before.append(arg)
+            if kinds[name] != "bool" and "=" not in arg and index + 1 < len(extra_args):
+                before.append(str(extra_args[index + 1]))
+                index += 2
+                continue
+            index += 1
+            continue
+        after.append(arg)
+        index += 1
+    return before, after
+
+
 def build_cmd(argv: list[str], extra_args: list[str], *, python: str,
-              skill_dir: Any) -> list[str]:
-    return [str(a).replace("{python}", python).replace("{skill}", str(skill_dir))
-            for a in argv] + [str(a) for a in extra_args]
+              skill_dir: Any, parent_params: list[dict] | None = None) -> list[str]:
+    rendered = [str(a).replace("{python}", python).replace("{skill}", str(skill_dir))
+                for a in argv]
+    extra = [str(a) for a in extra_args]
+    if parent_params and len(rendered) >= 2:
+        before, after = _split_parent_args(extra, parent_params)
+        if before:
+            return rendered[:-1] + before + rendered[-1:] + after
+    return rendered + extra
 
 
 def execute(cmd: list[str], timeout: float = 300.0) -> dict[str, Any]:

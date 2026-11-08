@@ -373,7 +373,9 @@ def main():
         res = check_compaction(target_dir=args.dir, transcript_path=args.transcript)
         print(json.dumps(res, indent=2))
         if res["needs_compaction"]:
-            print(f"\n⚠️  [state-compactor] COMPACTION TRIGGERED! (Estimated tokens: {res['estimated_tokens']}/{res['token_limit']})")
+            print(f"\n⚠️  [state-compactor] COMPACTION TRIGGERED! (Estimated tokens: {res['estimated_tokens']}/{res['token_limit']})",
+                  file=sys.stderr)
+            sys.exit(2)
     elif args.cmd == "compact":
         out = generate_handover(target_dir=args.dir, out_path=args.out)
         if not args.out:

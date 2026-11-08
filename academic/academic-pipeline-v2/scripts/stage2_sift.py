@@ -273,7 +273,14 @@ def run(workspace: Path, dry_run: bool = False, deps: dict | None = None) -> dic
 
 
 if __name__ == "__main__":  # pragma: no cover
+    import argparse
     import sys
 
-    result = run(Path(sys.argv[1]) if len(sys.argv) > 1 else Path("workspace"))
+    parser = argparse.ArgumentParser(description="Stage 2 sift: classify and clean ingested material.")
+    parser.add_argument("workspace", nargs="?", default="workspace", metavar="DIR",
+                        help="ICM workspace root (default: workspace)")
+    parser.add_argument("--dry-run", action="store_true", help="report what would be sifted")
+    args = parser.parse_args()
+    result = run(Path(args.workspace), dry_run=args.dry_run)
     print(json.dumps(result, indent=2))
+    sys.exit(0 if result.get("status") != "failed" else 2)

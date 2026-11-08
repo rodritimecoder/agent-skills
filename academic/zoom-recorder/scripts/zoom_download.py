@@ -529,13 +529,13 @@ def main():
     parser.add_argument("--format", choices=["md", "vtt", "txt", "all"], default="md", help="Transcript format")
     parser.add_argument("--video", action="store_true", help="Download the full MP4 video file")
     parser.add_argument("--keyframes", action="store_true", help="Extract presentation slide keyframes using ffmpeg")
-    parser.add_argument("--scene-threshold", type=float, default=0.35, help="Scene change sensitivity for keyframes (0.0 - 1.0)")
+    parser.add_argument("--scene-threshold", type=float, metavar="RATIO", default=0.35, help="Scene change sensitivity for keyframes (0.0 - 1.0)")
     parser.add_argument("--json", action="store_true", help="Output JSON format")
     parser.add_argument("--table", "-t", action="store_true", help="Output Markdown table format")
     parser.add_argument("--project", default="", help="Comma-separated fields to project in output")
     parser.add_argument("--outline", "--agenda", action="store_true", help="Extract high-density chronological agenda/outline table")
     parser.add_argument("--info-only", "--info", action="store_true", help="Retrieve recording metadata only without downloading files")
-    parser.add_argument("--limit", "-n", type=int, default=0, help="Cap number of outline rows returned")
+    parser.add_argument("--limit", "-n", type=int, metavar="LIMIT", default=0, help="Cap number of outline rows returned")
 
     args = parser.parse_args()
 

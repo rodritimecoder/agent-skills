@@ -1,0 +1,1035 @@
+{
+  "version": 1,
+  "note": "Generated routing questions, one snapshot per catalog. Each entry carries a verbatim quote from its skill description; the build gate re-checks it, so an edited description that no longer contains the quote drops the question instead of indexing a stale claim.",
+  "generator": "opencode-go/deepseek-v4.1-flash (6 parallel batches)",
+  "proposed": 275,
+  "accepted": 228,
+  "rejected": {
+    "no": 47
+  },
+  "self_floor": 0.45,
+  "questions": {
+    "academic-icm": [
+      {
+        "question": "Turn my recorded lectures and their slides into revision notes",
+        "quote": "Zoom cloud lecture & slide extraction"
+      },
+      {
+        "question": "Notes and slides never line up with the actual course structure",
+        "quote": "and OKF curriculum architecture into a single late-binding academic hub"
+      }
+    ],
+    "academic-pipeline-v2": [
+      {
+        "question": "How do I turn my course material into a properly structured curriculum?",
+        "quote": "OKF v0.2 curriculum structuring"
+      },
+      {
+        "question": "Generate a graph, flashcards and a study sheet from my class notes",
+        "quote": "three focused HTML outputs"
+      },
+      {
+        "question": "Bad output only shows up at the end of my notes pipeline",
+        "quote": "micro-gates at every stage and a step_NN.json ledger"
+      },
+      {
+        "question": "Is the newer pipeline safe to switch to or should I stay on the old one?",
+        "quote": "v1 stays live until one real course passes all five gates"
+      }
+    ],
+    "agent-reach": [
+      {
+        "question": "Where can I research a topic across many social sites at once?",
+        "quote": "gather intelligence across 16 web platforms"
+      },
+      {
+        "question": "Look up what Reddit and YouTube are saying about this product",
+        "quote": "Internet and social media research router"
+      },
+      {
+        "question": "Free way to do social listening without a paid subscription tool",
+        "quote": "gather intelligence across 16 web platforms"
+      },
+      {
+        "question": "I have a list of links, feeds and articles I need to go through",
+        "quote": "RSS feeds, and web articles (via Jina Reader)"
+      }
+    ],
+    "agentic-engineering": [
+      {
+        "question": "How do I run a proper software factory with agents instead of one chat?",
+        "quote": "Autonomous production engineering pipeline"
+      },
+      {
+        "question": "Have agents pick up backlog items from a markdown board automatically",
+        "quote": "target-local Markdown Kanban boards"
+      }
+    ],
+    "audiocpp": [
+      {
+        "question": "Is there something that turns audio into text on my own machine?",
+        "quote": "Local audio intelligence: speech-to-text, text-to-speech"
+      },
+      {
+        "question": "Read this paragraph out loud and save it as a wav",
+        "quote": "narrate or speak text out loud to a wav file"
+      },
+      {
+        "question": "Transcription is running slower than the recording itself",
+        "quote": "Every model runs faster than real time"
+      },
+      {
+        "question": "Free offline alternative to a paid speech to text service",
+        "quote": "Use to transcribe a recording"
+      }
+    ],
+    "canvas-cli": [
+      {
+        "question": "How can I read my school data without opening the portal?",
+        "quote": "Read Canvas LMS data"
+      },
+      {
+        "question": "What homework do I have due this week?",
+        "quote": "what is due this week or next"
+      },
+      {
+        "question": "I can't find the reading my teacher posted",
+        "quote": "readings, lecture material a teacher posted"
+      },
+      {
+        "question": "Lighter way to check marks than logging into the student portal",
+        "quote": "student portal, learning management system (LMS) or gradebook"
+      },
+      {
+        "question": "I have marks scattered around and want the whole gradebook as data",
+        "quote": "courses, assignments, submissions, grades, the gradebook"
+      }
+    ],
+    "cf-architect": [
+      {
+        "question": "What can my hosting account actually do before I plan the build?",
+        "quote": "Probe what an account can actually do before designing"
+      },
+      {
+        "question": "Will this workload fit in the free plan or will I get billed?",
+        "quote": "free-tier budget math on a concrete workload"
+      },
+      {
+        "question": "My storage upload fails until someone flips a dashboard setting",
+        "quote": "the R2 dashboard toggle, and the beta `cf dev` config trap"
+      },
+      {
+        "question": "Should I use stateful objects, containers or a tunnel for this?",
+        "quote": "choose between Durable Objects, Containers, R2 and Cloudflare Tunnel"
+      },
+      {
+        "question": "I have a local dev server I want reachable from outside",
+        "quote": "expose a local GPU box or dev server"
+      }
+    ],
+    "clip-box": [
+      {
+        "question": "Where is the total amount on this receipt photo?",
+        "quote": "where is X in this screenshot/receipt/photo"
+      },
+      {
+        "question": "It keeps giving me a box even when the object isn't there",
+        "quote": "and a `present` probability that gates the answer"
+      },
+      {
+        "question": "Do I really need a cloud vision API just to get coordinates?",
+        "quote": "no cloud, no OCR"
+      },
+      {
+        "question": "I have a screenshot and only want the table area cut out",
+        "quote": "to crop a region before OCR"
+      }
+    ],
+    "companion": [
+      {
+        "question": "Can I speak to my local model instead of typing?",
+        "quote": "talk to the local model"
+      },
+      {
+        "question": "Make a little character that answers me out loud when I hold a button",
+        "quote": "a pixel-art avatar answers out loud"
+      },
+      {
+        "question": "There is a long silence before the spoken reply starts",
+        "quote": "audio starts ~1.2 s after you release the button"
+      },
+      {
+        "question": "Voice assistant like the big cloud ones but running fully local?",
+        "quote": "Character chat page: hold to talk"
+      },
+      {
+        "question": "I have a homelab dashboard and want a talking avatar on it",
+        "quote": "add a voice interface to the homelab page"
+      }
+    ],
+    "cornell-notes": [
+      {
+        "question": "Can I print my notes as a proper study sheet?",
+        "quote": "revision notes, study sheets, or Anki export"
+      },
+      {
+        "question": "Turn my markdown file into cards I can revise from",
+        "quote": "Convert existing Markdown notes into print-ready Cornell Notes HTML"
+      },
+      {
+        "question": "Rereading my notes isn't working, nothing quizzes me on them",
+        "quote": "with active-recall cue–note pairs"
+      },
+      {
+        "question": "Cheaper than a flashcard subscription with spaced repetition?",
+        "quote": "a self-quiz mode, and spaced repetition"
+      },
+      {
+        "question": "I already wrote all my lecture notes in markdown",
+        "quote": "Convert existing Markdown notes into print-ready Cornell Notes HTML"
+      }
+    ],
+    "decision-model": [
+      {
+        "question": "is there a tool that only gives me a label and a confidence number",
+        "quote": "Answers typed bool, choice, score, and bounding-box queries"
+      },
+      {
+        "question": "i want to swap between models on the same port without changing code",
+        "quote": "The :8083 slot rotates between decision models"
+      }
+    ],
+    "deck": [
+      {
+        "question": "is there a page that shows what my machine is doing right now",
+        "quote": "what the box is doing right now"
+      },
+      {
+        "question": "how much graphics memory is still free on the box",
+        "quote": "how much VRAM is free"
+      },
+      {
+        "question": "one api died and now my whole status page is blank",
+        "quote": "one dead API never blanks the page"
+      },
+      {
+        "question": "can i open that status board from my laptop while travelling",
+        "quote": "expose a status page over Tailscale"
+      },
+      {
+        "question": "some numbers on my dashboard look old, which ones are live",
+        "quote": "Each source polls independently and reports its own freshness"
+      }
+    ],
+    "design-pack": [
+      {
+        "question": "how do i stop generated pages from looking different every time",
+        "quote": "when generated pages keep drifting off-style"
+      },
+      {
+        "question": "i want my app to look like an old handheld game screen",
+        "quote": "a GBA, or a retro pixel system"
+      },
+      {
+        "question": "every new page i generate has slightly different colors and fonts",
+        "quote": "it is tokens plus sprites plus a gate that fails on drift"
+      },
+      {
+        "question": "is a long prompt enough or do i need a real design system",
+        "quote": "when a project needs a design system rather than a prompt"
+      },
+      {
+        "question": "i have screenshots of a look i want reused across a project",
+        "quote": "Turn a look into a reusable pack"
+      }
+    ],
+    "doc-layout": [
+      {
+        "question": "is there a parser that keeps tables and headings in the right order",
+        "quote": "detects all 25 region types"
+      },
+      {
+        "question": "turn this scanned pdf into clean markdown with the tables intact",
+        "quote": "output is normalized Markdown"
+      },
+      {
+        "question": "two column pdf comes out as jumbled text when i ocr it",
+        "quote": "when multi-column layout breaks whole-page OCR"
+      },
+      {
+        "question": "can i read a page without firing up pytorch on the gpu",
+        "quote": "Uses a torch-free ONNX layout model"
+      },
+      {
+        "question": "i need the charts in this document saved as separate image files",
+        "quote": "when figures must be extracted as separate assets"
+      }
+    ],
+    "edstem-cli": [
+      {
+        "question": "can i read my class discussion board straight from the terminal",
+        "quote": "list courses, browse and search forum threads"
+      },
+      {
+        "question": "reply to a student question on the course forum without opening a browser",
+        "quote": "post a question or reply"
+      },
+      {
+        "question": "pull my courses and lessons in one command instead of the website",
+        "quote": "open cloud IDE workspaces, and list lessons"
+      },
+      {
+        "question": "here is a link to my course thread, summarise the replies",
+        "quote": "read a thread and its comments"
+      }
+    ],
+    "eval-pipeline": [
+      {
+        "question": "how do i know which steps in my pipeline are code versus model calls",
+        "quote": "Step-level propagation risk mitigation and intermediate artifact ledger"
+      },
+      {
+        "question": "save every intermediate result to disk so i can rerun one stage",
+        "quote": "forcing disk serialization of intermediate states"
+      },
+      {
+        "question": "is a long log enough or should each step be labelled",
+        "quote": "Tags every step explicitly as [D]"
+      }
+    ],
+    "eval-router": [
+      {
+        "question": "send easy questions to a cheap model and hard ones to a good one",
+        "quote": "route a prompt to the right model by difficulty"
+      },
+      {
+        "question": "send this prompt to the cheapest thing that can still answer it",
+        "quote": "Use to pick the cheap model unless the question is hard"
+      },
+      {
+        "question": "my bill exploded because every tiny request goes to a big model",
+        "quote": "to cut token spend without losing quality"
+      },
+      {
+        "question": "can this run on local models instead of paying a provider",
+        "quote": "dispatches to local zero-cost models or free tiers"
+      },
+      {
+        "question": "i have a pile of prompts that failed and want them turned into tests",
+        "quote": "harvests failures into training evaluations"
+      }
+    ],
+    "free-swarm": [
+      {
+        "question": "can i ask several different models the same question at once",
+        "quote": "a panel or ensemble of different models"
+      },
+      {
+        "question": "get three independent takes on this design decision",
+        "quote": "for a second opinion"
+      },
+      {
+        "question": "the model keeps missing the same edge case and i want another view",
+        "quote": "when one model's blind spot should be covered by another"
+      },
+      {
+        "question": "i have a huge document and want several models to read it in parallel",
+        "quote": "long-context reads, or cheap parallel review"
+      }
+    ],
+    "frontend-uat": [
+      {
+        "question": "is there a way to click through my signup flow and check it worked",
+        "quote": "driving a checkout or login flow"
+      },
+      {
+        "question": "click the buy button and confirm the success screen appears",
+        "quote": "verifying a screen state after an action"
+      },
+      {
+        "question": "my browser tests are slow and flaky because selectors keep breaking",
+        "quote": "clicking a target by intent rather than by selector"
+      },
+      {
+        "question": "full browser test suites cost too much, is there a cheaper loop",
+        "quote": "a journey costs seconds and fractions of a cent"
+      },
+      {
+        "question": "i have the page open, just click the thing that says continue",
+        "quote": "clicks deterministically over CDP"
+      }
+    ],
+    "gh-action-subagent": [
+      {
+        "question": "run several coding agents in parallel somewhere in the cloud",
+        "quote": "delegating parallel coding tasks"
+      },
+      {
+        "question": "have an agent fix a bug and open a pull request while i sleep",
+        "quote": "fixing issues asynchronously via Pull Requests"
+      },
+      {
+        "question": "i need browser tests to run somewhere other than my laptop",
+        "quote": "running browser E2E checks in a sandbox"
+      },
+      {
+        "question": "give the agent a real linux shell and chrome in a throwaway vm",
+        "quote": "full Linux shell, Git, and headless Chrome CDP browser skills"
+      }
+    ],
+    "github-architect": [
+      {
+        "question": "what do I have that syncs my repos between two laptops",
+        "quote": "syncing repositories between machines"
+      },
+      {
+        "question": "push my dotfiles repo without leaking my api keys",
+        "quote": "shielding secrets before a push"
+      },
+      {
+        "question": "is there a safer routine than just git push every time",
+        "quote": "making a repo private"
+      },
+      {
+        "question": "I just got a new laptop and want my GitHub projects on it",
+        "quote": "bootstrapping a fresh workstation from GitHub"
+      }
+    ],
+    "glitch-orchestra": [
+      {
+        "question": "spawn child sessions and tell me when each one finishes",
+        "quote": "dispatching tasks to dedicated child sessions"
+      },
+      {
+        "question": "my parallel agent sessions keep stepping on each other's work",
+        "quote": "aligns intent, references and specialist panes"
+      },
+      {
+        "question": "one agent is too slow, what's a lighter way to split work",
+        "quote": "terminal conductor architecture"
+      }
+    ],
+    "graph-memory": [
+      {
+        "question": "how do I link my notes into a graph and search them",
+        "quote": "Knowledge Graph & Hybrid RAG Engine"
+      },
+      {
+        "question": "search shows the same person four times under different spellings",
+        "quote": "entity deduplication via UUID5 & aliases"
+      },
+      {
+        "question": "keyword search misses paraphrases, is there something cheaper than embeddings",
+        "quote": "hybrid BM25 + bge-small-en-v1.5 (384d) RRF search"
+      }
+    ],
+    "guard-hooks": [
+      {
+        "question": "is there something that blocks a dangerous command before it runs",
+        "quote": "Deterministic pre-execution guardrails and protected-file locks"
+      },
+      {
+        "question": "make sure the agent can never delete my env file",
+        "quote": "blocks unauthorised deletion or mutation of KeepMD, STATE.md, .env"
+      },
+      {
+        "question": "my agent ignored my instructions and wiped a folder anyway",
+        "quote": "whatever the model is told"
+      }
+    ],
+    "icm-architect": [
+      {
+        "question": "how should I organise my notes so an agent can navigate them",
+        "quote": "folder structure is the agent architecture"
+      },
+      {
+        "question": "turn these interview transcripts into lecture material and slides",
+        "quote": "turning transcripts and research into material for lectures"
+      },
+      {
+        "question": "my agent gets lost in this folder, nothing tells it where to go",
+        "quote": "restructure an existing folder, repo or vault into one"
+      },
+      {
+        "question": "before I change this config, what else in the repo depends on it",
+        "quote": "what would a change hit"
+      },
+      {
+        "question": "I have a messy folder of research and want it mapped out",
+        "quote": "a second brain, team brain or context map"
+      }
+    ],
+    "jev-decision": [
+      {
+        "question": "is there a way to get a yes or no with confidence",
+        "quote": "Calibrated, non-generative decision engine"
+      },
+      {
+        "question": "sort five hundred support tickets into two buckets",
+        "quote": "judged, triaged, routed, gated, scored, or classified"
+      },
+      {
+        "question": "asking the model for every tiny check is too slow and costly",
+        "quote": "Fast and near-free, so it suits high-volume loops"
+      },
+      {
+        "question": "I don't need a written answer, just a probability number",
+        "quote": "no generated tokens"
+      },
+      {
+        "question": "look at this screenshot and tell me if the login button shows",
+        "quote": "any yes/no question about a screenshot"
+      }
+    ],
+    "kem-dev-loop": [
+      {
+        "question": "get my approval on the plan before any code is written",
+        "quote": "human plan approval for intent"
+      },
+      {
+        "question": "this small fix doesn't need the full ceremony, how do I skip it",
+        "quote": "upfront complexity classification (Fast vs Full route)"
+      }
+    ],
+    "kem-ocr": [
+      {
+        "question": "check whether my transcription actually matches the page image",
+        "quote": "render the transcription back into an image, and score it"
+      },
+      {
+        "question": "the ocr looked fine but the numbers in the table were wrong",
+        "quote": "P(faithful) in one forward pass"
+      },
+      {
+        "question": "plain ocr gives no confidence, I need a score I can trust",
+        "quote": "a corrupted-candidate holdout that the gate must reject"
+      }
+    ],
+    "kem-thought": [
+      {
+        "question": "what principles should I follow when steering an agent through a task",
+        "quote": "Kem's 32 steering principles"
+      },
+      {
+        "question": "should I demand a number before believing that claim",
+        "quote": "a claim that needs measurement before it ships"
+      },
+      {
+        "question": "would a careful engineer run a control before trusting this",
+        "quote": "what would kem do"
+      }
+    ],
+    "leanrea": [
+      {
+        "question": "how do I figure out how this app's sync feature works",
+        "quote": "Reverse engineer shipped software with plain local CLI tools"
+      },
+      {
+        "question": "pull the strings and version numbers out of this binary",
+        "quote": "unpacking app.asar, decompiling, extracting strings"
+      },
+      {
+        "question": "the app updated and broke my setup, I need to see what changed",
+        "quote": "compare builds, or rebuild a feature"
+      },
+      {
+        "question": "I only have the installer, no source, can I inspect it offline",
+        "quote": "closed-source, proprietary, packaged or commercial desktop app"
+      },
+      {
+        "question": "I captured the network traffic from this desktop app",
+        "quote": "inspecting a network capture"
+      }
+    ],
+    "leasebox": [
+      {
+        "question": "is there something that stops two agents overwriting the same file",
+        "quote": "must not overwrite each other"
+      },
+      {
+        "question": "how do I let three people edit one shared file without clashing",
+        "quote": "to coordinate concurrent writes"
+      },
+      {
+        "question": "our agents keep clobbering each other's edits, how do I fix that",
+        "quote": "several people or agents edit the same files"
+      },
+      {
+        "question": "can I keep shared files synced without paying for anything",
+        "quote": "hibernating WebSockets, and free-tier guardrails"
+      },
+      {
+        "question": "I have files my agents wrote, how do I get them committed to git",
+        "quote": "to sync worker writes to git"
+      }
+    ],
+    "local": [
+      {
+        "question": "how do I run a model fully offline on my own gpu",
+        "quote": "Use for running a model locally, offline, or on device"
+      },
+      {
+        "question": "is there a free way to rank search results without a paid embedding api",
+        "quote": "used to re-rank catalog search"
+      },
+      {
+        "question": "I have a scanned page and want the text read on device",
+        "quote": "LightOnOCR document vision (:8085)"
+      }
+    ],
+    "local-llm": [
+      {
+        "question": "what coding model is installed on this box and where",
+        "quote": "Query the local Qwen3.6-35B-A3B Uncensored Genesis model on port 8080"
+      },
+      {
+        "question": "draft a long document without sending it to any cloud",
+        "quote": "or any prompt that should not leave the machine"
+      },
+      {
+        "question": "the model on 8080 is down, can you start it again",
+        "quote": "starts and health-checks the server when it is down"
+      },
+      {
+        "question": "I have a messy private repo that needs refactoring offline",
+        "quote": "Use for drafting code, long-form text, refactors"
+      }
+    ],
+    "markitdown-cli": [
+      {
+        "question": "how do I turn a pdf into markdown text I can read",
+        "quote": "Convert documents to Markdown with MarkItDown"
+      },
+      {
+        "question": "read this docx attachment and give me its content as text",
+        "quote": "Use to read a document or attachment into text"
+      },
+      {
+        "question": "the converter choked on a zip full of mixed office files",
+        "quote": "PDF, DOCX, PPTX, XLSX, HTML, CSV"
+      },
+      {
+        "question": "what's the least effort way to get text out of many file types",
+        "quote": "notebooks, images with optional local OCR, and URLs"
+      },
+      {
+        "question": "I have an epub and a spreadsheet I need as plain text",
+        "quote": "EPUB, ZIP, Outlook .msg, notebooks"
+      }
+    ],
+    "model-layer": [
+      {
+        "question": "where are the launcher scripts and weights for the models here",
+        "quote": "with its launcher script, weights files, health check, quirks"
+      },
+      {
+        "question": "is there one endpoint in front of all my models instead of many ports",
+        "quote": "plus the llama-swap rig (:8000) via vram-rig-ctl"
+      },
+      {
+        "question": "a model server won't come up and I don't know why",
+        "quote": "MUST READ before starting, stopping, swapping or debugging any local model server"
+      },
+      {
+        "question": "what's the correct way to add or switch a model in the rotation",
+        "quote": "a model swap edits the manifest and re-renders"
+      },
+      {
+        "question": "I'm writing a script that calls a local model, which port do I use",
+        "quote": "before writing code that calls one"
+      }
+    ],
+    "notes-index": [
+      {
+        "question": "how do I search my old markdown notes without grepping everything",
+        "quote": "searches the index instead of grepping"
+      },
+      {
+        "question": "what did we decide about the deployment last month",
+        "quote": "when answering questions about past work, decisions or notes"
+      },
+      {
+        "question": "searching my notes folder is slow and eats too many tokens",
+        "quote": "Cuts memory-search token spend by up to half"
+      },
+      {
+        "question": "is there a cheaper way to find notes than pasting them all into context",
+        "quote": "one SQLite FTS5 index, fingerprint-based refresh"
+      },
+      {
+        "question": "check that every quote in my answer actually appears in the source",
+        "quote": "every quoted span is verbatim in the cited file"
+      }
+    ],
+    "nvidia-nim": [
+      {
+        "question": "how do I call a big hosted model when I have no local gpu",
+        "quote": "Direct inference and autonomous subagent execution"
+      },
+      {
+        "question": "run a pile of shell commands through an agent loop in one go",
+        "quote": "autonomous subagent loop with compound bash batching"
+      },
+      {
+        "question": "my api key keeps hitting rate limits and calls just fail",
+        "quote": "multi-key pooling with automatic failover"
+      },
+      {
+        "question": "I have thousands of texts to embed in one request",
+        "quote": "batched embeddings (embed), multi-key pooling"
+      }
+    ],
+    "ocr": [
+      {
+        "question": "how do I get the text out of this screenshot",
+        "quote": "read text out of an image, screenshot or scanned page"
+      },
+      {
+        "question": "turn this scanned pdf into markdown with the tables intact",
+        "quote": "layout-aware Markdown/JSON with tables, formulas and reading order"
+      },
+      {
+        "question": "the text I pulled from a form came out in the wrong order",
+        "quote": "parses full documents, PDFs and scans into layout-aware Markdown"
+      },
+      {
+        "question": "can I read one slide quickly instead of parsing the whole document",
+        "quote": "transcribes slides and screenshots fast"
+      },
+      {
+        "question": "where exactly on screen is that button, give me its coordinates",
+        "quote": "returns 2D spatial coordinates and text tokens"
+      }
+    ],
+    "okf-architect": [
+      {
+        "question": "how should I structure docs so agents can navigate them",
+        "quote": "structure knowledge for AI agents and cross-organizational exchange"
+      },
+      {
+        "question": "build a folder of knowledge files an agent reads in stages",
+        "quote": "generate progressive-disclosure index.md and log.md files"
+      },
+      {
+        "question": "how do I check my knowledge base still follows the spec",
+        "quote": "validate, and maintain agent-friendly knowledge bundles"
+      },
+      {
+        "question": "is there an easier way than writing my own schema for shared knowledge",
+        "quote": "Design, scaffold, validate, and maintain"
+      },
+      {
+        "question": "I have a pile of docs that need provenance and trust levels",
+        "quote": "scaffold concepts with provenance, trust tiers, and lifecycle signals"
+      }
+    ],
+    "omnicli": [
+      {
+        "question": "which of the tools installed here can do this for me",
+        "quote": "which of the installed skills or tools handles something"
+      },
+      {
+        "question": "what is actually installed on this workstation, show me everything",
+        "quote": "to list what is installed"
+      },
+      {
+        "question": "I passed the wrong flags to a tool, what arguments does it take",
+        "quote": "one tool's arguments before calling it"
+      },
+      {
+        "question": "can I do five steps in one turn instead of five calls",
+        "quote": "run a multi-step job in one turn"
+      },
+      {
+        "question": "I know what I want but not which command does it, find it",
+        "quote": "Find the right tool by intent with hybrid lexical + dense search"
+      }
+    ],
+    "openrouter-free": [
+      {
+        "question": "where can I get model inference for free while my GPU is busy",
+        "quote": "when the local GPU is busy"
+      },
+      {
+        "question": "have a subagent write the tests and run the shell commands",
+        "quote": "autonomous coding subagent loops"
+      },
+      {
+        "question": "my job keeps failing because I ran out of paid quota",
+        "quote": "hosted inference without spending paid quota"
+      },
+      {
+        "question": "should I stay on the free endpoints or move to something better for hard refactors",
+        "quote": "For frontier-quality hosted models"
+      }
+    ],
+    "parallel-test-lane": [
+      {
+        "question": "is there a way to run our tests across many cores at once",
+        "quote": "Partitions test suites into sequential-isolated vs independent parallel worker lanes"
+      },
+      {
+        "question": "split my test suite so it finishes before lunch",
+        "quote": "slashing 40-60 minute regression suites down to 7-8 minutes"
+      },
+      {
+        "question": "the parallel test output is all jumbled together and I cannot read the failures",
+        "quote": "clean non-interleaved output buffering"
+      },
+      {
+        "question": "I have a 45 minute test suite that blocks every deploy",
+        "quote": "40-60 minute regression suites"
+      }
+    ],
+    "playwright": [
+      {
+        "question": "is there a tool that lets my agent drive a real browser",
+        "quote": "Agent-facing browser control through official Playwright"
+      },
+      {
+        "question": "can I reuse the chrome I already have open instead of launching a new browser",
+        "quote": "through official Playwright: CDP attach"
+      }
+    ],
+    "playwright-rs-usage": [
+      {
+        "question": "is there a guide for writing browser automation in rust",
+        "quote": "Procedural reference for using playwright-rs in Rust browser-automation code"
+      },
+      {
+        "question": "how do I get the browser binaries installed for my rust test project",
+        "quote": "adding the crate and installing its browsers"
+      },
+      {
+        "question": "my rust browser test fails intermittently and I need to look at the trace",
+        "quote": "capture / inspect traces for failure diagnosis"
+      },
+      {
+        "question": "should I chain the settings or pass them as arguments when building a page",
+        "quote": "builder pattern for options"
+      },
+      {
+        "question": "I already have a rust project and want to automate a page in it",
+        "quote": "Loaded automatically when the current repo has playwright-rs in its Cargo.toml"
+      }
+    ],
+    "projects-harness": [
+      {
+        "question": "how do I keep several command line agents working on one project without chaos",
+        "quote": "Autonomous multi-agent CLI coordination harness"
+      },
+      {
+        "question": "make sure the agent follows my exact words and not its own summary",
+        "quote": "AI coordinator brief vs owner verbatim instructions"
+      },
+      {
+        "question": "my project memory file got too long and drowns the prompt",
+        "quote": "a 200-line memory load cap"
+      }
+    ],
+    "review-hub": [
+      {
+        "question": "is there one place I can run every kind of code review check",
+        "quote": "Unified Code Review, Architecture Audit, and Quality Enforcement Gateway"
+      },
+      {
+        "question": "review this diff and tell me what I can delete",
+        "quote": "minimal diff & YAGNI"
+      },
+      {
+        "question": "the review output is huge and blows up my context window",
+        "quote": "disk buffering (--out) to eliminate context bloat"
+      },
+      {
+        "question": "is there something bundling all the review styles instead of running each one separately",
+        "quote": "Late-binding dispatch hub for 8 core engineering review suites"
+      }
+    ],
+    "semantic-cache": [
+      {
+        "question": "is there a way to answer the same question again without calling the model",
+        "quote": "It caches answers to questions"
+      },
+      {
+        "question": "stop paying to re-answer the same support question every day",
+        "quote": "to avoid paying twice for an answer already given"
+      },
+      {
+        "question": "how many of my incoming questions would actually get an instant hit",
+        "quote": "40-70% of inbound queries"
+      },
+      {
+        "question": "I have a list of past questions and answers I want served instantly",
+        "quote": "instant answers at zero token cost"
+      }
+    ],
+    "state-compactor": [
+      {
+        "question": "how do I keep a long running agent from forgetting what we decided",
+        "quote": "Zero-loss state protocol for long agent sessions"
+      },
+      {
+        "question": "write the important facts to disk before the window gets compacted",
+        "quote": "rehydrated with 100% fact parity"
+      },
+      {
+        "question": "my session is drifting and repeating itself after many turns",
+        "quote": "when a long session is getting confused or drifting"
+      },
+      {
+        "question": "how do I read one part of a huge file without dumping it all in",
+        "quote": "slice a huge file instead of reading it whole"
+      },
+      {
+        "question": "I need to pass everything we know to a fresh subagent",
+        "quote": "to hand state to a subagent"
+      }
+    ],
+    "subagent-spaces": [
+      {
+        "question": "how do I run an untrusted script without letting it touch my machine",
+        "quote": "isolates untrusted builds and scripts"
+      },
+      {
+        "question": "give each worker its own cores and memory so they stop fighting",
+        "quote": "when parallel workers need pinned CPU and memory"
+      },
+      {
+        "question": "my parallel builds step on each other and eat all the memory",
+        "quote": "Partitions 16 CPU threads into dedicated worker slots"
+      },
+      {
+        "question": "should I use a cloud box for this or keep it on my own machine",
+        "quote": "for a throwaway cloud VM instead, use gh-action-subagent"
+      },
+      {
+        "question": "my sandboxed worker needs to call the models running on this box",
+        "quote": "connects directly to local inference endpoints"
+      }
+    ],
+    "swarm-contract": [
+      {
+        "question": "how do I stop a swarm of agents from overspending",
+        "quote": "immutable financial/token spending ceiling"
+      },
+      {
+        "question": "we burned the whole token budget in an hour with no warning",
+        "quote": "halts execution in code before budget overruns"
+      },
+      {
+        "question": "is there a way to force short structured answers from every agent",
+        "quote": "rejecting vague markdown summaries"
+      },
+      {
+        "question": "I have a fixed list of goals I want the agents to work through",
+        "quote": "(1) explicit hit-list goals"
+      }
+    ],
+    "tailscale-ops": [
+      {
+        "question": "which of my machines are online right now",
+        "quote": "discovering online homelab/desktop nodes"
+      },
+      {
+        "question": "put my local dev server on a private https url",
+        "quote": "exposing local web servers or LLM ports over private HTTPS"
+      },
+      {
+        "question": "my remote box stopped connecting over the private network",
+        "quote": "Runtime Tailscale network operations"
+      },
+      {
+        "question": "free way to reach my home server without opening ports",
+        "quote": "opening temporary public webhook endpoints"
+      },
+      {
+        "question": "I have a file on my laptop that I need on the server",
+        "quote": "transferring artifacts across devices"
+      }
+    ],
+    "verification": [
+      {
+        "question": "how do I know the ui change actually works",
+        "quote": "when an agent says a UI change is done"
+      },
+      {
+        "question": "click through the app and tell me what breaks",
+        "quote": "reports what real users are hitting"
+      },
+      {
+        "question": "the checkout button does nothing and the console looks clean",
+        "quote": "an order or action silently fails"
+      },
+      {
+        "question": "faster repeatable check than eyeballing screenshots every time",
+        "quote": "a repeatable check the next agent can run"
+      },
+      {
+        "question": "I have before and after screenshots of a page that shifted",
+        "quote": "compares before/after pixels"
+      }
+    ],
+    "video-miner": [
+      {
+        "question": "pull the notes out of this lecture recording",
+        "quote": "turn a recorded lecture, talk, webinar or screen recording"
+      },
+      {
+        "question": "turn a screen recording into a written summary",
+        "quote": "get a transcript plus slides out of video you already have"
+      },
+      {
+        "question": "the transcript from my recording is full of duplicate junk frames",
+        "quote": "perceptual dedup + blank rejection"
+      },
+      {
+        "question": "is there a way to get study notes without watching the whole thing",
+        "quote": "mine a pile of video for what it teaches"
+      },
+      {
+        "question": "I have a pile of mp4 files and a webinar link",
+        "quote": "from video files or URLs into structured markdown notes"
+      }
+    ],
+    "worktree-harness": [
+      {
+        "question": "how do I run several coding agents on one repo at once",
+        "quote": "several agents will edit the same repository at once"
+      },
+      {
+        "question": "split this refactor across agents without them stepping on each other",
+        "quote": "reserve the file ranges they will write"
+      },
+      {
+        "question": "two agents edited the same files and now the merge is a mess",
+        "quote": "merge the passing ones with automated conflict arbitration"
+      },
+      {
+        "question": "I have three branches from parallel agents and their tests disagree",
+        "quote": "Spawn parallel coding subagents into isolated git worktrees"
+      }
+    ],
+    "zoom-recorder": [
+      {
+        "question": "download the recording and transcript from a class link",
+        "quote": "Download transcripts, slide keyframes, and metadata"
+      },
+      {
+        "question": "get the slides out of a recorded lecture",
+        "quote": "extract slides from a class recording"
+      },
+      {
+        "question": "the share link asks for a passcode and won't download",
+        "quote": "passcode-protected links, and unwraps Mimecast and SafeLinks wrappers"
+      },
+      {
+        "question": "any way to read what was said without an admin account",
+        "quote": "without API admin credentials"
+      },
+      {
+        "question": "I have a protected recording link wrapped in a redirect",
+        "quote": "unwraps Mimecast and SafeLinks wrappers"
+      }
+    ]
+  }
+}

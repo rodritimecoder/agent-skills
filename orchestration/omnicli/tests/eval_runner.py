@@ -1,9 +1,22 @@
-"""Golden routing evaluation: measure the catalog against the legacy scorer.
+"""Routing evaluation: measure the catalog against the legacy scorer.
+
+Two sets, deliberately different in kind:
+
+* ``golden``     — tuned against this catalog's vocabulary. Guards against
+                   regressions in the tuned routes.
+* ``paraphrase`` — real user prompts harvested from this machine's session log
+                   before any question vectors existed, plus a few authored for
+                   untouched skills. Measures whether retrieval follows how the
+                   operator actually types.
+
+A change that lifts paraphrase without dropping golden is a real gain; one
+that trades golden for paraphrase is a re-tuning, and must be reported as such.
 
 Usage:
-    python3 tests/eval_runner.py            # summary
-    python3 tests/eval_runner.py --verbose  # per-case detail
-    python3 tests/eval_runner.py --json     # machine readable
+    python3 tests/eval_runner.py                        # golden, summary
+    python3 tests/eval_runner.py --set=paraphrase       # blind paraphrase set
+    python3 tests/eval_runner.py --verbose              # per-case detail
+    python3 tests/eval_runner.py --json                 # machine readable
 """
 
 from __future__ import annotations
@@ -18,12 +31,18 @@ sys.path.insert(0, str(SKILL_ROOT))
 
 from catalog import builder, legacy, search  # noqa: E402
 
-GOLDEN = HERE / "golden_eval.json"
+SETS = {
+    "golden": HERE / "golden_eval.json",
+    "paraphrase": HERE / "paraphrase_eval.json",
+}
 
 
 def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
-        fusion: str = "never") -> dict:
-    cases = json.loads(GOLDEN.read_text(encoding="utf-8"))["cases"]
+        fusion: str = "never", eval_set: str = "golden") -> dict:
+    path = SETS.get(eval_set)
+    if path is None:
+        raise SystemExit(f"unknown eval set {eval_set!r}; choose from {sorted(SETS)}")
+    cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
     con = builder.connect()
     builder.ensure_built(con, progress=False)
 
@@ -93,6 +112,7 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
 
     total = len(cases)
     summary = {
+        "set": eval_set,
         "cases": total,
         "bm25": {
             "top1": f"{new_top1}/{total} ({100.0*new_top1/total:.1f}%)",
@@ -130,7 +150,7 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
     b1, b3 = summary["bm25"]["top1_raw"], summary["bm25"]["top3_raw"]
     l1, l3 = summary["legacy"]["top1_raw"], summary["legacy"]["top3_raw"]
     print("=" * 66)
-    print(f"  GOLDEN ROUTING EVAL   ({total} cases)   rerank={rerank}")
+    print(f"  {eval_set.upper()} ROUTING EVAL   ({total} cases)   rerank={rerank} fusion={fusion}")
     print("=" * 66)
     print(f"  BM25 catalog    top1 {b1:>3}/{total} ({100.0*b1/total:5.1f}%)   top3 {b3:>3}/{total} ({100.0*b3/total:5.1f}%)")
     print(f"  legacy scorer   top1 {l1:>3}/{total} ({100.0*l1/total:5.1f}%)   top3 {l3:>3}/{total} ({100.0*l3/total:5.1f}%)")
@@ -159,10 +179,13 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
 if __name__ == "__main__":
     mode = "never"
     fusion = "never"
+    eval_set = "golden"
     for arg in sys.argv[1:]:
         if arg.startswith("--rerank="):
             mode = arg.split("=", 1)[1]
         elif arg.startswith("--fusion="):
             fusion = arg.split("=", 1)[1]
+        elif arg.startswith("--set="):
+            eval_set = arg.split("=", 1)[1]
     run(verbose="--verbose" in sys.argv, as_json="--json" in sys.argv,
-        rerank=mode, fusion=fusion)
+        rerank=mode, fusion=fusion, eval_set=eval_set)

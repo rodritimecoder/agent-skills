@@ -74,7 +74,7 @@ deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
 | `decision` | `:8083` | `local-decide` | `h2o.sh` | h2o-lightning-4b (Q4_K_M + mmproj F16) | — | jev-decision, decision-model, clip-box, frontend-uat, eval-router |
 | `decision-engine` | `:8082` | `local-decide-engine` | `startlux-decision.sh` | StartLux-Decision-v1.1-4B-Instant (Q4_K_M + mmproj F16) **(candidate)** | `models/startlux-models/StartLux-Decision-v1.1-4B-Instant-GGUF/StartLux-Decision-v1.1-4B-Instant-Q4_K_M.gguf`<br>`models/startlux-models/StartLux-Decision-v1.1-4B-Instant-GGUF/mmproj-StartLux-Decision-v1.1-4B-Instant-F16.gguf` | jev-decision |
 | `decision-fallback` | `:8089` | `local-decide-fallback` | `imajev-decider.sh` | Imajev-4B (Q4_K_M + mmproj f16) | `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf`<br>`models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf` | jev-decision |
-| `ocr-crispembed` | `:8084` | `local-ocr-crispembed` | `crispembed-ocr.sh` | CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec) | `models/cstr/OXR-1.0-GGUF/oxr-1.0-q4_k-head.gguf`<br>`models/cstr/OXR-1.0-DFINE-layout-GGUF/oxr-1.0-dfine-layout-f32.gguf`<br>`models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf`<br>`models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf`<br>`models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf`<br>`models/cstr/parseq-GGUF/parseq-q8_0.gguf` | ocr |
+| `ocr-crispembed` | `:8084` | `local-ocr-crispembed` | `crispembed-ocr.sh` | CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec) | `models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf`<br>`models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf`<br>`models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf`<br>`models/cstr/parseq-GGUF/parseq-q8_0.gguf` | ocr |
 | `ocr-lighton` | `:8085` | `local-ocr-lighton` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
 | `reranker` | `:8086` | `local-rerank-jina` | `jina-reranker.sh` | jina-reranker-v2-base-multilingual (Q8_0) | `models/gpustack/jina-reranker-v2-base-multilingual-GGUF/jina-reranker-v2-base-multilingual-Q8_0.gguf` | graph-memory |
 | `embed` | `:8087` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
@@ -92,12 +92,12 @@ deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
 - **Owner:** `local-llm` · **Used by:** local-llm, omnicli
 - **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-GGUF/Qwen3.6-35B-A3B-Uncensored-Genesis-Final-Q4_K_M.gguf`
 - **Quirks:** WEIGHTS DELETED by owner 2026-11-01 — deliberate, not coming back; only the Q8_K_P build remains on the volume.
-- **Candidates:** `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, retired) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M + mmproj F16, retired) · `Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-TTQ` (4.51bpw IQ4_NL, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, candidate) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate)
+- **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, retired) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M + mmproj F16, retired) · `Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-TTQ` (4.51bpw IQ4_NL, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-Uncensored-Genesis-Final` (Q4_K_M, candidate) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate)
 
 ### `:8081` audio — `local-audio-audiocpp`
 
 - **Role:** Speech-to-text, text-to-speech, forced alignment, voice cloning
-- **Service:** audio.cpp 0.9.0 (Vulkan)
+- **Service:** audio.cpp 0.9.4 (Vulkan)
 - **Start:** `run-audiocpp.sh` (volume `sh/`; in-repo copy `launchers/run-audiocpp.sh`)
 - **Health:** `curl -s http://127.0.0.1:8081/health`
 - **API:** `/v1/audio/*`
@@ -146,7 +146,7 @@ deleted Genesis Q4_K_M — calls to the default model 500 until it is repointed
 - **Health:** `curl -s http://127.0.0.1:8084/health`
 - **API:** `/ocr/pipeline, /oxr/document`
 - **Owner:** `ocr` · **Used by:** ocr
-- **Weights:** `models/cstr/OXR-1.0-GGUF/oxr-1.0-q4_k-head.gguf` · `models/cstr/OXR-1.0-DFINE-layout-GGUF/oxr-1.0-dfine-layout-f32.gguf` · `models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf` · `models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf` · `models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf` · `models/cstr/parseq-GGUF/parseq-q8_0.gguf`
+- **Weights:** `models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf` · `models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf` · `models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf` · `models/cstr/parseq-GGUF/parseq-q8_0.gguf`
 - **Quirks:** Default engine ppocrv6.
 
 ### `:8085` ocr-lighton — `local-ocr-lighton`

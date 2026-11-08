@@ -47,6 +47,7 @@ try:
     from catalog import bindings as bindings_mod
     from catalog import bridge as bridge_mod
     from catalog import harness as harness_mod
+    from catalog import resolve as resolve_mod
     from catalog import builder, health, invoke, policy, registry, search, vectors  # noqa: E402
 except ImportError:  # pragma: no cover - degraded install
     aliases_mod = bindings_mod = bridge_mod = argspec_mod = harness_mod = None
@@ -160,6 +161,82 @@ def parse_invoke_args(argv: list[str]) -> tuple[str | None, dict, list[str]]:
         tool_args.append(a)
         i += 1
     return tool_id, opts, tool_args
+
+
+# `do` is parsed manually for the same two reasons as `invoke`: REMAINDER
+# would swallow the intent, and tool flags collide with gateway flags. The
+# split here is stricter — the intent is ONE token, and tool arguments only
+# ever arrive after `--`. Anything else is a malformed call, refused rather
+# than guessed at, because "the third word was probably a filename" is how a
+# correct refusal turns into a wrong execution.
+
+DO_VALUE_FLAGS = {
+    **INVOKE_VALUE_FLAGS,
+    "--skill": "skill",
+    "--tool": "tool",
+    "--margin": "margin",
+}
+DO_BOOL_FLAGS = {
+    "--dry-run": "dry_run",
+    "--omni-json": "json",
+}
+
+
+def parse_do_args(argv: list[str]) -> tuple[str | None, dict, list[str]]:
+    """Split `do` arguments into (intent, gateway options, tool args)."""
+    opts: dict[str, Any] = {
+        "buffer": None, "project": None, "jq": None, "grep": None,
+        "max_bytes": DEFAULT_MAX_BYTES, "json": False, "timeout": 300.0,
+        "skill": None, "tool": None, "margin": None, "dry_run": False,
+    }
+    intent: str | None = None
+    tool_args: list[str] = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--":
+            tool_args.extend(argv[i + 1:])
+            break
+        if a in DO_VALUE_FLAGS:
+            key = DO_VALUE_FLAGS[a]
+            if i + 1 >= len(argv):
+                sys.exit(f"❌ Error: {a} needs a value.")
+            val = argv[i + 1]
+            if key in ("max_bytes", "timeout"):
+                try:
+                    opts[key] = int(val) if key == "max_bytes" else float(val)
+                except ValueError:
+                    sys.exit(f"❌ Error: {a} expects a number, got {val!r}.")
+            elif key == "margin":
+                try:
+                    opts[key] = float(val)
+                except ValueError:
+                    sys.exit(f"❌ Error: {a} expects a number, got {val!r}.")
+            else:
+                opts[key] = val
+            i += 2
+            continue
+        if a in DO_BOOL_FLAGS:
+            opts[DO_BOOL_FLAGS[a]] = True
+            i += 1
+            continue
+        if a.startswith("--omni-"):
+            print(f"⚠️  omnicli: unknown gateway flag {a!r} ignored "
+                  f"(known: {', '.join(sorted(DO_VALUE_FLAGS))})",
+                  file=sys.stderr)
+            i += 1
+            continue
+        if intent is None and not a.startswith("-"):
+            intent = a
+            i += 1
+            continue
+        if intent is not None and not a.startswith("-"):
+            sys.exit(f"❌ Error: `omnicli do` takes ONE intent token; got {a!r} after "
+                     f"{intent!r}. Quote the intent as a single argument and pass "
+                     f"tool arguments after `--`.")
+        sys.exit(f"❌ Error: `omnicli do` does not accept flag {a!r} before the "
+                 f"intent. Gateway flags: {', '.join(sorted(DO_VALUE_FLAGS))}.")
+    return intent, opts, tool_args
 
 
 # --------------------------------------------------------------------------
@@ -645,7 +722,9 @@ def cmd_invoke(tool_id: str, extra_args: list[str], out_path: str | None = None,
                  f"   Enable it:  omnicli enable {tool_id}")
 
     argv = json.loads(row["argv"] or "[]")
-    cmd = invoke.build_cmd(argv, extra_args, python=sys.executable, skill_dir=SKILL_DIR)
+    parent_params = json.loads(row["contract"] or "{}").get("parent_params") if row["parent"] else None
+    cmd = invoke.build_cmd(argv, extra_args, python=sys.executable, skill_dir=SKILL_DIR,
+                           parent_params=parent_params)
     run = invoke.execute(cmd, timeout=timeout)
 
     fields = invoke.parse_fields(project_fields)
@@ -710,6 +789,85 @@ def cmd_invoke(tool_id: str, extra_args: list[str], out_path: str | None = None,
     if not shaped["output"].endswith("\n") and shaped["bytes"] < budget:
         sys.stdout.write("\n")
     sys.exit(run["exit_code"])
+
+# --------------------------------------------------------------------------
+# do — search, describe and invoke collapsed into one hop
+# --------------------------------------------------------------------------
+
+# Exit codes are part of the contract: a caller that only reads the status
+# must be able to tell "refused because ambiguous" from "refused because the
+# contract needs an argument". They are stable so scripts can branch on them.
+DO_EXIT = {
+    "ok": 0,
+    "no_match": 2,
+    "ambiguous": 3,
+    "missing_args": 4,
+    "no_tool": 5,
+}
+
+
+def cmd_do(intent: str, opts: dict, tool_args: list[str]):
+    con = _require_catalog()
+    decision = resolve_mod.resolve(
+        con, intent,
+        skill_hint=opts.get("skill"),
+        tool_hint=opts.get("tool"),
+        do_margin=opts.get("margin"),
+    )
+    status = decision.get("status", "no_match")
+
+    if status == "ok":
+        if opts.get("dry_run"):
+            # Resolve without executing: this is what the measurement harness
+            # calls, so a probe never runs a tool to learn where it would go.
+            print(json.dumps({
+                "status": "ok",
+                "skill": decision.get("skill"),
+                "tool": decision.get("tool"),
+                "argv": decision.get("argv"),
+                "supplied": tool_args,
+                "would_execute": True,
+            }, indent=2, ensure_ascii=False))
+            return
+        cmd_invoke(
+            decision["tool"], tool_args,
+            out_path=opts.get("buffer"), project_fields=opts.get("project"),
+            jq_expr=opts.get("jq"), grep=opts.get("grep"),
+            max_bytes=opts["max_bytes"], as_json=opts.get("json", False),
+            timeout=float(opts["timeout"]),
+        )
+        return
+
+    if opts.get("json"):
+        payload = {k: v for k, v in decision.items() if k != "contract"}
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    elif status == "missing_args":
+        # Loud by design: print the contract stub the caller needs to retry.
+        print(resolve_mod.stub_for(decision))
+    else:
+        reason = decision.get("reason") or status
+        level = decision.get("level")
+        # `no_tool` is a lookup miss, not a judgement call, so it does not get
+        # the "refusing to guess" framing or the narrowing advice — there is
+        # nothing to narrow toward.
+        if status == "no_tool":
+            print(f"❌ omnicli do: no tool — {reason}.")
+            print(f"   intent : {intent!r}")
+            print("   Browse: `omnicli list`  |  `omnicli tools <skill>`")
+        else:
+            gate = f"{status} ({level})" if level else status
+            print(f"❌ omnicli do: {gate} — refusing to guess.")
+            print(f"   intent : {intent!r}")
+            print(f"   reason : {reason}")
+            for i, cand in enumerate((decision.get("candidates") or [])[:4], 1):
+                name = cand.get("name", "?")
+                score = cand.get("score", 0.0)
+                print(f"   {i}. {name}   score={score}")
+            if status == "no_match":
+                print('   Try `omnicli search "<intent>"` to browse matches.')
+            else:
+                print('   Narrow the intent, or run `omnicli search "<intent>" --explain`.')
+    sys.exit(DO_EXIT.get(status, 2))
 
 # --------------------------------------------------------------------------
 # policy — discovery does not imply exposure
@@ -928,16 +1086,105 @@ def cmd_index(rebuild: bool = False, with_contracts: bool = True, as_json: bool 
 
 
 def cmd_eval(verbose: bool = False, as_json: bool = False, rerank: str = "never",
-             fusion: str = "never"):
+             fusion: str = "never", eval_set: str = "golden"):
     runner = SKILL_DIR / "tests" / "eval_runner.py"
     if not runner.is_file():
         sys.exit("❌ Error: tests/eval_runner.py not found next to omnicli.")
-    args = [sys.executable, str(runner), f"--rerank={rerank}", f"--fusion={fusion}"]
+    args = [sys.executable, str(runner), f"--rerank={rerank}",
+            f"--fusion={fusion}", f"--set={eval_set}"]
     if verbose:
         args.append("--verbose")
     if as_json:
         args.append("--json")
     sys.exit(subprocess.run(args).returncode)
+
+
+def cmd_questions(skill_id: str | None = None, build: str | None = None,
+                  as_json: bool = False):
+    """Inspect the distilled-question snapshot, or curate a new one.
+
+    The snapshot is what the dense leg embeds as ``kind='question'`` rows. It is
+    opt-in: ``OMNICLI_QUESTIONS=1`` makes the index build them. Off by default
+    because this catalog's descriptions already carry the user's vocabulary and
+    the measured effect on routing was zero (see SKILL.md, "Distilled questions").
+    """
+    from catalog import questions, question_build, vectors
+
+    if build:
+        directory = Path(build)
+        if not directory.is_dir():
+            sys.exit(f"❌ Not a directory: {directory}")
+        res = question_build.from_dir(directory)
+        accepted = res["accepted"]
+        rejected = res["rejected"]
+        if res.get("error"):
+            print(f"⚠️  {res['error']}")
+        histogram: dict[str, int] = {}
+        for entry in rejected:
+            key = entry["reason"].split(" ")[0]
+            histogram[key] = histogram.get(key, 0) + 1
+        meta = {
+            "generator": f"batches in {directory.name}",
+            "proposed": sum(len(v) for v in accepted.values()) + len(rejected),
+            "accepted": sum(len(v) for v in accepted.values()),
+            "rejected": histogram,
+            "self_floor": questions.SELF_FLOOR,
+        }
+        path = questions.write_snapshot(accepted, meta=meta)
+        if as_json:
+            print(json.dumps({"snapshot": str(path), **meta,
+                              "rejected_detail": rejected}, indent=2, ensure_ascii=False))
+            return
+        print(f"\n📝 Snapshot: {path}")
+        print(f"   accepted {meta['accepted']} / {meta['proposed']} "
+              f"across {len(accepted)} skills")
+        if histogram:
+            print("   rejected : " + ", ".join(f"{k}={v}" for k, v in sorted(histogram.items())))
+        print("   enable   : OMNICLI_QUESTIONS=1 omnicli index\n")
+        return
+
+    snapshot = questions.load()
+    if not snapshot:
+        print("\n📝 No question snapshot loaded.")
+        print("   Build one:  omnicli questions --build <dir-of-batches>")
+        print("   Enable it : OMNICLI_QUESTIONS=1 omnicli index")
+        print("   Status    : the dense leg is description-only (the tuned default).\n")
+        return
+
+    if as_json:
+        print(json.dumps(
+            {"skills": len(snapshot),
+             "questions": sum(len(v) for v in snapshot.values()),
+             "enabled": bool(os.environ.get("OMNICLI_QUESTIONS") not in ("0", "false", "off")),
+             "entries": snapshot if skill_id else {}},
+            indent=2, ensure_ascii=False))
+        return
+
+    if skill_id:
+        entries = snapshot.get(skill_id)
+        if not entries:
+            sys.exit(f"❌ No questions for {skill_id!r}; `omnicli questions` lists which have them.")
+        from catalog import registry
+        meta = registry.load_all_skills().get(skill_id) or {}
+        source = " ".join((meta.get("description") or "").split())
+        print(f"\n❓ [{skill_id}] {len(entries)} distilled question(s)\n")
+        for i, entry in enumerate(entries, 1):
+            ok, reason = questions.gate(entry["question"], entry["quote"], source, skill_id)
+            flag = "✓" if ok else f"✗ {reason}"
+            print(f"  {i}. {entry['question']}")
+            print(f"     quote: \"{entry['quote']}\"  {flag}")
+        print()
+        return
+
+    total = sum(len(v) for v in snapshot.values())
+    enabled = questions.enabled()
+    print(f"\n❓ Question snapshot: {len(snapshot)} skills · {total} questions"
+          f" · {'ENABLED' if enabled else 'disabled (set OMNICLI_QUESTIONS=1)'}")
+    print(f"   {questions.SNAPSHOT_PATH}")
+    for name in sorted(snapshot):
+        print(f"     {name:<26} {len(snapshot[name])} questions")
+    print("\n   Inspect one : omnicli questions <skill>")
+    print("   Rebuild     : OMNICLI_QUESTIONS=1 omnicli index\n")
 
 
 # --------------------------------------------------------------------------
@@ -1269,6 +1516,13 @@ def main():
                 max_bytes=opts["max_bytes"], as_json=opts["json"],
                 timeout=float(opts["timeout"]),
             )
+        if subcmd == "do":
+            # Parsed manually: see parse_do_args.
+            intent, do_opts, do_args = parse_do_args(sys.argv[2:])
+            if not intent:
+                sys.exit("❌ Error: `omnicli do` needs an intent. "
+                         'Example: omnicli do "transcribe this recording"')
+            cmd_do(intent, do_opts, do_args)
         if subcmd == "llm":
             exec_internal_script("llm_client.py", sys.argv[2:])
         elif subcmd == "ocr":
@@ -1316,6 +1570,10 @@ def main():
     p.add_argument("args", nargs=argparse.REMAINDER)
 
     # --- catalog -----------------------------------------------------
+    p = sub.add_parser("do", help="One hop: intent -> runnable tool (search+describe+invoke)",
+                       add_help=False)
+    p.add_argument("args", nargs=argparse.REMAINDER)
+
     p = sub.add_parser("search", help="Find tools by intent (BM25 over every skill body)")
     p.add_argument("query", help="Natural-language intent")
     p.add_argument("--json", action="store_true")
@@ -1399,6 +1657,17 @@ def main():
                         "catalog's own default is auto)")
     p.add_argument("--fusion", choices=["auto", "always", "never"], default="never",
                    help="dense-leg fusion used during the eval (default: never)")
+    p.add_argument("--set", dest="eval_set", choices=["golden", "paraphrase"],
+                   default="golden", help="golden=tuned routes, paraphrase=blind "
+                                          "user prompts harvested from this machine")
+
+    p = sub.add_parser("questions",
+                       help="Inspect or curate the distilled-question snapshot")
+    p.add_argument("skill", nargs="?", default=None,
+                   help="Show one skill's questions and their verbatim quotes")
+    p.add_argument("--build", default=None, metavar="DIR",
+                   help="Gate a directory of generated batch files into the snapshot")
+    p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("spec", help="Query the catalog surface without loading it")
     p.add_argument("--skill", default=None)
@@ -1490,7 +1759,9 @@ def main():
                   remove=args.remove, show_all=args.list, as_json=args.json)
     elif args.action == "eval":
         cmd_eval(verbose=args.verbose, as_json=args.json, rerank=args.rerank,
-                 fusion=args.fusion)
+                 fusion=args.fusion, eval_set=args.eval_set)
+    elif args.action == "questions":
+        cmd_questions(skill_id=args.skill, build=args.build, as_json=args.json)
     elif args.action == "bindings":
         cmd_bindings(out_dir=args.out, as_json=args.json, stubs=args.stubs,
                      skill=args.skill, grep=args.grep)

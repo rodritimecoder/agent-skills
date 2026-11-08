@@ -718,7 +718,7 @@ def cmd_verify() -> int:
         for mid in extra:
             print(f"   + {PROVIDER}/{mid}")
     print(f"\nUpdate MODELS in {sys.argv[0]} and {DOCS_URL}")
-    return 1
+    return 2
 
 
 def money(value: Optional[float]) -> str:
@@ -771,7 +771,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="Is the provider connected, and does the roster match it")
     parser.add_argument("--verify", action="store_true", help="Fail when an id in the roster is no longer served")
     parser.add_argument("--plan", metavar="SPEC", help='Lanes as "model:agents,..." e.g. "deepseek-v4.1-flash:3,glm-5.3-flash:2"')
-    parser.add_argument("--hours", type=float, default=5.0, help="Block length for --plan (default 5)")
+    parser.add_argument("--hours", type=float, metavar="SECONDS", default=5.0, help="Block length for --plan (default 5)")
     parser.add_argument("--profile", metavar="IN,CACHED,OUT", help="Override tokens per request for every lane")
     args = parser.parse_args()
 

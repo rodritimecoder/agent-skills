@@ -92,6 +92,8 @@
   },
   "audiocpp": {
     "aliases": [
+      "audio transcription",
+      "transcription",
       "audio",
       "speech",
       "asr",

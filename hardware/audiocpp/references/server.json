@@ -1,0 +1,155 @@
+{
+  "host": "127.0.0.1",
+  "port": 8081,
+  "backend": "vulkan",
+  "device": 0,
+  "threads": 4,
+  "lazy_load": true,
+  "max_loaded_models": 3,
+  "busy_timeout_ms": 300000,
+  "models": [
+    {
+      "id": "kokoro",
+      "family": "kokoro_tts",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/kokoro-82m-bf16.gguf",
+      "task": "tts",
+      "mode": "streaming",
+      "default_voice_preset": "af_heart",
+      "voice_presets": {
+        "af_heart": { "voice_id": "af_heart" },
+        "af_bella": { "voice_id": "af_bella" },
+        "af_nicole": { "voice_id": "af_nicole" },
+        "af_sarah": { "voice_id": "af_sarah" },
+        "am_adam": { "voice_id": "am_adam" },
+        "am_michael": { "voice_id": "am_michael" },
+        "bf_emma": { "voice_id": "bf_emma" },
+        "bm_george": { "voice_id": "bm_george" },
+        "ef_dora": { "voice_id": "ef_dora" },
+        "ff_siwis": { "voice_id": "ff_siwis" },
+        "hf_alpha": { "voice_id": "hf_alpha" },
+        "im_nicola": { "voice_id": "im_nicola" },
+        "jf_alpha": { "voice_id": "jf_alpha" },
+        "zf_xiaobei": { "voice_id": "zf_xiaobei" },
+        "zm_yunjian": { "voice_id": "zm_yunjian" }
+      },
+      "session_options": {
+        "language": "en-us"
+      }
+    },
+    {
+      "id": "kitten",
+      "family": "kitten_tts",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/kitten-tts-mini-0.8-orig.gguf",
+      "task": "tts",
+      "mode": "offline"
+    },
+    {
+      "id": "nemotron-asr",
+      "family": "nemotron_asr",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/nemotron-3.5-asr-streaming-0.6b-q8_0.gguf",
+      "task": "asr",
+      "mode": "streaming",
+      "session_options": {
+        "language": "en-US"
+      }
+    },
+    {
+      "id": "nemotron-asr-f16",
+      "family": "nemotron_asr",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/nemotron-3.5-asr-streaming-0.6b-f16.gguf",
+      "task": "asr",
+      "mode": "streaming",
+      "session_options": {
+        "language": "en-US"
+      }
+    },
+    {
+      "id": "crisperwhisper",
+      "family": "crisperwhisper",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/crisperwhisper-2-large-q4_k.gguf",
+      "task": "asr",
+      "mode": "offline"
+    },
+    {
+      "id": "supertonic",
+      "family": "supertonic",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/supertonic-3-q8_0.gguf",
+      "task": "tts",
+      "mode": "streaming"
+    },
+    {
+      "id": "omnivoice",
+      "family": "omnivoice",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/omnivoice-q8_0.gguf",
+      "task": "tts",
+      "mode": "streaming"
+    },
+    {
+      "id": "omnivoice-bf16",
+      "family": "omnivoice",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/omnivoice-bf16.gguf",
+      "task": "tts",
+      "mode": "streaming"
+    },
+    {
+      "id": "audio8-tts",
+      "family": "audio8_tts",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/audio8-tts-preview-0.6b-q8_0.gguf",
+      "task": "tts",
+      "mode": "streaming",
+      "default_voice_preset": "maomao",
+      "voice_presets": {
+        "maomao": {
+          "voice_ref": "/run/media/rodri/AI/voice/maomao.wav",
+          "reference_text": "Everyone has a price for their dreams, and I merely facilitate the transaction. If you seek to ascend, you must be prepared to offer something truly precious. Is it your memories or perhaps your future? Whatever you choose, the results will be quite exquisite. Shall we begin?"
+        },
+        "egirl": {
+          "voice_ref": "/run/media/rodri/AI/voice/egirl.wav",
+          "reference_text": "Hey why are you sitting here all alone in the corner come on let me sit next to you what's wrong you're being way too quiet tonight I know you're not usually like this is it because of what happened earlier don't worry about that just relax with me"
+        }
+      }
+    },
+    {
+      "id": "audio8-tts-bf16",
+      "family": "audio8_tts",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/audio8-tts-preview-0.6b-bf16.gguf",
+      "task": "tts",
+      "mode": "streaming"
+    },
+    {
+      "id": "index-tts2",
+      "family": "index_tts2",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/index-tts2_5-q8_0.gguf",
+      "task": "tts",
+      "mode": "offline"
+    },
+    {
+      "id": "index-tts2-f16",
+      "family": "index_tts2",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/index-tts2_5-f16.gguf",
+      "task": "tts",
+      "mode": "offline"
+    },
+    {
+      "id": "higgs-tts",
+      "family": "higgs_audio_tts",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/higgs-audio-v3-tts-4b-q8_0.gguf",
+      "task": "tts",
+      "mode": "offline"
+    },
+    {
+      "id": "fish-s2-pro",
+      "family": "fish_audio",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/fish-audio-s2-pro-q4_k.gguf",
+      "task": "tts",
+      "mode": "offline"
+    },
+    {
+      "id": "aligner",
+      "family": "qwen3_forced_aligner",
+      "path": "/run/media/rodri/AI/models/audio-cpp/audio.cpp-gguf/qwen3-forced-aligner-0.6b-q8_0.gguf",
+      "task": "align",
+      "mode": "offline"
+    }
+  ]
+}

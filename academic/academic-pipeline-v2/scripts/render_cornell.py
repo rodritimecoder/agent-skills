@@ -398,8 +398,15 @@ def run(workspace: Path, dry_run: bool = False, deps: dict | None = None) -> dic
 
 
 if __name__ == "__main__":
+    import argparse
     import json
     import sys
 
-    result = run(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+    parser = argparse.ArgumentParser(description="Stage 4 render: Cornell notes HTML.")
+    parser.add_argument("workspace", nargs="?", default=".", metavar="DIR",
+                        help="ICM workspace root (default: .)")
+    parser.add_argument("--dry-run", action="store_true", help="report what would be rendered")
+    args = parser.parse_args()
+    result = run(Path(args.workspace), dry_run=args.dry_run)
     print(json.dumps(result, indent=2))
+    sys.exit(0 if result.get("status") != "failed" else 2)

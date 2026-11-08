@@ -346,8 +346,10 @@ def tool_invoke(args: dict[str, Any]) -> dict[str, Any]:
         }, max_bytes)
 
     argv = json.loads(row["argv"] or "[]")
+    parent_params = json.loads(row["contract"] or "{}").get("parent_params") if row["parent"] else None
     cmd = invoke.build_cmd(argv, [str(a) for a in (args.get("args") or [])],
-                           python=sys.executable, skill_dir=SKILL_DIR)
+                           python=sys.executable, skill_dir=SKILL_DIR,
+                           parent_params=parent_params)
     run = invoke.execute(cmd, timeout=timeout)
 
     projection = args.get("projection") or []

@@ -335,9 +335,9 @@ def main() -> int:
     p.add_argument("file", nargs="?", help="PDF or image to OCR")
     p.add_argument("-p", "--prompt", default=DEFAULT_PROMPT, help="extraction prompt")
     p.add_argument("--pages", help="page selection for PDFs, e.g. 1-3,7 (default: all)")
-    p.add_argument("--dpi", type=int, default=200, help="rasterisation DPI (default: 200)")
-    p.add_argument("--workers", type=int, default=2, help="parallel page requests (default: 2)")
-    p.add_argument("--max-tokens", type=int, default=2048)
+    p.add_argument("--dpi", type=int, metavar="N", default=200, help="rasterisation DPI (default: 200)")
+    p.add_argument("--workers", type=int, metavar="WORKERS", default=2, help="parallel page requests (default: 2)")
+    p.add_argument("--max-tokens", type=int, metavar="N", default=2048)
     p.add_argument("--model", default=os.environ.get("OCR_MODEL") or os.environ.get("NAVIDC_OCR_MODEL"),
                    help="model name to send (llama-server usually ignores this)")
     p.add_argument("--endpoint", default=ENDPOINT, help=f"default: {ENDPOINT}")

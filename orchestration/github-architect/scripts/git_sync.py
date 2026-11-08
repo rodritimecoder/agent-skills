@@ -520,9 +520,9 @@ def guarded_commit(repo: str, message: str, excludes: list = None) -> dict:
             safe.append(rel)
 
     if blocked:
-        print("🛡️  [guard] Blocked files from staging:")
+        print("🛡️  [guard] Blocked files from staging:", file=sys.stderr)
         for rel, reason in blocked:
-            print(f"   ❌ {rel} — {reason}")
+            print(f"   ❌ {rel} — {reason}", file=sys.stderr)
         return {"committed": [], "blocked": blocked, "safe": safe}
 
     committed = stage3_commit(safe, message=message, repo=repo) if safe else []
@@ -543,7 +543,7 @@ def cmd_guarded_commit(args) -> int:
             print(f"🛑 [guard] {len(result['blocked'])} file(s) blocked; nothing committed.")
         else:
             print(f"✅ [guard] committed {len(result['safe'])} file(s) in {args.repo}")
-    return 1 if result["blocked"] else 0
+    return 2 if result["blocked"] else 0
 
 
 def cmd_check_messages(args) -> int:

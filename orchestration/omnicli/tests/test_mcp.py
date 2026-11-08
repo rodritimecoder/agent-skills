@@ -150,9 +150,11 @@ def main() -> int:
                 "arguments": {"intent": "transcribe a zoom lecture", "rerank": "always"},
             })["result"]["content"][0]["text"])
             results.append(check("omni_discover rerank=never stays lexical",
-                                 never.get("tier") == "bm25", never.get("tier", "")))
+                                 never.get("tier", "").startswith("bm25")
+                                 and "rerank" not in never.get("tier", ""),
+                                 never.get("tier", "")))
             results.append(check("omni_discover rerank=always reaches the re-ranker",
-                                 always.get("tier") == "bm25+rerank",
+                                 "rerank" in always.get("tier", ""),
                                  always.get("tier", "")))
 
         # 4. omni_describe — one contract, no schemas for everything
@@ -240,7 +242,7 @@ def main() -> int:
         r = c.call("tools/call", {"name": "omni_status", "arguments": {}})
         st = json.loads(r["result"]["content"][0]["text"])
         results.append(check("omni_status reports the retrieval tier",
-                             st.get("retrieval_tier") in ("bm25", "bm25+rerank"),
+                             st.get("retrieval_tier", "").startswith("bm25"),
                              st.get("retrieval_tier", "")))
         results.append(check("omni_status reports catalog freshness",
                              st.get("catalog", {}).get("skills", 0) > 0))

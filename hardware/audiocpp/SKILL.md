@@ -3,21 +3,23 @@ name: audiocpp
 
 description: >
   Local audio intelligence: speech-to-text, text-to-speech, forced alignment and voice
-  cloning, powered by audio.cpp v0.9.3 on dual AMD Radeon RX 9060 XT GPUs. Every model runs
+  cloning, powered by audio.cpp v0.9.4 on dual AMD Radeon RX 9060 XT GPUs. Every model runs
   faster than real time. Use to transcribe a recording, turn speech into text, narrate or
   speak text out loud to a wav file, clone a voice, align a transcript to its audio, or work
   out who said what. For a spoken chat page with an avatar, use companion.
 
-compatibility: "Requires Dual AMD Radeon RX 9060 XT GPUs with Vulkan and the audio.cpp v0.9.3 binary."
+compatibility: "Requires Dual AMD Radeon RX 9060 XT GPUs with Vulkan and the audio.cpp v0.9.4 binary."
 allowed-tools: "Bash(audiocpp:*) Bash(python3:*) Read Write"
 ---
 
 > **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8081`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model.
+>
+> **Orientation:** `README.md` routes tasks; `CONTEXT.md` holds the live state, the invariants and the failure modes; `scripts/check-docs.py` fails when the two disagree with the install.
 
 # Local Audio Intelligence (`audiocpp`)
 
 Hardware-accelerated speech-to-text, text-to-speech, forced alignment and voice
-cloning, powered by `audio.cpp v0.9.3` on **dual AMD Radeon RX 9060 XT** GPUs
+cloning, powered by `audio.cpp v0.9.4` on **dual AMD Radeon RX 9060 XT** GPUs
 over Vulkan. Every model runs faster than real time, so a minute of audio
 transcribes in under a second and a sentence narrates in under fifty
 milliseconds.
@@ -135,7 +137,34 @@ python3 $AC tts "Synthesizing from laptop over Tailscale" --model kokoro -o spee
 
 ---
 
+## 🔀 Switching builds
+
+The install is reached through one symlink, so a version change is a link flip:
+
+```
+/run/media/rodri/AI/audio.cpp -> /run/media/rodri/AI/audio-v0.9.4-bin-ubuntu-x64-vulkan
+```
+
+Flip it with the gate, never by hand:
+
+```bash
+S=hardware/audiocpp/scripts/switch-version.sh
+$S --status                                  # what is live, and what answers :8081
+$S /home/rodri/audio-v0.9.5-bin-ubuntu-x64-vulkan
+$S --rollback
+```
+
+The script validates the candidate by running its own `audiocpp_cli --version`
+before touching anything — that single call is what rejects a HIP/ROCm build with
+no runtime (`libhipblas.so.3`), instead of finding out on the port — seeds a
+missing `server.json` from `references/server.json`, restarts :8081, and restores
+the previous install if the new one fails its health check.
+
 ## Reference
 
+- `README.md` — what this folder is, and where to go for each task
+- `CONTEXT.md` — the contract and the **live state**: version, symlink, invariants, failure modes
 - `references/benchmarks.md` — measured RTF, wall time and speed for all 12 models
-- `references/architecture.md` — canonical paths, binary directory, server config, weights
+- `references/server-json.md` — the install config, recoverable, with the model and voice-preset inventory
+- `references/server.json` — the same config as a seed the switch script installs
+- `scripts/check-docs.py` — fails when this folder's claims disagree with the install

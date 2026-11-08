@@ -22,7 +22,9 @@ OPTION_ENTRY = re.compile(
     r"^(?:-\w,\s+)?(--[A-Za-z0-9][A-Za-z0-9_-]*)(?:\s+(\S+))?(?:\s{2,}.*)?$"
 )
 OPTION_START = re.compile(r"^\s{2,}(?:-\w,\s+)?--")
-OPTIONS_SECTION = re.compile(r"^(?:options|optional arguments):\s*$", re.MULTILINE)
+OPTIONS_SECTION = re.compile(
+    r"^[A-Za-z0-9][^\n:]*:\s*$", re.MULTILINE
+)
 METAVAR_CHOICES = re.compile(r"^\{([^}]*)\}$")
 USAGE_CHOICES = re.compile(r"\{([^}]+)\}")
 INT_HINTS = {"N", "COUNT", "NUM", "LIMIT", "PORT", "RETRIES", "JOBS", "WORKERS", "PAGES"}
@@ -97,16 +99,22 @@ def _help_text(contract: dict[str, Any]) -> str:
 
 
 def _options_block(help_text: str) -> list[str]:
-    match = None
+    """Every option section, concatenated.
+
+    argparse renders one section per `add_argument_group(...)`, and the group
+    titles are free-form ("OCR / image description (local vision endpoint):",
+    "token shielding / ICM inspection:"). Taking only the last
+    `options:` block loses every flag a grouped CLI declared, so those flags
+    degrade to `str | None` in the generated bindings.
+    """
+    lines: list[str] = []
     for match in OPTIONS_SECTION.finditer(help_text):
-        pass
-    if match is None:
-        return []
-    block = help_text[match.end():]
-    stop = re.search(r"\n(?!\s)\S", block)
-    if stop:
-        block = block[: stop.start()]
-    return block.splitlines()
+        block = help_text[match.end():]
+        stop = re.search(r"\n(?!\s)\S", block)
+        if stop:
+            block = block[: stop.start()]
+        lines.extend(block.splitlines())
+    return lines
 
 
 def _entries(lines: list[str]) -> list[str]:
@@ -118,12 +126,12 @@ def _entries(lines: list[str]) -> list[str]:
     return headers
 
 
-def _parse_header(header: str) -> tuple[str, str]:
-    """Return (long flag, metavar) from a header such as `--url, -u URL`."""
+def _parse_header(header: str) -> tuple[str, str, list[str]]:
+    """Return (long flag, metavar, sibling long flags) for `--url, -u URL`."""
     tokens = [t.rstrip(",") for t in header.split()]
     long_flags = [t for t in tokens if t.startswith("--")]
     if not long_flags:
-        return "", ""
+        return "", "", []
     flag = long_flags[0]
     tail = tokens[tokens.index(flag) + 1:]
     metavar = ""
@@ -132,7 +140,7 @@ def _parse_header(header: str) -> tuple[str, str]:
             continue
         metavar = token
         break
-    return flag, metavar
+    return flag, metavar, long_flags[1:]
 
 
 def _required_flags(usage: str) -> set[str]:
@@ -196,7 +204,7 @@ def parse_flags(contract: dict[str, Any]) -> list[Param]:
     seen: set[str] = set()
 
     for header in _entries(_options_block(_help_text(contract))):
-        flag, metavar = _parse_header(header)
+        flag, metavar, aliases = _parse_header(header)
         if not flag or flag in ("--help", "--version"):
             continue
         kind, choices = ("bool", []) if not metavar else _kind_for(metavar)
@@ -204,8 +212,39 @@ def parse_flags(contract: dict[str, Any]) -> list[Param]:
         seen.add(name)
         params.append(Param(name=name, flag=flag, kind=kind, choices=choices,
                             required=flag in required and kind != "bool"))
+        # `--outline, --agenda` declares one option twice. The alias carries the
+        # same kind, so it must not be re-invented as a `str` flag from the raw
+        # flag list — that produced bindings like `agenda: str` for a bool.
+        for alias in aliases:
+            params.append(Param(name=_param_name(alias, seen), flag=alias, kind=kind,
+                                choices=choices, required=False))
 
     known = {p.flag for p in params}
+    # A subcommand parser inherits its parent's globals (--json, --dir, --port),
+    # and the builder carries their *typed* params here. Merging only the raw
+    # flag names lost the kind, so `--json` came out as `str | None` and the
+    # generated call passed `--json True` to a store_true flag.
+    for parent_param in contract.get("parent_params") or []:
+        flag = parent_param.get("flag")
+        if not flag or flag in known:
+            continue
+        kind = parent_param.get("kind") or "str"
+        choices = list(parent_param.get("choices") or [])
+        name = _param_name(flag, seen)
+        seen.add(name)
+        params.append(Param(name=name, flag=flag, kind=kind, choices=choices,
+                            required=flag in required and kind != "bool"))
+        known.add(flag)
+
+    # A parser with subparsers leaks its children's flags into the contract's
+    # flat flag list: ``parse_help_contract`` scans the whole help text, and the
+    # subcommand table names options that only that subcommand accepts. Those
+    # phantoms became bindings the root parser rejects ("unrecognized
+    # arguments"), so for a subcommand CLI only the option block is trusted —
+    # argparse always prints the parent's own options there.
+    if contract.get("subcommands"):
+        return params
+
     for flag in contract.get("flags") or []:
         if not isinstance(flag, str) or flag.startswith("--") is False or flag in known:
             continue

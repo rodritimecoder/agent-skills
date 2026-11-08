@@ -419,7 +419,7 @@ class TestCommitMessage(unittest.TestCase):
             [sys.executable, str(HERE / "git_sync.py"), "guarded-commit", "--repo", str(self.repo)],
             capture_output=True, text=True,
         )
-        self.assertEqual(proc.returncode, 1)
+        self.assertEqual(proc.returncode, 2)
 
 
 class TestGate(unittest.TestCase):

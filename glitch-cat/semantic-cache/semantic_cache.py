@@ -38,18 +38,21 @@ def main():
         res = cache.get(args.question, threshold=args.threshold)
         if args.json:
             print(json.dumps(res, indent=2))
+        elif res["hit"]:
+            print(f"⚡ [CACHE HIT] Similarity: {res['similarity'] * 100:.1f}% (Hits: {res['hit_count']})")
+            print(f"Matched: \"{res['matched_query']}\"")
+            print(f"Answer:\n{res['answer']}")
         else:
-            if res["hit"]:
-                print(f"⚡ [CACHE HIT] Similarity: {res['similarity'] * 100:.1f}% (Hits: {res['hit_count']})")
-                print(f"Matched: \"{res['matched_query']}\"")
-                print(f"Answer:\n{res['answer']}")
-            else:
-                print(f"❌ [CACHE MISS] Best Similarity: {res['best_similarity'] * 100:.1f}% (Threshold: {res['threshold'] * 100:.1f}%)")
-                sys.exit(1)
+            print(f"❌ [CACHE MISS] Best Similarity: {res['best_similarity'] * 100:.1f}% (Threshold: {res['threshold'] * 100:.1f}%)")
+        if not res["hit"]:
+            sys.exit(2)
 
     elif args.command == "store":
         cache.set(args.question, args.answer)
-        print(f"✓ Cached question: \"{args.question}\"")
+        if args.json:
+            print(json.dumps({"stored": True, "question": args.question}, indent=2))
+        else:
+            print(f"✓ Cached question: \"{args.question}\"")
 
     elif args.command == "stats":
         st = cache.stats()
@@ -63,7 +66,10 @@ def main():
 
     elif args.command == "purge":
         deleted = cache.purge()
-        print(f"✓ Purged {deleted} cache entries.")
+        if args.json:
+            print(json.dumps({"purged": deleted}, indent=2))
+        else:
+            print(f"✓ Purged {deleted} cache entries.")
 
 
 if __name__ == "__main__":

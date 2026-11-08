@@ -58,8 +58,15 @@ def index_embedding(db):
     )
 
 
-def meaning_leg(db, query):
-    """Return (rowids, reason). reason is set only when the leg could not run."""
+def meaning_leg(db, query, floor=0.0):
+    """Return (rowids, reason). reason is set only when the leg could not run.
+
+    `floor` drops vectors whose cosine is below it. Dense similarity always
+    returns a full list, so a leg with no floor cannot abstain: ask an
+    out-of-vocabulary question and it still names ten notes, confidently.
+    The injection hook passes a floor; the CLI leaves it at 0 to show the
+    best hits anyway.
+    """
     rows = db.execute("SELECT id, vec FROM vectors").fetchall()
     if not rows:
         model, dim, _ = index_embedding(db)
@@ -96,7 +103,7 @@ def meaning_leg(db, query):
             continue
         scored.append((sum(a * b for a, b in zip(q, vec)), rowid))
     scored.sort(reverse=True)
-    return [rowid for _, rowid in scored[:10]], None
+    return [rowid for score, rowid in scored[:10] if score >= floor], None
 
 
 def fuse(legs):
@@ -235,20 +242,21 @@ def main():
         out_p = Path(args.out).expanduser()
         out_p.parent.mkdir(parents=True, exist_ok=True)
         out_p.write_text(json.dumps(hits, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"### Buffered {len(hits)} memory hits to `{args.out}`\n")
+        sys.stderr.write(f"### Buffered {len(hits)} memory hits to `{args.out}`\n")
 
-    if args.table or args.out:
+    if args.project:
+        proj = [k.strip().lower() for k in args.project.split(",") if k.strip()]
+        hits = [{k: h[k] for k in h if k.lower() in proj} for h in hits]
+
+    if args.json:
+        print(json.dumps(hits, indent=2, ensure_ascii=False))
+    elif args.table or args.out:
         cols = ["rank", "file", "section", "lines", "legs", "snippet"]
         if args.project:
             proj = [k.strip().lower() for k in args.project.split(",") if k.strip()]
             cols = [c for c in cols if c in proj] or cols
         table_rows = [{k: h[k] for k in cols if k in h} for h in hits]
         print(render_table(table_rows, cols))
-    elif args.json:
-        if args.project:
-            proj = [k.strip().lower() for k in args.project.split(",") if k.strip()]
-            hits = [{k: h[k] for k in h if k.lower() in proj} for h in hits]
-        print(json.dumps(hits, indent=2, ensure_ascii=False))
     else:
         # Backward-compatible verbose show
         for position, rowid in enumerate(ranked[:args.limit], start=1):

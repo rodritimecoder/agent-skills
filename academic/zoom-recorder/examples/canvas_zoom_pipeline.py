@@ -149,7 +149,7 @@ def process_course_recordings(course_id: int, out_dir: str, format_type: str = "
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch Zoom lecture recordings from Canvas LMS and download transcripts.")
-    parser.add_argument("--course-id", type=int, required=True, help="Canvas Course ID (e.g. 41088)")
+    parser.add_argument("--course-id", type=int, metavar="N", required=True, help="Canvas Course ID (e.g. 41088)")
     parser.add_argument("--out-dir", "-o", default=os.path.expanduser("~/Downloads/notes/zoom_transcripts"), help="Target output folder")
     parser.add_argument("--format", choices=["md", "vtt", "txt", "all"], default="md", help="Transcript format")
     parser.add_argument("--keyframes", action="store_true", help="Extract video keyframes with ffmpeg")

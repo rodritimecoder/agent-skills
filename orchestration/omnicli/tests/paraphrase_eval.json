@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "description": "Blind paraphrase set for the dense leg. Unlike golden_eval.json (tuned against this catalog's own vocabulary), every `harvested` case is a verbatim user prompt pulled from this machine's OpenCode session DB before any question vectors existed, so neither the questions nor the descriptions were authored with these phrasings in view. `authored` cases cover skills the log never touched and are phrased deliberately without catalog nouns. Read the score as 'does the mechanism respond to how this user actually types', not as a forecast.",
+  "cases": [
+    {
+      "query": "why the deskforge in zoom recorder? i thought it only gets the link and password from canvas cli then you can download the vids and vtt?",
+      "top1": "zoom-recorder",
+      "expect": ["zoom-recorder", "canvas-cli"],
+      "expect_not": ["icm-architect"],
+      "min_margin": 1.2,
+      "kind": "harvested",
+      "note": "Real prompt about pulling a cloud recording and its captions."
+    },
+    {
+      "query": "uh looking back to my canvas cli skill it should work but where should i put the api key again?",
+      "top1": "canvas-cli",
+      "expect": ["canvas-cli"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "lets work on the 48430 assessment 3 github/canvas in the canvas lets look at the 15% report side",
+      "top1": "canvas-cli",
+      "expect": ["canvas-cli"],
+      "kind": "harvested",
+      "note": "Course assignment work, no catalog nouns at all."
+    },
+    {
+      "query": "check out my edstem ed workspace tim's one? thinking if its too hard to acess thinking adding a script that shows workspaces",
+      "top1": "edstem-cli",
+      "expect": ["edstem-cli"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "can you look at the skills and make sure that if the skills are using a local jev decision model it should always use the h2o 4b jev model",
+      "top1": "jev-decision",
+      "expect": ["jev-decision", "model-layer"],
+      "kind": "harvested"
+    },
+    {
+      "query": "explain why it needs search from graph mode that means it needs my bge embeding model or no?",
+      "top1": "graph-memory",
+      "expect": ["graph-memory", "model-layer"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "for the playwright extension i got it where do i put the mcp token at",
+      "top1": "playwright",
+      "expect": ["playwright"],
+      "kind": "harvested"
+    },
+    {
+      "query": "with leanrea, you can reverse engineer websites right? speically with like inspect element or whatever?",
+      "top1": "leanrea",
+      "expect": ["leanrea"],
+      "kind": "harvested"
+    },
+    {
+      "query": "how does litellm and llama swap even work",
+      "top1": "model-layer",
+      "expect": ["model-layer"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "how does local hub and llm switcher work again? should it be one skill or nah",
+      "top1": "model-layer",
+      "expect": ["model-layer"],
+      "kind": "harvested"
+    },
+    {
+      "query": "so can it fit in all in one 16gb card at like 262k context?",
+      "top1": "model-layer",
+      "expect": ["model-layer"],
+      "kind": "harvested",
+      "note": "Deliberately has no noun from any description; only 'fit on a card'."
+    },
+    {
+      "query": "im thinking the glitch orchestra one because in the images it looks pretty cool",
+      "top1": "glitch-orchestra",
+      "expect": ["glitch-orchestra"],
+      "kind": "harvested"
+    },
+    {
+      "query": "so for the gh arhitect skill its like a sync protocol but why not call it like a push protocol?",
+      "top1": "github-architect",
+      "expect": ["github-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "ngl i think we got a bunch of outstanding skills to commit/push or sync or what ever its called",
+      "top1": "github-architect",
+      "expect": ["github-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "can you verify all the skills?",
+      "top1": "verification",
+      "expect": ["verification"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "ok push it into github then make sure you verify it and it runs",
+      "top1": "github-architect",
+      "expect": ["github-architect", "verification"],
+      "kind": "harvested"
+    },
+    {
+      "query": "uh ngl i thought we were updated my video miner pipeline? maybe we can marry them up",
+      "top1": "video-miner",
+      "expect": ["video-miner"],
+      "kind": "harvested"
+    },
+    {
+      "query": "is the video miner also using crisper whisper?",
+      "top1": "video-miner",
+      "expect": ["video-miner", "audiocpp"],
+      "kind": "harvested"
+    },
+    {
+      "query": "thinking adapting my academic v2 into that new template? but idk about the py checks from the v2 the look very convoluted",
+      "top1": "academic-pipeline-v2",
+      "expect": ["academic-pipeline-v2"],
+      "kind": "harvested"
+    },
+    {
+      "query": "i thinking of dropping navidc lighton ocr is better",
+      "top1": "ocr",
+      "expect": ["ocr"],
+      "kind": "harvested"
+    },
+    {
+      "query": "for the black white pdf it goes over 2 pages can you make it only one page",
+      "top1": "cornell-notes",
+      "expect": ["cornell-notes", "doc-layout"],
+      "kind": "harvested",
+      "note": "Print layout, no 'Cornell' or 'study' anywhere in the prompt."
+    },
+    {
+      "query": "take a look at the vault on the reel about the design pack, for like extracting and copying some thing from video lets say pixel/pixelated art, what software to use",
+      "top1": "design-pack",
+      "expect": ["design-pack"],
+      "kind": "harvested"
+    },
+    {
+      "query": "so what are the plans are you giving the subagents again? 4:09 PM The subagents receive a standardized Vertical Slice Specification",
+      "top1": "kem-dev-loop",
+      "expect": ["kem-dev-loop", "agentic-engineering"],
+      "kind": "harvested"
+    },
+    {
+      "query": "im thinking in my AGENTS.md is to have it say always use kem dev loop thoughts?",
+      "top1": "kem-dev-loop",
+      "expect": ["kem-dev-loop", "kem-thought"],
+      "kind": "harvested"
+    },
+    {
+      "query": "my kem thought > i based it on the pstack so im thinking to do the same thing to disable invocation too? thoughts?",
+      "top1": "kem-thought",
+      "expect": ["kem-thought"],
+      "kind": "harvested"
+    },
+    {
+      "query": "uh whats cool about my omni cli again? so it uses the bm25 thing and does it also use bge small or nah?",
+      "top1": "omnicli",
+      "expect": ["omnicli"],
+      "kind": "harvested"
+    },
+    {
+      "query": "docs/code-mode-skill-compatibility.md for looking at this: have a look at my skills, any of them need the omnicli sdk code mode treatment?",
+      "top1": "omnicli",
+      "expect": ["omnicli"],
+      "kind": "harvested"
+    },
+    {
+      "query": "whats the differnce then between hermes vs pi agent & opencode",
+      "top1": "opencode",
+      "expect": ["opencode"],
+      "kind": "harvested"
+    },
+    {
+      "query": "for my decision model how fast is gliclass v4 edge on onnx and how much ram does it use",
+      "top1": "decision-model",
+      "expect": ["decision-model", "model-layer"],
+      "kind": "harvested"
+    },
+    {
+      "query": "holy shit i want a acitivity apge cf and github and tailscale? so its shows all my connected tailscale devices then the main thing is my linux pc and then resources then the vram switcher stuff?",
+      "top1": "deck",
+      "expect": ["deck"],
+      "kind": "harvested"
+    },
+    {
+      "query": "can you find anything omarchy linux and rocm?",
+      "top1": "agent-reach",
+      "expect": ["agent-reach"],
+      "expect_not": ["icm-architect"],
+      "kind": "harvested"
+    },
+    {
+      "query": "i want a second opinion from another model before i keep this change",
+      "top1": "free-swarm",
+      "expect": ["free-swarm", "review-hub"],
+      "kind": "authored"
+    },
+    {
+      "query": "use the cheap model unless the question is actually hard",
+      "top1": "eval-router",
+      "expect": ["eval-router"],
+      "expect_not": ["icm-architect"],
+      "kind": "authored"
+    },
+    {
+      "query": "remember the decisions from this long session so a fresh window picks up where i left off",
+      "top1": "state-compactor",
+      "expect": ["state-compactor"],
+      "kind": "authored"
+    },
+    {
+      "query": "the same question keeps coming back, stop paying for the answer twice",
+      "top1": "semantic-cache",
+      "expect": ["semantic-cache"],
+      "expect_not": ["icm-architect"],
+      "kind": "authored"
+    },
+    {
+      "query": "where is the total amount on this receipt",
+      "top1": "clip-box",
+      "expect": ["clip-box", "ocr"],
+      "kind": "authored"
+    },
+    {
+      "query": "read the text out of this screenshot for me",
+      "top1": "ocr",
+      "expect": ["ocr", "kem-ocr"],
+      "kind": "authored"
+    },
+    {
+      "query": "turn this pdf into markdown so i can read it properly",
+      "top1": "markitdown-cli",
+      "expect": ["markitdown-cli", "doc-layout"],
+      "kind": "authored"
+    },
+    {
+      "query": "i have a pile of lecture recordings, get the transcript and the slides out of them",
+      "top1": "video-miner",
+      "expect": ["video-miner", "zoom-recorder"],
+      "kind": "authored"
+    }
+  ]
+}

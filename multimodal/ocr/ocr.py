@@ -50,8 +50,8 @@ def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON format")
     parent_parser.add_argument("--host", default=None, help="OCR server host (default: $OCR_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
-    parent_parser.add_argument("--lighton-port", type=int, default=8085, help="LightOnOCR port (default: 8085)")
-    parent_parser.add_argument("--crisp-port", type=int, default=8084, help="CrispEmbed port (default: 8084)")
+    parent_parser.add_argument("--lighton-port", type=int, metavar="PORT", default=8085, help="LightOnOCR port (default: 8085)")
+    parent_parser.add_argument("--crisp-port", type=int, metavar="PORT", default=8084, help="CrispEmbed port (default: 8084)")
 
     parser = argparse.ArgumentParser(
         description="ocr — Unified OCR Hub (OXR-1.0 document parser + LightOnOCR + CrispEmbed spatial)",
@@ -66,7 +66,7 @@ def main():
     p_read.add_argument("--pages", help="PDF page range selection (e.g. 1-3,5)")
     p_read.add_argument("--engine", choices=["auto", "oxr", "lighton"], default="auto",
                         help="Document engine: oxr (OXR-1.0 layout+markdown), lighton, or auto (OXR when already running, else LightOnOCR)")
-    p_read.add_argument("--max-tokens", type=int, default=4096, help="OXR completion budget per region (default: 4096)")
+    p_read.add_argument("--max-tokens", type=int, metavar="N", default=4096, help="OXR completion budget per region (default: 4096)")
     p_read.add_argument("--assets", metavar="DIR", default=None,
                         help="Write figure crops (PNG) into DIR and link them from the Markdown (OXR, or LightOnOCR grounding)")
     p_read.add_argument("--grounding", action="store_true",
@@ -79,7 +79,7 @@ def main():
     # Spatial scene-text parser
     p_spat = sub.add_parser("spatial", aliases=["boxes"], parents=[parent_parser], help="Spatial Scene Text & Bounding Box OCR via CrispEmbed")
     p_spat.add_argument("image", help="Input image file (.png/.jpg)")
-    p_spat.add_argument("--min-conf", type=float, default=0.0, help="Minimum confidence cutoff (0.0 - 1.0)")
+    p_spat.add_argument("--min-conf", type=float, metavar="SCORE", default=0.0, help="Minimum confidence cutoff (0.0 - 1.0)")
     p_spat.add_argument("--output", "-o", help="Write JSON or markdown to file")
 
     # Doctor

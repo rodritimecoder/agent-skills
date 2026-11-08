@@ -125,6 +125,72 @@ class TestGraphMemorySearch(unittest.TestCase):
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0]["file"], "notes_power.md")
 
+    def _floor_db(self):
+        """A 2-d vector table with one stored unit vector, for floor tests."""
+        import struct
+
+        self.db.execute("DELETE FROM vectors")
+        self.db.execute("INSERT INTO meta VALUES ('embedding_model', 'stub')")
+        self.db.execute("INSERT INTO meta VALUES ('embedding_dim', '2')")
+        self.db.execute("INSERT INTO vectors VALUES (1, ?)", (struct.pack("2f", 1.0, 0.0),))
+        self.db.commit()
+
+    def _with_query_vector(self, x, y):
+        """Run meaning_leg with urlopen stubbed to return the given query vector."""
+        import math
+        from unittest import mock
+
+        norm = math.hypot(x, y)
+        payload = json.dumps(
+            {"model": "stub", "data": [{"embedding": [x / norm, y / norm]}]}
+        ).encode("utf-8")
+
+        class FakeResponse:
+            def read(self_inner):
+                return payload
+
+            def __enter__(self_inner):
+                return self_inner
+
+            def __exit__(self_inner, *a):
+                return False
+
+        with mock.patch.object(rag_search.urllib.request, "urlopen", return_value=FakeResponse()):
+            return rag_search.meaning_leg(self.db, "anything", floor=0.66)
+
+    def test_meaning_floor_keeps_a_close_match(self):
+        self._floor_db()
+        ids, why = self._with_query_vector(0.9, 0.436)  # cos 0.9
+        self.assertIsNone(why)
+        self.assertEqual(ids, [1])
+
+    def test_meaning_floor_abstains_on_noise(self):
+        self._floor_db()
+        ids, why = self._with_query_vector(0.5, 0.866)  # cos 0.5, nearest neighbour still exists
+        self.assertIsNone(why)
+        self.assertEqual(ids, [])
+
+    def test_meaning_leg_without_floor_still_returns(self):
+        self._floor_db()
+        import math
+        from unittest import mock
+
+        payload = json.dumps({"model": "stub", "data": [{"embedding": [0.5, math.sqrt(0.75)]}]}).encode("utf-8")
+
+        class FakeResponse:
+            def read(self_inner):
+                return payload
+
+            def __enter__(self_inner):
+                return self_inner
+
+            def __exit__(self_inner, *a):
+                return False
+
+        with mock.patch.object(rag_search.urllib.request, "urlopen", return_value=FakeResponse()):
+            ids, _ = rag_search.meaning_leg(self.db, "anything")
+        self.assertEqual(ids, [1])
+
 
 if __name__ == "__main__":
     unittest.main()

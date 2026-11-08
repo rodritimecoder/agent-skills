@@ -74,20 +74,32 @@ def main():
                 references_unnecessary=args.references_unnecessary,
                 readiness_cue=args.readiness_cue,
             )
-            print("📝 [Conductor] Plan drafted; a human must run 'approve' before dispatch.")
-            print(json.dumps(plan, indent=2, ensure_ascii=False))
+            if args.json:
+                print(json.dumps(plan, indent=2, ensure_ascii=False))
+            else:
+                print("📝 [Conductor] Plan drafted; a human must run 'approve' before dispatch.")
+                print(json.dumps(plan, indent=2, ensure_ascii=False))
 
         elif args.command == "approve":
             approval = conductor.approve_plan(args.by)
-            print(f"✓ [Conductor] Plan approved by {approval['approver']}; dispatch is unlocked.")
+            if args.json:
+                print(json.dumps(approval, indent=2, ensure_ascii=False))
+            else:
+                print(f"✓ [Conductor] Plan approved by {approval['approver']}; dispatch is unlocked.")
 
         elif args.command == "register":
             session = conductor.register_child_session(args.id, args.task, args.role, args.scope, args.term)
-            print(f"🎻 [Conductor] Registered {session['role']} '{session['session_id']}' on {session['terminal_tag']}")
+            if args.json:
+                print(json.dumps(session, indent=2, ensure_ascii=False))
+            else:
+                print(f"🎻 [Conductor] Registered {session['role']} '{session['session_id']}' on {session['terminal_tag']}")
 
         elif args.command == "signal":
             event = conductor.record_worker_signal(args.id, args.message, args.worker_status)
-            print(f"↩ [Conductor] Recorded worker signal #{event['sequence']} from '{args.id}'")
+            if args.json:
+                print(json.dumps(event, indent=2, ensure_ascii=False))
+            else:
+                print(f"↩ [Conductor] Recorded worker signal #{event['sequence']} from '{args.id}'")
 
         elif args.command == "compare":
             event = conductor.record_worker_comparison(
@@ -97,11 +109,16 @@ def main():
                 args.after,
                 args.assessment,
             )
-            print(f"✓ [Conductor] Recorded qualitative comparison #{event['sequence']} from '{args.id}'")
+            if args.json:
+                print(json.dumps(event, indent=2, ensure_ascii=False))
+            else:
+                print(f"✓ [Conductor] Recorded qualitative comparison #{event['sequence']} from '{args.id}'")
 
         elif args.command == "complete":
             c = conductor.mark_session_complete(args.id, args.summary, evidence=args.evidence)
-            if c.get("verified"):
+            if args.json:
+                print(json.dumps(c, indent=2, ensure_ascii=False))
+            elif c.get("verified"):
                 print(f"✓ [Conductor] Completed session '{c['session_id']}' with evidence: {c['evidence']}")
             else:
                 print(f"⚠️  [Conductor] Completed session '{c['session_id']}' UNVERIFIED — a summary is not evidence.")
@@ -109,7 +126,10 @@ def main():
 
         elif args.command == "alert":
             al = conductor.trigger_completion_alert(args.message)
-            print(f"🔔 [Alert] {al['alert_message']}")
+            if args.json:
+                print(json.dumps(al, indent=2, ensure_ascii=False))
+            else:
+                print(f"🔔 [Alert] {al['alert_message']}")
 
         elif args.command == "status":
             st = conductor.status()

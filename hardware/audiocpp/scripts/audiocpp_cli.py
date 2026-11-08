@@ -47,6 +47,13 @@ CONFIG_FILE = AUDIO_CPP_DIR / "server.json"
 BACKEND = os.environ.get("AUDIOCPP_BACKEND", "vulkan")
 ROCM_LIB_DIR = Path(os.environ.get("ROCM_LIB_DIR", "/opt/rocm/lib"))
 
+# What runs when the caller names no model. Both are served in streaming mode by
+# references/server.json; check-docs.py asserts the two stay in agreement.
+# crisperwhisper remains the model of choice for mining, requested explicitly,
+# because it is the only ASR family that emits word timings.
+DEFAULT_ASR = "nemotron"
+DEFAULT_TTS = "kokoro"
+
 
 def _loader_env() -> Dict[str, str]:
     env = dict(os.environ)
@@ -274,7 +281,7 @@ def cmd_transcribe_http(
     scheme: str,
     ssl_ctx: ssl.SSLContext,
     audio_path: str,
-    model_key: str = "crisperwhisper",
+    model_key: str = DEFAULT_ASR,
     language: str = "en",
     mode: str = "verbatim",
     out_file: Optional[str] = None,
@@ -504,7 +511,7 @@ def cmd_doctor_http(host: str, port: int, scheme: str, ssl_ctx: ssl.SSLContext, 
 
 def cmd_transcribe(
     audio_path: str,
-    model_key: str = "crisperwhisper",
+    model_key: str = DEFAULT_ASR,
     language: str = "en",
     mode: str = "verbatim",
     out_file: Optional[str] = None,
@@ -536,6 +543,13 @@ def cmd_transcribe(
             args.extend(["--request-option", f"transcription_mode={mode}"])
         if words_out:
             args.extend(["--words-out", str(Path(words_out).resolve())])
+    elif words_out:
+        # Silence here would look like a bug in the caller: the model simply has
+        # no word timing to give, so say so instead of writing an empty file.
+        sys.stderr.write(
+            f"⚠️  --words-out is only emitted for crisperwhisper; "
+            f"{model_key} returns text without word timings.\n"
+        )
 
     res = run_audiocpp_raw(args)
     if res.returncode != 0:
@@ -841,7 +855,7 @@ def main():
     # 1. asr / transcribe
     p_asr = sub.add_parser("asr", aliases=["transcribe", "stt"], parents=[parent_parser], help="Speech-to-Text: audio in -> text or JSON out")
     p_asr.add_argument("audio", help="Path to input audio file (.wav/.mp3)")
-    p_asr.add_argument("--model", "-m", choices=["crisperwhisper", "nemotron", "nemotron-f16"], default="crisperwhisper", help="ASR model slug (default: crisperwhisper)")
+    p_asr.add_argument("--model", "-m", choices=["crisperwhisper", "nemotron", "nemotron-f16"], default=DEFAULT_ASR, help=f"ASR model slug (default: {DEFAULT_ASR})")
     p_asr.add_argument("--language", "-l", default="en", help="Language code (default: en)")
     p_asr.add_argument("--mode", choices=["verbatim", "intended"], default="verbatim", help="Transcription mode (verbatim [default] or intended)")
     p_asr.add_argument("--words-out", help="Save word timestamps to JSON file")
@@ -850,7 +864,7 @@ def main():
     # 2. tts / speak
     p_tts = sub.add_parser("tts", aliases=["speak"], parents=[parent_parser], help="Text-to-Speech: text in -> .wav audio file out")
     p_tts.add_argument("text", help="Text to speak")
-    p_tts.add_argument("--model", "-m", choices=["supertonic", "kokoro", "kitten", "fish", "audio8", "higgs", "omnivoice", "index"], default="supertonic", help="TTS model slug (default: supertonic)")
+    p_tts.add_argument("--model", "-m", choices=["supertonic", "kokoro", "kitten", "fish", "audio8", "higgs", "omnivoice", "index"], default=DEFAULT_TTS, help=f"TTS model slug (default: {DEFAULT_TTS})")
     p_tts.add_argument("--voice-id", "--voice", dest="voice_id", help="Voice ID (e.g. af_bella, af_sky) or reference profile name (e.g. egirl, supertonic_F1)")
     p_tts.add_argument("--voice-ref", help="Voice reference audio for cloning (for Fish, Audio8, Index)")
     p_tts.add_argument("--play", action="store_true", help="Play synthesized audio directly through system speakers")

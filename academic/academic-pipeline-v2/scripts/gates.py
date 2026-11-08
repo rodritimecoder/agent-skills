@@ -587,8 +587,14 @@ def run(workspace, dry_run=False, deps=None):
 
 
 if __name__ == "__main__":  # pragma: no cover - manual smoke run
+    import argparse
     import sys
 
-    result = run(Path(sys.argv[1] if len(sys.argv) > 1 else "."), dry_run="--dry-run" in sys.argv)
+    parser = argparse.ArgumentParser(description="Stage 5 verification micro-gates; writes 05_verify/step_05.json.")
+    parser.add_argument("workspace", nargs="?", default=".", metavar="DIR",
+                        help="ICM workspace root (default: .)")
+    parser.add_argument("--dry-run", action="store_true", help="run the gates without writing step_05.json")
+    args = parser.parse_args()
+    result = run(Path(args.workspace), dry_run=args.dry_run)
     print(json.dumps(result, indent=2))
-    sys.exit(0 if result["status"] == "ok" else 1)
+    sys.exit(0 if result["status"] == "ok" else 2)

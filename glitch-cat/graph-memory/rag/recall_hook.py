@@ -19,6 +19,11 @@ DB = HERE / "rag.db"
 TOP = 5
 BUDGET = 1500  # characters of context in total
 PER_HIT = 280  # characters of chunk text per hit
+# Measured on ../corpus, bge-small 384d: in-vocabulary questions top out at
+# 0.693-0.777 cosine, questions the corpus cannot answer at 0.497-0.630. 0.66
+# sits between them. Dense similarity always returns a full list, so without a
+# floor this hook answers every prompt, however unrelated.
+MEANING_FLOOR = 0.66
 
 
 def hits(query):
@@ -28,8 +33,8 @@ def hits(query):
     db = sqlite3.connect(DB)
     try:
         legs = {"keyword": keyword_leg(db, query)}
-        meaning = meaning_leg(db, query)
-        if meaning is not None:
+        meaning, _ = meaning_leg(db, query, floor=MEANING_FLOOR)
+        if meaning:
             legs["meaning"] = meaning
         ranked, _ = fuse(legs)
         out = []

@@ -60,7 +60,7 @@ whole catalog:
 
 ```bash
 go-roster --check                 # is the plan connected, and does the roster match it
-go-roster --verify                # exit 1 if a curated id is no longer served
+go-roster --verify                # exit 2 if a curated id is no longer served
 go-roster --plan "deepseek-v4.1-flash:6,deepseek-v4-pro:2"
 go-roster --tier 2 --json
 ```

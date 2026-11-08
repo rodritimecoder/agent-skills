@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
-from . import policy, registry
+from . import argspec, policy, registry
 from .textutil import expand_cjk
 
 HERE = Path(__file__).resolve().parent
@@ -36,7 +36,7 @@ SECTION_RE = re.compile(r"^#{1,4}\s+(.*)$", re.MULTILINE)
 
 # Bump when the FTS5 column layout changes; the catalog is a derived
 # artifact, so the cheapest correct response is to rebuild it.
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 
 
 # --------------------------------------------------------------------------
@@ -175,6 +175,18 @@ def _subcommand_contract(con: sqlite3.Connection, tool: dict, sub: str,
     merged = list(dict.fromkeys(
         list(parent.get("flags", [])) + list(out.get("flags", []))))
     out["flags"] = merged
+    # Carry the parent's *typed* params, not only its flag names: a merged
+    # `--json` with no kind degrades to `str | None`, and the generated call
+    # then passes `--json True` to a store_true flag. A flag the subparser
+    # re-declares itself (argparse `parents=[common]`) is left alone: moving it
+    # before the subcommand would let the subparser's own default overwrite it.
+    own = argspec.parse_flags({k: v for k, v in cached.items() if k != "parent_params"})
+    own_flags = {p.flag for p in own}
+    out["parent_params"] = [
+        {"flag": p.flag, "kind": p.kind, "choices": p.choices}
+        for p in argspec.parse_flags(parent)
+        if p.flag and p.flag not in own_flags
+    ]
     out["parent_help_excerpt"] = "\n".join(parent.get("help", "").splitlines()[:12])
     return out
 

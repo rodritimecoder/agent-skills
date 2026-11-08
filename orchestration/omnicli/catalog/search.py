@@ -580,12 +580,30 @@ def search(
     if fusion and results:
         wants = fusion is True or (fusion == "auto" and needs_rerank(results))
         if wants:
-            dense_ids, dense_reason = vectors.dense_rank(con, query, CANDIDATE_POOL)
+            dense_best, dense_reason = vectors.score_skills(con, query)
             dense["reason"] = dense_reason
+            dense_ids = [
+                skill for skill, _ in
+                sorted(dense_best.items(), key=lambda kv: -kv[1]["score"])
+            ][:CANDIDATE_POOL]
             if dense_ids:
                 results = _fuse(con, results, dense_ids)
                 dense["ran"] = True
                 tier = "bm25+dense(rrf)" if fusion is True else "bm25+dense(rrf:gated)"
+                if explain:
+                    # Which text won, and on which leg. A question matching is
+                    # the interesting case: it says the intent mirrored an
+                    # authored phrasing rather than the description itself.
+                    dense["best"] = {
+                        skill: {
+                            "score": round(dense_best[skill]["score"], 4),
+                            "kind": dense_best[skill]["kind"],
+                            # A snippet, not the whole description: explain is
+                            # a debugging view and still respects the context budget.
+                            "text": dense_best[skill]["text"][:120],
+                        }
+                        for skill in dense_ids
+                    }
 
     # The blend re-ranker is a second semantic mechanism; it never runs on top
     # of a fused ranking, where it would re-score the same signal twice.

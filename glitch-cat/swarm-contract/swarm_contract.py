@@ -52,19 +52,26 @@ def main():
         sc_data = json.loads(Path(args.scorecard).read_text(encoding="utf-8") if Path(args.scorecard).exists() else args.scorecard)
         try:
             entry = swarm.record_scorecard(sc_data, tokens_used=args.tokens, cost_usd=args.cost)
-            print(f"✓ Recorded scorecard for worker '{sc_data.get('worker_id')}' (Tokens: {args.tokens}, Cost: ${args.cost:.4f})")
+            if args.json:
+                print(json.dumps(entry, indent=2))
+            else:
+                print(f"✓ Recorded scorecard for worker '{sc_data.get('worker_id')}' (Tokens: {args.tokens}, Cost: ${args.cost:.4f})")
         except (SwarmBudgetExceededError, ScorecardValidationError) as e:
-            print(f"🛑 [HALTED] {e}")
-            sys.exit(1)
+            if args.json:
+                print(json.dumps({"halted": True, "error": str(e)}, indent=2))
+            else:
+                print(f"🛑 [HALTED] {e}")
+            sys.exit(2)
 
     elif args.command == "check":
         can_run = swarm.check_budget_availability(estimated_tokens=args.est_tokens, estimated_usd=args.est_cost)
-        if can_run:
+        if args.json:
+            print(json.dumps({"can_run": can_run}, indent=2))
+        elif can_run:
             print("✓ Budget available for worker spawn.")
-            sys.exit(0)
         else:
             print("🛑 Insufficient budget remaining to spawn worker.")
-            sys.exit(1)
+        sys.exit(0 if can_run else 2)
 
     elif args.command == "status":
         summ = swarm.summary()

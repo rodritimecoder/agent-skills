@@ -23,7 +23,7 @@ class TestBindings(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         con = builder.connect()
-        builder.ensure_built(con, rebuild=True, with_contracts=True, progress=False)
+        builder.ensure_built(con, with_contracts=True, progress=False)
         con.close()
 
     def test_generated_module_exposes_the_plan_api(self):

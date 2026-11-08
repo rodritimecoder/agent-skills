@@ -1,7 +1,7 @@
 ---
 name: omnicli
 
-description: "Late-binding gateway to every tool on this workstation. Find the right tool by intent with hybrid lexical + dense search over all skill bodies, pull one tool's exact contract, invoke it with a bounded response, or run a whole multi-step plan in a sandbox. Use when you do not know which of the installed skills or tools handles something, to list what is installed, to read one tool's arguments before calling it, or to run a multi-step job in one turn. Also fronts the local inference endpoints: Genesis 35B coder (:8080), LightOnOCR (:8085), calibrated decisions (:8083), Nemotron ASR (:8081)."
+description: "Unified tool execution gateway and Python Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.py`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8085)."
 
 compatibility: "Requires the local inference servers it fronts: :8080, :8081, :8083, :8084 and :8085, plus the optional embedding server :8087, which supplies the dense leg of hybrid search (the catalog works without it, on BM25 alone). The decision port speaks either native /v1/systemone or the pplx-decider joint protocol v3; the protocol is auto-detected from the served model."
 allowed-tools: "Bash(omnicli:*) Read"
@@ -91,6 +91,43 @@ vocabulary and one differentiator apiece) moved held-out BM25 from 12/30 to
 19/30 before any dense leg was involved, at a cost of one golden case. The
 useful vocabulary is the user's ("school portal", "closed source", "second
 opinion"), not the system's.
+
+### Distilled questions: built, measured, left off (negative result)
+
+Cerebras' internal RAG found embeddings over raw text insufficient and fixed it
+by embedding *the question someone would search for* — "a question meets a
+question". That was applied here: 228 questions across 55 skills, generated in
+six parallel batches, each carrying a verbatim quote from its own description.
+The gate is code (`catalog/questions.py`): the quote must be a real span, the
+question may not name the skill, and it must sit within 0.45 cosine of its own
+description embedding. A deliberately off-topic question with a valid stolen
+quote is rejected, and a test asserts it.
+
+The routing effect is **zero**:
+
+| rows embedded | golden top-1 (auto / always) | paraphrase top-1 (auto / always) |
+|---|---|---|
+| description only | 55/61 · 53/61 | 24/39 · 26/39 |
+| description + questions | 56/61 · 52/61 | 24/39 · 26/39 |
+
+Why it cannot be converted: on this corpus **every BM25 top-1 miss is also a
+dense top-1 miss** — the oracle rescue potential is 0/61 on golden and 3/39 on
+paraphrase. Fusion has nothing to promote. Questions alone are weaker than
+descriptions (dense top-1 34/61 golden, 12/39 paraphrase, versus 46/61 and
+16/39), and max-pooling both buys paraphrase recall (16→18) by spending golden
+precision (46→42).
+
+Two levers explain it. Descriptions were already rewritten with the user's
+vocabulary, which is the same fix questions apply, so the headroom was spent.
+What remains in the paraphrase misses is *proper nouns* — `deskforge`,
+`litellm`, `navidc` — and those belong in the curated alias column (weight 12),
+not in an embedding.
+
+So the snapshot ships, and stays off: `OMNICLI_QUESTIONS=1 omnicli index`.
+`omnicli questions <skill>` lists the questions and re-checks each quote against
+the current description, so an edited `SKILL.md` cannot leave a stale claim
+indexed. The machinery is kept because it is cheap, reversible, and the next
+corpus that has not already spent the description lever may not be neutral.
 
 ### Body length is a ranking bias
 

@@ -851,7 +851,7 @@ def main() -> int:
 
     p_serve = sub.add_parser("serve", help="run the chat page")
     p_serve.add_argument("--host", default=os.environ.get("COMPANION_HOST", "127.0.0.1"))
-    p_serve.add_argument("--port", type=int, default=int(os.environ.get("COMPANION_PORT", "7778")))
+    p_serve.add_argument("--port", type=int, metavar="PORT", default=int(os.environ.get("COMPANION_PORT", "7778")))
     p_serve.add_argument("--verbose", action="store_true")
 
     sub.add_parser("doctor", help="check ffmpeg, upstreams, models and avatar assets")

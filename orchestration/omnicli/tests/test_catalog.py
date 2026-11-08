@@ -126,6 +126,41 @@ class TestInvokeParsing(unittest.TestCase):
         self.assertIsNone(tool_id)
 
 
+class TestSubcommandArgvOrder(unittest.TestCase):
+    """argparse reads a subcommand's globals only *before* the subcommand."""
+
+    PARENT = [
+        {"flag": "--json", "kind": "bool"},
+        {"flag": "--db", "kind": "str"},
+        {"flag": "--limit", "kind": "int"},
+    ]
+
+    def build(self, extra):
+        return invoke.build_cmd(
+            ["{python}", "{skill}/cache.py", "stats"], extra,
+            python="python3", skill_dir="/skill", parent_params=self.PARENT,
+        )
+
+    def test_parent_globals_move_before_the_subcommand(self):
+        cmd = self.build(["--db", "/tmp/x.db", "--json"])
+        self.assertEqual(cmd[-4:], ["--db", "/tmp/x.db", "--json", "stats"])
+
+    def test_subcommand_args_stay_after_it(self):
+        cmd = self.build(["--job", "abc", "--json"])
+        self.assertEqual(cmd[-4:], ["--json", "stats", "--job", "abc"])
+
+    def test_bool_takes_no_value_and_equals_form_survives(self):
+        cmd = self.build(["--json", "--limit=5", "positional"])
+        self.assertLess(cmd.index("--json"), cmd.index("stats"))
+        self.assertLess(cmd.index("--limit=5"), cmd.index("stats"))
+        self.assertEqual(cmd[-1], "positional")
+
+    def test_no_parent_params_keeps_legacy_order(self):
+        cmd = invoke.build_cmd(["python3", "tool.py", "sub"], ["--x", "1"],
+                               python="python3", skill_dir="/s")
+        self.assertEqual(cmd, ["python3", "tool.py", "sub", "--x", "1"])
+
+
 class TestOutputCap(unittest.TestCase):
     def test_cap_is_never_exceeded(self):
         for cap in (10, 50, 100, 200, 500, 1000, 8000, 100000):
@@ -330,6 +365,10 @@ class TestCatalog(unittest.TestCase):
         cls.con = builder.connect()
         builder.ensure_built(cls.con, progress=False)
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.con.close()
+
     def test_catalog_is_populated(self):
         skills = self.con.execute("SELECT count(*) c FROM skills").fetchone()["c"]
         tools = self.con.execute("SELECT count(*) c FROM tools").fetchone()["c"]
@@ -417,6 +456,10 @@ class TestContractCache(unittest.TestCase):
     def setUpClass(cls):
         cls.con = builder.connect()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.con.close()
+
     def test_cache_roundtrip(self):
         builder._store_contract(self.con, "/tmp/fake.py", 12345, "/usr/bin/python3",
                                 {"usage": "x", "flags": ["--a"], "positionals": [],
@@ -478,6 +521,10 @@ class TestSearch(unittest.TestCase):
     def setUpClass(cls):
         cls.con = builder.connect()
         builder.ensure_built(cls.con, progress=False)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.con.close()
 
     def _top(self, query, n=1):
         res = search.search(self.con, query, limit=n, rerank_enabled=False)

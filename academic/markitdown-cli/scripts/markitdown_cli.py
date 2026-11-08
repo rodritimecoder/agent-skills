@@ -520,7 +520,7 @@ def build_parser() -> argparse.ArgumentParser:
     g_token.add_argument("--grep", help="search for regex pattern and extract matching lines with context")
     g_token.add_argument("--table", "-t", action="store_true", help="output tables in Markdown pipe table format")
     g_token.add_argument("--project", "-p", help="comma-separated fields to project in outline table or receipt")
-    g_token.add_argument("--limit", "-n", type=int, default=0, help="cap number of outline rows or output lines")
+    g_token.add_argument("--limit", "-n", type=int, metavar="LIMIT", default=0, help="cap number of outline rows or output lines")
     g_token.add_argument("--receipt", action="store_true", help="emit conversion receipt instead of silent completion")
     g_token.add_argument("--json", action="store_true", help="emit output as JSON")
 

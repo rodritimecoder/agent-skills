@@ -281,7 +281,7 @@ def cmd_scan(args) -> int:
                 print(f"   ❌ {f['path']} — {f['detail']}")
         else:
             print(f"✅ [publication-guard] {args.label}: clean")
-    return 1 if blocked else 0
+    return 2 if blocked else 0
 
 
 def cmd_reap(args) -> int:
