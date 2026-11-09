@@ -97,6 +97,7 @@ A refusal is a bug in the process, not an obstacle.
 5. **Validate, then review.** Functional proof precedes style.
 6. **Two attempts, then stop.** The cap lives in `meta.json`; a third needs `--force`.
 7. **The human keeps the Why and Why Not.** Phase 6 shows evidence and the diff.
+8. After a validated batch, ship with `sync-skills publish` (run `sync-skills status` first to confirm the tree is clean).
 
 ## State
 
