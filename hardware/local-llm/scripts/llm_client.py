@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -116,6 +117,33 @@ def is_genesis_online(endpoint: str = "http://127.0.0.1:8080") -> bool:
             return resp.status == 200
     except Exception:
         return False
+
+
+def ensure_genesis(timeout_s: float = 60.0) -> bool:
+    """Mirror OCR's self-healing pattern: if the local LLM server is down,
+    start it via `vram-rig-ctl up 8080` and poll health for up to timeout_s.
+    Returns True when the server answers, False otherwise (callers then fall
+    through to their existing offline error path unchanged)."""
+    if is_genesis_online():
+        return True
+    ctl = shutil.which("vram-rig-ctl")
+    if not ctl:
+        return False
+    try:
+        subprocess.run(
+            [ctl, "up", "8080"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception:
+        return False
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if is_genesis_online():
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def call_local_genesis(
@@ -348,6 +376,7 @@ def main():
     chat_p.add_argument("--json", action="store_true", help="Wrap the reply in JSON")
     chat_p.add_argument("--project", help="Keep only these JSON fields, e.g. content")
     chat_p.add_argument("--fallback", action="store_true", help="Fallback to cloud if :8080 is offline")
+    chat_p.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local LLM server via vram-rig-ctl before reporting offline")
 
     # models
     models_p = sub.add_parser("models", help="List available model candidates registered for :8080")
@@ -378,6 +407,10 @@ def main():
             sys.stderr.write("[local-llm] :8080 offline. Dispatching to cloud fallback...\n")
             res = call_cloud_fallback(args.prompt, system=args.system)
             emit(res, args)
+        elif not getattr(args, "no_autostart", False) and ensure_genesis():
+            res = call_local_genesis(args.prompt, system=args.system, stream=args.stream, temperature=args.temp, max_tokens=args.max_tokens)
+            if not args.stream:
+                emit(res, args)
         else:
             sys.stderr.write("⚠️ [local-llm] LLM is not running on :8080.\n")
             sys.stderr.write("   Start server: bash /run/media/rodri/AI/sh/luffy_nothink.sh\n")
