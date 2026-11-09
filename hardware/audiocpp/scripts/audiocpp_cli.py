@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import ssl
 import subprocess
 import sys
@@ -273,6 +274,41 @@ def run_audiocpp_raw(args_list: List[str]) -> subprocess.CompletedProcess:
         sys.exit(f"❌ Error: audio.cpp CLI binary not found at {CLI_BIN}")
     cmd = [str(CLI_BIN)] + args_list
     return subprocess.run(cmd, capture_output=True, text=True, env=_loader_env())
+
+
+def ensure_audio_server(host: str = "127.0.0.1", port: int = 8081, timeout_s: float = 20.0) -> bool:
+    """Mirror OCR's self-healing pattern: if the local audio server is down,
+    start it via `vram-rig-ctl up audio` and poll /health for up to timeout_s.
+    Returns True when the server answers, False otherwise (callers then fall
+    through to their existing offline error path unchanged)."""
+    def _up() -> bool:
+        try:
+            req = urllib.request.Request(f"http://{host}:{port}/health")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+
+    if _up():
+        return True
+    ctl = shutil.which("vram-rig-ctl")
+    if not ctl:
+        return False
+    try:
+        subprocess.run(
+            [ctl, "up", "audio"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception:
+        return False
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if _up():
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def cmd_transcribe_http(
@@ -845,6 +881,7 @@ def main():
     parent_parser.add_argument("--quiet", "-q", action="store_true", help="Suppress console status messages")
     parent_parser.add_argument("--host", default=None, help="audio.cpp host (default: $AUDIOCPP_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
     parent_parser.add_argument("--port", type=int, default=8081, metavar="PORT", help="audio.cpp port (default: $AUDIOCPP_PORT or 8081)")
+    parent_parser.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local audio server (vram-rig-ctl up audio) before HTTP requests")
 
     parser = argparse.ArgumentParser(
         description="audiocpp — Unified Local Audio Engineering Hub (Vulkan / Dual-GPU)",
@@ -902,6 +939,16 @@ def main():
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.check_hostname = False
         ssl_ctx.verify_mode = ssl.CERT_NONE
+
+    # Self-healing: bring up the local audio server before any HTTP request
+    # (transcribe/doctor/speak/models). Local-binary commands never hit here.
+    if (
+        is_remote
+        and not getattr(args, "no_autostart", False)
+        and host in ("127.0.0.1", "localhost")
+        and args.command in ("asr", "transcribe", "stt", "tts", "speak", "models", "doctor")
+    ):
+        ensure_audio_server(host, port)
 
     if args.command in ("asr", "transcribe", "stt"):
         if is_remote:

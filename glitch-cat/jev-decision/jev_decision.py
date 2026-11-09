@@ -8,18 +8,63 @@ caller pays a handful of tokens instead of a full payload.
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
+import time
+import urllib.request
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
 from jev_engine import JevEngine
 import jev_engine
 
+_VRAM_RIG_CTL = shutil.which("vram-rig-ctl")
+
 
 def _die(message: str, code: int) -> "SystemExit":
     """Errors go to stderr with a stable exit code: 2 usage, 3 dependency."""
     print(message, file=sys.stderr)
     return SystemExit(code)
+
+
+def _decision_up(health_url: str, engine=None) -> bool:
+    if engine is not None:
+        return engine.is_online()
+    try:
+        with urllib.request.urlopen(health_url, timeout=0.8) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def ensure_decision_server(engine=None, host: str = "127.0.0.1", port: int = 8083,
+                           timeout: float = 20.0) -> bool:
+    """Start the decision server if it is down — mirrors OCR's ensure_lighton."""
+    if isinstance(engine, str):
+        host, engine = engine, None
+    elif isinstance(engine, int):
+        port, engine = engine, None
+    health_url = engine.health_url if engine is not None else f"http://{host}:{port}/health"
+    resolved_host = engine.host if engine is not None else host
+    if _decision_up(health_url, engine):
+        return True
+    if resolved_host not in ("127.0.0.1", "localhost"):
+        return False
+    ctl = _VRAM_RIG_CTL
+    if not ctl:
+        return False
+    try:
+        subprocess.Popen([ctl, "up", "decision"], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        return False
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _decision_up(health_url, engine):
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def _context(args) -> str:
@@ -90,6 +135,8 @@ def main():
     parent_parser.add_argument("--out", default=None, help="Write the JSON result here and print a one-line pointer")
     parent_parser.add_argument("--require-server", action="store_true",
                                help="Fail instead of falling back to the keyword heuristic")
+    parent_parser.add_argument("--no-autostart", action="store_true",
+                               help="Do not auto-start the decision server (for tests / offline contexts)")
 
     # Subparsers re-declare the shared options with SUPPRESS so that a --port
     # given before the subcommand is not silently overwritten by the default.
@@ -99,6 +146,7 @@ def main():
     sub_parent.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
     sub_parent.add_argument("--out", default=argparse.SUPPRESS)
     sub_parent.add_argument("--require-server", action="store_true", default=argparse.SUPPRESS)
+    sub_parent.add_argument("--no-autostart", action="store_true", default=argparse.SUPPRESS)
 
     parser = argparse.ArgumentParser(
         description="JEV decision engine — h2o-lightning-4b native /v1/systemone, vision-capable",
@@ -197,6 +245,9 @@ def main():
         else:
             print(f"{status} {model} {endpoint}")
         return 0 if online else 3
+
+    if not getattr(args, "no_autostart", False):
+        ensure_decision_server(engine)
 
     if args.command == "bool":
         res = engine.decide_bool(_context(args), args.question, image=args.image)
