@@ -88,7 +88,13 @@ Present the **Why and Why Not** to the human:
 2. What are we explicitly *not* building (anti-goals)?
 3. What is the contract?
 
-Once approved by the human, write 1–3 **hidden holdout scripts** in `.kem-loop/auth-rate-limiter/holdouts/`, each carrying its own positive case and negative control, then register them:
+Record the approval explicitly — `dispatch` refuses an unapproved plan, so chat approval alone is not enough:
+```bash
+kem-dev-loop approve auth-rate-limiter          # serious work: you read the plan
+kem-dev-loop dispatch --skip-plan-review …       # quick MVP: deliberately skipped unread
+```
+
+Write 1–3 **hidden holdout scripts** in `.kem-loop/auth-rate-limiter/holdouts/`, each carrying its own positive case and negative control, then register them:
 ```bash
 kem-dev-loop holdout add auth-rate-limiter .kem-loop/auth-rate-limiter/holdouts/test_expiry.py
 ```
@@ -119,7 +125,7 @@ kem-dev-loop validate auth-rate-limiter --test "pytest tests/test_rate_limit.py"
   ```
 - **If validation FAILS:**
   Do **NOT** start an open-ended debate. Collect the exact exit code, stdout/stderr traceback, or failed assertion, and send **Template C** back to the subagent.
-  > 🛑 **Cap:** Maximum **2 validation retries**. If it fails a second time, halt and escalate to the human operator. Never permit infinite loops.
+  > 🛑 **Cap:** **2 attempts**, counted in `meta.json`; a third spend needs `--force` and a reason. Past that, halt and escalate to the human operator. Never permit infinite loops.
 
 ### Step 5: Decoupled Code Review (Parent Agent)
 Only *after* Phase 4 produces a verifiable PASS artifact:
@@ -230,3 +236,128 @@ Instructions:
 
 ### In Cursor / OpenCode:
 - Set up isolated branches so that model edits do not cause file flickering or language server churn in the active editor pane.
+
+---
+
+## ⚡ Speed-Run Worked Example: The 2-Minute Vertical Slice
+
+When subagents take 40+ minutes or get stuck, it is almost always caused by **unbounded discovery prompts**, **unbuffered stdout context poisoning**, or **interactive CLI hangs**. 
+
+Here is the exact battle-tested blueprint used to optimize `academic/okf-architect/scripts/okf_architect.py` in under 2 minutes:
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│ 1. Conductor defines BOUNDED slice (Exact file + fields)       │ [30s]
+├───────────────────────────────────────────────────────────────┤
+│ 2. Conductor writes HIDDEN holdout + control script           │ [20s]
+├───────────────────────────────────────────────────────────────┤
+│ 3. Subagent dispatched with DISK BUFFERING (> /tmp/run.log)   │ [60-90s]
+├───────────────────────────────────────────────────────────────┤
+│ 4. Conductor asserts exit code == 0 & runs holdout probe       │ [1s]
+├───────────────────────────────────────────────────────────────┤
+│ 5. Conductor syncs & commits (Done)                            │ [15s]
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Conductor Defines the Bounded Plan
+The conductor **never** asks the subagent to "audit the codebase" or "figure out what to do." It specifies the exact file, arguments, and return schema:
+
+```markdown
+Target: academic/okf-architect/scripts/okf_architect.py
+Goal: Add Code-Mode support to the `validate` (and `audit`) subcommand.
+Contract:
+1. Add `--json` flag to `validate` subcommand.
+2. Under `--json`, route scan logs to `sys.stderr`.
+3. Emit pure JSON dictionary to `sys.stdout`:
+   {"valid": bool, "concepts_count": int, "errors": int, "warnings": int, "bundle_root": str}
+4. Exit 0 if valid (errors == 0), exit 1 if validation fails.
+```
+
+### Step 2: Conductor Stages the Hidden Holdout & Control FIRST
+Before invoking the subagent, create the evaluation gate in `.kem-loop/<run>/holdouts/test_holdout.py` and register it. `dispatch` refuses without a `pass` and a `control`, and `validate` refuses any gate that postdates the dispatch.
+Notice Kem's Rule: **Always test both the positive pass and the negative control**:
+
+```python
+import subprocess, sys
+
+# 1. Pass run: --help must exit 0
+p = subprocess.run([sys.executable, "academic/okf-architect/scripts/okf_architect.py", "--help"], capture_output=True)
+assert p.returncode == 0
+
+# 2. Control run: mutated / invalid flag MUST exit != 0 (proves gate can fail)
+p_bad = subprocess.run([sys.executable, "academic/okf-architect/scripts/okf_architect.py", "--invalid-flag-xyz"], capture_output=True)
+assert p_bad.returncode != 0, "Gate failed: CLI did not reject invalid argument"
+
+print("PASS: okf-architect holdout")
+```
+
+### Step 3: Stage Task File & Dispatch Buffered Subagent
+Write the task to a temp file to avoid shell quoting and escaping errors:
+
+```bash
+cat << 'EOF' > /tmp/task_okf_architect.txt
+You are an autonomous engineering subagent in Kem's Dev Loop.
+Task: Optimize academic/okf-architect/scripts/okf_architect.py for Code Mode:
+1. In main(), add '--json' to the 'validate' (and 'audit') subcommand:
+   - p_audit.add_argument("--json", action="store_true", help="Emit validation report as JSON on stdout")
+2. When validate_bundle is called with --json:
+   - All informational and stage progress logs must route to sys.stderr (or suppress printing to stdout).
+   - The final verdict must be emitted as pure JSON on stdout:
+     {"valid": errors == 0, "concepts_count": concepts_count, "errors": errors, "warnings": warnings, "bundle_root": str(bundle_root)}
+   - Exit with code 0 if valid (errors == 0), else exit with code 1.
+3. Keep human-readable output default when --json is not specified.
+4. Keep diff clean and minimal. Once done and verified, exit immediately.
+EOF
+```
+
+**The Zero-Bloat Dispatch Command:**
+```bash
+kem-dev-loop dispatch okf-json --task /tmp/task_okf_architect.txt \
+  --cmd 'opencode run --model opencode/deepseek-v4.1-flash-free "$(cat {task})"'
+# DISPATCH ok exit=0 62.4s log=.kem-loop/okf-json/dispatch/builder_....log
+```
+
+> 💡 **Why this is fast:**
+> - `> /tmp/subagent_okf.log 2>&1` buffers all raw tool calls, reasoning steps, and diff dumps to disk.
+> - Zero lines enter the orchestrator's conversation window.
+> - The subagent executes without waiting for interactive input, and exits cleanly.
+
+### Step 4: Grounded Kem Verification
+When the background command exits with code `0`:
+
+```bash
+# Run the holdout probe
+python3 .kem-loop/<run>/holdouts/test_holdout.py
+
+# Verify live JSON emission
+python3 academic/okf-architect/scripts/okf_architect.py validate . --json 2>/dev/null
+```
+Output:
+```json
+PASS: okf-architect holdout
+{"valid": true, "concepts_count": 2, "errors": 0, "warnings": 0, "bundle_root": "/home/rodri/src/my-agent-skills"}
+```
+
+### Step 5: Surgical Error Recovery (If It Fails)
+If exit code is non-zero or the holdout fails, **never paste the entire log back into chat**.
+Extract only the failing trace:
+```bash
+tail -n 25 /tmp/subagent_okf.log
+```
+Feed back only that 25-line snippet (capped at 2 retries max):
+```text
+Holdout Gate FAILED.
+Error:
+<tail -n 25 snippet>
+
+Fix academic/okf-architect/scripts/okf_architect.py to resolve this failure. Do not alter other functionality.
+```
+
+---
+
+## 🛡️ Summary Rules for Subagent Success
+
+1. **One Conductor, Bounded Builders:** Never make a subagent the conductor.
+2. **Zero Chat in Workers:** Builders must never attempt interactive user dialog.
+3. **Zero Context Bloat (Kem Invariant 7):** Never dump verbose test traces into agent history. Buffer to disk (`> /tmp/builder.log 2>&1`), report a 1-line verdict, and inspect via `tail -n 25` only on failure.
+

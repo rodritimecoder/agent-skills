@@ -3,7 +3,7 @@
 Every principle in `principles/` is a distillation of something Kem actually said. This file
 maps each one back to the reel, the timestamp, and the mined transcript it came from.
 
-Method: the 27 vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
+Method: the 35 vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
 mined (transcript + notes + visuals), and the recurring doctrine was extracted per talk,
 then merged across talks by frequency and by whether the point was load-bearing in his
 argument. A principle survived if it appeared as a rule he states, not as an example he
@@ -45,10 +45,16 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `cite-what-you-claim` | LLM Wikis vs Plain Claude Code | `DfFSZDvN6oV` | 01:59 | `2026-10-30_karpathy_llm_wikis` |
 | `mutate-the-test` | Do You Even Mutate Tests Bro? | `DfSJyHpNyBe` | 01:55 | `2026-11-03_mutation_testing_for_ai_code` |
 | `fix-the-measuring-not-the-results` | Hill-Climbing Loops: How to Set Them Up Properly | `DfUt_qCNo9c` | 02:23 | `2026-11-04_hill_climbing_loops_lets_begin` |
+| `2026-10-29_build_your_own_verification_skill` | A generator skill that builds a project's own verification skill, tool-approval card, breaks one feature on purpose before hand-over (reel `DfCsHxbtV3J`) | `give-it-hands-and-eyes`, `mutate-the-test` |
+| `2026-11-01_model_swap_after_first_edit` | Mid-session model swap re-benchmarked on SWE-bench Pro: the saving is starting cheap, not swapping (reel `DfKd11FNwNW`) | `start-low-step-up` |
+| `2026-08-17_do_you_need_a_graph_short_answer_prob_not` | The retrieval cost ladder: folders and keyword, index file, RAG, graph (reel `DcI_-FStEqz`) | `foundations-over-shiny-objects` |
+| `2026-08-30_free_cerberus_rag_system` | Index the question, one exact quote per entry, 67 MB embedding beats 640 MB (reel `DcqtyTStpsw`) | `foundations-over-shiny-objects`, `cite-what-you-claim` |
+| `2026-10-04_glitch_orchestra_conductor_rotation` | State, board and cache; rotate the conductor instead of compacting (reel `DeEyZPEtkyH`) | `never-let-a-summary-be-the-handoff`, `contain-the-swarm` |
+| `2026-10-06_glitch_orchestra_alignment_first` | Alignment phase and references before any worker builds, still experimental (reel `DeKBMCQNRXU`) | `decide-what-good-looks-like-first` |
 
 ## Talks mined
 
-27 vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
+35 vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
 
 | Vault entry | Topic | Feeds |
 | :--- | :--- | :--- |
@@ -90,3 +96,12 @@ Seven reels are catalogued in `creator-vault/kem_glitch/REELS_LEDGER.md` but sti
 which is likely architecturally dense. When these are mined, expect additions around
 adversarial loops, knowledge-graph setup, and data-safety tooling — and expect this suite's
 principle set to be revised upward rather than rewritten.
+
+Five further vault entries are on disk but cited by no principle. Four were read for
+principles and added none, because their substance lives in a skill: the graph-hype inaugural
+post (`2026-10-16_inaugural_post_unidentified`, covered by `model-the-domain`), the JEV capture
+duplicate (`2026-10-16_unmatched_fast_frontend_uat_jev_capture`, `jev-decision` and
+`frontend-uat`), the FTS index reel (`2026-10-22_sqlite_fts_index_for_native_memory_search`,
+`notes-index`) and the design pack reel (`2026-11-03_design_pack_workflow`, `design-pack`).
+Only `2026-10-25_ai_practitioner_summit` (two event recordings, 19 KB of notes) is still
+unreviewed in depth.

@@ -80,6 +80,60 @@ def require_run(name):
     return run_dir if run_dir.exists() else None
 
 
+BUILDER_FAILURE_MARKERS = (
+    "question failed",
+    "Asked 1 question failed",
+    "asked a question",
+)
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+_SNAPSHOT_SKIP = {".kem-loop", ".git", "__pycache__", ".venv", "node_modules"}
+
+
+def _workspace_snapshot():
+    """{path: mtime_ns} for the cwd tree, skipping run state and caches."""
+    root = Path.cwd()
+    snap = {}
+    for p in root.rglob("*"):
+        if any(part in _SNAPSHOT_SKIP for part in p.parts):
+            continue
+        try:
+            if p.is_file():
+                snap[str(p)] = p.stat().st_mtime_ns
+        except OSError:
+            continue
+    return snap
+
+
+def _workspace_changed(before):
+    """True if any file was created, deleted, or touched since the snapshot."""
+    after = _workspace_snapshot()
+    if set(before) != set(after):
+        return True
+    return any(before[k] != after[k] for k in before)
+
+
+def _builder_failure_marker(path):
+    """None if the builder appears to have worked, else the telltale line.
+
+    opencode/T3 builders return exit 0 even when they never land code --
+    most commonly by raising an interactive question the non-interactive
+    runner cannot answer. The log is the only honest record."""
+    try:
+        text = _ANSI.sub("", Path(path).read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return None
+    folded = text.lower()
+    for marker in BUILDER_FAILURE_MARKERS:
+        if marker.lower() in folded:
+            for line in text.splitlines():
+                if marker.lower() in line.lower():
+                    return line.strip()
+    return None
+
+
 def tail(path, lines=25):
     try:
         return "\n".join(
@@ -161,6 +215,10 @@ def cmd_route(args):
         route, complexity, source, confidence, reason = classify_by_model(prompt)
 
     if as_json:
+        if source in ("degraded", "unavailable") or "heuristic" in source:
+            print("⚠️  kem-dev-loop route: no calibrated model answered; defaulting to the human gate. "
+                  "Start the decision server on :8083, then re-run to get a real verdict.",
+                  file=sys.stderr)
         print(json.dumps({
             "prompt": prompt,
             "route": route,
@@ -171,13 +229,19 @@ def cmd_route(args):
         }))
         return 0
 
+    degraded = source in ("degraded", "unavailable") or "heuristic" in source
+    if degraded:
+        print("⚠️  kem-dev-loop route: no calibrated model answered; defaulting to the human gate. "
+              "Start the decision server on :8083, then re-run to get a real verdict.",
+              file=sys.stderr)
+
     print(f"🎯 Route: **{route}** ({complexity})")
     print(f"   Decided by: {source}")
     if source not in ("deterministic",):
         print(f"   Confidence: {confidence:.0%}")
     print(f"   Why: {reason}\n")
 
-    if source in ("degraded", "unavailable") or "heuristic" in source:
+    if degraded:
         print("   ⚠️  DEGRADED: no calibrated model answered. Routed to the human gate.")
         print("       Start the decision server on :8083, then re-run to get a real verdict.\n")
 
@@ -338,6 +402,7 @@ def cmd_dispatch(args):
 
     started_epoch = time.time()
     started_at = _now()
+    before = _workspace_snapshot()
     with log_path.open("w", encoding="utf-8") as fh:
         fh.write(f"cmd: {cmd}\nstarted: {started_at}\n\n")
         fh.flush()
@@ -359,6 +424,23 @@ def cmd_dispatch(args):
     save_meta(run_dir, meta)
 
     duration = round(time.time() - started_epoch, 1)
+    marker = _builder_failure_marker(log_path)
+    if exit_code == 0 and not marker:
+        changed = _workspace_changed(before)
+        if not changed:
+            marker = "builder exited 0 with no file changes in the workspace"
+    if exit_code == 0 and marker:
+        # The builder exited 0 having done nothing (it asked a question it
+        # could not answer, or bailed mid-task). A pipeline that only reads
+        # the exit code must not see this as success.
+        exit_code = 1
+        meta["dispatch"]["builder_failure_marker"] = marker
+        save_meta(run_dir, meta)
+        print(f"DISPATCH failed exit=1 {duration}s log={log_path}")
+        print(f"❌ Builder exited 0 but the log shows: {marker}")
+        print(f"\n--- tail -n 25 {log_path} ---")
+        print(tail(log_path))
+        return 1
     if exit_code == 0:
         print(f"DISPATCH ok exit=0 {duration}s log={log_path}")
         return 0

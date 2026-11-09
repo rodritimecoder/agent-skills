@@ -11,7 +11,7 @@
       "vram_mb": 20500,
       "pinned": true,
       "name": "Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/luffy-hermes-mtp-vulkan.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/luffy-hermes-mtp-vulkan.sh",
       "role": "Primary generative LLM \u2014 chat, code, long-form writing, prose projection"
     },
     "8081": {
@@ -19,7 +19,7 @@
       "vram_mb": 2500,
       "pinned": false,
       "name": "nemotron-asr",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/run-audiocpp.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/run-audiocpp.sh",
       "role": "Speech-to-text, text-to-speech, forced alignment, voice cloning"
     },
     "8083": {
@@ -27,7 +27,7 @@
       "vram_mb": 3600,
       "pinned": false,
       "name": "h2o-lightning-4b",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/h2o.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/h2o.sh",
       "role": "The decision engine slot - bool / choice / score primitives"
     },
     "8082": {
@@ -35,7 +35,7 @@
       "vram_mb": 0,
       "pinned": false,
       "name": "StartLux-Decision-v1.1-4B-Instant",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/startlux-decision.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/startlux-decision.sh",
       "role": "Experimental StartLux backend; not the h2o-lightning-4b JEV endpoint"
     },
     "8089": {
@@ -43,7 +43,7 @@
       "vram_mb": 0,
       "pinned": false,
       "name": "Imajev-4B",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/imajev-decider.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/imajev-decider.sh",
       "role": "Secondary decision engine \u2014 Imajev-4B chat path, or letter/readout with READOUT=1"
     },
     "8084": {
@@ -51,7 +51,7 @@
       "vram_mb": 6300,
       "pinned": false,
       "name": "CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec)",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/crispembed-ocr.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/crispembed-ocr.sh",
       "role": "Documents & scene text \u2014 OXR-1.0 layout-aware Markdown, PP-OCRv6 bounding boxes"
     },
     "8085": {
@@ -59,7 +59,7 @@
       "vram_mb": 1500,
       "pinned": false,
       "name": "LightOnOCR-3-0.8B",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/lighton-ocr.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/lighton-ocr.sh",
       "role": "Documents, PDFs and slides \u2014 fast prefill, high-throughput markdown"
     },
     "8086": {
@@ -67,7 +67,7 @@
       "vram_mb": null,
       "pinned": false,
       "name": "jina-reranker-v2-base-multilingual",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/jina-reranker.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/jina-reranker.sh",
       "role": "Cross-encoder reranking for RAG"
     },
     "8087": {
@@ -75,7 +75,7 @@
       "vram_mb": null,
       "pinned": false,
       "name": "bge-small-en-v1.5",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/bge-small.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-small.sh",
       "role": "Vector embeddings for RAG and semantic caching"
     },
     "8088": {
@@ -83,7 +83,7 @@
       "vram_mb": 3300,
       "pinned": false,
       "name": "WeVisOne-VL-4B",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/wevisone-vl.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/wevisone-vl.sh",
       "role": "Word-level OCR boxes, open-vocab detection, referring localization, pointing, counting"
     },
     "8090": {
@@ -91,7 +91,7 @@
       "vram_mb": 5300,
       "pinned": false,
       "name": "MiniCPM-OCR-Jev",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/minicpm-ocr-jev.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/minicpm-ocr-jev.sh",
       "role": "OCR consistency gate \u2014 scores a candidate transcription against the source image in one forward pass"
     },
     "8091": {
@@ -99,7 +99,7 @@
       "vram_mb": 2200,
       "pinned": false,
       "name": "LFM3-1.7B-Uncensored-AD",
-      "cmd": "sh $HOME/src/my-agent-skills/launchers/lfm3-1.7b-uncensored.sh",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/lfm3-1.7b-uncensored.sh",
       "role": "Secondary generative LLM \u2014 uncensored roleplay and short-form creative, runs beside the primary :8080 slot instead of swapping it out"
     }
   }

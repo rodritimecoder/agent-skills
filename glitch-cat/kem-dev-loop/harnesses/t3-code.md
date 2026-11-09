@@ -60,7 +60,7 @@ A builder agent must **never** judge its own code, and a judge must **never** in
   Evaluate the pull request or worktree branch: <PR_LINK_OR_BRANCH>.
   Verification criteria:
   1. All regression tests in tests/unit/ pass.
-  2. The hidden holdout case in tests/holdout/edge_case.py passes.
+  2. The registered holdout `.kem-loop/<run>/holdouts/edge_case.py` exits 0 (run it with `kem-dev-loop validate <run>`; never place it under `tests/`, where the builder can read it).
   3. No architectural violations of the domain model.
 
   Output your evaluation strictly as JSON:

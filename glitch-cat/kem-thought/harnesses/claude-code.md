@@ -44,7 +44,7 @@ Use the Agent tool:
     You are an unbiased code judge. Evaluate the changes on branch 'feature/oauth'.
     Check:
     1. Run tests: `pytest tests/unit`
-    2. Run hidden holdout: `pytest tests/holdout/test_token_replay.py`
+    2. Run the registered holdout: `python3 .kem-loop/oauth/holdouts/test_token_replay.py` (a runnable script with its own control; never under `tests/`, where the builder can read it)
     3. Verify no mutations to protected core domain models.
     Output only JSON:
     {"verdict": "PASS" | "FAIL", "issues": [...]}
