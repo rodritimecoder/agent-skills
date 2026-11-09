@@ -12,6 +12,10 @@ allowed-tools: "Bash(kem-dev-loop:*) Bash(jev:*) Bash(review-hub:*) Bash(git:*) 
 
 # Kem Dev Loop
 
+> **Successor:** `apiv-loop` (Reel `Dfhog8VtWDx`, APIV methodology) is the
+> successor for new work. This skill remains for runs in flight and
+> subprocesses that still reference it.
+
 Six phases. The CLI holds the order so the prose does not have to be trusted.
 
 ## The loop

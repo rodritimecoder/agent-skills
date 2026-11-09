@@ -3,7 +3,7 @@
 Every principle in `principles/` is a distillation of something Kem actually said. This file
 maps each one back to the reel, the timestamp, and the mined transcript it came from.
 
-Method: the 35 vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
+Method: the 36 vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
 mined (transcript + notes + visuals), and the recurring doctrine was extracted per talk,
 then merged across talks by frequency and by whether the point was load-bearing in his
 argument. A principle survived if it appeared as a rule he states, not as an example he
@@ -52,9 +52,18 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `2026-10-04_glitch_orchestra_conductor_rotation` | State, board and cache; rotate the conductor instead of compacting (reel `DeEyZPEtkyH`) | `never-let-a-summary-be-the-handoff`, `contain-the-swarm` |
 | `2026-10-06_glitch_orchestra_alignment_first` | Alignment phase and references before any worker builds, still experimental (reel `DeKBMCQNRXU`) | `decide-what-good-looks-like-first` |
 
+### `Dfhog8VtWDx` additional feeds
+
+| Principle | Quote | Time | Vault entry |
+| :--- | :--- | :---: | :--- |
+| `decide-what-good-looks-like-first` | "I wouldn't reach for BMAD for everything, certainly not small changes, but for a bigger build or when a whole team has to agree... AI tends to turn unstated assumptions into code, and BMAD makes the important decisions explicit, leaving a written record at each step, like the brief, PRD and architecture" | 02:12 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+| `hold-out-the-tests` | "Every task carries its own validation command, and the plan sets checks at five levels from linting, unit test integration, a manual walk-through and any extra tours" | 00:41 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+| `hold-out-the-tests` | "Anything that's off goes back to align. I never patch it. It's a loop" | 01:47 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+| `check-the-judge-too` | "I open a fresh window and I run my execution skill with the plan argument. Its orchestrator writes no code... writes a strict brief for each sub-agent and checks everything they return against the actual files" | 01:07 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+
 ## Talks mined
 
-35 vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
+36 vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
 
 | Vault entry | Topic | Feeds |
 | :--- | :--- | :--- |
@@ -87,6 +96,7 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `2026-10-30_karpathy_llm_wikis` | LLM wikis benchmarked, ICM at baseline cost, the cite-your-source hook (70% → 92.5%) | `cite-what-you-claim`, `measure-then-claim`, `foundations-over-shiny-objects` |
 | `2026-11-03_mutation_testing_for_ai_code` | Mutation testing for AI code, breaking code on purpose, sycophantic test detection | `mutate-the-test`, `hold-out-the-tests`, `always-run-the-control` |
 | `2026-11-04_hill_climbing_loops_lets_begin` | Hill-climbing loops, Anthropic 4 scoring methods, steadiness test, Pareto tension | `fix-the-measuring-not-the-results`, `check-the-judge-too`, `give-it-hands-and-eyes` |
+| `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` | APIV methodology: align, plan, implement, verify in a loop from intent | `decide-what-good-looks-like-first`, `hold-out-the-tests`, `check-the-judge-too` |
 
 ## Known gaps
 
