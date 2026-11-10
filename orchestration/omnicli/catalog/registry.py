@@ -396,7 +396,7 @@ def _usage_subcommands(usage: str) -> list[str]:
 # Bumped whenever the *parser* changes, not the scripts. The contract cache
 # is keyed on the script's mtime, so a parser fix would otherwise keep
 # serving the contracts the old parser produced.
-CONTRACT_PARSER_VERSION = 5
+CONTRACT_PARSER_VERSION = 7
 
 
 def parse_help_contract(help_text: str) -> dict[str, Any]:
@@ -436,7 +436,8 @@ def parse_help_contract(help_text: str) -> dict[str, Any]:
             flags.append(m.group(0))
 
     positionals: list[str] = []
-    for m in re.finditer(r"(?<![\w-])([a-z][\w-]*)\s*(?:STATE|QUESTION|\.\.\.|$)", usage):
+    usage_text = " ".join(part.strip() for part in usage_lines) if usage_lines else usage
+    for m in re.finditer(r"(?<![\w-])([a-z][\w-]*)\s*(?:STATE|QUESTION|\.\.\.|$)", usage_text):
         tok = m.group(1)
         if tok not in positionals and not tok.startswith("-"):
             positionals.append(tok)
@@ -483,7 +484,12 @@ def parse_help_contract(help_text: str) -> dict[str, Any]:
         subcommands.append({"name": name, "aliases": [], "summary": ""})
 
     return {
+        # `usage` stays the first line: it is what the search index embeds, and
+        # widening it shifted the golden routing eval from 59/61 to 57/61.
+        # `usage_full` carries the wrapped continuation lines for argument
+        # parsing, where the truncated line loses every positional.
         "usage": usage,
+        "usage_full": " ".join(part.strip() for part in usage_lines) if usage_lines else usage,
         "flags": flags,
         "positionals": positionals,
         "subcommands": subcommands,

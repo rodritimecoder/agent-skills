@@ -88,7 +88,8 @@ class Signature:
         pos = [p.declaration() for p in self.ordered_positionals()]
         required = [p.declaration() for p in self.params if p.required]
         optional = [p.declaration() for p in self.params if not p.required]
-        if self.command:
+        taken = {p.name for p in self.params} | {p.name for p in self.positionals}
+        if self.command and "command" not in taken:
             optional.insert(0, "command: str | None = None")
         parts = pos + required + (["*"] + optional if optional else [])
         return f"{self.func}({', '.join(parts)}) -> dict"
@@ -257,13 +258,41 @@ def parse_flags(contract: dict[str, Any]) -> list[Param]:
     return params
 
 
+def _depth0_choices(usage: str) -> list[str]:
+    """Command names in an unbracketed ``{a,b,c}``.
+
+    ``[--layer {note,wiki,context}]`` is an option's value set and sits inside
+    brackets. Reading it as a command list inserted a bogus `command` parameter
+    into every generated signature that had a choice-typed flag.
+    """
+    depth = 0
+    for index, ch in enumerate(usage):
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth = max(0, depth - 1)
+        elif ch == "{" and depth == 0:
+            end = usage.find("}", index)
+            if end < 0:
+                return []
+            return [n.strip() for n in usage[index + 1:end].split(",") if n.strip()]
+    return []
+
+
 def _commands(contract: dict[str, Any], usage: str) -> tuple[bool, list[str]]:
     listed = [s for s in (contract.get("subcommands") or []) if s.get("name")]
-    braces = USAGE_CHOICES.search(usage)
-    if braces:
-        names = [n.strip() for n in braces.group(1).split(",") if n.strip()]
+    names = _depth0_choices(usage)
+    if names:
         return True, names
-    names = [str(s["name"]) for s in listed if not str(s["name"]).endswith("_pos")]
+    # A name argparse listed in the "positional arguments" block is a
+    # positional, even when the block parser recorded it beside real
+    # sub-parsers. `apiv-loop dispatch` has both a `--command` flag and a `run`
+    # positional; treating `run` as a command injected a second `command`
+    # parameter and produced a signature Python refuses to define.
+    positionals = {str(p) for p in (contract.get("positionals") or [])}
+    names = [str(s["name"]) for s in listed
+             if not str(s["name"]).endswith("_pos")
+             and str(s["name"]) not in positionals]
     return bool(names), names
 
 
@@ -282,6 +311,22 @@ def _positionals(contract: dict[str, Any], usage: str, taken: set[str]) -> list[
             param = _param_name(param, taken)
         taken.add(param)
         bracketed = re.search(rf"\[\s*<?{re.escape(name)}>?\s*\]", usage) is not None
+        params.append(Param(name=param, kind="str", required=not bracketed, positional=True))
+
+    # argparse's usage line is the only place a bare positional appears, and the
+    # registry already extracts it there. Without this union a tool like
+    # `mem search <query>` generated `search()` with no way to pass the query:
+    # the signature looked complete and every call would have failed.
+    has_commands, commands = _commands(contract, usage)
+    for entry in contract.get("positionals") or []:
+        pretty = str(entry).strip()
+        if not pretty or pretty in commands:
+            continue
+        param = _param_name(pretty)
+        if param in taken:
+            continue
+        taken.add(param)
+        bracketed = re.search(rf"\[\s*<?{re.escape(pretty)}>?\s*\]", usage) is not None
         params.append(Param(name=param, kind="str", required=not bracketed, positional=True))
     return params
 
@@ -310,7 +355,7 @@ def signatures(rows: list[Any]) -> list[Signature]:
         contract = row["contract"]
         if isinstance(contract, str):
             contract = json.loads(contract or "{}")
-        usage = str(contract.get("usage") or "").replace("\n", " ").strip()
+        usage = str(contract.get("usage_full") or contract.get("usage") or "").replace("\n", " ").strip()
 
         func = _function_name(tool_id)
         holder = taken.get(func)
