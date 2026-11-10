@@ -31,5 +31,6 @@ service. Read `CONTEXT.md` for the layer contract.
 
 ```bash
 python3 _tools/links.py            # exit 0 clean, 1 on any finding
-python3 -m pytest tests -q         # gates must fail on their negative control
+python3 tests/test_gates.py        # gates must fail on their negative control
+node _tools/test_capture.mjs       # the transcript hook must not leak secrets
 ```

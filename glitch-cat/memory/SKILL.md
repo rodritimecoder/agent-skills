@@ -100,6 +100,23 @@ approval queue:
 - `dreamer` exits non-zero when the budget gate cannot be met, so a cron cannot
   claim success over a broken header
 
+## Install
+
+```bash
+# 1. runtime root
+mem init                                    # ~/.memory or $MEMORY_ROOT
+
+# 2. transcript hook (one symlink, so the repo stays the source of truth)
+ln -sfn "$PWD/_tools/memory-capture.js" ~/.config/opencode/plugins/memory-capture.js
+
+# 3. nightly cycle: observe -> dream -> gate
+systemctl --user enable --now memory-dream.timer
+```
+
+The hook is fire-and-forget: it never blocks a turn, never throws, strips
+`<private>…</private>` and bare credentials, and logs each path's read once per
+session. Set `MEMORY_CAPTURE=0` to disable it for one run.
+
 ## Recall discipline
 
 - Search the wiki **and** the notes; the measurements say one alone is worse.
