@@ -21,7 +21,7 @@ from pathlib import Path
 
 from . import argspec
 
-BINDINGS_VERSION = "2"
+BINDINGS_VERSION = "3"
 
 MODULE_HEAD = '''"""omnicli bindings — generated file, do not edit.
 
@@ -31,20 +31,48 @@ function (`zoom_recording(url=...)`). Intermediate values stay in Python
 variables; only what you print comes back to the model.
 
 Every call goes through the `omnicli` CLI, so the enable gate, projection,
-byte cap and buffer behave exactly as they do from the shell.
+byte cap and buffer behave exactly as they do from the shell. One call is one
+process, so independent calls are worth overlapping: the `a*` twins do the
+same work without blocking, and `parallel()` fans them out.
+
+A plan is bounded. `omnicli exec --max-calls` caps nested calls and fails at
+the call site rather than after the run, and `emit_result()` hands one value
+back on its own channel instead of printing it into stdout.
 """
 
 from __future__ import annotations
 
+import asyncio
+import collections
 import json
 import os
 import subprocess
+import threading
+import time
 from typing import Any, Literal
 
 OMNICLI = os.environ.get("OMNICLI_BIN", "omnicli")
 TOOL_IDS = __TOOL_IDS__
 SPEC: list[dict[str, Any]] = json.loads(__SPEC__)
 SIGNATURES: dict[str, str] = {row["id"]: row["sig"] for row in SPEC}
+
+DEFAULT_MAX_CALLS = 100
+_CALL_LOCK = threading.Lock()
+_CALLS = 0
+_RECENT: collections.deque = collections.deque(maxlen=20)
+
+
+def emit_result(value):
+    """Publish one value as `exec --json`'s `result`, separate from stdout.
+
+    stdout stays the plan's own prose and the result travels on its own file,
+    so neither side has to parse the other. No-op without the env var.
+    """
+    path = os.environ.get("OMNICLI_RESULT")
+    if not path:
+        return
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(value, ensure_ascii=False))
 
 
 def _log(event):
@@ -55,41 +83,132 @@ def _log(event):
         fh.write(json.dumps(event, ensure_ascii=False) + "\\n")
 
 
+def _endpoint(argv):
+    return (argv[1] if len(argv) > 1 else "", argv[2] if len(argv) > 2 else "")
+
+
+def _max_calls():
+    raw = os.environ.get("OMNICLI_MAX_CALLS")
+    if not raw:
+        return DEFAULT_MAX_CALLS
+    try:
+        return int(raw)
+    except ValueError:
+        return DEFAULT_MAX_CALLS
+
+
+def _reserve(argv):
+    """Take one slot of the call budget before a subprocess exists.
+
+    Reserved before dispatch, so a fan-out cannot overshoot by its own width.
+    A slot is never returned: a call that raises still counts.
+    """
+    global _CALLS
+    verb, target = _endpoint(argv)
+    limit = _max_calls()
+    with _CALL_LOCK:
+        _CALLS += 1
+        count = _CALLS
+        _RECENT.append(f"{verb} {target!r}")
+        if limit and count > limit:
+            raise RuntimeError(
+                f"call {count} of {limit} (max-calls); recent calls: "
+                + ", ".join(_RECENT))
+
+
+def _open_call(argv):
+    verb, target = _endpoint(argv)
+    _log({"kind": "call", "call": verb, "tool": target, "t": time.time()})
+    return verb, target, time.perf_counter()
+
+
+def _close_call(verb, target, started, rc):
+    _log({"kind": "done", "call": verb, "tool": target,
+          "ms": int((time.perf_counter() - started) * 1000), "rc": rc})
+
+
 def _run(argv):
-    _log({"call": argv[1] if len(argv) > 1 else "", "tool": argv[2] if len(argv) > 2 else ""})
-    return subprocess.run(argv, capture_output=True, text=True)
+    verb, target, started = _open_call(argv)
+    _reserve(argv)
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True)
+    except BaseException:
+        _close_call(verb, target, started, -1)
+        raise
+    _close_call(verb, target, started, proc.returncode)
+    return proc
+
+
+async def _arun(argv):
+    verb, target, started = _open_call(argv)
+    _reserve(argv)
+    try:
+        proc = await asyncio.to_thread(subprocess.run, argv, capture_output=True, text=True)
+    except BaseException:
+        _close_call(verb, target, started, -1)
+        raise
+    _close_call(verb, target, started, proc.returncode)
+    return proc
+
+
+def _payload(proc, label):
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or f"{label} failed")
+    return json.loads(proc.stdout)
+
+
+def _envelope(proc, tool_id):
+    if proc.returncode != 0 and not proc.stdout.strip():
+        raise RuntimeError(proc.stderr.strip() or f"{tool_id} failed")
+    return json.loads(proc.stdout)
+
+
+def _argv_search(intent, limit):
+    return [OMNICLI, "search", intent, "--json", "--limit", str(limit)]
+
+
+def _argv_skills():
+    return [OMNICLI, "list", "--json"]
+
+
+def _argv_tools(skill):
+    return [OMNICLI, "tools", skill, "--json"]
+
+
+def _argv_describe(tool_id):
+    return [OMNICLI, "describe", tool_id, "--json"]
+
+
+def _argv_invoke(tool_id, args, project=None, grep=None, max_bytes=None, timeout=300.0):
+    argv = [OMNICLI, "invoke", tool_id, *[str(a) for a in args], "--omni-json"]
+    if project:
+        argv += ["--omni-project", project]
+    if grep:
+        argv += ["--omni-grep", grep]
+    if max_bytes is not None:
+        argv += ["--omni-max-bytes", str(max_bytes)]
+    argv += ["--omni-timeout", str(timeout)]
+    return argv
 
 
 def search(intent, limit=6):
     """Route by intent. Returns compact rows: skill, score, matched, why."""
-    proc = _run([OMNICLI, "search", intent, "--json", "--limit", str(limit)])
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "search failed")
-    return json.loads(proc.stdout).get("results", [])
+    return _payload(_run(_argv_search(intent, limit)), "search").get("results", [])
 
 
 def skills():
     """Every skill the catalog knows about."""
-    proc = _run([OMNICLI, "list", "--json"])
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "list failed")
-    return json.loads(proc.stdout)
+    return _payload(_run(_argv_skills()), "list")
 
 
 def tools(skill):
     """The executable tools inside one skill."""
-    proc = _run([OMNICLI, "tools", skill, "--json"])
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "tools failed")
-    return json.loads(proc.stdout)
+    return _payload(_run(_argv_tools(skill)), "tools")
 
 
 def describe(tool_id):
     """One tool's exact contract (usage, flags, state)."""
-    proc = _run([OMNICLI, "describe", tool_id, "--json"])
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "describe failed")
-    return json.loads(proc.stdout)
+    return _payload(_run(_argv_describe(tool_id)), "describe")
 
 
 def spec(skill=None, grep=None, kind=None, limit=None):
@@ -118,23 +237,65 @@ def spec(skill=None, grep=None, kind=None, limit=None):
 
 def invoke(tool_id, *args, project=None, grep=None, max_bytes=None, timeout=300.0):
     """Run one enabled tool. Returns the CLI envelope: output, exit_code, bytes."""
-    argv = [OMNICLI, "invoke", tool_id, *[str(a) for a in args], "--omni-json"]
-    if project:
-        argv += ["--omni-project", project]
-    if grep:
-        argv += ["--omni-grep", grep]
-    if max_bytes is not None:
-        argv += ["--omni-max-bytes", str(max_bytes)]
-    argv += ["--omni-timeout", str(timeout)]
-    proc = _run(argv)
-    if proc.returncode != 0 and not proc.stdout.strip():
-        raise RuntimeError(proc.stderr.strip() or f"{tool_id} failed")
-    return json.loads(proc.stdout)
+    proc = _run(_argv_invoke(tool_id, args, project=project, grep=grep,
+                             max_bytes=max_bytes, timeout=timeout))
+    return _envelope(proc, tool_id)
 
 
 def output(tool_id, *args, **kwargs):
     """invoke() and return only the shaped stdout, not the envelope."""
     return invoke(tool_id, *args, **kwargs).get("output", "")
+
+
+async def asearch(intent, limit=6):
+    """search() without blocking the plan."""
+    return _payload(await _arun(_argv_search(intent, limit)), "search").get("results", [])
+
+
+async def askills():
+    """skills() without blocking the plan."""
+    return _payload(await _arun(_argv_skills()), "list")
+
+
+async def atools(skill):
+    """tools() without blocking the plan."""
+    return _payload(await _arun(_argv_tools(skill)), "tools")
+
+
+async def adescribe(tool_id):
+    """describe() without blocking the plan."""
+    return _payload(await _arun(_argv_describe(tool_id)), "describe")
+
+
+async def ainvoke(tool_id, *args, **kwargs):
+    """invoke() without blocking the plan."""
+    return _envelope(await _arun(_argv_invoke(tool_id, args, **kwargs)), tool_id)
+
+
+async def aoutput(tool_id, *args, **kwargs):
+    """output() without blocking the plan."""
+    return (await ainvoke(tool_id, *args, **kwargs)).get("output", "")
+
+
+async def parallel(calls, limit=8):
+    """Run independent calls at once. Results keep input order.
+
+    Each item is either a zero-arg callable or a `(fn, args, kwargs)` tuple;
+    at most `limit` are in flight. Exceptions surface through `gather`, so one
+    failure fails the batch. Pass the `a*` twins: a sync callable runs inline
+    and holds the loop for its whole subprocess.
+    """
+    gate = asyncio.Semaphore(limit)
+
+    async def one(call):
+        fn, args, kwargs = (call, (), {}) if callable(call) else call
+        async with gate:
+            value = fn(*args, **kwargs)
+            if hasattr(value, "__await__"):
+                value = await value
+            return value
+
+    return await asyncio.gather(*[one(call) for call in calls])
 
 '''
 

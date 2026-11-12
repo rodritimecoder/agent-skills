@@ -10,7 +10,7 @@ This guide specifies how `omnicli` integrates natively with **T3 Code** as a fir
 
 T3 Code is a shell-native Agent Client Protocol (ACP) IDE. Rather than paying the JSON-RPC context tax of traditional MCP servers, `omnicli` integrates with T3 Code through two primary high-performance paths:
 
-### Face A: Direct Terminal / Bash Invocation (`run_command`)
+### Path 1: Direct Terminal / Bash Invocation (`run_command`)
 
 When executing commands in T3 Code, use `omnicli` to guard against context flooding:
 
@@ -28,7 +28,7 @@ omnicli invoke zoom-recorder/scripts/zoom_download \
   -- --url "https://zoom.us/rec/..."
 ```
 
-### Face B: Code Mode Python SDK (`omnicli exec`)
+### Path 2: Code Mode Python SDK (`omnicli exec`)
 
 For multi-step workflows (≥ 2 tool calls), write one Python plan script that executes in a single turn. Intermediate data lives in Python memory rather than polluting the conversation history:
 

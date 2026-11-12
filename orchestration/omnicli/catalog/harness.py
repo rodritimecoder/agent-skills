@@ -1,7 +1,7 @@
 """First-party harness adapter registry and verification for omnicli.
 
 Supports:
-  - t3-code: T3 Code IDE (Agent Client Protocol + MCP stdio server + previews)
+  - t3-code: T3 Code IDE (Agent Client Protocol + previews)
   - agy: Antigravity CLI (DeepMind Python workflow graphs + subagents + surgical diffs)
   - opencode: OpenCode terminal agent (opencode.json + local model daemons + compound bash)
   - pi: Pi Agent (lightweight terminal agent + rsync skills + strict 8KB token cap)
@@ -63,7 +63,7 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
         "aliases": ["opencode", "oc"],
         "summary": "Terminal-native open-source harness connecting to local model daemons (:8080-:8085) with compound bash batching.",
         "doc_file": "opencode.md",
-        "protocols": ["mcp", "cli", "surface-skills", "worktree-harness"],
+        "protocols": ["cli", "surface-skills", "code-mode", "worktree-harness"],
         "config_paths": ["~/.config/opencode/opencode.json", "~/.local/share/opencode"],
         "env_indicators": ["OPENCODE_CONFIG", "OPENCODE_ROOT"],
         "env_patterns": {
@@ -73,13 +73,7 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
         "config_snippet": json.dumps({
             "skills": [
                 "/home/rodri/src/my-agent-skills/surface"
-            ],
-            "mcp": {
-                "omnicli": {
-                    "type": "local",
-                    "command": ["omnicli", "mcp"]
-                }
-            }
+            ]
         }, indent=2),
     },
     "pi": {

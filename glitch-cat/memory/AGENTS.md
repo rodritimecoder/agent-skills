@@ -15,6 +15,7 @@ service. Read `CONTEXT.md` for the layer contract.
 | Raw event log | `01_transcripts/**/*.jsonl` |
 | Observations | `02_notes/<project>/*.md` |
 | Linked knowledge | `03_wiki/entities/<kind>/*.md` |
+| Ingest agy transcripts | `_tools/agy_ingest.py` |
 | Consolidate / correct | `_tools/dreamer.py` |
 | Gate before believing a pass | `_tools/links.py` |
 
@@ -31,6 +32,6 @@ service. Read `CONTEXT.md` for the layer contract.
 
 ```bash
 python3 _tools/links.py            # exit 0 clean, 1 on any finding
-python3 tests/test_gates.py        # gates must fail on their negative control
+python3 -m unittest discover tests/ # gates and agy ingest unit tests
 node _tools/test_capture.mjs       # the transcript hook must not leak secrets
 ```

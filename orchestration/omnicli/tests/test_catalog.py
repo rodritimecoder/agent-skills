@@ -393,9 +393,9 @@ class TestCatalog(unittest.TestCase):
         """Most script tools must expose a usage contract.
 
         A minority legitimately do not: shell wrappers with no usage
-        function, hook and library scripts, and the MCP stdio server, which
-        has no argparse by design. Those are recorded as empty contracts
-        rather than garbage.
+        function, hook and library scripts, and thin dispatchers with no
+        argparse by design. Those are recorded as empty contracts rather
+        than garbage.
         """
         rows = self.con.execute(
             "SELECT id, contract FROM tools WHERE kind = 'script'"

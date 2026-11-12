@@ -2,34 +2,29 @@
 
 > *"OpenCode is an open-source, terminal-native AI agent environment with native support for local model daemons and compound bash batching."*
 
-This guide specifies how `omnicli` integrates with **OpenCode** as a first-party tool discovery gateway, MCP provider, and local model router.
+This guide specifies how `omnicli` integrates with **OpenCode** as a first-party tool discovery gateway, Code Mode runner, and local model router.
 
 ---
 
-## ⚡ Integration Faces in OpenCode
+## ⚡ Integration Surfaces in OpenCode
 
-OpenCode interacts with `omnicli` through two complementary channels:
+OpenCode reaches `omnicli` through two complementary channels:
 
 ### 1. Configuration in `~/.config/opencode/opencode.json`
 
-Register `omnicli` both as an MCP server and via zero-copy surface skill discovery:
+Register the zero-copy surface path. Nothing else is needed — omnicli ships no
+server to attach:
 
 ```json
 {
   "skills": [
     "/home/rodri/src/my-agent-skills/surface"
-  ],
-  "mcp": {
-    "omnicli": {
-      "type": "local",
-      "command": ["omnicli", "mcp"]
-    }
-  }
+  ]
 }
 ```
 
-- **MCP Face:** OpenCode accesses `omni_discover`, `omni_describe`, `omni_invoke`, and `omni_status` as native tool functions.
 - **Surface Discovery:** Any skill symlinked in `surface/` is discovered instantly by OpenCode's internal skill crawler.
+- **Code Mode:** That skill teaches `omnicli search` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.py`.
 
 ---
 

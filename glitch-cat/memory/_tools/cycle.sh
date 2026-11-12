@@ -16,6 +16,10 @@ PY="${PYTHON:-python3}"
 
 "$PY" "$HERE/mem.py" --root "$ROOT" init >/dev/null
 
+if [ -f "$HERE/agy_ingest.py" ]; then
+  "$PY" "$HERE/agy_ingest.py" --root "$ROOT" 2>&1 | sed 's/^/  /' || true
+fi
+
 "$PY" "$HERE/observer.py" --root "$ROOT" 2>&1 | sed 's/^/  /'
 "$PY" "$HERE/dreamer.py" --root "$ROOT" 2>&1 | sed 's/^/  /'
 "$PY" "$HERE/links.py" --root "$ROOT"

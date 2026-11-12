@@ -81,10 +81,11 @@ def main() -> None:
     median_body_name = bodies[len(bodies) // 2][1]
 
     # ---- path B: the omnicli metatool face -----------------------------------
-    # Ground truth: ask the real MCP server for its tools/list and count what an
-    # agent actually receives (name + description + inputSchema).
+    # Ground truth: ask the archived MCP server for its tools/list and count what
+    # an agent actually receives (name + description + inputSchema). The server
+    # is not wired to any verb; this measures the shape it shipped with.
     mcp_tools = []
-    mcp_path = OMNICLI / "scripts/mcp_server.py"
+    mcp_path = OMNICLI.parents[1] / "archived" / "omnicli-mcp" / "mcp_server.py"
     if mcp_path.is_file():
         try:
             proc = subprocess.Popen(

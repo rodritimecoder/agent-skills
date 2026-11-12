@@ -52,6 +52,13 @@ def kind_of(entity: str) -> str:
     return "topic"
 
 
+def wiki_id(name: str) -> str:
+    if len(name) <= 24:
+        return f"wiki-{name}"
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:6]
+    return f"wiki-{name[:17]}-{digest}"
+
+
 # --------------------------------------------------------------------------
 # crossref
 # --------------------------------------------------------------------------
@@ -138,7 +145,7 @@ def build_wiki(root: Path) -> dict:
             body += [f"- [[{slug(r)}]]" for r in related]
             body += [""]
         meta = {
-            "id": f"wiki-{name[:24]}",
+            "id": wiki_id(name),
             "title": page["label"],
             "type": "entity",
             "kind": kind,
@@ -291,7 +298,7 @@ def close_gaps(root: Path) -> dict:
         if target.is_file():
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        meta = {"id": f"wiki-{name[:24]}", "title": item["ref"], "type": "entity",
+        meta = {"id": wiki_id(name), "title": item["ref"], "type": "entity",
                 "kind": "topic", "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "source": "dreamer", "entities": [item["ref"]],
                 "sources": [item["page"]], "confidence": 0.4, "verified": False}

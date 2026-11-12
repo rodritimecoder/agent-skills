@@ -50,6 +50,11 @@ class TestCapabilities(unittest.TestCase):
         for model in ("h2o-lightning-4b-Q4_K_M.gguf", "/models/H2O-Lightning-4b", "h2o-lightning"):
             self.assertTrue(decision_model.box_capable(model), model)
 
+    def test_native_bbox_models_are_box_capable(self):
+        for model in ("/models/Valen-Team/Valen-Decision-1.5-0.8B-Q5_K_M.gguf", "valen-decision"):
+            self.assertTrue(decision_model.box_capable(model), model)
+            self.assertIn("box", decision_model.primitives(model))
+
     def test_other_slot_candidates_are_not(self):
         for model in ("vllm-d3-nano-Q4_K_M.gguf", "pplx-decider-flash-v1.2", "imajev-4b"):
             self.assertFalse(decision_model.box_capable(model), model)
@@ -59,6 +64,25 @@ class TestCapabilities(unittest.TestCase):
                          ["bool", "choice", "score", "box"])
         self.assertEqual(decision_model.primitives("vllm-d3-nano"),
                          ["bool", "choice", "score"])
+
+
+class TestValenAnswers(unittest.TestCase):
+    def test_bbox_is_flattened_to_four_corners(self):
+        answer = decision_model.normalize_box_answer(
+            {"type": "bbox", "bbox": [0.1, 0.2, 0.3, 0.4], "point": [0.2, 0.3],
+             "confidence": 0.8123})
+        self.assertEqual(answer["box"], {"left": 0.1, "top": 0.2, "right": 0.3, "bottom": 0.4})
+        self.assertTrue(answer["found"])
+        self.assertIsNone(answer["present"])
+
+    def test_valen_has_no_presence_head_so_only_confidence_gates(self):
+        answer = decision_model.normalize_box_answer(
+            {"type": "bbox", "bbox": [0.1, 0.2, 0.3, 0.4], "confidence": 0.55})
+        accepted, reason = decision_model.gate_box(answer)
+        self.assertTrue(accepted, reason)
+        rejected, reason = decision_model.gate_box(answer, min_confidence=0.60)
+        self.assertFalse(rejected)
+        self.assertTrue(reason.startswith("confidence 0.550"), reason)
 
 
 if __name__ == "__main__":

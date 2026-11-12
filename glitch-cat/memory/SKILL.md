@@ -139,7 +139,7 @@ memory/
 │   ├── entities/<kind>/<name>.md
 │   └── topics/
 ├── 04_context/MEMORY.md
-├── _tools/{mem,observer,dreamer,links}.py
+├── _tools/{mem,observer,dreamer,links,agy_ingest}.py
 ├── _templates/
 └── tests/
 ```

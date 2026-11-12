@@ -15,12 +15,12 @@
 
 | Feature / Primitive | T3 Code | Antigravity (`agy`) | OpenCode | Pi Agent | Boxxy Claw |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Primary Interaction Face** | MCP Server (`stdio`) + CLI | Python Bindings + CLI | MCP Server + CLI | Direct CLI | Direct CLI + Sandbox |
-| **Discovery Protocol** | `omni_discover` meta-tool | `from omnicli_tools import search` | `omnicli search` / MCP | `omnicli search` | `omnicli search` |
-| **Invocation Protocol** | `omni_invoke` / bash tool | `invoke()` / `omnicli invoke` | Compound bash / `omnicli invoke` | Direct bash / CLI | `omnicli invoke` / `exec` |
+| **Primary Interaction Face** | Code Mode + CLI | Python Bindings + CLI | Code Mode + CLI | Direct CLI | Direct CLI + Sandbox |
+| **Discovery Protocol** | `from omnicli_tools import search` | `from omnicli_tools import search` | `omnicli search` / `search()` | `omnicli search` | `omnicli search` |
+| **Invocation Protocol** | `invoke()` / bash tool | `invoke()` / `omnicli invoke` | Compound bash / `omnicli invoke` | Direct bash / CLI | `omnicli invoke` / `exec` |
 | **Code Mode SDK** | `omnicli exec` | Native in `run_workflow` | `omnicli exec` (plan.py) | Script invocation | `omnicli exec --sandbox` |
 | **Output Capping** | Strict 8KB (`--omni-max-bytes`) | Strict 8KB / Python return | Strict 8KB / `step_NN.json` | Strict 8KB cap | Strict 8KB cap |
-| **JSON Projection** | `--omni-project` / `omni_invoke` | Dict keys / `--omni-project` | `--omni-project` / jq | `--omni-project` | `--omni-project` |
+| **JSON Projection** | `--omni-project` / `invoke()` | Dict keys / `--omni-project` | `--omni-project` / jq | `--omni-project` | `--omni-project` |
 | **Concurrency Model** | Reactive wakeups (ACP) | Async Python (`parallel`) | Git worktrees (`worktree-harness`)| Sequential CLI | Async workers |
 | **Config Location** | `~/.config/t3code-v2/` | `~/.gemini/antigravity-cli/` | `~/.config/opencode/opencode.json` | `~/.pi/agent/` | `~/.config/boxxy-terminal/` |
 | **Verification Gate** | `omnicli harness verify t3-code` | `omnicli harness verify agy` | `omnicli harness verify opencode` | `omnicli harness verify pi` | `omnicli harness verify boxxy` |
@@ -65,8 +65,8 @@ omnicli harness verify
 
 ## 📖 Harness Guides
 
-- [**T3 Code Adapter Guide**](t3-code.md) — MCP stdio integration, ACP tool calls, visual rendering, reactive wakeups.
+- [**T3 Code Adapter Guide**](t3-code.md) — Code Mode plans, ACP tool calls, visual rendering, reactive wakeups.
 - [**Antigravity (`agy`) Guide**](agy.md) — Python workflow graphs (`run_workflow`), dynamic subagents, workspace isolation.
-- [**OpenCode Guide**](opencode.md) — `opencode.json` MCP configuration, compound bash batching, local model daemon routing.
+- [**OpenCode Guide**](opencode.md) — `opencode.json` skills path, compound bash batching, local model daemon routing.
 - [**Pi Agent Guide**](pi.md) — Interactive terminal usage, rsync sync, tight token budgeting.
 - [**Boxxy Claw Guide**](boxxy.md) — Bubblewrap sandboxing, hot-reload sync, SQLite WAL safety.

@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""decision-model client — Calibrated Decision & Visual Grounding Model (h2o-lightning-4b).
+"""decision-model client — Calibrated Decision & Visual Grounding engine.
 
 Handles typed decisions (bool, choice, score) and visual bounding boxes (4 corners,
-calibrated confidence, presence probability) on dual RX 9060 XT GPUs.
+calibrated confidence, presence probability) on the decision slot (:8083).
+
+The slot rotates between backends; the client adapts its request shape to the
+served architecture. h2o-lightning-4b runs behind the h2oai shim (state.context +
+assets, two-pass box readout). Valen-Decision-1.5 runs on its own custom llama.cpp
+runtime (messages with inline data URLs, single-pass bbox answer).
 """
 from __future__ import annotations
 
@@ -25,16 +30,21 @@ BOX_MIN_CONFIDENCE = float(os.environ.get("BOX_MIN_CONFIDENCE", 0.30))
 PROTOCOL_PRIMITIVES = ("bool", "choice", "score")
 
 
-def box_capable(model_id: str) -> bool:
-    """Box is a shim feature, not a protocol feature.
+def is_valen(model_id: str) -> bool:
+    return "valen" in (model_id or "").lower()
 
-    llama.cpp's own `/v1/systemone` answers noul, choice and score. Only the
-    h2oai shim implements the two-pass box readout (presence on the untouched
-    image, tightness on the box-drawn one), so the capability is named by the
-    served model rather than assumed from the port.
+
+def box_capable(model_id: str) -> bool:
+    """Box is a per-backend feature, not a protocol feature.
+
+    llama.cpp's own `/v1/systemone` answers noul, choice and score. h2o-lightning
+    adds a two-pass box readout in the h2oai shim (presence on the untouched
+    image, tightness on the box-drawn one). Valen-Decision-1.5 has a bbox
+    grounding head in the model itself and returns a box in the same pass. Match
+    the served model, not the port.
     """
     lowered = (model_id or "").lower()
-    return "h2o" in lowered or "lightning" in lowered
+    return "h2o" in lowered or "lightning" in lowered or "valen" in lowered
 
 
 def primitives(model_id: str) -> list[str]:
@@ -50,14 +60,16 @@ def gate_box(answer: dict, min_present: float = BOX_MIN_PRESENT,
 
     `present` says the target exists at all; `confidence` says the box is
     tight. A missing target still returns `found: true` with a plausible
-    rectangle, so `found` alone is not a decision.
+    rectangle, so `found` alone is not a decision. Valen's bbox head reports no
+    separate presence probability, so `present` may be None and only the
+    confidence gate applies.
     """
-    present = float(answer.get("present", 0.0))
+    present = answer.get("present")
     confidence = float(answer.get("confidence", 0.0))
     if not answer.get("found", False):
         return False, "no box located"
-    if present < min_present:
-        return False, f"present {present:.3f} < {min_present:.3f}"
+    if present is not None and float(present) < min_present:
+        return False, f"present {float(present):.3f} < {min_present:.3f}"
     if confidence < min_confidence:
         return False, f"confidence {confidence:.3f} < {min_confidence:.3f}"
     return True, None
@@ -72,6 +84,65 @@ def image_to_base64(path: Path) -> tuple[str, str]:
     else:
         fmt = "png"
     return fmt, base64.b64encode(blob).decode("ascii")
+
+
+def image_data_url(path: Path) -> str:
+    fmt, b64 = image_to_base64(path)
+    return f"data:image/{fmt};base64,{b64}"
+
+
+def build_payload(context: str, question: Dict[str, Any], image: Optional[Path] = None,
+                  port: int = DECISION_PORT) -> dict:
+    """Shape one request for whichever backend holds the slot.
+
+    h2o reads `state.context` and a named `assets` map. Valen reads
+    `state.messages` and expects images inline as data URLs, because the model
+    evaluates state and questions in one shared pass.
+    """
+    model = served_model(port)
+    if is_valen(model):
+        content: List[Dict[str, Any]] = []
+        if image and image.is_file():
+            content.append({"type": "image_url", "image_url": {"url": image_data_url(image)}})
+        if context:
+            content.append({"type": "text", "text": context})
+        return {
+            "state": {"messages": [{"role": "user", "content": content}]},
+            "questions": {"q": question},
+        }
+
+    payload: Dict[str, Any] = {"state": {"context": context}, "questions": {"q": question}}
+    if image and image.is_file():
+        fmt, b64 = image_to_base64(image)
+        payload["assets"] = {"img": {"type": "image", "format": fmt, "data_base64": b64}}
+        payload["questions"]["q"]["image"] = "img"
+    return payload
+
+
+def normalize_box_answer(ans: dict) -> dict:
+    """Flatten both box answer shapes into one gated result.
+
+    h2o: `box {left,top,right,bottom}` + `present` + `confidence` + `found`.
+    Valen: `bbox [x1,y1,x2,y2]` + `point` + `confidence`, no presence head.
+    """
+    bbox = ans.get("bbox")
+    if isinstance(bbox, list) and len(bbox) == 4:
+        left, top, right, bottom = (float(v) for v in bbox)
+        return {
+            "box": {"left": left, "top": top, "right": right, "bottom": bottom},
+            "present": ans.get("present"),
+            "confidence": float(ans.get("confidence", 0.0)),
+            "found": True,
+            "point": ans.get("point"),
+        }
+    box = ans.get("box", {})
+    return {
+        "box": box,
+        "present": ans.get("present", 0.0),
+        "confidence": float(ans.get("confidence", 0.0)),
+        "found": bool(ans.get("found", False)) and bool(box),
+        "point": ans.get("point"),
+    }
 
 def served_model(port: int) -> str:
     """Name the model behind the slot; the slot rotates, the API does not."""
@@ -100,17 +171,10 @@ def post_systemone(payload: dict, port: int = DECISION_PORT, timeout: float = 30
         detail = e.read().decode(errors="replace")[:400]
         raise SystemExit(f"decision-model error: HTTP {e.code} from {url} — {detail}")
     except urllib.error.URLError as e:
-        raise SystemExit(f"decision-model error: could not connect to {url} ({e.reason}). Start with sh/h2o.sh")
+        raise SystemExit(f"decision-model error: could not connect to {url} ({e.reason}). Start with sh/h2o.sh or sh/valen.sh")
 
 def cmd_bool(context: str, question: str, image: Optional[Path] = None, json_mode: bool = False) -> int:
-    payload: Dict[str, Any] = {
-        "state": {"context": context},
-        "questions": {"q": {"type": "noul", "instructions": question}},
-    }
-    if image and image.is_file():
-        fmt, b64 = image_to_base64(image)
-        payload["assets"] = {"img": {"type": "image", "format": fmt, "data_base64": b64}}
-        payload["questions"]["q"]["image"] = "img"
+    payload = build_payload(context, {"type": "noul", "instructions": question}, image)
 
     res = post_systemone(payload)
     ans = res.get("answers", {}).get("q", {})
@@ -127,18 +191,11 @@ def cmd_bool(context: str, question: str, image: Optional[Path] = None, json_mod
     return 0 if prob >= 0.5 else 1
 
 def cmd_choice(context: str, question: str, options: List[str], image: Optional[Path] = None, json_mode: bool = False) -> int:
-    payload: Dict[str, Any] = {
-        "state": {"context": context},
-        "questions": {"q": {
-            "type": "choice",
-            "instructions": question,
-            "criteria": {opt: opt for opt in options},
-        }},
-    }
-    if image and image.is_file():
-        fmt, b64 = image_to_base64(image)
-        payload["assets"] = {"img": {"type": "image", "format": fmt, "data_base64": b64}}
-        payload["questions"]["q"]["image"] = "img"
+    payload = build_payload(context, {
+        "type": "choice",
+        "instructions": question,
+        "criteria": {opt: opt for opt in options},
+    }, image)
 
     res = post_systemone(payload)
     ans = res.get("answers", {}).get("q", {})
@@ -158,14 +215,7 @@ def cmd_choice(context: str, question: str, options: List[str], image: Optional[
     return 0
 
 def cmd_score(context: str, criteria: str, levels: List[str], image: Optional[Path] = None, json_mode: bool = False) -> int:
-    payload: Dict[str, Any] = {
-        "state": {"context": context},
-        "questions": {"q": {"type": "score", "instructions": criteria, "criteria": levels}},
-    }
-    if image and image.is_file():
-        fmt, b64 = image_to_base64(image)
-        payload["assets"] = {"img": {"type": "image", "format": fmt, "data_base64": b64}}
-        payload["questions"]["q"]["image"] = "img"
+    payload = build_payload(context, {"type": "score", "instructions": criteria, "criteria": levels}, image)
 
     res = post_systemone(payload)
     ans = res.get("answers", {}).get("q", {})
@@ -191,20 +241,29 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
     if not box_capable(model):
         raise SystemExit(
             f"decision-model error: :{BOX_PORT} serves {model}, which has no box primitive. "
-            f"Box answers come from the h2oai shim — start it with `h2o.sh` (slot :8083), "
-            f"or point BOX_PORT at a running standalone shim (:8761)."
+            f"Box answers come from h2o-lightning (h2o.sh) or Valen-Decision-1.5 (valen.sh) "
+            f"on slot :8083, or point BOX_PORT at a running standalone h2oai shim (:8761)."
         )
 
-    fmt, b64 = image_to_base64(image)
-    ref = "photo"
-    payload = {
-        "state": {"note": "box request"},
-        "questions": {"loc": {"type": "box", "instructions": f"{target} in `{ref}`"}},
-        "assets": {ref: {"type": "image", "format": fmt, "data_base64": b64}},
-    }
+    if is_valen(model):
+        payload = {
+            "state": {"messages": [{"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": image_data_url(image)}},
+            ]}]},
+            "questions": {"loc": {"type": "bbox", "instructions": target, "image": 0}},
+        }
+    else:
+        fmt, b64 = image_to_base64(image)
+        ref = "photo"
+        payload = {
+            "state": {"note": "box request"},
+            "questions": {"loc": {"type": "box", "instructions": f"{target} in `{ref}`"}},
+            "assets": {ref: {"type": "image", "format": fmt, "data_base64": b64}},
+        }
     res = post_systemone(payload, port=BOX_PORT, timeout=timeout)
-    ans = res.get("answers", {}).get("loc", {})
-    box = ans.get("box", {})
+    ans = normalize_box_answer(res.get("answers", {}).get("loc", {}))
+    box = ans["box"]
+    present = ans.get("present")
     accepted, reason = gate_box(ans, min_present, min_confidence)
 
     pixels = None
@@ -249,23 +308,25 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
             "reason": reason,
             "box": box,
             "pixels": pixels,
-            "confidence": ans.get("confidence", 0.0),
-            "present": ans.get("present", 0.0),
-            "found": bool(ans.get("found", False)),
+            "confidence": ans["confidence"],
+            "present": present,
+            "found": bool(ans["found"]),
+            "point": ans.get("point"),
             "crop": str(crop_out) if cropped and not cropped.startswith("skipped") else None,
             "crop_note": cropped,
         }, indent=2))
         return 0 if accepted else 2
 
+    present_note = "n/a" if present is None else f"{float(present):.3f}"
     if accepted:
         print(f"ACCEPT  box=({box.get('left',0):.3f}, {box.get('top',0):.3f}) -> "
               f"({box.get('right',0):.3f}, {box.get('bottom',0):.3f})  "
-              f"confidence={ans.get('confidence',0):.3f}  present={ans.get('present',0):.3f}")
+              f"confidence={ans['confidence']:.3f}  present={present_note}")
         if cropped:
             print(f"Crop saved to {crop_out} ({cropped})" if crop_out else f"Crop {cropped}")
     else:
-        print(f"REJECT  {reason}  present={ans.get('present',0):.3f}  "
-              f"confidence={ans.get('confidence',0):.3f}")
+        print(f"REJECT  {reason}  present={present_note}  "
+              f"confidence={ans['confidence']:.3f}")
 
     return 0 if accepted else 2
 
@@ -280,7 +341,8 @@ def cmd_caps(json_mode: bool = False) -> int:
         "primitives": caps,
         "vision": "box" in caps,
         "note": None if "box" in caps else (
-            "box needs the h2oai shim; this endpoint answers noul, choice and score only"
+            "box needs h2o-lightning (h2o.sh) or Valen-Decision-1.5 (valen.sh); "
+            "this endpoint answers noul, choice and score only"
         ),
     }
     if json_mode:

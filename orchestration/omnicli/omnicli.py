@@ -2,10 +2,10 @@
 """
 omnicli — the Uber OmniCLI: one late-binding gateway to every local tool.
 
-Two faces over one catalog:
+One gateway, two surfaces over one catalog:
 
-  Face A (CLI / Code Mode)   omnicli search | describe | invoke | status
-  Face B (MCP stdio server)  omnicli mcp   →  4 meta-tools over JSON-RPC
+  CLI        omnicli search | describe | invoke | status
+  Code Mode  omnicli exec plan.py  (typed SDK, sandboxed, one turn)
 
 The catalog is a BM25 (SQLite FTS5) index over the full body of every skill,
 with hand-curated aliases in a separately weighted column. An agent discovers
@@ -55,7 +55,7 @@ except ImportError:  # pragma: no cover - degraded install
 
 # The response cap. An agent must never be able to pull an unbounded payload
 # into its context window, even by forgetting the flags. The implementation
-# lives in catalog.invoke so that the MCP face enforces the same ceiling.
+# lives in catalog.invoke so the CLI and the Code Mode bindings share one ceiling.
 DEFAULT_MAX_BYTES = invoke.DEFAULT_MAX_BYTES if invoke else 8000
 
 
@@ -1188,18 +1188,6 @@ def cmd_questions(skill_id: str | None = None, build: str | None = None,
 
 
 # --------------------------------------------------------------------------
-# mcp
-# --------------------------------------------------------------------------
-
-def cmd_mcp(as_json: bool = False):
-    sys.exit(
-        "⚠️  Notice: `omnicli mcp` has been retired. The workstation operates on "
-        "Code Mode and direct CLI execution (`omnicli search`, `describe`, `invoke`, `exec`). "
-        "This eliminates JSON-RPC overhead and preserves agent context."
-    )
-
-
-# --------------------------------------------------------------------------
 # exec / bindings
 # --------------------------------------------------------------------------
 
@@ -1319,12 +1307,19 @@ def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
 
 
 def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = None,
-             sandbox: str = "write", timeout: float = 300.0, as_json: bool = False):
+             sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
+             max_calls: int = 100, mem_limit: int | None = None):
     con = _require_catalog()
     if builder is None or bindings_mod is None:
         sys.exit("❌ Error: omnicli catalog package not importable.")
     if sandbox not in ("write", "strict", "none"):
         sys.exit(f"❌ Error: unknown sandbox mode {sandbox!r}")
+    if max_calls < 0:
+        sys.exit(f"❌ Error: --max-calls must be 0 (unlimited) or positive, not {max_calls}")
+    if mem_limit is not None and mem_limit <= 0:
+        sys.exit(f"❌ Error: --mem-limit must be a positive number of MiB, not {mem_limit}")
+    if mem_limit is not None and sandbox == "none":
+        sys.exit("❌ Error: --mem-limit needs a sandbox; --sandbox none runs without an rlimit")
 
     script_path = Path(script).resolve()
     if not script_path.is_file():
@@ -1339,12 +1334,19 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
         sys.exit(f"❌ Error: workspace {work} is not a directory")
 
     trace = work / ".omnicli_trace.jsonl"
-    if trace.exists():
-        trace.unlink()
+    seen = 0
+    if trace.is_file():
+        # One workspace keeps one trace log; count only rows this run appends.
+        seen = sum(1 for line in trace.read_text(encoding="utf-8").splitlines() if line.strip())
+    result_file = work / ".omnicli_result.json"
+    if result_file.exists():
+        result_file.unlink()
 
     env = os.environ.copy()
     env["OMNICLI_BIN"] = shutil.which("omnicli") or str(SCRIPT_PATH)
     env["OMNICLI_TRACE"] = str(trace)
+    env["OMNICLI_RESULT"] = str(result_file)
+    env["OMNICLI_MAX_CALLS"] = str(max_calls)
     env["OMNICLI_TRUST_INDEX"] = "1"
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONPATH"] = str(bindings_dir) + (
@@ -1394,6 +1396,15 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
             "--setenv", "HOME", str(work),
         ] + tail + [sys.executable, str(script_path)]
 
+        if mem_limit is not None:
+            if not shutil.which("prlimit"):
+                sys.exit("❌ Error: --mem-limit needs prlimit (util-linux) to set RLIMIT_AS")
+            # bwrap has no --rlimit-* option, so the cap is set on bwrap itself;
+            # the plan and every process it spawns inherit it. Soft = hard, so the
+            # plan cannot raise its own ceiling back up.
+            cap = mem_limit * 1024 * 1024
+            cmd = ["prlimit", f"--as={cap}:{cap}", "--"] + cmd
+
     started = time.time()
     if os.environ.get("OMNICLI_EXEC_DEBUG"):
         print(" ".join(cmd), file=sys.stderr)
@@ -1409,9 +1420,33 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
             shutil.rmtree(runtime, ignore_errors=True)
     elapsed = time.time() - started
 
+    stderr_text = proc.stderr
+    if proc.returncode != 0 and mem_limit is not None and (
+        "MemoryError" in proc.stderr or "can't start new thread" in proc.stderr
+    ):
+        stderr_text += (
+            f"\n[omnicli] this plan ran under --mem-limit {mem_limit} MiB (RLIMIT_AS). "
+            "A MemoryError or thread-creation failure above is the cap, not the plan's logic.\n"
+        )
+
     calls = 0
     if trace.is_file():
-        calls = sum(1 for line in trace.read_text(encoding="utf-8").splitlines() if line.strip())
+        rows = [line for line in trace.read_text(encoding="utf-8").splitlines() if line.strip()]
+        for line in rows[seen:]:
+            try:
+                kind = json.loads(line).get("kind")
+            except (ValueError, AttributeError):
+                kind = None
+            if kind in (None, "call"):
+                calls += 1
+
+    result = None
+    if result_file.is_file():
+        try:
+            result = json.loads(result_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            result = None
+        result_file.unlink(missing_ok=True)
 
     if out_path:
         target = Path(out_path).resolve()
@@ -1425,19 +1460,23 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
             "plan": str(script_path),
             "sandboxed": sandboxed,
             "sandbox": sandbox,
+            "mem_limit": mem_limit,
             "exit_code": proc.returncode,
             "seconds": round(elapsed, 3),
             "tool_calls": calls,
             "bridge_calls": bridge_calls,
             "bridge_denied": bridge_denied,
             "tools": built.get("tools"),
+            "result": result,
             "stdout": proc.stdout,
-            "stderr": proc.stderr[-2000:],
+            "stderr": stderr_text[-2000:],
         }, indent=2))
+        if proc.returncode != 0 and stderr_text:
+            sys.stderr.write(stderr_text if stderr_text.endswith("\n") else stderr_text + "\n")
     else:
         sys.stdout.write(proc.stdout)
-        if proc.stderr:
-            sys.stderr.write(proc.stderr if proc.stderr.endswith("\n") else proc.stderr + "\n")
+        if stderr_text:
+            sys.stderr.write(stderr_text if stderr_text.endswith("\n") else stderr_text + "\n")
         detail = f"sandbox={sandbox}"
         if bridge_calls:
             detail += f" · bridge={bridge_calls} call(s)"
@@ -1697,9 +1736,12 @@ def main():
                         "none: unsandboxed.")
     p.add_argument("--no-sandbox", action="store_true", help="Alias for --sandbox none")
     p.add_argument("--timeout", type=float, default=300.0)
+    p.add_argument("--max-calls", type=int, default=100, metavar="N",
+                   help="Tool calls one plan may make; 0 = unlimited (default 100)")
+    p.add_argument("--mem-limit", type=int, default=None, metavar="MiB",
+                   help="Address-space cap in MiB (RLIMIT_AS) on the plan process and "
+                        "every child it spawns; unset = no cap, needs a sandbox")
     p.add_argument("--json", action="store_true")
-
-    sub.add_parser("mcp", help="(retired) JSON-RPC MCP server; use Code Mode or CLI instead")
 
     p = sub.add_parser("status", aliases=["health"],
                        help="Health of every local service, the catalog, and the retrieval tier")
@@ -1772,9 +1814,8 @@ def main():
     elif args.action in ("exec", "plan"):
         mode = "none" if args.no_sandbox else args.sandbox
         cmd_exec(args.script, workspace=args.workspace, out_path=args.out,
-                 sandbox=mode, timeout=args.timeout, as_json=args.json)
-    elif args.action == "mcp":
-        cmd_mcp()
+                 sandbox=mode, timeout=args.timeout, as_json=args.json,
+                 max_calls=args.max_calls, mem_limit=args.mem_limit)
     elif args.action in ("status", "health"):
         cmd_status(as_json=args.json)
     elif args.action == "harness":

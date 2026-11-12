@@ -99,10 +99,24 @@ export async function appendEvent(root, sessionID, project, event) {
   }
 }
 
+function resolveProject(ctx) {
+  const dir =
+    (typeof ctx?.directory === "string" && ctx.directory) ||
+    (typeof ctx?.location?.directory === "string" && ctx.location.directory) ||
+    (typeof ctx?.location === "string" && ctx.location) ||
+    (typeof process?.cwd === "function" ? process.cwd() : "");
+  if (!dir) return "global";
+  try {
+    return basename(dir) || "global";
+  } catch {
+    return "global";
+  }
+}
+
 export const MemoryCapturePlugin = async (ctx) => {
   if (process.env.MEMORY_CAPTURE === "0") return {};
   const root = memoryRoot();
-  const project = basename(ctx?.directory || process.cwd()) || "global";
+  const project = resolveProject(ctx);
   const seen = new Set();
 
   return {
@@ -123,4 +137,56 @@ export const MemoryCapturePlugin = async (ctx) => {
   };
 };
 
-export default MemoryCapturePlugin;
+export async function setup(ctx) {
+  try {
+    if (process.env.MEMORY_CAPTURE === "0") return () => {};
+    const root = memoryRoot();
+    const project = resolveProject(ctx);
+    const seen = new Set();
+
+    if (!ctx || typeof ctx.event?.subscribe !== "function") return () => {};
+
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        for await (const input of ctx.event.subscribe({ signal: controller.signal })) {
+          if (controller.signal.aborted) break;
+          try {
+            if (!input) continue;
+            const type = input.type;
+            const properties = input.data || input.properties || {};
+
+            if (type !== "message.part.updated") continue;
+            const part = properties.part;
+            if (part?.type !== "tool") continue;
+            const sessionID = properties.sessionID || part.sessionID;
+            if (!sessionID) continue;
+            const line = toEvent(part, seen);
+            if (!line) continue;
+            await appendEvent(root, sessionID, project, line);
+          } catch {
+            // capture must never fail
+          }
+        }
+      } catch {
+        // capture must never fail
+      }
+    })();
+
+    return () => {
+      try {
+        controller.abort();
+      } catch {}
+    };
+  } catch {
+    return () => {};
+  }
+}
+
+export default process.env.OPENCODE_PLUGIN_API === "v1" ? MemoryCapturePlugin : {
+  id: "memory-capture",
+  server: MemoryCapturePlugin,
+  setup,
+};
+

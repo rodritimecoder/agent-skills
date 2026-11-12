@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { appendEvent, scrub, toEvent } from "./memory-capture.js";
+import { MemoryCapturePlugin, appendEvent, scrub, setup, toEvent } from "./memory-capture.js";
 
 const fixed = () => "2026-11-10T00:00:00.000Z";
 
@@ -126,6 +126,55 @@ await check("an unwritable root does not throw, it returns false", async () => {
 });
 
 rmSync(root, { recursive: true, force: true });
+
+// ---------------------------------------------------------------- setup & ctx shapes
+
+await check("setup accepts ctx with location object without throwing", async () => {
+  const dispose = await setup({ location: { directory: "/home/user/my-project", workspaceID: "ws-1" } });
+  assert.equal(typeof dispose, "function");
+  dispose();
+});
+
+await check("setup processes events from ctx.event.subscribe", async () => {
+  const testRoot = mkdtempSync(join(tmpdir(), "memcap-setup-"));
+  process.env.MEMORY_ROOT = testRoot;
+  try {
+    let pushed = false;
+    async function* eventStream() {
+      yield {
+        type: "message.part.updated",
+        data: {
+          sessionID: "ses_stream",
+          part: {
+            type: "tool",
+            tool: "edit",
+            state: { status: "completed", input: { filePath: "index.ts" } },
+          },
+        },
+      };
+      // Wait a moment for consumer
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const dispose = await setup({
+      location: { directory: "/home/user/project-stream" },
+      event: { subscribe: () => eventStream() },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    dispose();
+
+    const logged = readFileSync(
+      join(testRoot, "01_transcripts", "project-stream", "ses_stream.jsonl"),
+      "utf8",
+    ).trim();
+    assert.ok(logged.includes('"action":"edit"'));
+    assert.ok(logged.includes('"path":"index.ts"'));
+  } finally {
+    delete process.env.MEMORY_ROOT;
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
 
 if (failures.length) {
   console.error(`\n${failures.length} failure(s)`);

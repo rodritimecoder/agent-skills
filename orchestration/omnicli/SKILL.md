@@ -9,14 +9,16 @@ allowed-tools: "Bash(omnicli:*) Read"
 
 # `omnicli` — The Uber OmniCLI
 
-One gateway, two faces, one catalog. An agent discovers a tool by *intent*,
+One gateway, two surfaces, one catalog. An agent discovers a tool by *intent*,
 pulls the contract for that one tool, invokes it, and gets a bounded response.
 Nothing else enters the context window.
 
 ```
-                  ┌── Face A: CLI (shell harnesses) ──────────────┐
+                  ┌── CLI (shell harnesses) ──────────────────────┐
    agent ────────▶│  omnicli search | describe | invoke | status │
-                  └── Face B: MCP stdio (tool-calling agents) ────┘
+                  ├── Code Mode (one plan, one turn) ────────────┤
+                  │  omnicli exec plan.py --sandbox strict       │
+                  └──────────────────────────────────────────────┘
                                         │
                         ┌───────────────▼───────────────┐
                         │  catalog.db  (control plane)   │
@@ -195,8 +197,8 @@ that is what you ask for.
 
 `omnicli spec --grep <re> --stubs` is the wide-angle version: annotated
 signatures for every matching tool, in one bounded reply. It is what an agent
-reads before writing a plan, and `omni_describe(stub: true)` returns the same
-thing over MCP.
+reads before writing a plan, and `spec(grep=...)` returns the same thing
+*inside* the plan.
 
 The skills themselves are **never modified**. The catalog is an index over
 them: it reads the files, it does not own them. Delete `catalog.db` and every
@@ -274,22 +276,18 @@ at import time, not at call forty.
 | **Discovery** | `search()`, `spec()` and `describe()` are callable *inside* the plan — definitions never enter the window |
 | **Isolation (`write`)** | bubblewrap: writes land only in the workspace and an ephemeral `/tmp`; `/` is read-only |
 | **Isolation (`strict`)** | no network, home masked, and every tool call crosses one UNIX socket to the parent; the plan holds no credentials and cannot open a socket |
-| **Allowlist** | a strict plan can reach `search`, `list`, `tools`, `describe`, `invoke`, `policy`, `spec` — `exec` and `mcp` are refused with rc 126 and recorded in `bridge_denied` |
-| **Trace** | each call appends to `.omnicli_trace.jsonl`; `exec --json` reports `tool_calls`, `bridge_calls`, seconds and bytes |
+| **Isolation (memory)** | `--mem-limit MiB` is opt-in: unset is no cap at all. Because the right number belongs to the plan (a 64 MiB one-liner and a 200 MiB allocation cannot share a default), setting it caps `RLIMIT_AS` for the plan and every child it spawns |
+| **Allowlist** | a strict plan can reach `search`, `list`, `tools`, `describe`, `invoke`, `policy`, `spec` — `exec` is refused with rc 126 and recorded in `bridge_denied` |
+| **Concurrency** | sync calls are serial; `parallel()` runs the `a*` twins at once (default fan-out 8), so ten independent calls cost about one call's latency |
+| **Call budget** | `--max-calls` (default 100, `0` = unlimited) reserves each slot *before* dispatch; over budget raises `RuntimeError` at the call site naming the count and the calls just made |
+| **Result** | `emit_result(value)` sends one value back on its own channel: `exec --json` reports it under `result`, while `stdout` stays the plan's printed text |
+| **Trace** | each call appends a `kind=call` row (with `t`) and then a `kind=done` row (with `ms`, `rc`) to `.omnicli_trace.jsonl`; `exec --json` reports `tool_calls`, `bridge_calls`, seconds and bytes |
 | **Escape hatch** | `--no-sandbox` runs unsandboxed; `--workspace DIR` chooses the writable root |
 
 Token arithmetic: a 9-step job becomes **one** model turn. The plan's own
 reads and writes never cross the boundary.
 
-See [references/code-mode-sdk.md](references/code-mode-sdk.md) for the full SDK API reference, and inspect runnable scripts in [examples/](examples/).
-
----
-
-## 🔌 Face B — The MCP Server (Retired)
-
-> ⚠️ **Retired:** `omnicli mcp` has been retired. Coding agents on this workstation operate directly through **Face A (CLI)** and **Code Mode (`omnicli exec`)**.
-> 
-> As established by Uber's MCP Gateway experience and Michael Rollins' engineering research, routing intermediate data across MCP JSON-RPC round-trips burns massive prompt tokens and causes quadratic context decay. Chaining tools inside Python scripts (`omnicli exec`) keeps intermediate state in local variables and emits only the final answer in one single turn.
+See [references/code-mode-sdk.md](references/code-mode-sdk.md) for the full SDK API reference, and inspect runnable scripts in [examples/](examples/). The run that added budgets, fan-out and the memory cap is recorded in [references/plan-code-mode-limits.md](references/plan-code-mode-limits.md).
 
 ---
 
@@ -300,9 +298,9 @@ workstation harness in the `harnesses/` directory:
 
 | Harness | Guide | Primary Face | Key Primitives |
 |---|---|---|---|
-| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | MCP Server (`stdio`) + CLI | `omni_*` meta-tools, `html_preview` visuals, reactive wakeups |
+| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | Code Mode + CLI | `omnicli exec` plans, `html_preview` visuals, reactive wakeups |
 | **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Python Bindings + CLI | `run_workflow` integration, dynamic subagents, surgical diffs |
-| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | MCP Server + CLI | `opencode.json` config, local daemons (:8080-:8085), compound bash |
+| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | Code Mode + CLI | skills path, local daemons (:8080-:8085), compound bash |
 | **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI | Fast sub-10ms terminal tool calls, strict 8KB token budget cap |
 | **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Direct CLI + Sandbox | Bubblewrap sandboxing (`--sandbox strict`), hot-reloading, WAL safety |
 
@@ -404,4 +402,9 @@ uses the BM25 catalog instead of the old substring scorer.
    *Architecture*: AutoCrawler catalog ingestion → SQLite FTS registry → 4 core meta-tools (`discover`, `describe`, `invoke`, `status`) → bounded responses with byte caps and JSON projections. Eliminates catalog bloat and context poisoning across large fleets of tools.
 2. **Cloudflare's Code Mode**: [Code Mode: execute code to invoke tools instead of LLM function calling](https://blog.cloudflare.com/code-mode/)  
    *Architecture*: Replaces multi-step JSON function calling roundtrips with sandboxed code execution (`omnicli exec`) against typed SDK bindings (`omnicli_tools.py`). Intermediates stay in memory; only synthesized results enter context.
+3. **MCP, evaluated and removed.** A stdio JSON-RPC server was built, tested (28
+   conformance checks) and retired: routing intermediate data across round-trips
+   burns prompt tokens and causes quadratic context decay, while Python variables
+   cost nothing. The code is preserved at `archived/omnicli-mcp/` for reference,
+   not wired to any verb.
 
