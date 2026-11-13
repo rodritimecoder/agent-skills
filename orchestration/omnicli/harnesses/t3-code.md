@@ -50,9 +50,20 @@ omnicli invoke zoom-recorder/scripts/zoom_download \
 
 ### Path 3 — Python Code Mode (`omnicli exec`)
 
-For multi-step plans and heavy parsing, one script, one turn:
+For multi-step plans and heavy parsing, run sandboxed Python in one turn with zero file staging overhead:
 
 ```bash
+# Inline execution
+omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'
+
+# Piped stdin execution
+cat << 'EOF' | omnicli exec -
+from omnicli_tools import search, invoke, zoom
+hits = search("audio transcription", limit=3)
+print(hits)
+EOF
+
+# File execution
 omnicli exec plan.py --sandbox write
 ```
 

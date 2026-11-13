@@ -100,6 +100,30 @@ log(f"Finished pipeline: {summary}")
 
 ---
 
+## 💻 Python Code Mode in Shell (`omnicli exec`)
+
+When an agent needs to perform multi-step data exploration, inspect binary formats/archives (like `app.asar`), or chain multiple tool calls, **never run serial `python3 -c` commands**. Instead, run sandboxed Python Code Mode in a single turn via `omnicli exec`:
+
+```bash
+# Inline execution (zero file staging overhead)
+omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'
+
+# Piped stdin execution
+cat << 'EOF' | omnicli exec -
+import json
+from omnicli_tools import search
+results = search("ocr text extraction", limit=3)
+print(json.dumps([r["id"] for r in results]))
+EOF
+
+# File-based execution
+omnicli exec plan.py --sandbox write
+```
+
+Inside `omnicli exec`, bubblewrap isolates the process, enforces `--max-calls` (default 100), optional memory limits (`--mem-limit`), and pre-loads typed `omnicli_tools` bindings.
+
+---
+
 ## 👥 Dynamic Subagent Delegation
 
 When dispatching parallel workers with `invoke_subagent`, equip subagents with `omnicli` CLI tools:

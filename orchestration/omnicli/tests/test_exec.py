@@ -197,6 +197,46 @@ class TestExec(unittest.TestCase):
             self.assertIn("rc 126", report["stdout"])
             self.assertIn("exec", report["bridge_denied"])
 
+    @unittest.skipUnless(shutil.which("bwrap"), "bubblewrap not installed")
+    def test_exec_with_code_flag(self):
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "exec", "-c", "print('inline-success')", "--json"],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["plan"], "<inline>")
+        self.assertIn("inline-success", report["stdout"])
+
+    @unittest.skipUnless(shutil.which("bwrap"), "bubblewrap not installed")
+    def test_exec_with_stdin(self):
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "exec", "-", "--json"],
+            input="print('stdin-success')",
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["plan"], "<stdin>")
+        self.assertIn("stdin-success", report["stdout"])
+
+    def test_exec_arg_validation(self):
+        # neither script nor -c
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "exec"],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("requires a plan script", proc.stderr)
+
+        # both script and -c
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "exec", "dummy.py", "-c", "print(1)"],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("cannot pass both", proc.stderr)
+
 
 class TestContractIsolation(unittest.TestCase):
     def test_help_probe_cannot_write_into_the_caller_directory(self):

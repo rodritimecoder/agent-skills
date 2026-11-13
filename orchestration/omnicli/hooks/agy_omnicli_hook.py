@@ -30,8 +30,9 @@ ROUTING = (
     "- omnicli search \"<intent>\" — find catalogued tools by intent.\n"
     "- omnicli describe <tool_id> — read one tool's contract before calling it.\n"
     "- omnicli invoke <tool_id> — run one catalogued tool; output is capped at 8 KB.\n"
-    "- omnicli exec plan.py — run a Python Code Mode plan when a job needs two or more catalogue calls.\n"
-    "Rules: discover with search, never by viewing or grepping skill directories. "
+    "- omnicli exec -c '<python code>' or omnicli exec plan.py — run Python Code Mode in sandbox with omnicli_tools bindings.\n"
+    "Rules: For multi-step exploration or data parsing (≥ 2 tool calls or parsing files/binaries), DO NOT probe incrementally with python3 -c / bash. Run a Code Mode script via omnicli exec in one turn.\n"
+    "Discover with search, never by viewing or grepping skill directories. "
     "Ordinary code and file work in the current repo still uses native tools."
 )
 

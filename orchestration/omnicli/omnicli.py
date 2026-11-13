@@ -1306,7 +1306,8 @@ def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
         print(f"   {payload['tools']} tools · {payload['skills']} skills · fingerprint {fingerprint[:12]}")
 
 
-def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = None,
+def cmd_exec(script: str | None = None, code: str | None = None,
+             workspace: str | None = None, out_path: str | None = None,
              sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
              max_calls: int = 100, mem_limit: int | None = None):
     con = _require_catalog()
@@ -1321,17 +1322,47 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
     if mem_limit is not None and sandbox == "none":
         sys.exit("❌ Error: --mem-limit needs a sandbox; --sandbox none runs without an rlimit")
 
-    script_path = Path(script).resolve()
-    if not script_path.is_file():
-        sys.exit(f"❌ Error: no plan script at {script_path}")
+    if not script and code is None:
+        sys.exit("❌ Error: exec requires a plan script, -c/--code, or '-' from stdin.")
+    if script and code is not None:
+        sys.exit("❌ Error: cannot pass both a plan script and -c/--code.")
+
+    inline_code: str | None = None
+    if code is not None:
+        inline_code = code
+    elif script == "-":
+        inline_code = sys.stdin.read()
+
+    is_inline = inline_code is not None
+
+    work = Path(workspace).resolve() if workspace else (
+        Path.cwd().resolve() if is_inline else Path(script).resolve().parent
+    )
+    if not work.is_dir():
+        sys.exit(f"❌ Error: workspace {work} is not a directory")
+
+    script_path: Path
+    if is_inline:
+        temp_plan = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".py",
+            prefix=".omnicli_inline_plan_",
+            dir=str(work),
+            delete=False,
+            encoding="utf-8",
+        )
+        temp_plan.write(inline_code)
+        temp_plan.flush()
+        temp_plan.close()
+        script_path = Path(temp_plan.name).resolve()
+    else:
+        script_path = Path(script).resolve()
+        if not script_path.is_file():
+            sys.exit(f"❌ Error: no plan script at {script_path}")
 
     built = builder.ensure_built(con, progress=False)
     fingerprint = builder.meta_get(con, "fingerprint", "")
     bindings_dir = bindings_mod.ensure(con, fingerprint)
-
-    work = Path(workspace).resolve() if workspace else script_path.parent
-    if not work.is_dir():
-        sys.exit(f"❌ Error: workspace {work} is not a directory")
 
     trace = work / ".omnicli_trace.jsonl"
     seen = 0
@@ -1414,6 +1445,8 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
     except subprocess.TimeoutExpired:
         sys.exit(f"❌ Error: plan exceeded {timeout:g}s")
     finally:
+        if is_inline and script_path.is_file():
+            script_path.unlink(missing_ok=True)
         if serving is not None:
             serving.__exit__()
         if runtime is not None:
@@ -1456,8 +1489,9 @@ def cmd_exec(script: str, workspace: str | None = None, out_path: str | None = N
     bridge_calls = getattr(bridge_server, "calls", 0)
     bridge_denied = getattr(bridge_server, "denied", [])
     if as_json:
+        plan_desc = "<stdin>" if script == "-" else ("<inline>" if code is not None else str(script_path))
         print(json.dumps({
-            "plan": str(script_path),
+            "plan": plan_desc,
             "sandboxed": sandboxed,
             "sandbox": sandbox,
             "mem_limit": mem_limit,
@@ -1727,8 +1761,11 @@ def main():
 
     p = sub.add_parser("exec", aliases=["plan"],
                        help="Run one plan script with tool bindings, in a sandbox")
-    p.add_argument("script", help="Path to the Python plan")
-    p.add_argument("--workspace", default=None, help="Writable directory (default: the script's folder)")
+    p.add_argument("script", nargs="?", default=None,
+                   help="Path to the Python plan, or '-' to read from stdin")
+    p.add_argument("-c", "--code", default=None,
+                   help="Inline Python code string to execute as a plan")
+    p.add_argument("--workspace", default=None, help="Writable directory (default: the script's folder or cwd)")
     p.add_argument("--out", default=None, help="Also write the plan's stdout to this file")
     p.add_argument("--sandbox", choices=["write", "strict", "none"], default="write",
                    help="write: writable workspace, open network. "
@@ -1813,9 +1850,9 @@ def main():
                  max_bytes=args.omni_max_bytes)
     elif args.action in ("exec", "plan"):
         mode = "none" if args.no_sandbox else args.sandbox
-        cmd_exec(args.script, workspace=args.workspace, out_path=args.out,
-                 sandbox=mode, timeout=args.timeout, as_json=args.json,
-                 max_calls=args.max_calls, mem_limit=args.mem_limit)
+        cmd_exec(script=args.script, code=args.code, workspace=args.workspace,
+                 out_path=args.out, sandbox=mode, timeout=args.timeout,
+                 as_json=args.json, max_calls=args.max_calls, mem_limit=args.mem_limit)
     elif args.action in ("status", "health"):
         cmd_status(as_json=args.json)
     elif args.action == "harness":

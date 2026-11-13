@@ -250,7 +250,9 @@ print comes back.
 ```bash
 omnicli spec --grep zoom --stubs   # the typed surface for just those tools
 omnicli bindings                   # writes ~/.local/share/omnicli/bindings/omnicli_tools.py
-omnicli exec plan.py               # runs it in bubblewrap; prints only the plan's stdout
+omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'  # inline
+cat plan.py | omnicli exec -       # piped stdin
+omnicli exec plan.py               # runs file in bubblewrap; prints only the plan's stdout
 omnicli exec plan.py --sandbox strict
 ```
 
