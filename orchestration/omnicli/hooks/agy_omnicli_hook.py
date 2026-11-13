@@ -3,8 +3,11 @@
 agy_omnicli_hook.py — Antigravity lifecycle hook for omnicli routing and bypass prevention.
 
 Integrates with ~/.gemini/config/hooks.json under "omnicli-route":
-  - PreInvocation: Injects the [omnicli route] prompt header so agents use Code Mode / catalog search.
-  - PreToolUse: Blocks raw reads/greps inside ~/src/my-agent-skills until omnicli search is called.
+  - PreInvocation / SessionStart: Injects [omnicli route] using agy protojson
+    `injectSteps: [{"systemMessage": {"systemMessage": ...}}]`.
+  - PreToolUse: Extracts agy camelCase `toolCall` payloads, primes sessions on
+    `omnicli` CLI usage, and blocks raw reads/greps inside ~/src/my-agent-skills
+    until omnicli search/exec is called.
   - Logs decisions to ~/.local/share/omnicli/route.jsonl for unified metrics across harnesses.
 """
 
@@ -12,7 +15,6 @@ import json
 import os
 import re
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,12 +38,27 @@ ROUTING = (
     "Ordinary code and file work in the current repo still uses native tools."
 )
 
-NATIVE_READ_TOOLS = {"view_file", "read_file", "search_code", "grep", "read"}
-SHELL_TOOLS = {"run_command", "bash", "shell"}
+NATIVE_READ_TOOLS = {
+    "view_file",
+    "read_file",
+    "search_code",
+    "code_search",
+    "grep",
+    "grep_search",
+    "glob",
+    "read",
+    "list_dir",
+    "find_by_name",
+    "view_file_outline",
+    "view_code_item",
+}
+SHELL_TOOLS = {"run_command", "bash", "shell", "execute_command", "run_terminal_command"}
 SHELL_READ_VERBS = re.compile(
-    r"(^|[;&|]\s*|\b(?:sudo|command|exec)\s+)(cat|bat|less|head|tail|grep|rg|ag|sed|awk|find|ls|tree)\b"
+    r"(^|[;&|]\s*|\b(?:sudo|command|exec)\s+)(cat|bat|less|head|tail|grep|rg|ag|sed|awk|find|ls|tree|python3?)\b"
 )
-OMNICLI_CMD = re.compile(r"\bomnicli\s+(search|describe|invoke|exec|status|policy)\b")
+OMNICLI_CMD = re.compile(
+    r"\b(?:omnicli|omnicli\.py)\s+(search|describe|invoke|exec|plan|spec|tools|list|status|policy|bindings)\b"
+)
 
 
 def _is_inside(child: str, parent: str) -> bool:
@@ -51,6 +68,16 @@ def _is_inside(child: str, parent: str) -> bool:
         return c == p or p in c.parents
     except Exception:
         return False
+
+
+def _get_session_id(payload: dict) -> str:
+    val = (
+        payload.get("conversationId")
+        or payload.get("conversation_id")
+        or payload.get("common", {}).get("conversationId")
+        or ""
+    )
+    return str(val).strip()
 
 
 def _is_session_primed(session_id: str) -> bool:
@@ -71,6 +98,24 @@ def _mark_session_primed(session_id: str) -> None:
         pass
 
 
+def _is_session_injected(session_id: str) -> bool:
+    if not session_id:
+        return False
+    marker = PRIMED_DIR / f"{session_id}.injected"
+    return marker.exists()
+
+
+def _mark_session_injected(session_id: str) -> None:
+    if not session_id:
+        return
+    try:
+        PRIMED_DIR.mkdir(parents=True, exist_ok=True)
+        marker = PRIMED_DIR / f"{session_id}.injected"
+        marker.touch()
+    except Exception:
+        pass
+
+
 def _log_route(row: dict) -> None:
     try:
         ROUTE_LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -86,69 +131,125 @@ def _log_route(row: dict) -> None:
 
 
 def _extract_tool_info(payload: dict) -> tuple[str, dict]:
-    # Extract tool call from possible payload locations
+    # Antigravity (agy) sends protojson camelCase: top-level `toolCall`
+    # (keep snake_case fallbacks for legacy/synthetic callers).
     tool_call = (
-        payload.get("tool_call")
+        payload.get("toolCall")
+        or payload.get("preToolHookArgs", {}).get("toolCall")
+        or payload.get("tool_call")
         or payload.get("pre_tool_hook_args", {}).get("tool_call")
         or payload.get("toolRequest")
         or {}
     )
 
-    name = tool_call.get("name") or tool_call.get("tool_name") or payload.get("tool") or ""
+    name = (
+        tool_call.get("name")
+        or tool_call.get("toolName")
+        or tool_call.get("tool_name")
+        or payload.get("toolName")
+        or payload.get("tool")
+        or ""
+    )
 
-    args = tool_call.get("args") or tool_call.get("arguments") or payload.get("args") or {}
+    args = (
+        tool_call.get("args")
+        or tool_call.get("arguments")
+        or payload.get("args")
+        or {}
+    )
     if isinstance(args, str):
         try:
             args = json.loads(args)
         except Exception:
             args = {"raw": args}
 
-    return name, args
+    return name, args if isinstance(args, dict) else {"raw": args}
+
+
+def _iter_strings(obj):
+    if isinstance(obj, str):
+        yield obj
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            yield from _iter_strings(v)
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            yield from _iter_strings(v)
 
 
 def _detect_skills_hit(tool_name: str, args: dict, cwd: str) -> str | None:
     if tool_name in NATIVE_READ_TOOLS:
-        path_fields = [
+        candidates = [
+            args.get("Path"),
             args.get("AbsolutePath"),
+            args.get("TargetFile"),
+            args.get("SearchDirectory"),
+            args.get("SearchPath"),
+            args.get("DirectoryPath"),
+            args.get("Directory"),
             args.get("path"),
+            args.get("file_path"),
+            args.get("target_file"),
             args.get("filePath"),
             args.get("filepath"),
             args.get("file"),
             args.get("directory"),
+            args.get("uri"),
         ]
-        for val in path_fields:
-            if isinstance(val, str) and val.strip():
-                resolved = os.path.abspath(os.path.join(cwd, val))
-                if _is_inside(resolved, SKILLS_ROOT):
-                    return resolved
+        seen = set()
+        for val in list(candidates) + list(_iter_strings(args)):
+            if not isinstance(val, str):
+                continue
+            raw = val.strip()
+            if not raw or raw in seen:
+                continue
+            seen.add(raw)
+            if raw.startswith("file://"):
+                raw = raw[len("file://"):]
+            expanded = os.path.expanduser(raw)
+            resolved = os.path.abspath(os.path.join(cwd, expanded))
+            if _is_inside(resolved, SKILLS_ROOT):
+                return resolved
         return None
 
     if tool_name in SHELL_TOOLS:
         cmd = args.get("CommandLine") or args.get("command") or ""
         if isinstance(cmd, str) and cmd:
-            if SHELL_READ_VERBS.search(cmd) and SKILLS_ROOT in cmd:
+            expanded_cmd = cmd.replace("~/", os.path.expanduser("~/"))
+            if SHELL_READ_VERBS.search(expanded_cmd) and (
+                SKILLS_ROOT in expanded_cmd or "my-agent-skills" in expanded_cmd
+            ):
                 return SKILLS_ROOT
 
     return None
 
 
 def handle_pre_invocation(payload: dict) -> dict:
+    session_id = _get_session_id(payload)
+    if session_id and _is_session_injected(session_id):
+        return {"terminationBehavior": ""}
+    if session_id:
+        _mark_session_injected(session_id)
+    _log_route({
+        "session": session_id or "global",
+        "tool": "",
+        "kind": "inject",
+        "decision": "inject",
+    })
     return {
-        "inject_steps": [
+        "injectSteps": [
             {
-                "system_message": ROUTING,
+                "systemMessage": {
+                    "systemMessage": ROUTING,
+                }
             }
-        ]
+        ],
+        "terminationBehavior": "",
     }
 
 
 def handle_pre_tool_use(payload: dict) -> dict:
-    session_id = str(
-        payload.get("conversationId")
-        or payload.get("conversation_id")
-        or payload.get("common", {}).get("conversationId")
-        or "global"
-    )
+    session_id = _get_session_id(payload) or "global"
     cwd = str(payload.get("cwd") or payload.get("common", {}).get("cwd") or os.getcwd())
     workspaces = payload.get("workspacePaths") or [cwd]
 
@@ -212,7 +313,7 @@ def handle_pre_tool_use(payload: dict) -> dict:
         "decision": "deny",
         "reason": (
             "Denied by agy-omnicli-route: reading skill directories to find a tool is the bypass this gate exists to stop. "
-            "Call 'omnicli search <intent>' first (or 'omnicli exec plan.py' for Code Mode); "
+            "Call 'omnicli search <intent>' first (or 'omnicli exec -c ...' for Code Mode); "
             "after one catalogue call, direct reads are allowed. "
             f"To work on the skills repo from a project outside it, create {EXEMPT_MARKER}."
         ),
@@ -234,7 +335,7 @@ def main():
     if not event:
         event = payload.get("hookEventName") or "PreToolUse"
 
-    if event == "PreInvocation":
+    if event in ("PreInvocation", "SessionStart"):
         result = handle_pre_invocation(payload)
     elif event == "PreToolUse":
         result = handle_pre_tool_use(payload)

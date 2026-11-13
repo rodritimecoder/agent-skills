@@ -3,16 +3,15 @@
 Unit tests for Antigravity omnicli lifecycle hook (agy_omnicli_hook.py).
 """
 
-import json
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 # Add hook directory to path
 HOOK_DIR = Path(__file__).resolve().parent.parent / "hooks"
-import sys
 sys.path.insert(0, str(HOOK_DIR))
 
 import agy_omnicli_hook as hook
@@ -45,17 +44,25 @@ class TestAgyOmnicliHook(unittest.TestCase):
         hook.ROUTE_LOG = self.orig_route_log
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    def test_pre_invocation_injects_routing(self):
-        res = hook.handle_pre_invocation({})
-        self.assertIn("inject_steps", res)
-        self.assertTrue(len(res["inject_steps"]) > 0)
-        self.assertIn("[omnicli route]", res["inject_steps"][0]["system_message"])
+    def test_pre_invocation_injects_protojson_routing_once_per_session(self):
+        res = hook.handle_pre_invocation({"conversationId": "ses-inject-1", "invocationNum": 1})
+        self.assertIn("injectSteps", res)
+        self.assertEqual(len(res["injectSteps"]), 1)
+        sys_msg = res["injectSteps"][0]["systemMessage"]
+        self.assertIsInstance(sys_msg, dict)
+        self.assertIn("[omnicli route]", sys_msg["systemMessage"])
+
+        # Second invocation in same session should not spam duplicate systemMessage
+        res2 = hook.handle_pre_invocation({"conversationId": "ses-inject-1", "invocationNum": 2})
+        self.assertNotIn("injectSteps", res2)
+        self.assertEqual(res2.get("terminationBehavior"), "")
 
     def test_unrelated_file_read_allowed(self):
         payload = {
             "conversationId": "ses-1",
             "cwd": "/home/rodri/my-app",
-            "tool_call": {
+            "toolCall": {
+                "id": "toolu_01",
                 "name": "view_file",
                 "args": {"AbsolutePath": "/home/rodri/my-app/index.js"},
             },
@@ -63,12 +70,13 @@ class TestAgyOmnicliHook(unittest.TestCase):
         res = hook.handle_pre_tool_use(payload)
         self.assertEqual(res["decision"], "allow")
 
-    def test_skill_dir_view_file_denied_when_unprimed(self):
+    def test_skill_dir_view_file_denied_when_unprimed_camel_case(self):
         target = os.path.join(self.skills_dir, "zoom-recorder", "SKILL.md")
         payload = {
             "conversationId": "ses-2",
             "cwd": "/home/rodri/my-app",
-            "tool_call": {
+            "toolCall": {
+                "id": "toolu_02",
                 "name": "view_file",
                 "args": {"AbsolutePath": target},
             },
@@ -77,12 +85,40 @@ class TestAgyOmnicliHook(unittest.TestCase):
         self.assertEqual(res["decision"], "deny")
         self.assertIn("Denied by agy-omnicli-route", res["reason"])
 
+    def test_skill_dir_find_by_name_denied_when_unprimed(self):
+        payload = {
+            "conversationId": "ses-find",
+            "cwd": "/home/rodri/my-app",
+            "toolCall": {
+                "id": "toolu_03",
+                "name": "find_by_name",
+                "args": {"SearchDirectory": self.skills_dir, "Pattern": "*"},
+            },
+        }
+        res = hook.handle_pre_tool_use(payload)
+        self.assertEqual(res["decision"], "deny")
+
+    def test_skill_dir_read_file_capital_path_denied_when_unprimed(self):
+        target = os.path.join(self.skills_dir, "ocr", "SKILL.md")
+        payload = {
+            "conversationId": "ses-read-file-path",
+            "cwd": "/home/rodri/my-app",
+            "toolCall": {
+                "id": "toolu_03b",
+                "name": "read_file",
+                "args": {"Path": target},
+            },
+        }
+        res = hook.handle_pre_tool_use(payload)
+        self.assertEqual(res["decision"], "deny")
+
     def test_skill_dir_shell_read_denied_when_unprimed(self):
         cmd = f"cat {self.skills_dir}/zoom-recorder/SKILL.md"
         payload = {
             "conversationId": "ses-3",
             "cwd": "/home/rodri/my-app",
-            "tool_call": {
+            "toolCall": {
+                "id": "toolu_04",
                 "name": "run_command",
                 "args": {"CommandLine": cmd},
             },
@@ -91,33 +127,37 @@ class TestAgyOmnicliHook(unittest.TestCase):
         self.assertEqual(res["decision"], "deny")
         self.assertIn("Denied by agy-omnicli-route", res["reason"])
 
-    def test_omnicli_search_primes_session_and_allows(self):
-        session_id = "ses-prime-test"
-        # 1. First run omnicli search
-        prime_payload = {
-            "conversationId": session_id,
-            "cwd": "/home/rodri/my-app",
-            "tool_call": {
-                "name": "run_command",
-                "args": {"CommandLine": "omnicli search 'transcribe audio'"},
-            },
-        }
-        res = hook.handle_pre_tool_use(prime_payload)
-        self.assertEqual(res["decision"], "allow")
-        self.assertTrue(hook._is_session_primed(session_id))
+    def test_omnicli_search_and_exec_prime_session_and_allow(self):
+        for idx, cmd in enumerate([
+            "omnicli search 'transcribe audio'",
+            "omnicli exec -c 'print(1)'",
+        ]):
+            session_id = f"ses-prime-{idx}"
+            prime_payload = {
+                "conversationId": session_id,
+                "cwd": "/home/rodri/my-app",
+                "toolCall": {
+                    "id": f"toolu_p_{idx}",
+                    "name": "run_command",
+                    "args": {"CommandLine": cmd},
+                },
+            }
+            res = hook.handle_pre_tool_use(prime_payload)
+            self.assertEqual(res["decision"], "allow")
+            self.assertTrue(hook._is_session_primed(session_id))
 
-        # 2. Subsequent direct read of skill is now permitted
-        target = os.path.join(self.skills_dir, "audiocpp-asr", "SKILL.md")
-        read_payload = {
-            "conversationId": session_id,
-            "cwd": "/home/rodri/my-app",
-            "tool_call": {
-                "name": "view_file",
-                "args": {"AbsolutePath": target},
-            },
-        }
-        res2 = hook.handle_pre_tool_use(read_payload)
-        self.assertEqual(res2["decision"], "allow")
+            target = os.path.join(self.skills_dir, "audiocpp-asr", "SKILL.md")
+            read_payload = {
+                "conversationId": session_id,
+                "cwd": "/home/rodri/my-app",
+                "toolCall": {
+                    "id": f"toolu_r_{idx}",
+                    "name": "view_file",
+                    "args": {"AbsolutePath": target},
+                },
+            }
+            res2 = hook.handle_pre_tool_use(read_payload)
+            self.assertEqual(res2["decision"], "allow")
 
     def test_project_inside_skills_is_exempt(self):
         target = os.path.join(self.skills_dir, "omnicli", "SKILL.md")
@@ -125,7 +165,7 @@ class TestAgyOmnicliHook(unittest.TestCase):
             "conversationId": "ses-exempt-proj",
             "cwd": self.skills_dir,
             "workspacePaths": [self.skills_dir],
-            "tool_call": {
+            "toolCall": {
                 "name": "view_file",
                 "args": {"AbsolutePath": target},
             },
@@ -139,7 +179,7 @@ class TestAgyOmnicliHook(unittest.TestCase):
         payload = {
             "conversationId": "ses-marker-test",
             "cwd": "/home/rodri/my-app",
-            "tool_call": {
+            "toolCall": {
                 "name": "view_file",
                 "args": {"AbsolutePath": target},
             },
