@@ -75,6 +75,21 @@ class TestHarnessVerification(unittest.TestCase):
                 self.assertIsInstance(c["passed"], bool)
                 self.assertIn("detail", c)
 
+    def test_native_tool_plugin_check_is_wired(self):
+        for h_id in ("t3-code", "opencode"):
+            res = harness.verify_harness(h_id)
+            checks = {c["check"]: c for c in res["checks"]}
+            self.assertIn("native_tool_plugin", checks)
+            self.assertIsInstance(checks["native_tool_plugin"]["passed"], bool)
+            self.assertIn("omnicli-route.js", checks["native_tool_plugin"]["detail"])
+
+    def test_agy_route_hook_check_is_wired(self):
+        res = harness.verify_harness("agy")
+        checks = {c["check"]: c for c in res["checks"]}
+        self.assertIn("agy_route_hook", checks)
+        self.assertIsInstance(checks["agy_route_hook"]["passed"], bool)
+        self.assertIn("agy_omnicli_hook.py", checks["agy_route_hook"]["detail"])
+
     def test_verify_all(self):
         res = harness.verify_all()
         self.assertIn(res["status"], ("PASS", "FAIL"))

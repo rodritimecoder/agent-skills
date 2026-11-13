@@ -38,7 +38,16 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
             "CHROME_DESKTOP": "com.t3tools.T3Code.desktop",
             "APPIMAGE": ".*T3-Code.*",
         },
-        "config_snippet": "# In T3 Code terminal or plan:\nfrom omnicli_tools import search, invoke, describe\n\n# Multi-step tasks execute in one turn via `omnicli exec plan.py`\nres = search(\"your task intent\")\n",
+        "config_snippet": (
+            "# Native tool surface (once): T3 Code drives OpenCode, so the plugin lands there.\n"
+            "mkdir -p ~/.config/opencode/plugins\n"
+            "ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \\\n"
+            "  ~/.config/opencode/plugins/omnicli-route.js\n"
+            "# Then reload the provider (`opencode reload`, or restart T3 Code).\n"
+            "# T3 lists omnicli_search / omnicli_describe / omnicli_invoke / omnicli_exec;\n"
+            "# Code Mode reaches the same functions as tools.omnicli.*.\n"
+            "omnicli harness verify t3-code\n"
+        ),
     },
     "agy": {
         "id": "agy",
@@ -55,7 +64,13 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
             "ANTIGRAVITY_CONVERSATION_ID": ".+",
             "GEMINI_HOME": ".+",
         },
-        "config_snippet": "# In Antigravity run_workflow or subagent script:\nfrom omnicli_tools import search, invoke, describe, spec\n\ntools = search(\"your task intent\", limit=3)\nresult = invoke(tools[0][\"id\"], [\"--help\"])\n",
+        "config_snippet": (
+            "# 1) Wire agy lifecycle hook in ~/.gemini/config/hooks.json under 'omnicli-route'\n"
+            "# 2) In Antigravity run_workflow or subagent script:\n"
+            "from omnicli_tools import search, invoke, describe, spec\n\n"
+            "tools = search(\"your task intent\", limit=3)\n"
+            "result = invoke(tools[0][\"id\"], [\"--help\"])\n"
+        ),
     },
     "opencode": {
         "id": "opencode",
@@ -70,11 +85,14 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
             "OPENCODE_CONFIG": ".+",
             "OPENCODE_ROOT": ".+",
         },
-        "config_snippet": json.dumps({
-            "skills": [
-                "/home/rodri/src/my-agent-skills/surface"
-            ]
-        }, indent=2),
+        "config_snippet": (
+            "# 1) Native tools (once): symlink the omnicli plugin\n"
+            "mkdir -p ~/.config/opencode/plugins\n"
+            "ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \\\n"
+            "  ~/.config/opencode/plugins/omnicli-route.js\n"
+            "# 2) Skill discovery (opencode.json)\n"
+            + json.dumps({"skills": ["/home/rodri/src/my-agent-skills/surface"]}, indent=2)
+        ),
     },
     "pi": {
         "id": "pi",
@@ -188,6 +206,43 @@ def get_config(query: str) -> str | None:
     return spec.get("config_snippet", "")
 
 
+
+def _native_tool_plugin_check() -> dict[str, Any]:
+    """The OpenCode plugin that gives T3/OpenCode omnicli_search et al."""
+    src = SKILL_DIR / "plugin" / "omnicli-route.js"
+    link = Path(os.path.expanduser("~/.config/opencode/plugins/omnicli-route.js"))
+    node = shutil.which("node")
+    link_ok = link.exists()
+    syntax_ok = False
+    if link_ok and node:
+        try:
+            proc = subprocess.run(
+                [node, "--check", str(link)], capture_output=True, text=True, timeout=10
+            )
+            syntax_ok = proc.returncode == 0
+        except Exception:
+            syntax_ok = False
+    passed = src.is_file() and link_ok and syntax_ok
+    detail = f"source={src.is_file()} link={link_ok} node_check={syntax_ok} target={link}"
+    return {"check": "native_tool_plugin", "passed": passed, "detail": detail}
+
+
+def _agy_route_hook_check() -> dict[str, Any]:
+    """The Antigravity lifecycle hook that gives agy PreToolUse gating and PreInvocation routing."""
+    src = SKILL_DIR / "hooks" / "agy_omnicli_hook.py"
+    hooks_cfg = Path(os.path.expanduser("~/.gemini/config/hooks.json"))
+    configured = False
+    if hooks_cfg.is_file():
+        try:
+            data = json.loads(hooks_cfg.read_text())
+            configured = "omnicli-route" in data
+        except Exception:
+            configured = False
+    passed = src.is_file() and configured
+    detail = f"source={src.is_file()} hooks_json_configured={configured} target={src}"
+    return {"check": "agy_route_hook", "passed": passed, "detail": detail}
+
+
 def verify_harness(query: str) -> dict[str, Any]:
     spec = get_harness(query)
     if not spec:
@@ -254,6 +309,7 @@ def verify_harness(query: str) -> dict[str, Any]:
             "passed": has_bindings,
             "detail": f"Bindings valid at {bindings_py}" if has_bindings else "Bindings not found or empty",
         })
+        checks.append(_native_tool_plugin_check())
 
     elif h_id == "agy":
         # Verify Python bindings generation
@@ -277,6 +333,7 @@ def verify_harness(query: str) -> dict[str, Any]:
                 "passed": False,
                 "detail": f"Bindings check failed: {exc}",
             })
+        checks.append(_agy_route_hook_check())
 
     elif h_id == "opencode":
         # Check opencode.json validity and surface discovery
@@ -293,6 +350,7 @@ def verify_harness(query: str) -> dict[str, Any]:
             "passed": is_valid_json,
             "detail": f"opencode.json parsed successfully at {cfg_file}" if is_valid_json else "Missing or invalid opencode.json",
         })
+        checks.append(_native_tool_plugin_check())
 
     elif h_id == "pi":
         # Verify output capping logic

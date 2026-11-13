@@ -8,9 +8,26 @@ This guide specifies how `omnicli` integrates with **OpenCode** as a first-party
 
 ## ⚡ Integration Surfaces in OpenCode
 
-OpenCode reaches `omnicli` through two complementary channels:
+OpenCode reaches `omnicli` through three complementary channels:
 
-### 1. Configuration in `~/.config/opencode/opencode.json`
+### 1. Native tools (the plugin)
+
+`plugin/omnicli-route.js` registers `omnicli_search`, `omnicli_describe`,
+`omnicli_invoke`, and `omnicli_exec` with `codemode: true`, so they appear in
+the tool list and inside Code Mode as `tools.omnicli.*`. It also injects the
+routing rule and denies skill-directory discovery until a catalogue call has
+run.
+
+```bash
+ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \
+  ~/.config/opencode/plugins/omnicli-route.js
+opencode reload
+omnicli harness verify opencode   # includes native_tool_plugin
+```
+
+Metrics: `python3 scripts/route_stats.py` reads `~/.local/share/omnicli/route.jsonl`.
+
+### 2. Configuration in `~/.config/opencode/opencode.json`
 
 Register the zero-copy surface path. Nothing else is needed — omnicli ships no
 server to attach:

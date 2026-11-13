@@ -298,11 +298,44 @@ workstation harness in the `harnesses/` directory:
 
 | Harness | Guide | Primary Face | Key Primitives |
 |---|---|---|---|
-| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | Code Mode + CLI | `omnicli exec` plans, `html_preview` visuals, reactive wakeups |
-| **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Python Bindings + CLI | `run_workflow` integration, dynamic subagents, surgical diffs |
-| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | Code Mode + CLI | skills path, local daemons (:8080-:8085), compound bash |
+| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | Native tools + Code Mode | `omnicli_*` tools, `omnicli exec` plans, `html_preview` visuals, reactive wakeups |
+| **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Hooks + Python Bindings | `PreToolUse` gate, `PreInvocation` routing, `run_workflow`, subagents |
+| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | Native tools + Code Mode | `omnicli_*` plugin tools, skills path, local daemons (:8080-:8085) |
 | **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI | Fast sub-10ms terminal tool calls, strict 8KB token budget cap |
 | **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Direct CLI + Sandbox | Bubblewrap sandboxing (`--sandbox strict`), hot-reloading, WAL safety |
+
+### Native tools in OpenCode and T3 Code
+
+Both harnesses reach the catalogue as native tools, not as a shell hop. The
+plugin registers `omnicli_search`, `omnicli_describe`, `omnicli_invoke`, and
+`omnicli_exec` with `codemode: true` (so Code Mode sees `tools.omnicli.*`),
+injects the routing rule, and denies skill-directory discovery until a
+catalogue call has run.
+
+```bash
+ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \
+  ~/.config/opencode/plugins/omnicli-route.js
+opencode reload
+omnicli harness verify t3-code   # includes native_tool_plugin
+```
+
+Source: [`plugin/omnicli-route.js`](plugin/omnicli-route.js). Bypass metrics:
+`python3 scripts/route_stats.py` over `~/.local/share/omnicli/route.jsonl`.
+
+### Deterministic hooks in Antigravity (`agy`)
+
+Antigravity uses native lifecycle hooks in `~/.gemini/config/hooks.json` under
+`omnicli-route` to enforce Kem's Law (*"a skill is instructions; a hook is code
+that ALWAYS runs"*):
+- `PreInvocation`: Injects `[omnicli route]` into prompt context.
+- `PreToolUse`: Intercepts `view_file` and shell commands reading `my-agent-skills`
+  and denies them until `omnicli search` has been called.
+
+```bash
+omnicli harness verify agy   # includes agy_route_hook
+```
+
+Source: [`hooks/agy_omnicli_hook.py`](hooks/agy_omnicli_hook.py).
 
 ### Harness operations
 

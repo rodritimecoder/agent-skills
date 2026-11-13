@@ -1,91 +1,97 @@
 # 🛠️ T3 Code Harness Guide for omnicli
 
-> *"T3 Code is an agentic IDE powered by the Agent Client Protocol (ACP) and host-managed MCP tools."*
+> *"T3 Code is an agentic IDE powered by the Agent Client Protocol (ACP); the agent it drives does the tool calling."*
 
-This guide specifies how `omnicli` integrates natively with **T3 Code** as a first-party tool discovery, execution, and local-inference gateway.
+T3 Code has **no omnicli integration of its own** — its provider drivers are `codex`, `claudeAgent`, `opencode`, `antigravity`, and `pi`, and none of them knows the catalogue exists. When the provider is **OpenCode** (the default here), the integration point is OpenCode's plugin surface: a native tool registration plus a routing hook. That is what this guide wires.
 
 ---
 
-## ⚡ Integration Faces in T3 Code
+## ⚡ Three ways omnicli reaches a T3 session
 
-T3 Code is a shell-native Agent Client Protocol (ACP) IDE. Rather than paying the JSON-RPC context tax of traditional MCP servers, `omnicli` integrates with T3 Code through two primary high-performance paths:
+### Path 1 — Native tools (default; install once)
 
-### Path 1: Direct Terminal / Bash Invocation (`run_command`)
-
-When executing commands in T3 Code, use `omnicli` to guard against context flooding:
+A global OpenCode plugin registers four catalogue verbs and injects the routing rule at every model call. Because T3 enumerates the OpenCode tool list, the verbs appear in T3, and because they are registered with `codemode: true`, they are also callable inside OpenCode's Code Mode as `tools.omnicli.*`.
 
 ```bash
-# 1. Search for a tool by natural intent
+mkdir -p ~/.config/opencode/plugins
+ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \
+  ~/.config/opencode/plugins/omnicli-route.js
+opencode reload          # or restart T3 Code / its OpenCode provider
+omnicli harness verify t3-code
+```
+
+| Tool | What it does |
+|---|---|
+| `omnicli_search` / `tools.omnicli.search` | Rank catalogued tools by intent. Use **before** hand-writing a script or reading a skill. |
+| `omnicli_describe` / `tools.omnicli.describe` | Read one tool's contract (`--section`, `--doc`), not a whole `SKILL.md`. |
+| `omnicli_invoke` / `tools.omnicli.invoke` | Run one tool; 8 KB cap, optional `project` fields and `buffer`. |
+| `omnicli_exec` / `tools.omnicli.exec` | Run a Python plan in one turn; bubblewrap, 100-call budget, optional memory cap. |
+
+The plugin also:
+
+- injects a short `[omnicli route]` block into the system instructions on each model call;
+- denies `read`/`grep`/`glob`/`list` (and read-only shell verbs) against `~/src/my-agent-skills/**` until the session has called `omnicli_search`/`describe`/`invoke` — the anti-pattern `AGENTS.md` names;
+- exempts a session whose project root is inside the skills repo, and honours `~/src/my-agent-skills/.omnicli-route-exempt` for maintenance from another project;
+- appends one JSON row per call to `~/.local/share/omnicli/route.jsonl`. Summarise it with `python3 scripts/route_stats.py` (bypass rate, denials, catalogue calls).
+
+**The collision to know:** inside OpenCode Code Mode, the bare `search()` helper indexes *tool names*. The catalogue search is `tools.omnicli.search`. The injected routing block says so; do not rename it.
+
+### Path 2 — Direct CLI (`omnicli` on the shell)
+
+Still valid for one-shot commands and scripts outside the model loop:
+
+```bash
 omnicli search "transcribe zoom lecture"
-
-# 2. Inspect its contract
 omnicli describe zoom-recorder/scripts/zoom_download
-
-# 3. Run it with output capping and projection
 omnicli invoke zoom-recorder/scripts/zoom_download \
-  --omni-max-bytes 8000 \
-  --omni-project "status,transcript_path" \
+  --omni-max-bytes 8000 --omni-project "status,transcript_path" \
   -- --url "https://zoom.us/rec/..."
 ```
 
-### Path 2: Code Mode Python SDK (`omnicli exec`)
+### Path 3 — Python Code Mode (`omnicli exec`)
 
-For multi-step workflows (≥ 2 tool calls), write one Python plan script that executes in a single turn. Intermediate data lives in Python memory rather than polluting the conversation history:
-
-```bash
-omnicli exec plan.py --sandbox write
-```
-
----
-
-## 🐍 Code Mode in T3 Code (`omnicli exec`)
-
-Instead of making 10 round-trip tool calls across turns, write one Python plan script that executes in a single turn:
+For multi-step plans and heavy parsing, one script, one turn:
 
 ```bash
 omnicli exec plan.py --sandbox write
 ```
 
 ```python
-# plan.py
 from omnicli_tools import search, invoke, zoom
 
-# 1. Discover tools inside the plan
 hits = search("audio transcription", limit=3)
-
-# 2. Invoke tool with typed bindings
 result = zoom(url="https://zoom.us/rec/share/abc", format="md")
-
-# 3. Print only the synthesis back to T3 Code
-print(f"Downloaded and transcribed: {result['output'][:300]}")
+print(result["output"][:300])
 ```
 
-Intermediates stay on disk or in Python memory; only the final print lands in T3 Code's context window.
+Use `strict` when the plan handles untrusted input; `--max-calls` and `--mem-limit` are enforced inside the bwrap sandbox.
 
 ---
 
 ## 🖼️ Visual Presentation & Previews
 
-T3 Code provides `html_preview` and `html_render` tools. When `omnicli` produces tabular, diagnostic, or graphical reports:
-1. Output HTML report (e.g. `omnicli status --json` rendered to an HTML dashboard).
-2. Pass the HTML file path to `html_preview`, then `html_render`.
-3. Never start background HTTP servers to display static results.
+T3 provides `html_preview` and `html_render`. When omnicli produces tabular, diagnostic, or graphical reports:
+1. Write an HTML report (e.g. `omnicli status --json` rendered to a dashboard).
+2. Pass the file path to `html_preview`, then `html_render`.
+3. Never start a background HTTP server for a static result.
 
 ---
 
 ## 🏛️ T3 Code Host Invariants
 
-1. **Reactive Wakeups (Zero Polling):** Never use `sleep` or poll tasks in a loop. When launching background commands, let T3 Code resume execution automatically.
-2. **Delegate Worktrees:** Never manually run `git worktree add` for child delegates in shell. Pass `isolation: "worktree"` in `delegate_task`.
-3. **Artifact Directory:** Store run traces, buffers, and intermediate step outputs in `<appDataDir>/brain/<conversation-id>/scratch/` or `.omnicli/`.
-4. **Verbatim Thread Links:** Always use the markdown `link` verbatim when referencing threads.
+1. **Reactive wakeups:** never `sleep` or poll; let T3 resume the turn.
+2. **Delegate worktrees:** pass `isolation: "worktree"`; never run `git worktree add` for a child.
+3. **Artifacts:** keep traces and intermediate outputs in `<appDataDir>/brain/<conversation-id>/scratch/` or `.omnicli/`.
+4. **Links:** reference threads with their markdown `link` verbatim.
 
 ---
 
 ## 🔍 Verification
 
-Run the automated verification suite to confirm T3 Code readiness:
-
 ```bash
-omnicli harness verify t3-code
+omnicli harness verify t3-code     # 6 checks, including native_tool_plugin
+omnicli harness config t3-code     # the install block above
+python3 orchestration/omnicli/scripts/route_stats.py
 ```
+
+`native_tool_plugin` fails when the symlink is missing or the plugin no longer parses — i.e. the check tracks the wiring, not the documentation.

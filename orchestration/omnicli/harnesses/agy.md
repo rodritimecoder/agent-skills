@@ -13,6 +13,45 @@ Antigravity provides first-class primitives for agent execution:
 - `define_subagent` & `invoke_subagent`: Dynamic subagent orchestration with isolated workspaces.
 - `replace_file_content`: Surgical, contiguous file editing.
 - `run_command`: Sandboxed command execution with background task notifications.
+- `hooks.json`: Deterministic lifecycle hooks (`PreInvocation`, `PreToolUse`, `PostToolUse`).
+
+---
+
+## 🪝 Lifecycle Hook Integration (`omnicli-route`)
+
+Antigravity enforces Kem's Law: *"A skill is instructions the model may ignore; a hook is code that ALWAYS runs."*
+
+`orchestration/omnicli/hooks/agy_omnicli_hook.py` wires into `~/.gemini/config/hooks.json` under `"omnicli-route"`:
+
+1. **`PreInvocation` Hook:** Injects `[omnicli route]` into the prompt context, directing the agent to use `omnicli search` / `exec` instead of manual discovery.
+2. **`PreToolUse` Gate:** Automatically intercepts `view_file` and shell read commands (`cat`, `grep`, `rg`, `find`, etc.) targeting `~/src/my-agent-skills/**`. If an unprimed agent attempts to read skill directories directly without calling `omnicli search`, the hook rejects the call with `{"decision": "deny"}`.
+3. **Observability:** Logs all allows, denials, and exemptions to `~/.local/share/omnicli/route.jsonl`.
+
+```json
+{
+  "omnicli-route": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "/bin/sh -c 'if [ -f \"/home/rodri/src/my-agent-skills/orchestration/omnicli/hooks/agy_omnicli_hook.py\" ]; then /usr/bin/python3 \"/home/rodri/src/my-agent-skills/orchestration/omnicli/hooks/agy_omnicli_hook.py\" PreInvocation; else printf \"{}\"; fi'",
+        "timeout": 5
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'if [ -f \"/home/rodri/src/my-agent-skills/orchestration/omnicli/hooks/agy_omnicli_hook.py\" ]; then /usr/bin/python3 \"/home/rodri/src/my-agent-skills/orchestration/omnicli/hooks/agy_omnicli_hook.py\" PreToolUse; else printf \"{\\\"decision\\\":\\\"allow\\\"}\"; fi'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ---
 
