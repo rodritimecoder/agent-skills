@@ -53,11 +53,22 @@ NATIVE_READ_TOOLS = {
     "view_code_item",
 }
 SHELL_TOOLS = {"run_command", "bash", "shell", "execute_command", "run_terminal_command"}
+WRITE_TOOLS = {
+    "write_to_file",
+    "replace_file_content",
+    "multi_replace_file_content",
+    "edit_file",
+    "write_file",
+}
 SHELL_READ_VERBS = re.compile(
     r"(^|[;&|]\s*|\b(?:sudo|command|exec)\s+)(cat|bat|less|head|tail|grep|rg|ag|sed|awk|find|ls|tree|python3?)\b"
 )
 OMNICLI_CMD = re.compile(
     r"\b(?:omnicli|omnicli\.py)\s+(search|describe|invoke|exec|plan|spec|tools|list|status|policy|bindings)\b"
+)
+INLINE_PY_PROBE = re.compile(
+    r"(?:^|[;&|()]\s*|\b(?:sudo|command|exec|env)\s+)"
+    r"(?:[^\s;&|()]*/)?python(?:3(?:\.\d+)?)?\s+-c(?:\s|$)"
 )
 
 
@@ -98,22 +109,79 @@ def _mark_session_primed(session_id: str) -> None:
         pass
 
 
-def _is_session_injected(session_id: str) -> bool:
+def _injected_marker(session_id: str) -> Path:
+    return PRIMED_DIR / f"{session_id}.injected"
+
+
+def _read_injected_state(session_id: str) -> dict | None:
     if not session_id:
-        return False
-    marker = PRIMED_DIR / f"{session_id}.injected"
-    return marker.exists()
+        return None
+    try:
+        raw = _injected_marker(session_id).read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        state = json.loads(raw)
+    except Exception:
+        return None
+    return state if isinstance(state, dict) else None
 
 
-def _mark_session_injected(session_id: str) -> None:
+def _write_injected_state(session_id: str, invocation: int, transcript_size: int) -> None:
     if not session_id:
         return
     try:
         PRIMED_DIR.mkdir(parents=True, exist_ok=True)
-        marker = PRIMED_DIR / f"{session_id}.injected"
-        marker.touch()
+        _injected_marker(session_id).write_text(
+            json.dumps({"invocation": int(invocation), "transcript_size": int(transcript_size)}),
+            encoding="utf-8",
+        )
     except Exception:
         pass
+
+
+def _coerce_int(value) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
+def _py_streak_marker(session_id: str) -> Path:
+    return PRIMED_DIR / f"{session_id}.py_streak"
+
+
+def _read_py_streak(session_id: str) -> int:
+    if not session_id:
+        return 0
+    try:
+        raw = _py_streak_marker(session_id).read_text(encoding="utf-8").strip()
+    except Exception:
+        return 0
+    try:
+        return max(0, int(raw))
+    except Exception:
+        return 0
+
+
+def _write_py_streak(session_id: str, value: int) -> None:
+    if not session_id:
+        return
+    try:
+        PRIMED_DIR.mkdir(parents=True, exist_ok=True)
+        _py_streak_marker(session_id).write_text(str(int(value)), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _is_inline_py_probe(cmd: str) -> bool:
+    if not isinstance(cmd, str) or not cmd:
+        return False
+    return bool(INLINE_PY_PROBE.search(cmd))
 
 
 def _log_route(row: dict) -> None:
@@ -226,10 +294,40 @@ def _detect_skills_hit(tool_name: str, args: dict, cwd: str) -> str | None:
 
 def handle_pre_invocation(payload: dict) -> dict:
     session_id = _get_session_id(payload)
-    if session_id and _is_session_injected(session_id):
-        return {"terminationBehavior": ""}
+
+    invocation_num = _coerce_int(payload.get("invocationNum") or 0)
+
+    transcript_path = payload.get("transcriptPath")
+    transcript_size = 0
+    if isinstance(transcript_path, str) and transcript_path:
+        try:
+            if os.path.exists(transcript_path):
+                transcript_size = os.path.getsize(transcript_path)
+        except Exception:
+            transcript_size = 0
+
     if session_id:
-        _mark_session_injected(session_id)
+        state = _read_injected_state(session_id)
+        if state is not None:
+            saved_invocation = _coerce_int(state.get("invocation") or 0)
+            saved_transcript_size = _coerce_int(state.get("transcript_size") or 0)
+
+            compacted = (
+                transcript_size > 0
+                and saved_transcript_size > 0
+                and transcript_size < saved_transcript_size
+            )
+            advanced = (
+                invocation_num > 0
+                and saved_invocation > 0
+                and (invocation_num - saved_invocation) >= 25
+            )
+            restarted = invocation_num == 1 and saved_invocation > 1
+
+            if not (compacted or advanced or restarted):
+                return {"terminationBehavior": ""}
+
+    _write_injected_state(session_id, invocation_num, transcript_size)
     _log_route({
         "session": session_id or "global",
         "tool": "",
@@ -265,6 +363,7 @@ def handle_pre_tool_use(payload: dict) -> dict:
             is_omnicli = True
 
     if is_omnicli:
+        _write_py_streak(session_id, 0)
         _mark_session_primed(session_id)
         _log_route({
             "session": session_id,
@@ -273,6 +372,31 @@ def handle_pre_tool_use(payload: dict) -> dict:
             "decision": "allow",
         })
         return {"decision": "allow"}
+
+    if tool_name in WRITE_TOOLS:
+        _write_py_streak(session_id, 0)
+
+    if tool_name in SHELL_TOOLS:
+        cmd = args.get("CommandLine") or args.get("command") or ""
+        if _is_inline_py_probe(cmd):
+            streak = _read_py_streak(session_id)
+            if streak >= 2:
+                _log_route({
+                    "session": session_id,
+                    "tool": tool_name,
+                    "kind": "py-loop",
+                    "decision": "deny",
+                    "streak": streak + 1,
+                })
+                return {
+                    "decision": "deny",
+                    "reason": (
+                        "Denied by agy-omnicli-route: detected 3+ consecutive `python3 -c` probes. "
+                        "Combine multi-step inspection or parsing into a single "
+                        "`omnicli exec -c '...'` or `omnicli exec - << 'EOF'` Code Mode script."
+                    ),
+                }
+            _write_py_streak(session_id, streak + 1)
 
     skills_hit = _detect_skills_hit(tool_name, args, cwd)
     if not skills_hit:
