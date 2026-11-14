@@ -15,13 +15,14 @@ import time instead of halfway through a fifty-call run.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
 from pathlib import Path
 
 from . import argspec
 
-BINDINGS_VERSION = "3"
+BINDINGS_VERSION = "4"
 
 MODULE_HEAD = '''"""omnicli bindings — generated file, do not edit.
 
@@ -61,6 +62,48 @@ _CALL_LOCK = threading.Lock()
 _CALLS = 0
 _RECENT: collections.deque = collections.deque(maxlen=20)
 
+_HARNESS_MARKERS = (
+    ("t3-code", ("T3CODE_CLI_PATH", "T3CODE_SESSION_ID")),
+    ("opencode", ("OPENCODE_SESSION_ID", "OPENCODE")),
+    ("agy", ("ORCA_ANTIGRAVITY_EVENT", "ANTIGRAVITY_SESSION_ID", "AGY_SESSION_ID")),
+    ("pi", ("PI_SESSION_ID", "PI_AGENT")),
+    ("boxxy", ("BOXXY_SESSION_ID", "BOXXY_TERMINAL")),
+)
+
+
+def trace_identity():
+    """(harness, session) for one trace row: explicit env first, then markers.
+
+    T3 Code runs on OpenCode and exports both sets of variables, so its markers
+    are tested first. A session id is what makes "did a search lead anywhere"
+    answerable; without one, all calls from a process group still correlate via
+    the parent pid.
+    """
+    harness = (os.environ.get("OMNICLI_HARNESS") or "").strip()
+    if not harness:
+        for name, markers in _HARNESS_MARKERS:
+            if any(os.environ.get(m) for m in markers):
+                harness = name
+                break
+        else:
+            harness = "cli"
+    session = (os.environ.get("OMNICLI_SESSION")
+               or os.environ.get("OPENCODE_SESSION_ID")
+               or f"ppid:{os.getppid()}")
+    return harness, session
+
+
+def user_trace_path() -> str:
+    """Where usage rows live: one per user, not per workspace.
+
+    Returns a string: the generated module stays import-light so a sandbox
+    cannot fail on a library the plan never needed.
+    """
+    override = os.environ.get("OMNICLI_USER_TRACE")
+    if override:
+        return os.path.expanduser(override)
+    return os.path.join(os.path.expanduser("~"), ".local", "share", "omnicli", "trace.jsonl")
+
 
 def emit_result(value):
     """Publish one value as `exec --json`'s `result`, separate from stdout.
@@ -76,11 +119,24 @@ def emit_result(value):
 
 
 def _log(event):
+    """Append one row to the exec trace, tagged with harness and session.
+
+    Only the workspace trace is written here: the sandbox has `/` read-only, so
+    the parent `omnicli exec` merges these rows into the per-user usage trace
+    once the plan is done.
+    """
+    harness, session = trace_identity()
+    event.setdefault("harness", harness)
+    event.setdefault("session", session)
+    event.setdefault("via", "exec")
     path = os.environ.get("OMNICLI_TRACE")
     if not path:
         return
-    with open(path, "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(event, ensure_ascii=False) + "\\n")
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False) + "\\n")
+    except OSError:
+        pass
 
 
 def _endpoint(argv):
@@ -298,6 +354,46 @@ async def parallel(calls, limit=8):
     return await asyncio.gather(*[one(call) for call in calls])
 
 '''
+
+
+# The generated module cannot import from `catalog`, so the identity helpers
+# exist twice: once in the template above (for plan runs) and once here (for the
+# CLI). Keep the marker table in sync — `test_usage` asserts they agree.
+_HARNESS_MARKERS = (
+    ("t3-code", ("T3CODE_CLI_PATH", "T3CODE_SESSION_ID")),
+    ("opencode", ("OPENCODE_SESSION_ID", "OPENCODE")),
+    ("agy", ("ORCA_ANTIGRAVITY_EVENT", "ANTIGRAVITY_SESSION_ID", "AGY_SESSION_ID")),
+    ("pi", ("PI_SESSION_ID", "PI_AGENT")),
+    ("boxxy", ("BOXXY_SESSION_ID", "BOXXY_TERMINAL")),
+)
+
+
+def trace_identity():
+    """(harness, session) for one trace row; see the copy in MODULE_HEAD."""
+    harness = (os.environ.get("OMNICLI_HARNESS") or "").strip()
+    if not harness:
+        for name, markers in _HARNESS_MARKERS:
+            if any(os.environ.get(m) for m in markers):
+                harness = name
+                break
+        else:
+            harness = "cli"
+    session = (os.environ.get("OMNICLI_SESSION")
+               or os.environ.get("OPENCODE_SESSION_ID")
+               or f"ppid:{os.getppid()}")
+    return harness, session
+
+
+def user_trace_path() -> str:
+    """Where usage rows live: one per user, not per workspace.
+
+    Returns a string: the generated module stays import-light so a sandbox
+    cannot fail on a library the plan never needed.
+    """
+    override = os.environ.get("OMNICLI_USER_TRACE")
+    if override:
+        return os.path.expanduser(override)
+    return os.path.join(os.path.expanduser("~"), ".local", "share", "omnicli", "trace.jsonl")
 
 
 def _spec_rows(con: sqlite3.Connection) -> list[dict]:

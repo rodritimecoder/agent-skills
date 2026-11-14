@@ -349,6 +349,25 @@ omnicli harness config <id># emit raw ready-to-paste configuration snippet
 omnicli harness verify     # run automated verification across all 5 harnesses
 ```
 
+### Usage telemetry — `omnicli usage`
+
+Every catalogue call is recorded once, with `harness` and `session`, to
+`~/.local/share/omnicli/trace.jsonl` (override with `OMNICLI_USER_TRACE`).
+Direct CLI calls are logged by the CLI; Code Mode calls are logged by the
+bindings and merged by the parent after the sandbox exits, so nothing is double
+counted. Harness detection uses `OMNICLI_HARNESS`, then markers (`T3CODE_CLI_PATH`,
+`OPENCODE_SESSION_ID`, `AGY_*`, `PI_*`, `BOXXY_*`), then `cli`.
+
+```bash
+omnicli usage                # last 7d: calls per harness, verbs, top tools/queries
+omnicli usage --since 24h    # 30m | 24h | 7d | 2w | an ISO date
+omnicli usage --json         # the same numbers for a script
+```
+
+`search → action` is the number that matters: of the sessions that searched, how
+many went on to `describe`/`invoke` (and the median gap). A low rate means the
+catalogue is finding the wrong thing, not that nobody is using omnicli.
+
 ---
 
 ## 🧠 Native local inference

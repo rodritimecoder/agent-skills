@@ -19,14 +19,18 @@ tools, and as a direct subcommand for interactive use.
 from __future__ import annotations
 
 import argparse
+import collections
+import datetime
 import json
 import os
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +61,199 @@ except ImportError:  # pragma: no cover - degraded install
 # into its context window, even by forgetting the flags. The implementation
 # lives in catalog.invoke so the CLI and the Code Mode bindings share one ceiling.
 DEFAULT_MAX_BYTES = invoke.DEFAULT_MAX_BYTES if invoke else 8000
+
+_SINCE_UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
+
+
+def _trace_identity():
+    if bindings_mod is None:
+        return "cli", f"ppid:{os.getppid()}"
+    return bindings_mod.trace_identity()
+
+
+def _user_trace_path() -> Path:
+    if bindings_mod is None:
+        return Path.home() / ".local" / "share" / "omnicli" / "trace.jsonl"
+    return Path(bindings_mod.user_trace_path())
+
+
+def _trace_append(path: Path, event: dict) -> None:
+    """Telemetry must never break a call, so every failure is swallowed."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+@contextmanager
+def _traced(verb: str, tool: str):
+    """Record one catalogue call, unless Code Mode already owns the row.
+
+    Under `omnicli exec` the bindings write the row and set `OMNICLI_TRACE`, so
+    the CLI stays silent there. Without that guard a single Code Mode call would
+    be counted twice, once by the bindings and once by the child process.
+    """
+    if os.environ.get("OMNICLI_TRACE"):
+        yield
+        return
+    path = _user_trace_path()
+    harness, session = _trace_identity()
+    base = {"call": verb, "tool": tool, "harness": harness, "session": session, "via": "cli"}
+    _trace_append(path, {"kind": "call", "t": time.time(), **base})
+    started = time.perf_counter()
+    rc = 0
+    try:
+        yield
+    except BaseException:
+        rc = -1
+        raise
+    finally:
+        _trace_append(path, {
+            "kind": "done", "ms": int((time.perf_counter() - started) * 1000), "rc": rc, **base,
+        })
+
+
+def _parse_since(spec: str) -> float:
+    """Cutoff epoch for '30m', '24h', '7d', '2w' or an ISO timestamp."""
+    raw = str(spec or "7d").strip().lower()
+    match = re.fullmatch(r"(\d+)([smhdw])", raw)
+    if match:
+        return time.time() - int(match.group(1)) * _SINCE_UNITS[match.group(2)]
+    try:
+        return datetime.datetime.fromisoformat(raw).timestamp()
+    except ValueError:
+        sys.exit(f"❌ Error: --since wants 30m, 24h, 7d, 2w or an ISO date, got {spec!r}")
+
+
+def _merge_exec_trace(trace: Path, start: int) -> None:
+    """Copy the rows a plan wrote into the per-user usage trace.
+
+    The sandbox has `/` read-only, so the child can only write inside its
+    workspace. The parent process is unsandboxed and owns the merge, which also
+    keeps Code Mode rows from being counted twice.
+    """
+    try:
+        lines = trace.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return
+    fresh = [line for line in lines[start:] if line.strip()]
+    if not fresh:
+        return
+    target = _user_trace_path()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target, "a", encoding="utf-8") as fh:
+            for line in fresh:
+                fh.write(line.rstrip("\n") + "\n")
+    except OSError:
+        pass
+
+
+def _load_trace(path: Path) -> list:
+    rows = []
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return rows
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def cmd_usage(trace=None, since="7d", as_json=False, limit=10):
+    """Who calls omnicli, what they call, and whether a search goes anywhere."""
+    path = Path(trace).expanduser() if trace else _user_trace_path()
+    if not path.is_file():
+        sys.exit(f"❌ Error: no trace at {path}. Make one with `omnicli search`, or pass --trace.")
+
+    cutoff = _parse_since(since)
+    calls = []
+    for row in _load_trace(path):
+        if row.get("kind") != "call":
+            continue
+        try:
+            ts = float(row.get("t") or 0)
+        except (TypeError, ValueError):
+            continue
+        if ts >= cutoff:
+            calls.append(row)
+
+    by_harness = collections.Counter(r.get("harness") or "unknown" for r in calls)
+    by_verb = collections.Counter(r.get("call") or "?" for r in calls)
+    by_tool = collections.Counter(
+        str(r.get("tool") or "?") for r in calls if r.get("call") in ("describe", "invoke", "do")
+    )
+    by_query = collections.Counter(
+        str(r.get("tool") or "?") for r in calls if r.get("call") == "search"
+    )
+    sessions: dict[str, list] = {}
+    for row in calls:
+        sessions.setdefault(str(row.get("session") or "unknown"), []).append(row)
+
+    searched = {s: rows for s, rows in sessions.items()
+                if any(x.get("call") == "search" for x in rows)}
+    acted, gaps = 0, []
+    for rows in searched.values():
+        first = min(float(x.get("t") or 0) for x in rows if x.get("call") == "search")
+        actions = [float(x.get("t") or 0) for x in rows
+                   if x.get("call") in ("describe", "invoke", "do") and float(x.get("t") or 0) >= first]
+        if actions:
+            acted += 1
+            gaps.append(min(actions) - first)
+    median_gap = statistics.median(gaps) if gaps else None
+
+    payload = {
+        "trace": str(path),
+        "since": since,
+        "calls": len(calls),
+        "sessions": len(sessions),
+        "harness": dict(by_harness.most_common()),
+        "verbs": dict(by_verb.most_common()),
+        "tools": dict(by_tool.most_common(limit)),
+        "queries": dict(by_query.most_common(limit)),
+        "search_sessions": len(searched),
+        "search_acted": acted,
+        "search_acted_rate": round(acted / len(searched), 4) if searched else None,
+        "search_median_gap_s": round(median_gap, 1) if median_gap is not None else None,
+    }
+    if as_json:
+        print(json.dumps(payload, indent=2))
+        return
+
+    print(f"📊 omnicli usage — last {since} · {len(calls)} call{'s' if len(calls) != 1 else ''}"
+          f" · {len(sessions)} session{'s' if len(sessions) != 1 else ''}")
+    print(f"   {path}")
+    if not calls:
+        print("\n  no calls in this window")
+        return
+    print("\n  harness        calls   share")
+    for name, count in by_harness.most_common():
+        print(f"  {name:<14} {count:>5}   {count / len(calls):>5.1%}")
+    print("\n  verb           calls")
+    for name, count in by_verb.most_common():
+        print(f"  {name:<14} {count:>5}")
+    if by_tool:
+        print("\n  top tools")
+        for name, count in by_tool.most_common(min(limit, 8)):
+            print(f"    {name[:46]:<48} {count:>3}")
+    if by_query:
+        print("\n  top queries")
+        for name, count in by_query.most_common(min(limit, 5)):
+            print(f"    {name[:46]:<48} {count:>3}")
+    if searched:
+        rate = acted / len(searched)
+        tail = f" · median {median_gap:.1f}s" if median_gap is not None else ""
+        print(f"\n  search → action   {acted}/{len(searched)} sessions ({rate:.0%}){tail}")
 
 
 # --------------------------------------------------------------------------
@@ -1516,6 +1713,7 @@ def cmd_exec(script: str | None = None, code: str | None = None,
             detail += f" · bridge={bridge_calls} call(s)"
         print(f"🐍 [exec] {calls} tool call(s) in one turn · {elapsed:.2f}s · {detail}",
               file=sys.stderr)
+    _merge_exec_trace(trace, seen)
     sys.exit(proc.returncode)
 
 
@@ -1582,20 +1780,22 @@ def main():
             if not tool_id:
                 sys.exit("❌ Error: `omnicli invoke` needs a tool id. "
                          "Use `omnicli tools <skill>` to list them.")
-            cmd_invoke(
-                tool_id, tool_args,
-                out_path=opts["buffer"], project_fields=opts["project"],
-                jq_expr=opts["jq"], grep=opts["grep"],
-                max_bytes=opts["max_bytes"], as_json=opts["json"],
-                timeout=float(opts["timeout"]),
-            )
+            with _traced("invoke", tool_id):
+                cmd_invoke(
+                    tool_id, tool_args,
+                    out_path=opts["buffer"], project_fields=opts["project"],
+                    jq_expr=opts["jq"], grep=opts["grep"],
+                    max_bytes=opts["max_bytes"], as_json=opts["json"],
+                    timeout=float(opts["timeout"]),
+                )
         if subcmd == "do":
             # Parsed manually: see parse_do_args.
             intent, do_opts, do_args = parse_do_args(sys.argv[2:])
             if not intent:
                 sys.exit("❌ Error: `omnicli do` needs an intent. "
                          'Example: omnicli do "transcribe this recording"')
-            cmd_do(intent, do_opts, do_args)
+            with _traced("do", intent):
+                cmd_do(intent, do_opts, do_args)
         if subcmd == "llm":
             exec_internal_script("llm_client.py", sys.argv[2:])
         elif subcmd == "ocr":
@@ -1784,6 +1984,12 @@ def main():
                        help="Health of every local service, the catalog, and the retrieval tier")
     p.add_argument("--json", action="store_true")
 
+    p = sub.add_parser("usage", help="Telemetry: calls per harness, top tools, and search→action rate")
+    p.add_argument("--trace", default=None, help="Trace file (default: ~/.local/share/omnicli/trace.jsonl)")
+    p.add_argument("--since", default="7d", help="30m, 24h, 7d, 2w or an ISO date (default 7d)")
+    p.add_argument("--limit", type=int, default=10)
+    p.add_argument("--json", action="store_true")
+
     p = sub.add_parser("harness", help="First-party harness support (t3-code, agy, opencode, pi, boxxy)")
     p.add_argument("subaction", nargs="?", choices=["list", "detect", "info", "show", "config", "verify"], default="list")
     p.add_argument("target", nargs="?", default=None, help="Harness name (t3-code, agy, opencode, pi, boxxy)")
@@ -1815,15 +2021,17 @@ def main():
             registry.resolve_skills_dir() / "hybrid-browser" / "scripts" / "fast-cdp")
         sys.exit(subprocess.run([fast_cdp] + args.args).returncode)
     elif args.action == "search":
-        cmd_search(args.query, as_json=args.json, limit=args.limit,
-                   explain=args.explain, no_rerank=args.no_rerank,
-                   rerank=args.rerank, chunks=args.chunks, fusion=args.fusion)
+        with _traced("search", " ".join(args.query) if isinstance(args.query, list) else str(args.query)):
+            cmd_search(args.query, as_json=args.json, limit=args.limit,
+                       explain=args.explain, no_rerank=args.no_rerank,
+                       rerank=args.rerank, chunks=args.chunks, fusion=args.fusion)
     elif args.action == "list":
         cmd_list(as_json=args.json, show_all=args.all)
     elif args.action == "tools":
         cmd_tools(args.skill, as_json=args.json)
     elif args.action == "describe":
-        cmd_describe(args.tool_id, as_json=args.json, section=args.section, doc=args.doc)
+        with _traced("describe", args.tool_id):
+            cmd_describe(args.tool_id, as_json=args.json, section=args.section, doc=args.doc)
     elif args.action == "index":
         cmd_index(rebuild=args.rebuild, with_contracts=not args.no_contracts,
                   as_json=args.json, check=args.check, with_vectors=not args.no_vectors)
@@ -1855,6 +2063,8 @@ def main():
                  as_json=args.json, max_calls=args.max_calls, mem_limit=args.mem_limit)
     elif args.action in ("status", "health"):
         cmd_status(as_json=args.json)
+    elif args.action == "usage":
+        cmd_usage(trace=args.trace, since=args.since, as_json=args.json, limit=args.limit)
     elif args.action == "harness":
         cmd_harness(subaction=args.subaction, target=args.target, as_json=args.json)
     elif args.action == "inspect":
