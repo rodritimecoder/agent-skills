@@ -17,7 +17,10 @@ import urllib.request
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent.parent
 REGISTRY_PATH = BASE_DIR / "config" / "port_registry.json"
+MANIFEST_PATH = REPO_ROOT / "ports.json"
+LAUNCH_ROOT = REPO_ROOT / "launchers"
 LLAMA_SWAP_CONFIG = BASE_DIR / "config" / "llama-swap.yaml"
 LOG_DIR = Path("/tmp/local-llm-ports")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,6 +34,172 @@ def load_registry():
             "models": {}
         }
     return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+
+
+def load_manifest():
+    """ports.json is the source of truth; port_registry.json is a rendered cache.
+
+    The registry flattens each slot to its default launcher, so anything that
+    asks it "what can run here" can only ever answer "the default". Reading the
+    manifest keeps every candidate launchable, and keeps a missing `vram_mb`
+    from being rendered as an explicit `null` that beats a default.
+    """
+    try:
+        return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _launcher_cmd(launcher: str) -> str:
+    return f"bash {LAUNCH_ROOT}/{Path(launcher).name}"
+
+
+def _candidate_keys(c: dict) -> set:
+    keys = set()
+    for raw in (c.get("model"), Path(c.get("launcher", "")).stem):
+        raw = str(raw or "").strip().lower()
+        if raw:
+            keys.add(raw)
+    return keys
+
+
+def _manifest_slot(s: dict, slot_range: list) -> dict:
+    candidates, seen = [], set()
+    for c in s.get("candidates", []):
+        launcher = Path(c.get("launcher", "")).name
+        if not launcher or launcher in seen:
+            continue
+        seen.add(launcher)
+        candidates.append({
+            "keys": _candidate_keys(c),
+            "model": c.get("model", launcher),
+            "launcher": launcher,
+            "cmd": _launcher_cmd(c.get("launcher", launcher)),
+            "vram_mb": c.get("vram_mb"),
+            "dim": c.get("dim"),
+            "status": c.get("status", ""),
+        })
+    default = Path(s.get("default", "")).name
+    for idx, c in enumerate(candidates):
+        if c["launcher"] == default:
+            candidates.insert(0, candidates.pop(idx))
+            break
+    return {
+        "port": str(s["port"]),
+        "id": s.get("id", str(s["port"])),
+        "alias": s.get("alias", s.get("id", str(s["port"]))),
+        "vram_mb": s.get("vram_mb"),
+        "pinned": bool(s.get("pinned")),
+        "candidates": candidates,
+        "range": slot_range,
+    }
+
+
+def load_slots():
+    """Return ({port: slot}, registry) with every candidate the manifest declares."""
+    registry = load_registry()
+    manifest = load_manifest()
+    slots = {}
+    if manifest:
+        slot_range = manifest.get("slot_range", [8080, 8091])
+        for s in manifest.get("slots", []):
+            slot = _manifest_slot(s, slot_range)
+            slots[slot["port"]] = slot
+    if not slots:
+        # Cache fallback: one launcher per slot, same contract, fewer options.
+        for port, meta in registry.get("models", {}).items():
+            cmd = meta.get("cmd", "")
+            name = meta.get("name") or meta.get("alias") or port
+            slots[str(port)] = {
+                "port": str(port),
+                "id": meta.get("alias", str(port)),
+                "alias": meta.get("alias", str(port)),
+                "vram_mb": meta.get("vram_mb"),
+                "pinned": bool(meta.get("pinned")),
+                "candidates": [{
+                    "keys": {str(name).strip().lower()},
+                    "model": name,
+                    "launcher": Path(cmd).name,
+                    "cmd": cmd,
+                    "vram_mb": meta.get("vram_mb"),
+                    "status": "current",
+                }],
+                "range": registry.get("port_range", [8080, 8090]),
+            }
+    return slots, registry
+
+
+def port_bounds(registry: dict, slots: dict) -> tuple:
+    """The declared slot range, never a hardcoded ceiling."""
+    rng = registry.get("port_range")
+    if not rng:
+        rng = next((s["range"] for s in slots.values() if s.get("range")), None)
+    try:
+        return int(rng[0]), int(rng[1])
+    except (TypeError, ValueError, IndexError):
+        return 8080, 8090
+
+
+def _find_slot(slots: dict, needle: str):
+    if needle in slots:
+        return slots[needle]
+    for slot in slots.values():
+        if needle in (slot["id"].lower(), slot["alias"].lower()):
+            return slot
+    synonym = SLOT_SYNONYMS.get(needle)
+    if synonym and synonym in slots:
+        return slots[synonym]
+    for slot in slots.values():
+        if needle in slot["alias"].lower():
+            return slot
+    return None
+
+
+def _find_candidate(slot: dict, needle: str) -> dict:
+    exact = [c for c in slot["candidates"] if needle in c["keys"]]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        builds = ", ".join(c["launcher"] for c in exact)
+        raise LookupError(
+            f"'{needle}' matches {len(exact)} registered builds on {slot['id']} "
+            f"(:{slot['port']}): {builds}. Pass the launcher name instead."
+        )
+    partial = [c for c in slot["candidates"] if any(needle in k for k in c["keys"])]
+    if len(partial) == 1:
+        return partial[0]
+    if len(partial) > 1:
+        names = ", ".join(sorted(c["model"] for c in partial))
+        raise LookupError(f"'{needle}' is ambiguous on {slot['id']} (:{slot['port']}): {names}")
+    names = ", ".join(c["model"] for c in slot["candidates"])
+    raise LookupError(f"'{needle}' is not a candidate of {slot['id']} (:{slot['port']}). Options: {names}")
+
+
+def resolve_launch(slots: dict, target: str, candidate: str = None) -> tuple:
+    """Resolve '<slot|alias|port> [candidate]' or a bare candidate model name."""
+    needle = str(target or "").strip().lower().lstrip(":")
+    if not needle:
+        raise LookupError("a slot, alias, port or candidate name is required")
+    slot = _find_slot(slots, needle)
+    if slot is not None:
+        if candidate:
+            return slot, _find_candidate(slot, str(candidate).strip().lower())
+        if not slot["candidates"]:
+            raise LookupError(f"{slot['id']} (:{slot['port']}) has no registered launcher")
+        return slot, slot["candidates"][0]
+    hits = [(s, c) for s in slots.values() for c in s["candidates"] if needle in c["keys"]]
+    if len(hits) == 1:
+        return hits[0]
+    if len(hits) > 1:
+        if len({s["port"] for s, _c in hits}) == 1:
+            # Same slot, several builds of one model: let the slot resolver name them.
+            return hits[0][0], _find_candidate(hits[0][0], needle)
+        where = ", ".join(f"{s['id']}:{s['port']}/{c['model']}" for s, c in hits)
+        raise LookupError(
+            f"'{needle}' matches several candidates: {where}. "
+            f"Disambiguate with: up <slot> {needle}"
+        )
+    raise LookupError(f"'{needle}' is not a slot, alias, port or registered candidate")
 
 
 def get_vram_info():
@@ -197,37 +366,19 @@ SLOT_SYNONYMS = {
 }
 
 
-def resolve_target(target: str, models: dict = None) -> str:
-    """Resolve port number, slot ID, alias, or friendly synonym to a port string."""
-    if not target:
-        return ""
-    clean = str(target).strip().lower().lstrip(":")
-    if models and clean in models:
-        return clean
-    if clean in SLOT_SYNONYMS:
-        syn = SLOT_SYNONYMS[clean]
-        if not models or syn in models:
-            return syn
-    if models:
-        for p_str, meta in models.items():
-            alias = str(meta.get("alias", "")).lower()
-            name = str(meta.get("name", "")).lower()
-            if clean == alias or clean in alias:
-                return p_str
-            if clean in name:
-                return p_str
-    return clean
-
-
 def kill_port(target_arg):
-    registry = load_registry()
-    models = registry.get("models", {})
-    port_str = resolve_target(target_arg, models)
-    try:
-        p_int = int(port_str)
-    except ValueError:
-        print(f"❌ Error: Cannot resolve '{target_arg}' to a valid port.")
-        return False
+    slots, _ = load_slots()
+    raw = str(target_arg or "").strip().lstrip(":")
+    if raw.isdigit():
+        port_str = raw
+    else:
+        try:
+            slot, _cand = resolve_launch(slots, raw)
+        except LookupError as exc:
+            print(f"❌ Error: {exc}")
+            return False
+        port_str = slot["port"]
+    p_int = int(port_str)
 
     active = get_listening_ports(p_int, p_int)
     info = active.get(str(port_str))
@@ -288,8 +439,10 @@ def get_llama_swap_info(port=8000):
 
 def cmd_status():
     registry = load_registry()
+    slots, _ = load_slots()
+    low, high = port_bounds(registry, slots)
     vram = get_vram_info()
-    active = get_listening_ports(8080, 8090)
+    active = get_listening_ports(low, high)
     swap_info = get_llama_swap_info(8000)
 
     pinned_port = registry.get("pinned_port", "8080")
@@ -297,15 +450,18 @@ def cmd_status():
         "vram": vram,
         "llama_swap_8000": swap_info,
         "pinned_king_port": pinned_port,
+        "port_range": [low, high],
         "ports_8080_8090": {},
     }
-    for p_str, meta in registry.get("models", {}).items():
+    for p_str, slot in sorted(slots.items()):
         state = active.get(p_str)
+        declared = slot["candidates"][0] if slot["candidates"] else None
         report["ports_8080_8090"][p_str] = {
-            "alias": meta.get("alias"),
-            "name": meta.get("name", meta.get("alias")),
-            "pinned": meta.get("pinned", False),
-            "est_vram_mb": meta.get("vram_mb"),
+            "alias": slot["alias"],
+            "name": declared["model"] if declared else slot["alias"],
+            "pinned": slot["pinned"],
+            "est_vram_mb": slot.get("vram_mb"),
+            "candidates": [c["model"] for c in slot["candidates"]],
             "status": "RUNNING" if state else "STOPPED",
             "pid": state.get("pid") if state else None,
         }
@@ -368,50 +524,120 @@ def cmd_llama_swap_status(port=8000):
     print(json.dumps(info, indent=2))
 
 
-def cmd_swap(target_arg):
-    registry = load_registry()
-    models = registry.get("models", {})
-    target_port = resolve_target(target_arg, models)
-    if str(target_port) not in models:
-        available = ", ".join([f"{p} ({m.get('alias', '')})" for p, m in models.items()])
-        sys.exit(f"❌ Error: Target '{target_arg}' could not be resolved to a registered port.\nAvailable: {available}")
+def _pick_by_dim(slot: dict, dim: int):
+    """Choose the embedding candidate by dimension, the slot's real identity.
 
-    target_meta = models[str(target_port)]
-    active = get_listening_ports(8080, 8090)
-    if str(target_port) in active:
-        print(f"ℹ️  Port {target_port} ({target_meta['alias']}) is already running.")
+    bge-small (384d) and EmbeddingGemma-2 (768d) vectors are not comparable, so
+    "the default" is the wrong answer whenever an index exists.
+    """
+    known = [c for c in slot["candidates"] if c.get("dim")]
+    if not known:
+        return None
+    for c in known:
+        if int(c["dim"]) == dim:
+            return c
+    options = ", ".join(f"{c['model']} ({c['dim']}d)" for c in known)
+    raise LookupError(f"no candidate on {slot['id']} (:{slot['port']}) has dim={dim}. Options: {options}")
+
+
+def _needed_mb(candidate: dict, slot: dict) -> int:
+    """VRAM estimate that tolerates a null/absent value instead of comparing int to None."""
+    needed = candidate.get("vram_mb")
+    if needed is None:
+        needed = slot.get("vram_mb")
+    if needed is None:
+        return 4000
+    try:
+        return max(0, int(needed))
+    except (TypeError, ValueError):
+        return 4000
+
+
+def cmd_swap(target_arg, candidate_arg=None, dry_run=False, dim=None):
+    slots, registry = load_slots()
+    try:
+        slot, cand = resolve_launch(slots, target_arg, candidate_arg)
+    except LookupError as exc:
+        sys.exit(f"❌ Error: {exc}")
+
+    if dim:
+        try:
+            dim = int(dim)
+        except (TypeError, ValueError):
+            sys.exit("❌ Error: --dim must be an integer (e.g. 384 or 768)")
+        if candidate_arg is None:
+            try:
+                picked = _pick_by_dim(slot, dim)
+            except LookupError as exc:
+                sys.exit(f"❌ Error: {exc}")
+            if picked is not None:
+                cand = picked
+
+    target_port = slot["port"]
+    low, high = port_bounds(registry, slots)
+    active = get_listening_ports(low, high)
+    needed_mb = _needed_mb(cand, slot)
+    if dry_run:
+        print(json.dumps({
+            "slot": slot["id"],
+            "port": target_port,
+            "alias": slot["alias"],
+            "model": cand["model"],
+            "launcher": cand["launcher"],
+            "dim": cand.get("dim"),
+            "cmd": cand["cmd"],
+            "needed_mb": needed_mb,
+            "pinned": slot["pinned"],
+            "declared": slot["candidates"][0]["model"] if slot["candidates"] else None,
+            "running": target_port in active,
+            "port_range": [low, high],
+        }, indent=2))
+        return
+    if target_port in active:
+        print(f"ℹ️  Port {target_port} ({slot['alias']}) is already running.")
+        if len(slot["candidates"]) > 1:
+            print(f"    Stop it first to change candidates: vram-rig-ctl down {target_port}")
         return
 
-    needed_mb = target_meta.get("vram_mb", 4000)
     vram = get_vram_info()
     pinned_port = registry.get("pinned_port", "8080")
+    king_evicted = False
 
     if vram["free_mb"] < needed_mb:
         print(f"⚠️ Need {needed_mb} MB VRAM, but only {vram['free_mb']} MB available.")
         print("   Evicting non-pinned auxiliary ports...")
         for p_str in sorted(active.keys()):
-            if p_str != pinned_port and p_str != str(target_port):
+            if p_str != pinned_port and p_str != target_port:
                 kill_port(p_str)
                 time.sleep(0.5)
                 vram = get_vram_info()
                 if vram["free_mb"] >= needed_mb:
                     break
 
-    if vram["free_mb"] < needed_mb and pinned_port in active and str(target_port) != pinned_port:
+    if vram["free_mb"] < needed_mb and pinned_port in active and target_port != pinned_port:
         print(f"⚠️ Heavy task requires {needed_mb} MB. Temporarily evicting pinned King (port {pinned_port})...")
         kill_port(pinned_port)
+        king_evicted = True
         time.sleep(1.0)
 
-    cmd_str = os.path.expanduser(target_meta["cmd"])
     log_file = LOG_DIR / f"port_{target_port}.log"
-    print(f"🚀 Starting {target_meta['alias']} on port {target_port}...")
+    print(f"🚀 Starting {slot['alias']} — {cand['model']} on port {target_port}...")
     with open(log_file, "ab") as out:
-        subprocess.Popen(cmd_str, shell=True, stdout=out, stderr=out, start_new_session=True)
+        subprocess.Popen(cand["cmd"], shell=True, stdout=out, stderr=out, start_new_session=True)
+
+    if len(slot["candidates"]) > 1 and cand is not slot["candidates"][0]:
+        print(f"ℹ️  {cand['model']} is not the declared default for {slot['id']} "
+              f"({slot['candidates'][0]['model']}). ports.json is unchanged.")
+        print(f"    Persist it: python3 ports.py swap {slot['id']} "
+              f"--model '{cand['model']}' --launcher {cand['launcher']}")
+    if king_evicted:
+        print(f"ℹ️  Pinned King on :{pinned_port} was evicted. "
+              f"Restore it with: vram-rig-ctl up {pinned_port}")
 
     for _ in range(40):
         time.sleep(0.5)
-        if str(target_port) in get_listening_ports(int(target_port), int(target_port)):
-            print(f"✅ SUCCESS: {target_meta['alias']} listening on port {target_port}. Logs: {log_file}")
+        if target_port in get_listening_ports(int(target_port), int(target_port)):
+            print(f"✅ SUCCESS: {cand['model']} listening on port {target_port}. Logs: {log_file}")
             return
 
     print(f"Launched process on port {target_port} (still loading weights—check {log_file}).")
@@ -441,13 +667,19 @@ if __name__ == "__main__":
     p_down.add_argument("target", nargs="?", help="Port, slot id, or alias")
     p_down.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
-    p_swap = sub.add_parser("swap", help="Start/swap a service by port, slot id, or alias (e.g. 8085, ocr, asr)")
-    p_swap.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_swap = sub.add_parser("swap", help="Start/swap a service by port, slot id, alias, or candidate (e.g. 8085, ocr)")
+    p_swap.add_argument("target", nargs="?", help="Port, slot id, alias, or candidate model")
+    p_swap.add_argument("candidate", nargs="?", help="Candidate within that slot (e.g. up embed embeddinggemma-2)")
     p_swap.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
+    p_swap.add_argument("--dry-run", action="store_true", help="Resolve and print the launch plan, start nothing")
+    p_swap.add_argument("--dim", type=int, metavar="N", help="Embedding dimension to match (e.g. 384, 768)")
 
     p_up = sub.add_parser("up", help="Alias for swap (e.g. vram-rig-ctl up ocr)")
-    p_up.add_argument("target", nargs="?", help="Port, slot id, or alias")
+    p_up.add_argument("target", nargs="?", help="Port, slot id, alias, or candidate model")
+    p_up.add_argument("candidate", nargs="?", help="Candidate within that slot (e.g. up embed embeddinggemma-2)")
     p_up.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
+    p_up.add_argument("--dry-run", action="store_true", help="Resolve and print the launch plan, start nothing")
+    p_up.add_argument("--dim", type=int, metavar="N", help="Embedding dimension to match (e.g. 384, 768)")
 
     args = parser.parse_args()
     if args.action == "status":
@@ -458,9 +690,9 @@ if __name__ == "__main__":
             sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl kill ocr)")
         kill_port(target)
     elif args.action == "evict-all":
-        reg = load_registry()
+        slots, reg = load_slots()
         pinned = reg.get("pinned_port", "8080")
-        for p in list(get_listening_ports(8080, 8090).keys()):
+        for p in list(get_listening_ports(*port_bounds(reg, slots)).keys()):
             if p != pinned:
                 kill_port(p)
         print("✅ Evicted auxiliary ports. Headroom reclaimed.")
@@ -468,7 +700,7 @@ if __name__ == "__main__":
         target = args.target or getattr(args, "opt_port", None)
         if not target:
             sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl swap ocr)")
-        cmd_swap(target)
+        cmd_swap(target, args.candidate, args.dry_run, getattr(args, "dim", None))
     elif args.action == "llama-swap-up":
         cmd_llama_swap_up(args.port)
     elif args.action == "llama-swap-down":

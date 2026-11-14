@@ -2,83 +2,129 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>glitch-console · terminal</title>
 <link rel="stylesheet" href="../tokens.css">
 <style>
   body {
     display: grid;
     place-items: start center;
-    padding: var(--s-9);
-    background: var(--ink-900);
+    min-height: 100vh;
+    padding: var(--s-8) var(--s-6);
   }
-  .win--paper { width: min(900px, 100%); }
-  .win__body { padding: var(--s-6) var(--s-8) var(--s-8); }
-  .spacer { height: calc(var(--s-10) * 2.4); }
-  .spacer--foot { height: calc(var(--s-10) * 1.2); }
+  .win--paper { width: min(860px, 100%); }
+  .stage { --sprite-scale: 7px; gap: var(--s-6); padding-top: var(--s-6); padding-bottom: var(--s-4); }
+  .stage.is-hidden { display: none; }
+  .log__sub { padding-left: 1.3em; color: var(--text); }
 </style>
 </head>
 <body>
 
-<div class="win win--paper">
+<main class="win win--paper">
   <div class="win__bar">
     <div class="win__dots">
       <i class="win__dot win__dot--pink"></i>
       <i class="win__dot win__dot--yellow"></i>
       <i class="win__dot win__dot--mint"></i>
     </div>
-    <span class="win__path"><b>/glitch-orchestra</b></span>
+    <span class="win__path">/glitch-orchestra</span>
     <span class="win__chip">♪ orchestrator</span>
   </div>
 
   <div class="win__body">
-    <div class="spacer"></div>
-
     <div class="log">
-      <p class="log__line log__line--cmd">&gt; /glitch-orchestra</p>
-      <p class="log__line"><span class="log__bullet">●</span>Started. A pane per worker.</p>
-      <p class="log__line"><span class="log__bullet">●</span>Three briefs out.</p>
+      <p class="line line--cmd">&gt; /glitch-orchestra</p>
+      <p class="line line--tree">└ Tuning up.</p>
+      <p class="line"><span class="line__bullet">●</span>Started. A pane per worker.</p>
+      <p class="line log__sub">Three briefs out.</p>
     </div>
 
-    <div class="stage">
+    <div class="stage" id="stage">
       <figure class="bot">
-        <canvas data-sprite="conductor" data-mood="outputting"></canvas>
+        <canvas class="sprite" data-sprite="conductor" data-mood="outputting" style="--sprite-scale:7px"></canvas>
         <figcaption>
-          <div class="bot__name">conductor</div>
-          <div class="bot__note">✳ the plan</div>
+          <div class="bot__name">♪ conductor</div>
+          <div class="bot__note"><span class="star">✳</span> the plan</div>
         </figcaption>
       </figure>
 
       <figure class="bot bot--blue">
-        <canvas data-sprite="frontend" data-mood="thinking"></canvas>
+        <canvas class="sprite" data-sprite="frontend" data-mood="thinking" data-wait-spawn data-stagger-spawn style="--sprite-scale:7px"></canvas>
         <figcaption>
           <div class="bot__name">frontend</div>
-          <div class="bot__note">✳ the world</div>
+          <div class="bot__note"><span class="star">✳</span> the world</div>
         </figcaption>
       </figure>
 
       <figure class="bot bot--pink">
-        <canvas data-sprite="copy" data-mood="outputting" data-offset="900"></canvas>
+        <canvas class="sprite" data-sprite="copy" data-mood="outputting" data-offset="900" data-wait-spawn data-stagger-spawn style="--sprite-scale:7px"></canvas>
         <figcaption>
           <div class="bot__name">copy</div>
-          <div class="bot__note">· the words</div>
+          <div class="bot__note"><span class="star">✳</span> the words</div>
         </figcaption>
       </figure>
 
       <figure class="bot bot--mint">
-        <canvas data-sprite="tests" data-mood="thinking" data-offset="1600"></canvas>
+        <canvas class="sprite" data-sprite="tests" data-mood="thinking" data-offset="1600" data-wait-spawn data-stagger-spawn style="--sprite-scale:7px"></canvas>
         <figcaption>
           <div class="bot__name">tests</div>
-          <div class="bot__note">· the holdout</div>
+          <div class="bot__note"><span class="star">·</span> the holdout</div>
         </figcaption>
       </figure>
     </div>
 
-    <div class="spacer spacer--foot"></div>
-  </div>
+    <div class="keybar" aria-label="terminal shortcuts">
+      <span><b class="keybar__k">1</b><span id="lbl-hide">Hide</span></span>
+      <span><b class="keybar__k">2</b><span id="lbl-stop">Stop</span></span>
+      <span><b class="keybar__k">s</b>Spawn</span>
+      <span><b class="keybar__k">j</b>Jump</span>
+      <span><b class="keybar__k">m</b>Moods</span>
+      <span><b class="keybar__k">g</b>Ground</span>
+    </div>
 
-  <div class="win__foot">&gt;</div>
-</div>
+    <div class="term-input" aria-label="prompt">
+      <span class="term-input__prompt">&gt;</span>
+      <span class="term-input__caret" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
 
 <script src="../sprites.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("ground") === "1") {
+    document.body.classList.add("is-ground");
+  }
+
+  const stage = document.getElementById("stage");
+  const lblHide = document.getElementById("lbl-hide");
+  const lblStop = document.getElementById("lbl-stop");
+
+  setTimeout(() => {
+    Pixels.staggerSpawn(stage, 330);
+  }, 500);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "s") {
+      Pixels.staggerSpawn(stage, 330);
+    } else if (key === "j") {
+      const conductor = stage.querySelector("canvas[data-sprite='conductor']");
+      if (conductor) Pixels.jump(conductor);
+    } else if (key === "m") {
+      Pixels.cycleMood(stage);
+    } else if (key === "1") {
+      const hidden = stage.classList.toggle("is-hidden");
+      if (lblHide) lblHide.textContent = hidden ? "Show" : "Hide";
+    } else if (key === "2") {
+      const next = !Pixels.isPaused();
+      Pixels.setPaused(next);
+      if (lblStop) lblStop.textContent = next ? "Run" : "Stop";
+    } else if (key === "g") {
+      document.body.classList.toggle("is-ground");
+    }
+  });
+</script>
 </body>
 </html>

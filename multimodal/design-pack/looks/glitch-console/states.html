@@ -2,30 +2,133 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>glitch-console · spawn states</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>glitch-console · states &amp; particles</title>
 <link rel="stylesheet" href="tokens.css">
 <style>
-  body { padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-end; }
-  figure { margin: 0; }
-  figcaption { color: var(--dim); font-size: var(--fs-2xs); margin-top: 8px; letter-spacing: var(--track-label); }
-  .sprite { --sprite-scale: 10px; }
-  h1 { width: 100%; font-size: var(--fs-sm); letter-spacing: var(--track-label); text-transform: uppercase; }
-  h1 span { color: var(--yellow); }
+  body {
+    display: grid;
+    place-items: start center;
+    min-height: 100vh;
+    padding: var(--s-8) var(--s-6);
+  }
+  .win--paper { width: min(1040px, 100%); }
+  .state-block + .state-block {
+    margin-top: var(--s-7);
+    padding-top: var(--s-6);
+    border-top: var(--b-1) solid var(--rule);
+  }
+  .frames {
+    display: flex;
+    gap: var(--s-5);
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding-top: var(--s-5);
+  }
+  .frames figure { margin: 0; }
+  .frames figcaption {
+    color: var(--dim);
+    font-size: var(--fs-2xs);
+    margin-top: var(--s-3);
+    letter-spacing: var(--track-label);
+  }
+  .sprite { --sprite-scale: 6px; }
 </style>
 </head>
 <body>
-<h1><span>◆</span> spawn · five hard frames · nothing eases</h1>
+<main class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path">/glitch-orchestra · states &amp; particles</span>
+    <span class="win__chip">30 fps keyframes</span>
+  </div>
 
-<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>1 · flash · 90ms · 1.0×</figcaption></figure>
-<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>2 · flash · 90ms · 1.35×</figcaption></figure>
-<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>3 · squash · 90ms · 1.2×</figcaption></figure>
-<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>4 · colour · 90ms · 1.05×</figcaption></figure>
-<figure><canvas class="sprite" data-sprite="conductor" data-static></canvas><figcaption>5 · settle · 90ms · 1.0×</figcaption></figure>
+  <div class="win__body">
+    <section class="state-block">
+      <p class="line line--cmd">&gt; Pixels.spawn(canvas)</p>
+      <p class="line line--tree">└ 23-frame floor-rise (759 ms) · #f2f3f8 → accent · zero easing</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-spawn-frame="0" style="--sprite-scale:6px"></canvas><figcaption>2 rows · 0 ms · #f2f3f8</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-spawn-frame="2" style="--sprite-scale:6px"></canvas><figcaption>4 rows · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-spawn-frame="5" style="--sprite-scale:6px"></canvas><figcaption>6 rows · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-spawn-frame="8" style="--sprite-scale:6px"></canvas><figcaption>8 rows · 264 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-spawn-frame="22" style="--sprite-scale:6px"></canvas><figcaption>10 rows · settle · 759 ms</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="state-block">
+      <p class="line line--cmd">&gt; outputting · dual-slot conveyor</p>
+      <p class="line line--tree">└ 396 + 330 + 363 + 396 ms · anchored to restRow (never bobs)</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="outputting" data-step="0" style="--sprite-scale:6px"></canvas><figcaption>step 0 · ♪ lower · 396 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="outputting" data-step="1" style="--sprite-scale:6px"></canvas><figcaption>step 1 · ♪+♫ pair · 330 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="outputting" data-step="2" style="--sprite-scale:6px"></canvas><figcaption>step 2 · ♫ upper · 363 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="outputting" data-step="3" style="--sprite-scale:6px"></canvas><figcaption>step 3 · hold · 396 ms</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="state-block">
+      <p class="line line--cmd">&gt; thinking · stepped pixel-dust cascade</p>
+      <p class="line line--tree">└ 165 × 3 + 198 + 495 ms · settles into 1.25px horizontal band</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-mood="thinking" data-step="0" style="--sprite-scale:6px"></canvas><figcaption>step 0 · scatter · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-mood="thinking" data-step="1" style="--sprite-scale:6px"></canvas><figcaption>step 1 · twinkle · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-mood="thinking" data-step="2" style="--sprite-scale:6px"></canvas><figcaption>step 2 · converge · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-mood="thinking" data-step="3" style="--sprite-scale:6px"></canvas><figcaption>step 3 · 1.25px band · 198 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="frontend" data-static data-mood="thinking" data-step="4" style="--sprite-scale:6px"></canvas><figcaption>step 4 · clear · 495 ms</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="state-block">
+      <p class="line line--cmd">&gt; absorbing · taste blocks + impact flash</p>
+      <p class="line line--tree">└ 6 × 66 + 198 ms · diagonal streak + 72% paper lerp on steps 2 &amp; 5</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="0" style="--sprite-scale:6px"></canvas><figcaption>step 0 · enter · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="1" style="--sprite-scale:6px"></canvas><figcaption>step 1 · climb · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="2" style="--sprite-scale:6px"></canvas><figcaption>step 2 · impact flash · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="4" style="--sprite-scale:6px"></canvas><figcaption>step 4 · streak · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="5" style="--sprite-scale:6px"></canvas><figcaption>step 5 · impact flash · 66 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="copy" data-static data-mood="absorbing" data-step="6" style="--sprite-scale:6px"></canvas><figcaption>step 6 · hold · 198 ms</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="state-block">
+      <p class="line line--cmd">&gt; aligning · -2.5px sparkle star wave</p>
+      <p class="line line--tree">└ 8 × 132 + 396 ms · wrapped ✶/✴/✻ wave + coral micro specks</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="aligning" data-step="0" style="--sprite-scale:6px"></canvas><figcaption>step 0 · corner pair · 132 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="aligning" data-step="1" style="--sprite-scale:6px"></canvas><figcaption>step 1 · pair+specks · 132 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="aligning" data-step="3" style="--sprite-scale:6px"></canvas><figcaption>step 3 · center · 132 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="aligning" data-step="6" style="--sprite-scale:6px"></canvas><figcaption>step 6 · wrap pair · 132 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="conductor" data-static data-mood="aligning" data-step="8" style="--sprite-scale:6px"></canvas><figcaption>step 8 · clear · 396 ms</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="state-block">
+      <p class="line line--cmd">&gt; packet · waiting hopper pixel</p>
+      <p class="line line--tree">└ 3 × 165 + 330 ms · 0.65×px --text dot over upper-left</p>
+      <div class="frames">
+        <figure><canvas class="sprite" data-sprite="tests" data-static data-mood="packet" data-step="0" style="--sprite-scale:6px"></canvas><figcaption>step 0 · left hop · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="tests" data-static data-mood="packet" data-step="1" style="--sprite-scale:6px"></canvas><figcaption>step 1 · apex hop · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="tests" data-static data-mood="packet" data-step="2" style="--sprite-scale:6px"></canvas><figcaption>step 2 · drop · 165 ms</figcaption></figure>
+        <figure><canvas class="sprite" data-sprite="tests" data-static data-mood="packet" data-step="3" style="--sprite-scale:6px"></canvas><figcaption>step 3 · rest · 330 ms</figcaption></figure>
+      </div>
+    </section>
+  </div>
+</main>
 
 <script src="sprites.js"></script>
 <script>
-  const poses = [["flash", 1], ["flash", 1.35], ["squash", 1.2], ["rest", 1.05], ["rest", 1]];
-  document.querySelectorAll("canvas[data-static]").forEach((c, i) => Pixels.pose(c, ...poses[i]));
+  document.querySelectorAll("canvas[data-spawn-frame]").forEach((c) => {
+    Pixels.spawnFrame(c, Number(c.dataset.spawnFrame));
+  });
+  document.querySelectorAll("canvas[data-static][data-mood]").forEach((c) => {
+    Pixels.pose(c, "rest", 1, c.dataset.mood, Number(c.dataset.step));
+  });
 </script>
 </body>
 </html>

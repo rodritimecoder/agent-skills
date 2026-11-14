@@ -1,5 +1,12 @@
 # llama-swap Configuration for Dual AMD Radeon RX 9060 XT (32 GB VRAM)
 # Upstream canonical: ~/src/my-agent-skills/hardware/model-layer/config/llama-swap.yaml
+#
+# Scope: chat-completions-shaped models only — a router fits a uniform contract
+# with many candidates, not a "type". :8081 (/v1/audio/*), :8084 (/ocr/pipeline),
+# :8086 (/v1/rerank), :8087 (/v1/embeddings), :8090 (/v1/systemone) and :8091
+# stay direct slots. `llm` (:8080, 15 candidates, one API) is the only slot that
+# satisfies both halves today, so it is the only one fronted here.
+# `llama-swap -validate` is a syntax gate; `ports.py check` is the truth gate.
 
 healthCheckTimeout: 180
 logLevel: info
@@ -63,7 +70,7 @@ models:
       - "jev-decision"
       - "local-decide"
     cmd: >
-      PORT=${PORT} sh $HOME/src/my-agent-skills/launchers/h2o.sh
+      PORT=${PORT} bash $HOME/src/my-agent-skills/launchers/h2o.sh
     proxy: "http://127.0.0.1:${PORT}"
     ttl: 600
 
@@ -152,28 +159,7 @@ models:
     ttl: 600
 
   # ============================================================
-  # 4. Computer-Use / GUI Grounding: DeskForge-Qwen3.5-4B (~3.5 GB)
-  # ============================================================
-  "deskforge-4b":
-    aliases:
-      - "agent-browser"
-      - "deskforge"
-    cmd: >
-      ${server_upstream_vulkan}
-      -m /run/media/rodri/AI/models/docling-project/DeskForge-Qwen3.5-4B/DeskForge-Qwen3.5-4B.Q4_K_M.gguf
-      --mmproj /run/media/rodri/AI/models/docling-project/DeskForge-Qwen3.5-4B/DeskForge-Qwen3.5-4B.mmproj-bf16.gguf
-      --host 127.0.0.1
-      --port ${PORT}
-      --jinja
-      --image-min-tokens 1024
-      -ngl 99
-      -c 8192
-      -np 1
-    proxy: "http://127.0.0.1:${PORT}"
-    ttl: 600
-
-  # ============================================================
-  # 5. Heavy General Model: Gemma4-26B-A4B HauhauCS (~18 GB)
+  # 4. Heavy General Model: Gemma4-26B-A4B HauhauCS (~18 GB)
   # ============================================================
   "gemma4-26b":
     aliases:
@@ -210,32 +196,30 @@ models:
 # ============================================================
 # Concurrency Swap Matrix (32 GB VRAM Budget)
 # ============================================================
+# Intent documentation only: llama-swap does not read `swap:`, and
+# vram-rig-ctl drives placement from ports.json. Every var must still name a
+# model defined above — `ports.py check` enforces that.
 swap:
   matrix:
     vars:
       q: "qwen3.6-35b"
-      p: "vllm-d3-nano"
+      p: "h2o-lightning-4b"
       v: "vllm-d3-mini"
       i: "imajev-4b"
       l: "lighton-ocr"
-      d: "deskforge-4b"
       g: "gemma4-26b"
 
     evict_costs:
       q: 100 # Highest cost - keep the primary coder resident
       g: 40
-      d: 15
       p: 10
       v: 10
       i: 10
       l: 10
 
     sets:
-      # Pinned King (22G) + Premier Decision vllm-d3-nano (3.5G) + OCR (1.5G) = 27 GB <= 32 GB
+      # Pinned King (22G) + Premier Decision h2o-lightning-4b (3.6G) + OCR (1.5G) = 27 GB <= 32 GB
       standard_trio: "q & p & l"
 
-      # Pinned King (22G) + GUI Browser Grounding (3.5G) + OCR (1.5G) = 27 GB <= 32 GB
-      browser_agent: "q & d & l"
-
-      # Alternative heavy model with auxiliary tools (18G + 3.1G + 1.5G = 23 GB)
+      # Alternative heavy model with auxiliary tools (18G + 3.6G + 1.5G = 23 GB)
       gemma_suite: "g & p & l"

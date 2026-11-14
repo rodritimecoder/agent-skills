@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>glitch-console · board</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body {
+    display: grid;
+    place-items: start center;
+    min-height: 100vh;
+    padding: var(--s-8) var(--s-6);
+  }
+  .win--paper { width: min(860px, 100%); }
+  .stage { --sprite-scale: 7px; gap: var(--s-6); padding-top: var(--s-6); padding-bottom: var(--s-3); }
+  .stage.is-hidden { display: none; }
+  .meter-wrap { display: inline-flex; }
+</style>
+</head>
+<body>
+
+<main class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path">/glitch-orchestra</span>
+    <span class="win__chip">♪ orchestrator</span>
+  </div>
+
+  <div class="win__body">
+    <section class="board" id="board">
+      <div class="board__title">Board · 3 of 3 done</div>
+      <div class="board__sub">started · 3 tasks</div>
+      <div class="cols">
+        <span class="col col--todo"><span class="col__name">to do</span><span class="col__n">0</span></span>
+        <span class="col col--needs"><span class="col__name">needs you</span><span class="col__n">0</span></span>
+        <span class="col col--doing"><span class="col__name">doing</span><span class="col__n">0</span></span>
+        <span class="col col--check"><span class="col__name">check</span><span class="col__n">0</span></span>
+      </div>
+    </section>
+
+    <div class="stage" id="stage">
+      <figure class="bot">
+        <canvas class="sprite" data-sprite="conductor" data-mood="outputting" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">♪ conductor</div>
+          <div class="bot__status">&nbsp;</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--blue">
+        <canvas class="sprite" data-sprite="frontend" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">frontend</div>
+          <div class="bot__status"><span class="ok">✓</span> passed</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--pink">
+        <canvas class="sprite" data-sprite="copy" data-offset="900" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">copy</div>
+          <div class="bot__status"><span class="ok">✓</span> passed</div>
+        </figcaption>
+      </figure>
+
+      <figure class="bot bot--mint">
+        <canvas class="sprite" data-sprite="tests" data-offset="1600" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">tests</div>
+          <div class="bot__status"><span class="ok">✓</span> passed</div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="progress-row">
+      <span class="progress-row__note">♪</span>
+      <span class="meter-wrap">
+        <span class="bar">
+          <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+        </span>
+      </span>
+      <span>3 of 3</span>
+      <span class="progress-row__msg">&gt; conductor: all three passed</span>
+    </div>
+
+    <div class="keybar" aria-label="terminal shortcuts">
+      <span><b class="keybar__k">1</b><span id="lbl-hide">Hide</span></span>
+      <span><b class="keybar__k">2</b><span id="lbl-stop">Stop</span></span>
+      <span><b class="keybar__k">g</b>Ground</span>
+    </div>
+
+    <div class="term-input" aria-label="prompt">
+      <span class="term-input__prompt">&gt;</span>
+      <span class="term-input__caret" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
+
+<script src="../sprites.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("ground") === "1") {
+    document.body.classList.add("is-ground");
+  }
+
+  const stage = document.getElementById("stage");
+  const lblHide = document.getElementById("lbl-hide");
+  const lblStop = document.getElementById("lbl-stop");
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "1") {
+      const hidden = stage.classList.toggle("is-hidden");
+      if (lblHide) lblHide.textContent = hidden ? "Show" : "Hide";
+    } else if (key === "2") {
+      const next = !Pixels.isPaused();
+      Pixels.setPaused(next);
+      if (lblStop) lblStop.textContent = next ? "Run" : "Stop";
+    } else if (key === "g") {
+      document.body.classList.toggle("is-ground");
+    }
+  });
+</script>
+</body>
+</html>

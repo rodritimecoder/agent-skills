@@ -7,9 +7,12 @@ Prints the top hits with the lines around them, and which leg found each.
 import json
 import os
 import re
+import shutil
 import sqlite3
 import struct
+import subprocess
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -19,6 +22,10 @@ K = 60  # rank fusion smoothing constant
 TOP = 3
 CONTEXT_LINES = 6
 EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings")
+VRAM_RIG_CTL = shutil.which("vram-rig-ctl")
+# Opt out with --no-autostart or GRAPH_MEMORY_AUTOSTART=0. The prompt hook never
+# starts a model at all: loading weights inside UserPromptSubmit blocks the prompt.
+AUTOSTART = os.environ.get("GRAPH_MEMORY_AUTOSTART", "1") != "0"
 
 
 STOPWORDS = {
@@ -58,6 +65,66 @@ def index_embedding(db):
     )
 
 
+def embedding_up(timeout=1.0):
+    """True when the embedding slot answers /health."""
+    health = EMBEDDING_URL.replace("/v1/embeddings", "/health")
+    try:
+        with urllib.request.urlopen(health, timeout=timeout) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _candidate_name(model: str) -> str:
+    """A candidate name, not a weights path.
+
+    `meta.embedding_model` may be `bge-small-en-v1.5` or a full
+    `/run/media/.../bge-small-en-v1.5-f16.gguf` path, depending on how the index
+    was built. Only the former is resolvable by the rig.
+    """
+    name = (model or "").strip()
+    if not name or "/" in name or name.lower().endswith(".gguf"):
+        return ""
+    return name
+
+
+def ensure_embedding(db, timeout=15.0):
+    """Start the embedding candidate this index was built with.
+
+    The slot can host bge-small (384d) or EmbeddingGemma-2 (768d), and vectors
+    from the two are not comparable. Starting "the default" would trade one
+    silent failure for another, so the candidate comes from the index meta:
+    `vram-rig-ctl up embed <model>`.
+    """
+    if not AUTOSTART:
+        return False
+    if embedding_up():
+        return True
+    if not VRAM_RIG_CTL:
+        return False
+    model, dim, _endpoint = index_embedding(db)
+    cmd = [VRAM_RIG_CTL, "up", "embed"]
+    candidate = _candidate_name(model)
+    if candidate:
+        cmd.append(candidate)
+    elif dim:
+        # Older indexes store the weights path, not a candidate name. Dimension
+        # is the slot's real identity: 384d and 768d vectors are not comparable.
+        cmd += ["--dim", str(dim)]
+    try:
+        subprocess.Popen(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True
+        )
+    except OSError:
+        return False
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if embedding_up():
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def meaning_leg(db, query, floor=0.0):
     """Return (rowids, reason). reason is set only when the leg could not run.
 
@@ -83,15 +150,18 @@ def meaning_leg(db, query, floor=0.0):
             res_data = json.loads(resp.read().decode("utf-8"))
             q = res_data["data"][0]["embedding"]
     except Exception as exc:
-        return None, f"{EMBEDDING_URL} unavailable ({exc})"
+        return None, (
+            f"{EMBEDDING_URL} unavailable ({exc}) — start it with "
+            f"`vram-rig-ctl up embed`"
+        )
 
     if dim and len(q) != dim:
         # Refuse rather than compare incomparable vectors: a 384d query dotted
         # against 768d rows would silently return nonsense.
         return None, (
             f"dimension mismatch — index was built with {model} ({dim}d) "
-            f"but {EMBEDDING_URL} returned {len(q)}d. Start the matching model "
-            f"(see ports.json slot 'embed') or rebuild with build_index.py"
+            f"but {EMBEDDING_URL} returned {len(q)}d. Start the matching model: "
+            f"`vram-rig-ctl up embed {model}`"
         )
 
     qnorm = sum(x * x for x in q) ** 0.5 or 1.0
@@ -210,6 +280,8 @@ def main():
     parser.add_argument("--project", "-p", help="Comma-separated fields to project")
     parser.add_argument("--limit", "-n", type=int, default=TOP, metavar="LIMIT", help=f"Max number of hits (default: {TOP})")
     parser.add_argument("--out", "-o", help="Buffer full text hits to file and return table receipt")
+    parser.add_argument("--no-autostart", action="store_true",
+                        help="Do not start the embedding slot if it is down (dense leg stays off)")
 
     args = parser.parse_args()
     query = " ".join(args.query)
@@ -217,6 +289,9 @@ def main():
     if not DB.is_file():
         sys.exit("no index yet: run python build_index.py first")
     db = sqlite3.connect(DB)
+
+    if not args.no_autostart:
+        ensure_embedding(db)
 
     legs = {"keyword": keyword_leg(db, query)}
     meaning, why = meaning_leg(db, query)

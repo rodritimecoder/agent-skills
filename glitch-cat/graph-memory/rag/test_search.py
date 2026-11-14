@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -190,6 +191,83 @@ class TestGraphMemorySearch(unittest.TestCase):
         with mock.patch.object(rag_search.urllib.request, "urlopen", return_value=FakeResponse()):
             ids, _ = rag_search.meaning_leg(self.db, "anything")
         self.assertEqual(ids, [1])
+
+
+class TestEnsureEmbedding(unittest.TestCase):
+    """A cold :8087 must start the candidate that built the index, not "the default"."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = sqlite3.connect(Path(self.tmp.name) / "t.db")
+        self.db.executescript(SCHEMA)
+
+    def tearDown(self):
+        self.db.close()
+        self.tmp.cleanup()
+
+    def _ensure(self, *, already_up=False, meta=None, ctl="/usr/bin/vram-rig-ctl",
+                autostart=True, timeout=0.05):
+        for key, value in (meta or {}).items():
+            self.db.execute("INSERT INTO meta VALUES (?, ?)", (key, str(value)))
+        self.db.commit()
+        calls = []
+        state = {"up": already_up}
+
+        def fake_popen(cmd, **kwargs):
+            calls.append(cmd)
+            state["up"] = True
+            return object()
+
+        with mock.patch.object(rag_search, "embedding_up", lambda *a, **k: state["up"]), \
+             mock.patch.object(rag_search, "VRAM_RIG_CTL", ctl), \
+             mock.patch.object(rag_search, "AUTOSTART", autostart), \
+             mock.patch.object(rag_search.subprocess, "Popen", fake_popen), \
+             mock.patch.object(rag_search.time, "sleep", lambda *_: None):
+            ok = rag_search.ensure_embedding(self.db, timeout=timeout)
+        return ok, calls
+
+    def test_already_up_spawns_nothing(self):
+        ok, calls = self._ensure(already_up=True)
+        self.assertTrue(ok)
+        self.assertEqual(calls, [])
+
+    def test_starts_the_index_candidate(self):
+        ok, calls = self._ensure(meta={"embedding_model": "embeddinggemma-2", "embedding_dim": 768})
+        self.assertTrue(ok)
+        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed", "embeddinggemma-2"]])
+
+    def test_no_meta_starts_the_slot_default(self):
+        ok, calls = self._ensure()
+        self.assertTrue(ok)
+        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed"]])
+
+    def test_path_meta_selects_by_dimension(self):
+        ok, calls = self._ensure(meta={
+            "embedding_model": "/run/media/rodri/AI/models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf",
+            "embedding_dim": 384,
+        })
+        self.assertTrue(ok)
+        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed", "--dim", "384"]])
+
+    def test_autostart_disabled_spawns_nothing(self):
+        ok, calls = self._ensure(autostart=False)
+        self.assertFalse(ok)
+        self.assertEqual(calls, [])
+
+    def test_missing_rig_fails_closed(self):
+        ok, calls = self._ensure(ctl=None)
+        self.assertFalse(ok)
+        self.assertEqual(calls, [])
+
+    def test_failure_message_names_the_command(self):
+        db = self.db
+        db.execute("INSERT INTO vectors VALUES (1, ?)", (b"\x00" * 16,))
+        db.execute("INSERT INTO meta VALUES ('embedding_model', 'bge-small-en-v1.5')")
+        db.execute("INSERT INTO meta VALUES ('embedding_dim', '4')")
+        db.commit()
+        with mock.patch.object(rag_search, "EMBEDDING_URL", "http://127.0.0.1:9/v1/embeddings"):
+            _rows, why = rag_search.meaning_leg(db, "anything")
+        self.assertIn("vram-rig-ctl up embed", why)
 
 
 if __name__ == "__main__":

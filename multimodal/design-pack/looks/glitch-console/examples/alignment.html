@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>glitch-console · alignment</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body {
+    display: grid;
+    place-items: start center;
+    min-height: 100vh;
+    padding: var(--s-8) var(--s-6);
+  }
+  .win--paper { width: min(860px, 100%); }
+  .stage { --sprite-scale: 7px; gap: var(--s-5); padding-top: var(--s-6); padding-bottom: var(--s-4); }
+  .stage.is-hidden { display: none; }
+  .q-line { padding-left: 1.5em; }
+  .reply { padding-left: 1.5em; color: var(--text-2); }
+</style>
+</head>
+<body>
+
+<main class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path">/glitch-orchestra</span>
+    <span class="win__chip">♪ orchestrator</span>
+  </div>
+
+  <div class="win__body">
+    <div class="log">
+      <p class="line line--cmd">&gt; /glitch-orchestra</p>
+      <p class="line"><span class="bullet--coral">●</span>Alignment first.</p>
+      <p class="line q-line"><span class="num--yellow">1</span>How is it made?</p>
+      <p class="line q-line"><span class="num--yellow">2</span>How does it move?</p>
+      <p class="line q-line"><span class="num--yellow">3</span>How should it feel?</p>
+      <p class="line"><span class="line__bullet">&gt;</span>one hero in a dark hall, real 3D, heavy</p>
+      <p class="line reply">weight that rings out when a blow lands.</p>
+      <p class="line"><span class="bullet--yellow">●</span>May I pull references?</p>
+    </div>
+
+    <div class="stage" id="stage">
+      <figure class="bot">
+        <canvas class="sprite" data-sprite="conductor" data-mood="aligning" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">♪ conductor</div>
+          <div class="bot__note bot__note--yellow">you: refs?</div>
+        </figcaption>
+      </figure>
+
+      <div class="comm-line" id="comm-ping" aria-label="communication ping">
+        <span class="comm-dot">■</span>
+        <span class="comm-dot">■</span>
+        <span class="comm-dot">■</span>
+        <span class="comm-dot">■</span>
+      </div>
+
+      <figure class="bot bot--blue">
+        <canvas class="sprite" data-sprite="frontend" data-mood="packet" style="--sprite-scale:7px"></canvas>
+        <figcaption>
+          <div class="bot__name">frontend</div>
+          <div class="bot__note">&nbsp;</div>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="keybar" aria-label="terminal shortcuts">
+      <span><b class="keybar__k">c</b>Comm ping</span>
+      <span><b class="keybar__k">1</b><span id="lbl-hide">Hide</span></span>
+      <span><b class="keybar__k">2</b><span id="lbl-stop">Stop</span></span>
+      <span><b class="keybar__k">g</b>Ground</span>
+    </div>
+
+    <div class="term-input" aria-label="prompt">
+      <span class="term-input__prompt">&gt;</span>
+      <span class="term-input__caret" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
+
+<script src="../sprites.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("ground") === "1") {
+    document.body.classList.add("is-ground");
+  }
+
+  const stage = document.getElementById("stage");
+  const lblHide = document.getElementById("lbl-hide");
+  const lblStop = document.getElementById("lbl-stop");
+
+  setTimeout(() => {
+    Pixels.communicate(stage);
+  }, 600);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "c") {
+      Pixels.communicate(stage);
+    } else if (key === "1") {
+      const hidden = stage.classList.toggle("is-hidden");
+      if (lblHide) lblHide.textContent = hidden ? "Show" : "Hide";
+    } else if (key === "2") {
+      const next = !Pixels.isPaused();
+      Pixels.setPaused(next);
+      if (lblStop) lblStop.textContent = next ? "Run" : "Stop";
+    } else if (key === "g") {
+      document.body.classList.toggle("is-ground");
+    }
+  });
+</script>
+</body>
+</html>

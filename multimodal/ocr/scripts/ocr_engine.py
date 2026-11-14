@@ -32,6 +32,20 @@ AI_DIR = Path(os.environ.get("OCR_AI_DIR", _drive_root()))
 LIGHTON_LAUNCHER = AI_DIR / "sh" / "lighton-ocr.sh"
 LIGHTON_MODEL_DIR = AI_DIR / "models" / "prithivMLmods" / "LightOnOCR-3-0.8B-GGUF"
 
+
+def lighton_start_command(ctl: Optional[str] = None) -> Optional[list]:
+    """How to start the LightOn slot: through the rig, or the launcher as a fallback.
+
+    The rig applies the VRAM budget and pinned-King rules; spawning the launcher
+    directly skips both, so it is only the fallback for a host without the rig.
+    """
+    ctl = ctl or shutil.which("vram-rig-ctl")
+    if ctl:
+        return [ctl, "up", "ocr"]
+    if LIGHTON_LAUNCHER.is_file():
+        return [str(LIGHTON_LAUNCHER)]
+    return None
+
 CRISP_DIR = AI_DIR / "CrispEmbed"
 CRISP_LAUNCHER = AI_DIR / "sh" / "crispembed-ocr.sh"
 CRISP_VULKAN_DIRECT = CRISP_DIR / "build-vulkan" / "test-ppocrv6-direct"
@@ -101,9 +115,10 @@ class OCREngine:
     def ensure_lighton(self, timeout: float = 12.0) -> bool:
         if self.is_lighton_online():
             return True
-        if not LIGHTON_LAUNCHER.is_file():
+        cmd = lighton_start_command()
+        if not cmd:
             return False
-        subprocess.Popen([str(LIGHTON_LAUNCHER)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         deadline = time.time() + timeout
         while time.time() < deadline:
             if self.is_lighton_online():

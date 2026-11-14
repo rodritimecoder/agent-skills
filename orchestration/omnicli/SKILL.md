@@ -27,7 +27,7 @@ Nothing else enters the context window.
                         └───────────────┬───────────────┘
                                         │
                         ┌───────────────▼───────────────┐
-                        │  474 tools  (data plane)       │
+                        │  556 tools  (data plane)       │
                         │  scripts · CLIs · endpoints    │
                         └───────────────────────────────┘
 ```
@@ -156,7 +156,7 @@ still returns their contract, and `omnicli invoke` refuses them with the exact
 command that would open the gate:
 
 ```bash
-omnicli policy            # 367/474 enabled, plus the recent decisions
+omnicli policy            # 532/556 enabled, plus the recent decisions
 omnicli enable <tool_id>  # record the decision against the contract hash
 omnicli disable <tool_id>
 ```
@@ -380,41 +380,42 @@ count. The router had to evaluate dozens of frontmatter descriptions on turn 0.
 
 Retrieval beats installation. The catalog moves selection off the model's
 shoulders and onto a BM25 index, and the golden evaluation in `tests/` is the
-falsifiable claim that it works:
+falsifiable claim that it works (re-measured 2026-11-14, 59-skill catalog, `:8087` offline):
 
 ```
-BM25 catalog    top1 59/61 (96.7%)   top3 61/61 (100%)
-legacy scorer   top1 35/61 (57.4%)   top3 46/61 (75.4%)
+BM25 catalog    top1  56/61 (91.8%)   top3  61/61 (100.0%)
+legacy scorer   top1  41/61 (67.2%)   top3  49/61 ( 80.3%)
 ```
 
-The miss is a generic-token query ("decide which model should handle this
-prompt before answering") where the decision skill matches all six tokens and
-the router matches four; neither leg separates them. It is recorded, not
-excluded.
+Adding newer skills (`video-miner`, `deck`, `playwright`, `gh-action-subagent`,
+virtual `local`) shifted five golden top-1 ties (`top3` remains 61/61): two are
+stopword misses (`"sure"`, `"now"`/`"right"` matching unrelated skills at
+`coord=1.0`), one is the 1-chunk `local` virtual skill beating `local-llm` via
+`CHUNK_PENALTY_ALPHA`, and two are direct lexical overlap with newer skills
+(`video-miner` vs `zoom-recorder`, `gh-action-subagent` vs `openrouter-free`).
 
 The alias set is audited against the eval set (`tests/overfit_check.py`) so a
 router handed the answer key cannot be mistaken for a router that works. It
-currently reports **0** echoes; three verbatim-echo aliases were removed, and
-the case one of them propped up is the miss above.
+currently reports **0** echoes across 389 aliases; three verbatim-echo aliases
+were removed earlier.
 
-**That 96.7% is a tuned-set number and should be quoted as one.** 32 of the 61
+**That 91.8% is a tuned-set number and should be quoted as one.** 32 of the 61
 queries share a curated alias string, so the set measures whether the
-vocabulary was written down, not whether a stranger's phrasing lands. The
-held-out set scores 24/30 on BM25 alone — and that number is itself optimistic,
-because the descriptions were written with those queries in view. Both are
-true; neither predicts a stranger's results. `omnicli eval --fusion
-auto|always|never` and `--rerank auto|always|never` re-run the set under either
-semantic mode.
+vocabulary was written down, not whether a stranger's phrasing lands. On the
+39-case paraphrase set (`tests/paraphrase_eval.json`), BM25 alone scores
+21/39 (53.8%) top-1 and 24/39 (61.5%) top-3 (`legacy`: 19/39). `omnicli eval
+--fusion auto|always|never` and `--rerank auto|always|never` re-run the set
+under either semantic mode when `:8087` is online.
 
-### Token cost (measured)
+### Token cost (measured 2026-11-14)
 
 `tests/measure_tokens.py` counts what actually lands in the model's context,
-using the local Qwen3.5 tokenizer against the 45-skill library:
+using the local Qwen3.5 tokenizer against the 58 non-archived skills:
 
 | | prompt shelf | omnicli | |
 |---|---|---|---|
-| selection phase | 8,208 tok | 691 tok | **91.6% smaller** |
-| to invoke one tool | 9,326 tok | 2,890 tok | **69.0% smaller** |
+| selection phase | 10,827 tok | 1,274 tok | **88.2% smaller** |
+| to invoke one tool | 13,209 tok | 4,265 tok | **67.7% smaller** |
 
 The second row's saving comes from the 8 KB response cap, not from the
 discovery itself. The selection-phase number is the one that matters, because

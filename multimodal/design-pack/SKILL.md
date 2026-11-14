@@ -25,7 +25,7 @@ looks/glitch-console/     the shipped look — dark terminal, pixel sprites
   sprites.js              ASCII pixel maps -> canvas, stepped, no easing
   pack.html               the retrieval target: everything on one page
   states.html             the spawn in five frames, for design review
-  examples/               five pages built only from the pack — copy these
+  examples/               terminal.html · board.html · alignment.html · timing.html
   traces/conductor_t4/    a measured pose: crop.json + grid.json + frame.png
   traces/conductor_jump_t543/   the jump: 6 rows, 300 ms, platform pinned
   traces/spawn_t18/       the spawn: 5 x 2-row steps + a 23-frame colour ramp
@@ -66,16 +66,17 @@ those six. That is why zone 3 is small here and zone 4 is nearly free.
 
 | Primitive | Class | States |
 | :--- | :--- | :--- |
-| window | `.win` | `ink` · `paper` · `inset` |
-| line | `.line` | `cmd` · `event` · `dim` · `alert` · `sm` |
-| chip | `.chip` | `default` · `ink` · `pink` · `mint` |
+| window | `.win` | default (`ink`) · `win--paper` · `win--inset` |
+| line | `.line` | `cmd` · `tree` · `event` · `dim` · `alert` · `sm` · `.term-input` · `.keybar` |
+| chip | `.chip` | `default` · `ink` · `coral` · `pink` · `mint` |
 | rule | `.rule` | `1px` · `heavy` · `dashed` |
-| meter | `.bar` | `rest` · `on` · `warn` |
-| sprite | `.sprite` | `rest` · `up` · `down` · `squash` + moods |
+| meter | `.bar` | `rest` · `on` · `dim` · `warn` |
+| sprite | `.sprite` | `rest` · `blink` · `bop` · `squash` · `jump` · `descent` · `flash` + moods |
 
 If a screen needs a seventh, it is not a component — it is a **block**: a new window,
-or a line that asks the question inline. Do not add a select, a modal or a tooltip to
-a terminal look; the constraint is the design.
+or a line that asks the question inline. Do not add a `<button>`, `<input>`, select,
+modal or tooltip to a terminal look; drive actions via keyboard triggers (`1` Hide,
+`2` Stop, `s` Spawn, `j` Jump, `m` Moods, `g` Ground, `c` Comm ping).
 
 ## Build a new look
 
@@ -109,18 +110,21 @@ a terminal look; the constraint is the design.
 
 ## Sprite pipeline (this look)
 
-Sprites are ASCII maps on a 16×10 grid, drawn to `<canvas>` at an integer scale with
-`imageSmoothingEnabled = false`. That is the whole renderer — no atlas, no engine.
-The conductor is the worker body with a solid two-row base band; workers swap that
-band for four one-cell leg stubs. That is the only difference.
+Sprites are ASCII maps on a 16×10 body inside a 22×18 grid (`PAD_X = 3`), drawn to
+`<canvas>` at an integer scale with `imageSmoothingEnabled = false`. All four bots
+(`conductor`, `frontend`, `copy`, `tests`) share `REST_ROW = 6` (rows 6–15) so their
+feet land on the same baseline; `conductor`'s 2-row solid platform sits fixed at
+`PLAT_ROW = 16..17`, leaving 6 rows of overhead headroom (`rows 0..5`) for jumps and tells.
 
 ```html
 <canvas data-sprite="conductor" data-mood="outputting"></canvas>
-<canvas data-sprite="frontend" data-mood="thinking" data-spawn></canvas>
+<canvas data-sprite="frontend" data-mood="thinking" data-wait-spawn data-stagger-spawn></canvas>
 ```
 
 ```js
-Pixels.spawn(canvas);   // the pokeball: white → oversize → squash → colour → settle
+Pixels.staggerSpawn(stage, 330); // staggered 23-frame floor-rise spawn across workers
+Pixels.setPaused(true);          // freeze/resume 30 fps loop (2 Stop)
+Pixels.cycleMood(root);          // cycle measured particle moods (m Moods)
 ```
 
 ### Motion: the bot never eases
@@ -128,24 +132,25 @@ Pixels.spawn(canvas);   // the pokeball: white → oversize → squash → colou
 Everything below was measured off the reference reel at 30 fps, one frame at a time.
 Do not soften it back into a tween.
 
-- **The feet never leave the floor.** Across 210 consecutive frames the bbox bottom
-  stays pinned while the top edge alternates: 793 ↔ 829 in one window,
-  813 ↔ 834 ↔ 855 in another. It is a **stretch about the feet**, not a hop — hence
-  `POSES` carries `flatten`, and there is no `dy`.
+- **Unified floor baseline.** All 4 bots rest at rows 6–15 with `conductor`'s fixed
+  2-row coral platform directly beneath at rows 16–17, sharing one floor and label row.
 - **A pose change takes one frame, 33 ms.** There is no interpolation anywhere. What
   looks smooth in the video is the *terminal transcript scrolling*, not the sprite.
-- **Holds are irregular.** Measured set: 100, 132, 165, 198, 231, 330, 363, 396, 462,
-  495, 660, 726 ms. Median ≈ 350 ms. `PROGRAMS.idle` picks from it with a seeded hash,
-  so a roster drifts apart instead of pulsing in unison.
-- **Particles are held steps, not a stream.** Thinking is 1→2→3 spark clusters above
-  the head (165 ms each, then 495 ms clear). Outputting is `♪` → `♪♪` → `♪`
-  (363 ms each, then 660 ms clear). Three steps, then nothing.
+- **Holds are irregular.** Measured set: 66, 99, 132, 165, 198, 231, 264, 297, 330,
+  363, 396, 495, 660 ms. `PROGRAMS.idle` picks from it with a seeded hash, so a
+  roster drifts apart instead of pulsing in unison.
+- **Particles are 30 fps stepped tells, not eased emitters.** Measured `Pixels.moods`:
+  `outputting` (dual-slot `♪`/`♫` conveyor anchored to `restRow`, `396+330+363+396 ms`),
+  `thinking` (5-step `0.65×px` pixel-dust cascade into a 1.25px horizontal band),
+  `absorbing` (diagonal taste blocks + `66 ms` 72% paper torso flash),
+  `aligning` (`-2.5 px` right-to-left `✶`/`✴`/`✻` sparkle wave + coral micro specks),
+  and `packet` (`0.65×px` waiting hopper + 2-phase packet→ping stream).
 - **The stage is one window.** Every bot stands on the same floor inside a single
   `win--paper` terminal. Never a card per bot.
 
-`examples/terminal.html` is the reel layout; `examples/timing.html` renders the live
-programs, so neither can drift from `sprites.js`. `prefers-reduced-motion` keeps the
-sprites at rest.
+`examples/terminal.html`, `examples/board.html`, and `examples/alignment.html` are the
+1-to-1 reference screens; `examples/timing.html` renders the live programs, so none
+can drift from `sprites.js`. `prefers-reduced-motion` keeps the sprites at rest.
 
 ## Adding a sprite
 

@@ -52,10 +52,22 @@ Beyond the slots sits the swapping rig, operated by `vram-rig-ctl`
   llm slot's king holds the VRAM); auxiliary models are evicted and restored on
   demand. Start/inspect/stop with `vram-rig-ctl llama-swap-up | llama-swap-status
   | llama-swap-down`; it watches [config/llama-swap.yaml](config/llama-swap.yaml).
+  It fronts **chat-completions models only** — `/v1/embeddings`, `/v1/rerank`,
+  `/v1/audio/*`, `/ocr/pipeline` and `/v1/systemone` stay direct slots, because a
+  router fits a uniform contract with many candidates, not a "type".
+  `llama-swap -validate` only proves the file parses; `ports.py check` proves every
+  model's weights exist and the swap matrix resolves.
 - **Headroom & Dynamic Swapping:** `vram-rig-ctl status` (VRAM + every slot's state),
-  `vram-rig-ctl up <slot|port>` (or `swap`), `vram-rig-ctl down <slot|port>` (or `kill`),
+  `vram-rig-ctl up <slot|port> [candidate]` (or `swap`), `vram-rig-ctl down <slot|port>` (or `kill`),
   and `vram-rig-ctl evict-all` (free every non-pinned port to reclaim headroom). Target
-  can be a slot id (`ocr`, `asr`, `decision`, `llm`), alias, or numeric port.
+  can be a slot id (`ocr`, `asr`, `decision`, `llm`), an alias, a numeric port, or any
+  registered candidate by model or launcher name (`up valen`,
+  `up embed embeddinggemma-2`). `--dry-run` prints the resolved launch plan and
+  starts nothing.
+- **Manifest first:** the tool reads `ports.json` (every candidate) and treats
+  `port_registry.json` as a rendered cache. Starting a non-default candidate never
+  rewrites the manifest: it prints the divergence and the `ports.py swap` command
+  that would persist it.
 
 The rig is `infra` in `ports.json` (owned by this skill); the slots above are
 the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weights on the AI volume.

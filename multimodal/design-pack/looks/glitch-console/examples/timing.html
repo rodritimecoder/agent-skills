@@ -2,86 +2,145 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>glitch-console · timing</title>
 <link rel="stylesheet" href="../tokens.css">
 <style>
-  body { padding: var(--s-9) var(--s-7); max-width: 1080px; margin: 0 auto; }
-  h1 { font-size: var(--fs-lg); letter-spacing: var(--track-label); text-transform: uppercase; margin-bottom: var(--s-2); }
-  .sub { color: var(--dim); font-size: var(--fs-sm); margin-bottom: var(--s-8); }
-  .prog { margin-bottom: var(--s-8); }
-  .prog__head { display: flex; align-items: baseline; gap: var(--s-4); margin-bottom: var(--s-3); }
-  .prog__name { font-weight: 700; letter-spacing: var(--track-label); text-transform: uppercase; font-size: var(--fs-sm); }
+  body { padding: var(--s-8) var(--s-6); max-width: 1080px; margin: 0 auto; }
+  .win--paper { width: 100%; }
+  .sub { color: var(--dim); font-size: var(--fs-sm); margin-bottom: var(--s-7); }
+  .prog { margin-bottom: var(--s-7); min-width: 0; max-width: 100%; }
+  .prog__head { display: flex; align-items: baseline; gap: var(--s-4); margin-bottom: var(--s-3); flex-wrap: wrap; }
+  .prog__name { font-weight: 700; letter-spacing: var(--track-label); text-transform: uppercase; font-size: var(--fs-sm); color: var(--coral); }
   .prog__total { color: var(--yellow); font-size: var(--fs-sm); }
   .prog__note { color: var(--dim); font-size: var(--fs-xs); margin-left: auto; }
-  .strip { display: flex; height: 34px; border: var(--b-1) solid var(--rule); }
+  .strip { display: flex; height: 32px; border: var(--b-1) solid var(--rule); max-width: 100%; }
   .seg { display: flex; align-items: center; justify-content: center; font-size: var(--fs-2xs);
-         color: var(--on-accent); border-right: var(--b-1) solid var(--ink-900); overflow: hidden; }
-  .seg--rest   { background: var(--ink-500); color: var(--text-2); }
-  .seg--up     { background: var(--blue); }
-  .seg--jump   { background: var(--coral); }
-  .seg--descent{ background: var(--yellow); }
-  .seg--down   { background: var(--mint); }
-  .seg--flash  { background: var(--paper); }
-  .seg--squash { background: var(--pink); }
-  .ruler { display: flex; justify-content: space-between; color: var(--dim); font-size: var(--fs-2xs); margin-top: var(--s-2); }
-  footer { color: var(--dim); font-size: var(--fs-xs); border-top: var(--b-1) solid var(--rule); padding-top: var(--s-5); margin-top: var(--s-7); }
+         color: var(--on-accent); border-right: var(--b-1) solid var(--ink-950); overflow: hidden; }
+  .seg--rest    { background: var(--ink-500); color: var(--text-2); }
+  .seg--blink   { background: var(--ink-600); color: var(--text-2); }
+  .seg--bop     { background: var(--violet); color: var(--paper); }
+  .seg--up      { background: var(--blue); }
+  .seg--jump    { background: var(--coral); }
+  .seg--descent { background: var(--yellow); }
+  .seg--down    { background: var(--mint); }
+  .seg--flash   { background: var(--paper); }
+  .seg--squash  { background: var(--pink); }
+  .seg--m0      { background: var(--coral); }
+  .seg--m1      { background: var(--yellow); }
+  .seg--m2      { background: var(--paper); }
+  .seg--m3      { background: var(--mint); }
+  .seg--m4      { background: var(--blue); }
+  .seg--m5      { background: var(--pink); }
+  .seg--m6      { background: var(--violet); color: var(--paper); }
+  .seg--m7      { background: var(--coral-hi); }
+  .seg--hold    { background: var(--ink-600); color: var(--text-2); }
+  .sec-gap { margin-top: var(--s-8); }
+  .ruler { display: flex; justify-content: space-between; color: var(--dim); font-size: var(--fs-2xs);
+           margin-top: var(--s-2); max-width: 100%; flex-wrap: nowrap; overflow: hidden; gap: var(--s-2); }
+  .foot-note { color: var(--dim); font-size: var(--fs-xs); border-top: var(--b-1) solid var(--rule); padding-top: var(--s-5); margin-top: var(--s-6); }
 </style>
 </head>
 <body>
-<h1>Timing</h1>
-<p class="sub">Rendered from <code>Pixels.programs</code> — each strip is scaled to fit; segment widths remain proportional to milliseconds.</p>
-<div id="out"></div>
-<footer>
-  Every value here is one constant in <code>sprites.js</code>. The idle strip is 64 poses drawn from the measured hold set, so it is irregular on purpose. A pose change costs one frame at 30 fps, and the feet never leave the floor — the body stretches about them. Nothing in the pack eases.
-</footer>
+<main class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path">/glitch-orchestra · timing</span>
+    <span class="win__chip">30 fps stepped</span>
+  </div>
+
+  <div class="win__body">
+    <p class="line line--cmd">&gt; Pixels.programs</p>
+    <p class="sub">Each strip is scaled to fit; segment widths remain proportional to milliseconds.</p>
+    <div id="out-programs"></div>
+
+    <p class="line line--cmd sec-gap">&gt; Pixels.moods</p>
+    <p class="sub">Measured 30 fps overhead &amp; torso particle loops snapped to 33 ms frames.</p>
+    <div id="out-moods"></div>
+
+    <p class="foot-note">
+      Every value here is one constant in <code>sprites.js</code>. A pose or particle step costs one frame at 30 fps (33 ms). Nothing in the pack eases.
+    </p>
+  </div>
+</main>
 
 <script src="../sprites.js"></script>
 <script>
-  const MAX_WIDTH = 980;
   const MAX_SCALE = 0.62;
   const NOTES = {
-    idle: "measured holds, feet pinned · 30 fps",
+    idle: "measured holds, discrete squash dips · 30 fps",
     walk: "the step cycle · 12 fps",
-    jump: "conductor high jump (4-row air gap) · 30 fps",
-    workerJump: "worker squat & jump · 30 fps",
-    spawn: "the pokeball · five held steps",
+    jump: "conductor 6-row jump over fixed platform · 30 fps",
+    workerJump: "worker squat & 6-row jump · 30 fps",
+    crouch: "conductor warming up crouch · 30 fps",
+    spawn: "2-row floor-rise (2→4→6→8→10) + #f2f3f8 tint lerp · 30 fps",
   };
-  const out = document.getElementById("out");
-  for (const [name, steps] of Object.entries(Pixels.programs)) {
-    const total = steps.reduce((s, x) => s + x.ms, 0);
-    const scale = Math.min(MAX_SCALE, MAX_WIDTH / total);
-    const row = document.createElement("section");
-    row.className = "prog";
+  const MOOD_NOTES = {
+    outputting: "dual-slot ♪/♫ conveyor anchored to restRow · 396+330+363+396 ms",
+    thinking: "5-step pixel-dust cascade into 1.25px horizontal band · 165×3+198+495 ms",
+    absorbing: "diagonal taste blocks + 72% paper flash on steps 2 & 5 · 6×66+198 ms",
+    aligning: "-2.5px right-to-left ✶/✴/✻ wave + coral micro specks · 8×132+396 ms",
+    packet: "0.65×px waiting hopper above upper-left corner · 3×165+330 ms",
+    attention: "red ! alert toggle · 2×250 ms",
+  };
+  const outPrograms = document.getElementById("out-programs");
+  const outMoods = document.getElementById("out-moods");
 
-    const head = document.createElement("div");
-    head.className = "prog__head";
-    head.innerHTML = `<span class="prog__name">${name}</span>
-      <span class="prog__total">${total} ms</span>
-      <span class="prog__note">${NOTES[name] || ""}</span>`;
+  function renderGroup(target, entries, notesMap, isMood) {
+    target.textContent = "";
+    const avail = target.clientWidth || 940;
+    const MAX_WIDTH = Math.max(200, Math.min(940, avail));
+    for (const [name, steps] of entries) {
+      const total = steps.reduce((s, x) => s + x.ms, 0);
+      const scale = Math.min(MAX_SCALE, MAX_WIDTH / total);
+      const row = document.createElement("section");
+      row.className = "prog";
 
-    const strip = document.createElement("div");
-    strip.className = "strip";
-    strip.style.width = (total * scale) + "px";
-    for (const s of steps) {
-      const seg = document.createElement("div");
-      seg.className = "seg seg--" + s.pose;
-      const width = s.ms * scale;
-      seg.style.width = width + "px";
-      seg.textContent = width >= 40 ? s.ms : "";
-      seg.title = `${s.pose} · ${s.ms} ms · ${s.scale ?? 1}×`;
-      strip.appendChild(seg);
+      const head = document.createElement("div");
+      head.className = "prog__head";
+      head.innerHTML = `<span class="prog__name">${name}</span>
+        <span class="prog__total">${total} ms</span>
+        <span class="prog__note">${notesMap[name] || ""}</span>`;
+
+      const strip = document.createElement("div");
+      strip.className = "strip";
+      strip.style.width = (total * scale) + "px";
+      steps.forEach((s, idx) => {
+        const seg = document.createElement("div");
+        const isLastHold = isMood && idx === steps.length - 1 && name !== "attention";
+        seg.className = "seg " + (isMood ? (isLastHold ? "seg--hold" : "seg--m" + (s.step % 8)) : ("seg--" + s.pose));
+        const width = s.ms * scale;
+        seg.style.width = width + "px";
+        seg.textContent = width >= 36 ? s.ms : "";
+        seg.title = isMood
+          ? `step ${s.step} · ${s.ms} ms${isLastHold ? " · pause" : ""}`
+          : `${s.pose} · ${s.ms} ms · ${s.scale ?? 1}×`;
+        strip.appendChild(seg);
+      });
+
+      const ruler = document.createElement("div");
+      ruler.className = "ruler";
+      ruler.style.width = (total * scale) + "px";
+      const tick = total > 5000 ? 5000 : (MAX_WIDTH < 520 && total > 1000 ? 500 : 250);
+      for (let t = 0; t <= total; t += tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: t + "ms" }));
+      if (total % tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: total + "ms" }));
+
+      row.append(head, strip, ruler);
+      target.appendChild(row);
     }
-
-    const ruler = document.createElement("div");
-    ruler.className = "ruler";
-    ruler.style.width = (total * scale) + "px";
-    const tick = total > 5000 ? 5000 : 250;
-    for (let t = 0; t <= total; t += tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: t + "ms" }));
-    if (total % tick) ruler.appendChild(Object.assign(document.createElement("span"), { textContent: total + "ms" }));
-
-    row.append(head, strip, ruler);
-    out.appendChild(row);
   }
+
+  function render() {
+    renderGroup(outPrograms, Object.entries(Pixels.programs), NOTES, false);
+    renderGroup(outMoods, Object.entries(Pixels.moods), MOOD_NOTES, true);
+  }
+
+  render();
+  window.addEventListener("resize", render);
 </script>
 </body>
 </html>

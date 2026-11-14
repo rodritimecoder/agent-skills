@@ -1,61 +1,66 @@
 /* glitch-console — tokens
-   Every value measured off Reel DeKBMCQNRXU frame_000003 / 000012 / 000014 / 000016.
-   Nothing here is invented: the ink, the cream and the five accents are sampled RGB.
+   Sampled 1-to-1 from Kem's Glitch Orchestra stills (ref_01, ref_02, ref_05, ref_10, ref_11).
+   Pure rectangular terminal aesthetic on a strict monospace character grid.
    Change a look by copying this file, not by overriding a page. */
 
 :root {
-  /* ── ink: the terminal itself ───────────────────────────────────── */
-  --ink-900: #0e1118;   /* page behind the window */
-  --ink-800: #12151c;   /* terminal body (measured, 80-90% of every frame) */
-  --ink-700: #171b24;   /* raised panel, title strip */
-  --ink-600: #1e2430;   /* rest state of a control */
-  --ink-500: #262d3b;   /* hover state */
-  --ink-400: #343d4f;   /* pressed / input well */
-  --rule:    #2b3242;   /* 1px horizontal rule */
+  /* ── ink: sampled dark terminal surfaces ────────────────────────── */
+  --ink-950: #0a0b10;   /* outer window border & hard offset shadow */
+  --ink-900: #0e1118;   /* outer dark page ground */
+  --ink-800: #12131c;   /* terminal screen body */
+  --ink-700: #181a26;   /* raised panel / inset bar */
+  --ink-600: #222433;   /* meter off-cell */
+  --ink-500: #2b2e40;   /* subtle divider */
+  --rule:    #3a3b48;   /* 1px board box & double-ruled prompt lines */
 
-  /* ── paper: the cream chrome ────────────────────────────────────── */
-  --paper:    #fdf6e3;  /* window border, paper card (measured) */
-  --paper-2:  #f3e9cf;  /* paper shade / offset shadow */
-  --paper-3:  #e6d9b8;  /* paper rule */
+  /* ── paper: cream titlebar & spawn flash frame ──────────────────── */
+  --paper:       #fef2da;   /* cream titlebar & flash frame */
+  --paper-2:     #f3e4c3;   /* cream secondary */
+  --spawn-flash: #f2f3f8;   /* spawn floor-rise initial flash tint */
 
   /* ── text ───────────────────────────────────────────────────────── */
-  --text:    #dfe6f2;   /* body */
-  --text-2:  #9aa4b8;   /* secondary */
-  --dim:     #6d7688;   /* labels, meta, disabled */
-  --on-accent: #12151c; /* text sitting on a bright accent */
+  --text:      #e5e4eb; /* primary bright terminal text */
+  --text-2:    #b4b4c0; /* secondary text */
+  --dim:       #8c8c98; /* muted labels, tree notes */
+  --on-accent: #12131c; /* text sitting on a bright accent */
 
-  /* ── accents: one per worker, plus attention ────────────────────── */
-  --coral:    #d87653;  /* conductor */
-  --coral-hi: #f39f7e;  /* conductor highlight */
-  --blue:     #68a8e6;  /* frontend */
-  --pink:     #f02e75;  /* copy */
-  --mint:     #54c693;  /* tests */
-  --yellow:   #f7d140;  /* attention / pending */
-  --violet:   #7848f6;  /* astra */
-  --red:      #de301c;  /* alarm, sol's band */
+  /* ── accents: one per worker, plus attention & dots ─────────────── */
+  --coral:    #e17c51;  /* conductor, orchestrator chip text, musical notes */
+  --coral-hi: #f39f7e;  /* coral highlight */
+  --blue:     #62a5ea;  /* frontend */
+  --pink:     #dd6b95;  /* copy & alert */
+  --mint:     #6fcbbf;  /* tests & passed checkmark */
+  --yellow:   #f2c94c;  /* NEEDS YOU, numbered options, attention */
+  --violet:   #7848f6;  /* progress cell / optional astra */
+  --red:      #ee3d19;  /* alarm */
+  --sol-face: #fbdab2;  /* optional sol face */
 
-  /* ── type ───────────────────────────────────────────────────────── */
+  /* ── window dots & poster ground ────────────────────────────────── */
+  --dot-pink:   #fb4274;
+  --dot-yellow: #f6d354;
+  --dot-mint:   #6fcbbf;
+  --ground:     #7dabf3; /* periwinkle poster halftone toggle */
+  --ground-dot: #5468b8; /* halftone dot */
+
+  /* ── type: strict monospace everywhere ──────────────────────────── */
   --font-mono: "FantasqueSansM Nerd Font Mono", "Fantasque Sans Mono",
                ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  /* the headline face. Set this to var(--font-mono) for a pure-terminal headline;
-     the default keeps the reel's heavy grotesque. */
-  --font-display: system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-mono);
 
-  --fs-2xs: 9px;
-  --fs-xs: 11px;
-  --fs-sm: 13px;
-  --fs-md: 15px;
-  --fs-lg: 19px;
-  --fs-xl: 26px;
-  --fs-2xl: 38px;
-  --fs-3xl: 56px;
+  --fs-2xs: 10px;
+  --fs-xs:  12px;
+  --fs-sm:  14px;
+  --fs-md:  16px;
+  --fs-lg:  18px;
+  --fs-xl:  22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
 
-  --lh-tight: 1.05;
+  --lh-tight: 1.15;
   --lh: 1.45;
-  --track-label: 0.14em;   /* uppercase labels */
-  --track-display: -0.01em;
+  --track-label: 0.12em;
 
-  /* ── space: a 4px ladder, nothing between ───────────────────────── */
+  /* ── space: a 4px ladder ────────────────────────────────────────── */
   --s-1: 2px;
   --s-2: 4px;
   --s-3: 6px;
@@ -67,37 +72,33 @@
   --s-9: 48px;
   --s-10: 64px;
 
-  /* ── geometry: pixel art has no curves ──────────────────────────── */
+  /* ── geometry: pixel art has square corners ─────────────────────── */
   --r-0: 0px;
   --r-1: 2px;
   --b-1: 1px;
   --b-2: 2px;
   --b-3: 3px;
 
-  /* the window: cream border + hard offset shadow, never a soft blur */
-  --shadow-card: 6px 6px 0 var(--paper-2);
-  --shadow-hard: 4px 4px 0 var(--ink-900);
+  --shadow-card: 8px 8px 0 var(--ink-950);
+  --shadow-hard: 4px 4px 0 var(--ink-950);
 
-  /* ── motion: stepped, never eased ─────────────────────────────────
-     A step is held for its full duration, then swapped. Measured off
-     the reels: nothing in Kem's captures tweens. The idle cadence is
-     chosen, not transcribed — see the note in sprites.js. */
-  --snap: 33ms;           /* one frame at 30 fps — the only transition a bot has */
-  --hold-min: 100ms;      /* measured: the shortest a pose is ever held */
-  --hold-typical: 363ms;  /* representative measured hold; median is about 350ms */
-  --hold-max: 726ms;      /* measured: the longest, before a 1.2s settle */
-  --step-action: 84ms;    /* 12 fps per pose */
-  --step-flash: 90ms;     /* the pokeball, per step */
-  --spawn-total: 450ms;   /* five held steps */
-  --scroll: 1200ms;       /* the transcript scrolls; the bot never does */
+  /* ── motion: stepped at 30 fps, never eased ─────────────────────── */
+  --snap: 33ms;
+  --hold-min: 100ms;
+  --hold-typical: 363ms;
+  --hold-max: 726ms;
+  --step-action: 84ms;
+  --step-flash: 90ms;
+  --spawn-total: 759ms;
+  --scroll: 1200ms;
 
   /* ── sprite grid ────────────────────────────────────────────────── */
-  --sprite-scale: 6px;  /* one art pixel; integer multiples only */
-  --sprite-w: 16;
-  --sprite-h: 16;  /* 16-row vertical grid: peak jump (R0), rest (R3), squash (R5), platform (R13-14) */
+  --sprite-scale: 6px;
+  --sprite-w: 22;
+  --sprite-h: 18;
 }
 
-/* ── reset: this look resets hard, it does not inherit ───────────── */
+/* ── reset ────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { background: var(--ink-900); }
@@ -109,15 +110,22 @@ body {
   font-size: var(--fs-md);
   line-height: var(--lh);
   -webkit-font-smoothing: antialiased;
-  font-synthesis: weight; /* falls back to a synthesised 700 on machines without the Bold cut */
+  font-synthesis: weight;
+}
+
+body.is-ground,
+.ground {
+  background-color: var(--ground);
+  background-image: radial-gradient(var(--ground-dot) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
 }
 
 ::selection { background: var(--yellow); color: var(--on-accent); }
 
-/* ── the window: cream frame around a black screen ───────────────── */
+/* ── 1 · window (.win) ────────────────────────────────────────────── */
 .win {
   background: var(--ink-800);
-  border: var(--b-2) solid var(--paper);
+  border: var(--b-2) solid var(--ink-950);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -132,35 +140,58 @@ body {
   display: flex;
   font-size: var(--fs-xs);
   gap: var(--s-4);
-  padding: var(--s-3) var(--s-5);
+  padding: 6px 12px;
 }
 
-.win__dots { display: flex; gap: var(--s-2); }
+.win__dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .win__dot {
-  width: 7px; height: 7px;
+  width: 11px;
+  height: 11px;
+  border: var(--b-2) solid var(--ink-950);
   background: var(--dim);
   display: block;
+  flex: none;
 }
-.win__dot--pink  { background: var(--pink); }
-.win__dot--yellow { background: var(--yellow); }
-.win__dot--mint  { background: var(--mint); }
+.win__dot--pink   { background: var(--dot-pink); }
+.win__dot--yellow { background: var(--dot-yellow); }
+.win__dot--mint   { background: var(--dot-mint); }
 
-.win__path { color: var(--text-2); }
-.win__path b { color: var(--text); font-weight: 700; }
+.win__path {
+  color: var(--text-2);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 
-.win__chip, .chip {
+.win__chip,
+.chip {
   background: var(--yellow);
   color: var(--on-accent);
+  font-size: var(--fs-xs);
   font-weight: 700;
-  padding: 0 var(--s-3);
+  padding: 2px 8px;
   white-space: nowrap;
+  display: inline-block;
 }
 .win__chip { margin-left: auto; }
-.chip--ink  { background: var(--ink-900); color: var(--paper); }
-.chip--pink { background: var(--pink); color: var(--paper); }
-.chip--mint { background: var(--mint); color: var(--on-accent); }
+.chip--ink   { background: var(--ink-900); color: var(--paper); }
+.chip--coral { background: var(--ink-800); color: var(--coral); }
+.chip--pink  { background: var(--pink); color: var(--ink-950); }
+.chip--mint  { background: var(--mint); color: var(--ink-950); }
 
-.win__body { padding: var(--s-6); flex: 1; min-height: 0; }
+.win__body {
+  background: var(--ink-800);
+  padding: 20px 24px 14px;
+  flex: 1;
+  min-height: 0;
+}
+
 .win__foot {
   border-top: var(--b-1) solid var(--rule);
   color: var(--dim);
@@ -168,253 +199,99 @@ body {
   padding: var(--s-3) var(--s-5);
 }
 
-/* ── the reel's terminal: a cream bar on a black screen ────────────
-   Measured off DeKBMCQNRXU 0:18-0:21. The bar is paper, not ink; the
-   path is the accent; the chip inverts. One window holds every bot. */
+/* cream titlebar variant matching Kem's reel */
 .win--paper .win__bar {
   background: var(--paper);
-  border-bottom: 0;
-  color: var(--on-accent);
+  border-bottom: var(--b-2) solid var(--ink-950);
+  color: var(--ink-950);
+  padding: 6px 12px;
   font-size: var(--fs-sm);
-  padding: var(--s-4) var(--s-5);
 }
-.win--paper .win__path,
-.win--paper .win__path b { color: var(--on-accent); }
+.win--paper .win__path {
+  color: var(--ink-950);
+  font-weight: 400;
+}
 .win--paper .win__chip {
-  background: var(--on-accent);
-  color: var(--paper);
+  background: var(--ink-800);
+  color: var(--coral);
+  font-size: var(--fs-xs);
   font-weight: 700;
+  padding: 2px 8px;
   margin-left: auto;
-  padding: 0 var(--s-3);
 }
-.win--paper .win__body { background: var(--ink-900); }
+.win--paper .win__body {
+  background: var(--ink-800);
+  padding: 20px 24px 14px;
+}
 
-/* the window has three states and no fourth: ink (default), paper (the reel),
-   inset (no shadow, for a window inside a window) */
 .win--inset { box-shadow: none; }
 
-/* the transcript: the only thing in the frame that scrolls */
-.log { display: flex; flex-direction: column; gap: var(--s-3); }
-.log__line, .line { color: var(--text); font-size: var(--fs-2xl); line-height: var(--lh-tight); }
-.log__line--cmd, .line--cmd { color: var(--text); margin-bottom: var(--s-5); }
-.log__bullet, .line__bullet { color: var(--text); margin-right: var(--s-4); }
-.log__indent { color: var(--text-2); }
-.line--dim { color: var(--text-2); }
+/* ── 2 · line (.line) ─────────────────────────────────────────────── */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.line {
+  color: var(--text);
+  font-size: var(--fs-lg);
+  line-height: var(--lh);
+}
+.line--cmd { color: var(--text); }
+.line--tree { color: var(--dim); padding-left: 1.2em; }
+.line--dim { color: var(--dim); }
 .line--alert { color: var(--pink); }
-.line--sm { font-size: var(--fs-md); }
-.line--sm.line--cmd { margin-bottom: var(--s-3); }
+.line--sm { font-size: var(--fs-sm); }
 
-/* the rule: three weights, no more */
+.line__bullet { color: var(--text); margin-right: var(--s-3); }
+.bullet--coral  { color: var(--coral); margin-right: var(--s-3); }
+.bullet--yellow { color: var(--yellow); margin-right: var(--s-3); }
+.bullet--ok     { color: var(--mint); margin-right: var(--s-3); }
+.num--yellow    { color: var(--yellow); font-weight: 700; margin-right: var(--s-4); }
+
+/* Claude Code double-ruled prompt bar */
+.term-input {
+  border-top: var(--b-1) solid var(--rule);
+  border-bottom: var(--b-1) solid var(--rule);
+  padding: 8px 0;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-lg);
+  color: var(--text);
+}
+.term-input__prompt { color: var(--text); font-weight: 700; }
+.term-input__text { color: var(--dim); }
+.term-input__caret {
+  background: var(--text);
+  display: inline-block;
+  height: 1.1em;
+  width: 0.55em;
+  animation: caret-blink 1000ms steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* terminal shortcut hint line */
+.keybar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-6);
+  color: var(--dim);
+  font-size: var(--fs-sm);
+  margin-top: var(--s-4);
+}
+.keybar__k { color: var(--text); font-weight: 700; margin-right: var(--s-1); }
+
+/* ── 4 · rule (.rule) ─────────────────────────────────────────────── */
 .rule { border: 0; border-top: var(--b-1) solid var(--rule); }
 .rule--heavy { border-top-width: var(--b-2); }
 .rule--dashed { border-top-style: dashed; }
 
-/* the stage: every bot on one floor, inside the same window */
-.stage {
-  align-items: flex-start;
-  display: flex;
-  gap: var(--s-9);
-  padding-top: var(--s-10);
-  position: relative;
-  --sprite-scale: 8px;
-}
-.bot { --agent: var(--coral); display: flex; flex-direction: column; gap: var(--s-3); margin: 0; }
-.bot canvas { display: block; }
-.bot__name { color: var(--agent); font-size: var(--fs-xl); font-weight: 700; line-height: 1.1; }
-.bot__note { color: var(--dim); font-size: var(--fs-lg); line-height: 1.3; }
-.bot__status { color: var(--mint); font-size: var(--fs-lg); font-weight: 700; line-height: 1.3; }
-.bot--blue { --agent: var(--blue); }
-.bot--pink { --agent: var(--pink); }
-.bot--mint { --agent: var(--mint); }
-.bot--violet { --agent: var(--violet); }
-.bot--sol { --agent: var(--coral); }
-
-/* communication packet ping between bots (source.mp4 0:59, 1:35) */
-.comm-line {
-  align-self: center;
-  color: var(--paper);
-  display: flex;
-  gap: var(--s-4);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xl);
-  letter-spacing: var(--track-label);
-  margin-top: calc(var(--s-7) * -1);
-}
-.comm-dot {
-  color: var(--paper);
-  display: inline-block;
-  opacity: 0.35;
-}
-.comm-dot.is-active {
-  opacity: 1;
-}
-
-/* ── agent stage & inter-agent communication (source.mp4 0:24-0:26) ─ */
-.agent-stage {
-  align-items: flex-end;
-  display: flex;
-  gap: var(--s-6);
-  justify-content: flex-start;
-  padding: var(--s-8) var(--s-6) var(--s-6);
-  position: relative;
-}
-
-.agent-slot {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  position: relative;
-}
-
-.agent-label {
-  color: var(--agent, var(--coral));
-  font-family: var(--font-mono);
-  font-size: var(--fs-md);
-  font-weight: 700;
-  line-height: var(--lh-tight);
-}
-
-.agent-status {
-  color: var(--dim);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-tight);
-}
-
-/* Conductor floating music notes (♫, ♪) drifting up/right */
-.comm-notes {
-  color: var(--coral);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  left: 50%;
-  letter-spacing: var(--track-label);
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  top: calc(var(--s-6) * -1);
-  white-space: nowrap;
-}
-
-.comm-notes[data-active="conducting"],
-.comm-notes.is-conducting {
-  animation: comm-notes-float 2.0s steps(6, end) 1;
-}
-
-@keyframes comm-notes-float {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0);
-  }
-  20% {
-    opacity: 1;
-    transform: translate(4px, -6px);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(12px, -14px);
-  }
-  80% {
-    opacity: 0.8;
-    transform: translate(18px, -20px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(22px, -24px);
-  }
-}
-
-/* Mid-stage communication channel & blue firing dots (•, •••) */
-.comm-channel {
-  align-items: center;
-  align-self: center;
-  display: flex;
-  justify-content: center;
-  margin-bottom: var(--s-8);
-  min-width: 64px;
-  position: relative;
-}
-
-.comm-dots {
-  color: var(--blue);
-  font-family: var(--font-mono);
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  letter-spacing: var(--track-label);
-  opacity: 0;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-.comm-dots[data-from="worker"],
-.comm-dots.is-active {
-  animation: comm-dots-fire 660ms steps(4, end) 1;
-}
-
-@keyframes comm-dots-fire {
-  0% {
-    opacity: 1;
-    transform: translateX(20px);
-  }
-  33% {
-    opacity: 1;
-    transform: translateX(4px);
-  }
-  66% {
-    opacity: 1;
-    transform: translateX(-14px);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-}
-
-/* celebratory confetti particles for the board (source.mp4 1:26) */
-.particle-field {
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-}
-.particle {
-  background: var(--p-color, var(--yellow));
-  height: 4px;
-  position: absolute;
-  width: 8px;
-  top: 0;
-  left: var(--p-x, 50%);
-  animation: particle-drift 2.4s steps(12, end) infinite;
-  animation-delay: var(--p-delay, 0ms);
-}
-@keyframes particle-drift {
-  0% { transform: translateY(0); opacity: 1; }
-  80% { opacity: 1; }
-  100% { transform: translateY(120px); opacity: 0; }
-}
-
-/* ── the reel headline: black bar, pink shadow, yellow highlight ─── */
-.headline {
-  background: var(--ink-800);
-  border: var(--b-2) solid var(--ink-900);
-  box-shadow: 6px 6px 0 var(--pink);
-  color: var(--text);
-  display: inline-block;
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 900;
-  letter-spacing: var(--track-display);
-  line-height: var(--lh-tight);
-  padding: var(--s-4) var(--s-6);
-  text-transform: uppercase;
-}
-.headline mark { background: var(--yellow); color: var(--on-accent); padding: 0 .15em; }
-
-/* ── labels: the tiny uppercase rail above every panel ──────────── */
 .label {
   color: var(--dim);
   font-size: var(--fs-2xs);
@@ -422,166 +299,107 @@ body {
   text-transform: uppercase;
 }
 
-/* ── prompt lines: the terminal voice ───────────────────────────── */
-.prompt { color: var(--text); }
-.prompt__caret { color: var(--mint); font-weight: 700; }
-.muted { color: var(--text-2); }
-.action { color: var(--yellow); }
-.ok { color: var(--mint); }
-.warn { color: var(--coral); }
+/* ── 5 · meter (.bar) & board (.board) ────────────────────────────── */
+.board {
+  border: var(--b-1) solid var(--rule);
+  padding: 14px 18px;
+  min-height: 132px;
+  position: relative;
+  overflow: hidden;
+  background: var(--ink-800);
+}
+.board__title { color: var(--text); font-size: var(--fs-lg); font-weight: 700; position: relative; z-index: 1; }
+.board__sub   { color: var(--dim); font-size: var(--fs-md); margin-top: 2px; position: relative; z-index: 1; }
 
-/* ── agent line: ♪ conductor ────────────────────────────────────── */
-.agent {
+.cols {
+  display: flex;
+  gap: var(--s-7);
+  font-size: var(--fs-md);
+  flex-wrap: wrap;
+  margin-top: var(--s-3);
+  position: relative;
+  z-index: 1;
+}
+.col { display: flex; gap: var(--s-2); align-items: baseline; }
+.col__name { letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700; }
+.col__n { color: var(--text); font-weight: 400; }
+.col--todo  .col__name,
+.col--todo  .col__n { color: var(--text-2); }
+.col--needs .col__name,
+.col--needs .col__n { color: var(--yellow); }
+.col--doing .col__name,
+.col--doing .col__n { color: var(--coral); }
+.col--check .col__name,
+.col--check .col__n { color: var(--pink); }
+.col--done  .col__name,
+.col--done  .col__n { color: var(--mint); }
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin-top: var(--s-4);
+  flex-wrap: wrap;
+}
+.progress-row__note { color: var(--coral); font-weight: 700; }
+.progress-row__msg  { color: var(--dim); }
+
+.bar { display: flex; gap: 2px; height: 12px; }
+.bar__cell { background: var(--ink-600); flex: 1; min-width: 8px; }
+.bar__cell--on   { background: var(--violet); }
+.bar__cell--dim  { background: var(--dim); }
+.bar__cell--warn { background: var(--yellow); }
+.progress-row .bar { height: 12px; width: auto; }
+.progress-row .bar__cell { flex: 0 0 10px; width: 10px; height: 12px; min-width: 10px; }
+
+/* ── 6 · sprite (.sprite) & stage (.stage) ────────────────────────── */
+.stage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-6);
+  padding-top: var(--s-6);
+  position: relative;
+  flex-wrap: wrap;
+  --sprite-scale: 7px;
+}
+
+.bot {
   --agent: var(--coral);
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  width: max-content;
+  margin: 0;
 }
-.agent__name { color: var(--agent); font-weight: 700; }
-.agent__name::before { content: "♪ "; color: var(--agent); }
-.agent__state { color: var(--dim); font-size: var(--fs-xs); }
-.agent--blue   { --agent: var(--blue); }
-.agent--pink   { --agent: var(--pink); }
-.agent--mint   { --agent: var(--mint); }
-.agent--violet { --agent: var(--violet); }
-
-/* ── roster: gallery of agents inline on the same baseline ──────── */
-.roster {
-  align-items: flex-end;
-  display: flex;
-  gap: var(--s-9);
-  --sprite-scale: 4px;
-}
-
-/* ── controls, every state ──────────────────────────────────────── */
-.btn {
-  background: var(--ink-600);
-  border: var(--b-1) solid var(--rule);
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--fs-sm);
-  letter-spacing: var(--track-label);
-  padding: var(--s-2) var(--s-5);
-  text-transform: uppercase;
-  transition: none; /* stepped looks do not tween */
-}
-.btn:hover, .btn.is-hover   { background: var(--ink-500); border-color: var(--text-2); }
-.btn:active, .btn.is-active  { background: var(--ink-400); transform: translate(1px, 1px); }
-.btn:focus-visible, .btn.is-focus { outline: var(--b-2) solid var(--yellow); outline-offset: 2px; }
-.btn[disabled] { background: transparent; border-color: var(--ink-500); color: var(--dim); cursor: not-allowed; }
-
-.btn--primary {
-  background: var(--yellow);
-  border-color: var(--yellow);
-  color: var(--on-accent);
+.bot canvas { display: block; }
+.bot__name {
+  color: var(--agent);
+  font-size: var(--fs-md);
   font-weight: 700;
+  line-height: 1.2;
 }
-.btn--primary:hover { background: var(--coral-hi); border-color: var(--coral-hi); }
-
-.btn--ghost { background: transparent; border-color: var(--dim); color: var(--text-2); }
-.btn--danger { background: transparent; border-color: var(--pink); color: var(--pink); }
-
-/* ── tab: the bar runs left to right, the active one is filled ───── */
-.tabs { display: flex; gap: var(--b-1); border-bottom: var(--b-1) solid var(--rule); }
-.tab {
-  background: transparent;
-  border: var(--b-1) solid transparent;
-  border-bottom: none;
+.bot__note {
   color: var(--dim);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--fs-xs);
-  letter-spacing: var(--track-label);
-  margin-bottom: calc(-1 * var(--b-1));
-  padding: var(--s-3) var(--s-5);
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  min-height: 1.35em;
 }
-.tab:hover { color: var(--text); }
-.tab[aria-selected="true"] {
-  background: var(--ink-800);
-  border-color: var(--rule);
-  color: var(--text);
-  border-bottom: var(--b-2) solid var(--yellow);
-}
-
-/* ── board column header ────────────────────────────────────────── */
-.cols { display: flex; gap: var(--s-8); font-size: var(--fs-sm); flex-wrap: wrap; }
-.col { display: flex; gap: var(--s-2); align-items: baseline; }
-.col__name { letter-spacing: var(--track-label); text-transform: uppercase; font-weight: 700; }
-.col__n { color: var(--text); }
-.col--todo   .col__name { color: var(--coral); }
-.col--needs  .col__name { color: var(--yellow); }
-.col--doing  .col__name { color: var(--pink); }
-.col--check  .col__name { color: var(--mint); }
-.col--done   .col__name { color: var(--mint); }
-
-/* ── progress: blocks, never a gradient ─────────────────────────── */
-.bar { display: flex; gap: 2px; height: 10px; }
-.bar__cell { background: var(--ink-500); flex: 1; }
-.bar__cell--on { background: var(--violet); }
-.bar__cell--warn { background: var(--yellow); }
-
-/* ── badge ──────────────────────────────────────────────────────── */
-.badge {
-  border: var(--b-1) solid currentColor;
-  color: var(--mint);
-  font-size: var(--fs-2xs);
-  letter-spacing: var(--track-label);
-  padding: 0 var(--s-3);
-  text-transform: uppercase;
-}
-.badge--pink { color: var(--pink); }
-.badge--yellow { color: var(--yellow); }
-.badge--dim { color: var(--dim); }
-
-/* ── table: rules only, no zebra ────────────────────────────────── */
-.tbl { border-collapse: collapse; font-size: var(--fs-sm); width: 100%; }
-.tbl th {
-  border-bottom: var(--b-1) solid var(--rule);
+.bot__note .star { color: var(--agent); }
+.bot__note--yellow { color: var(--yellow); }
+.bot__status {
   color: var(--dim);
-  font-size: var(--fs-2xs);
-  font-weight: 400;
-  letter-spacing: var(--track-label);
-  padding: var(--s-3) var(--s-4);
-  text-align: left;
-  text-transform: uppercase;
-}
-.tbl td { border-bottom: var(--b-1) solid var(--ink-700); padding: var(--s-3) var(--s-4); }
-.tbl tr:last-child td { border-bottom: none; }
-.tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
-
-/* ── input ──────────────────────────────────────────────────────── */
-.field { display: flex; flex-direction: column; gap: var(--s-2); }
-.input {
-  background: var(--ink-900);
-  border: var(--b-1) solid var(--rule);
-  color: var(--text);
-  font: inherit;
   font-size: var(--fs-sm);
-  padding: var(--s-3) var(--s-4);
-  width: 100%;
+  line-height: 1.35;
 }
-.input::placeholder { color: var(--dim); }
-.input:hover, .input.is-hover { border-color: var(--text-2); }
-.input:focus-visible, .input.is-focus { border-color: var(--yellow); outline: none; box-shadow: inset 0 0 0 1px var(--yellow); }
-.input[disabled] { border-style: dashed; color: var(--dim); }
+.bot__status .ok { color: var(--mint); font-weight: 700; }
 
-/* ── toast / status line ─────────────────────────────────────────── */
-.toast {
-  align-items: center;
-  background: var(--ink-700);
-  border-left: var(--b-3) solid var(--mint);
-  display: flex;
-  font-size: var(--fs-sm);
-  gap: var(--s-5);
-  padding: var(--s-4) var(--s-5);
-}
-.toast--warn { border-left-color: var(--coral); }
-.toast--bad  { border-left-color: var(--pink); }
+.bot--blue   { --agent: var(--blue); }
+.bot--pink   { --agent: var(--pink); }
+.bot--mint   { --agent: var(--mint); }
+.bot--violet { --agent: var(--violet); }
+.bot--sol    { --agent: var(--coral); }
 
-/* ── sprite frame: what a worker looks like when it is idle ──────── */
 .sprite {
   --px: var(--sprite-scale);
   display: block;
@@ -590,67 +408,36 @@ body {
   height: calc(var(--sprite-h) * var(--px));
 }
 
-/* ── reduced motion: the look survives, the motion does not ──────── */
+/* inter-agent comm ping (▪ ▪ ▪ ▪ packet stream -> ■ ■ ■ ■ sync burst) */
+.comm-line {
+  align-self: flex-start;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  margin-top: calc(10 * var(--sprite-scale, 7px));
+}
+.comm-line--packets {
+  gap: var(--s-3);
+}
+.comm-dot {
+  color: var(--dim);
+  display: inline-block;
+}
+.comm-dot--packet {
+  color: var(--ink-500);
+  font-size: var(--fs-sm);
+}
+.comm-dot.is-active {
+  color: var(--paper);
+}
+.comm-dot--packet.is-active {
+  color: var(--text);
+}
+
+/* ── reduced motion ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
-}
-
-/* ── the presentation layer: how a card sits in a frame ────────────
-   This is the reel's own ground, not the app's. Use it for a cover, a
-   poster, a share card — never behind a working screen. Measured from
-   frame_000003: periwinkle ground, violet halftone, one coral disc. */
-:root {
-  --ground: #81aeed;      /* periwinkle */
-  --ground-dot: #b430d5;  /* halftone dots — violet, 1px, 6px pitch */
-  --tape: #f7d140;        /* yellow tape */
-  --tape-2: #7848f6;      /* violet tape */
-}
-
-.ground {
-  background-color: var(--ground);
-  background-image: radial-gradient(var(--ground-dot) 1px, transparent 1px);
-  background-size: 6px 6px;
-  padding: var(--s-8);
-  position: relative;
-  overflow: hidden;
-}
-.ground__disc {
-  background: var(--coral-hi);
-  border-radius: 50%;
-  position: absolute;
-  right: -8%;
-  top: -14%;
-  width: 44%;
-  aspect-ratio: 1;
-}
-
-.paper {
-  background: var(--paper);
-  border: var(--b-2) solid var(--ink-900);
-  box-shadow: var(--shadow-hard);
-  color: var(--ink-800);
-  padding: var(--s-6);
-  position: relative;
-}
-.paper .label { color: var(--ink-500); }
-.paper .sw__meta { color: var(--ink-500); }
-
-.tape {
-  background: var(--tape);
-  height: 18px;
-  position: absolute;
-  width: 96px;
-}
-.tape--l { left: -18px; top: 18px; transform: rotate(-8deg); }
-.tape--r { right: -18px; top: 18px; transform: rotate(6deg); background: var(--tape-2); }
-
-/* the card from the reel: sprite, name, and a ground you can see through */
-.card {
-  background: var(--ink-800);
-  border: var(--b-2) solid var(--ink-900);
-  box-shadow: 6px 6px 0 var(--paper-3);
-  display: inline-flex;
-  flex-direction: column;
-  gap: var(--s-5);
-  padding: var(--s-7);
 }

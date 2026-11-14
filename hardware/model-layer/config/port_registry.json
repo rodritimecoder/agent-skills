@@ -64,7 +64,7 @@
     },
     "8086": {
       "alias": "local-rerank-jina",
-      "vram_mb": null,
+      "vram_mb": 800,
       "pinned": false,
       "name": "jina-reranker-v2-base-multilingual",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/jina-reranker.sh",
@@ -72,7 +72,7 @@
     },
     "8087": {
       "alias": "local-embed-bge",
-      "vram_mb": null,
+      "vram_mb": 400,
       "pinned": false,
       "name": "bge-small-en-v1.5",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-small.sh",
