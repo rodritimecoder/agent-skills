@@ -1,9 +1,9 @@
 ---
 name: model-layer
-description: "The model layer of this machine: every local model server — llm (:8080), audio (:8081), decision (:8083/:8089), ocr (:8084/:8085), rerank + embed (:8086/:8087), grounding (:8088), ocr-jev (:8090) — with its launcher script, weights files, health check, quirks and the skills that consume it, plus the llama-swap rig (:8000) via vram-rig-ctl. MUST READ before starting, stopping, swapping or debugging any local model server, or before writing code that calls one. The roster is generated from ports.json; a model swap edits the manifest and re-renders — never this file."
+description: "The model layer of this machine: every local model server — llm (:8080), audio (:8081), decision (:8083/:8089), ocr (:8084/:8085), rerank + embed (:8086/:8087), grounding (:8088), ocr-jev (:8090) — with its launcher script, weights files, health check, quirks and the skills that consume it, plus the llama-swap rig (:8000) via llama-rig. MUST READ before starting, stopping, swapping or debugging any local model server, or before writing code that calls one. The roster is generated from ports.json; a model swap edits the manifest and re-renders — never this file."
 metadata:
-  bins: vram-rig-ctl
-allowed-tools: "Bash(vram-rig-ctl:*) Bash(python3:*) Bash(ports.py:*) Read"
+  bins: llama-rig
+allowed-tools: "Bash(llama-rig:*) Bash(python3:*) Bash(ports.py:*) Read"
 ---
 
 # model-layer — the machine's model roster
@@ -45,21 +45,21 @@ on disk.
 
 ## The rig — llama-swap (:8000)
 
-Beyond the slots sits the swapping rig, operated by `vram-rig-ctl`
-([scripts/vram_rig_ctl.py](scripts/vram_rig_ctl.py), config in [config/](config/)):
+Beyond the slots sits the swapping rig, operated by `llama-rig`
+([scripts/llama_rig.py](scripts/llama_rig.py), config in [config/](config/)):
 
 - **`:8000` llama-swap** — a Go model-swapping proxy. One model is pinned (the
   llm slot's king holds the VRAM); auxiliary models are evicted and restored on
-  demand. Start/inspect/stop with `vram-rig-ctl llama-swap-up | llama-swap-status
+  demand. Start/inspect/stop with `llama-rig llama-swap-up | llama-swap-status
   | llama-swap-down`; it watches [config/llama-swap.yaml](config/llama-swap.yaml).
   It fronts **chat-completions models only** — `/v1/embeddings`, `/v1/rerank`,
   `/v1/audio/*`, `/ocr/pipeline` and `/v1/systemone` stay direct slots, because a
   router fits a uniform contract with many candidates, not a "type".
   `llama-swap -validate` only proves the file parses; `ports.py check` proves every
   model's weights exist and the swap matrix resolves.
-- **Headroom & Dynamic Swapping:** `vram-rig-ctl status` (VRAM + every slot's state),
-  `vram-rig-ctl up <slot|port> [candidate]` (or `swap`), `vram-rig-ctl down <slot|port>` (or `kill`),
-  and `vram-rig-ctl evict-all` (free every non-pinned port to reclaim headroom). Target
+- **Headroom & Dynamic Swapping:** `llama-rig status` (VRAM + every slot's state),
+  `llama-rig up <slot|port> [candidate]` (or `swap`), `llama-rig down <slot|port>` (or `kill`),
+  and `llama-rig evict-all` (free every non-pinned port to reclaim headroom). Target
   can be a slot id (`ocr`, `asr`, `decision`, `llm`), an alias, a numeric port, or any
   registered candidate by model or launcher name (`up valen`,
   `up embed embeddinggemma-2`). `--dry-run` prints the resolved launch plan and

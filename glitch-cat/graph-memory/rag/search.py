@@ -22,7 +22,7 @@ K = 60  # rank fusion smoothing constant
 TOP = 3
 CONTEXT_LINES = 6
 EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings")
-VRAM_RIG_CTL = shutil.which("vram-rig-ctl")
+VRAM_RIG_CTL = shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
 # Opt out with --no-autostart or GRAPH_MEMORY_AUTOSTART=0. The prompt hook never
 # starts a model at all: loading weights inside UserPromptSubmit blocks the prompt.
 AUTOSTART = os.environ.get("GRAPH_MEMORY_AUTOSTART", "1") != "0"
@@ -94,7 +94,7 @@ def ensure_embedding(db, timeout=15.0):
     The slot can host bge-small (384d) or EmbeddingGemma-2 (768d), and vectors
     from the two are not comparable. Starting "the default" would trade one
     silent failure for another, so the candidate comes from the index meta:
-    `vram-rig-ctl up embed <model>`.
+    `llama-rig up embed <model>`.
     """
     if not AUTOSTART:
         return False
@@ -152,7 +152,7 @@ def meaning_leg(db, query, floor=0.0):
     except Exception as exc:
         return None, (
             f"{EMBEDDING_URL} unavailable ({exc}) — start it with "
-            f"`vram-rig-ctl up embed`"
+            f"`llama-rig up embed`"
         )
 
     if dim and len(q) != dim:
@@ -161,7 +161,7 @@ def meaning_leg(db, query, floor=0.0):
         return None, (
             f"dimension mismatch — index was built with {model} ({dim}d) "
             f"but {EMBEDDING_URL} returned {len(q)}d. Start the matching model: "
-            f"`vram-rig-ctl up embed {model}`"
+            f"`llama-rig up embed {model}`"
         )
 
     qnorm = sum(x * x for x in q) ** 0.5 or 1.0

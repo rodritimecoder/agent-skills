@@ -19,7 +19,7 @@ sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
 from jev_engine import JevEngine
 import jev_engine
 
-_VRAM_RIG_CTL = shutil.which("vram-rig-ctl")
+_VRAM_RIG_CTL = shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
 
 
 def _die(message: str, code: int) -> "SystemExit":

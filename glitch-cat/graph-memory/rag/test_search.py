@@ -205,7 +205,7 @@ class TestEnsureEmbedding(unittest.TestCase):
         self.db.close()
         self.tmp.cleanup()
 
-    def _ensure(self, *, already_up=False, meta=None, ctl="/usr/bin/vram-rig-ctl",
+    def _ensure(self, *, already_up=False, meta=None, ctl="/usr/bin/llama-rig",
                 autostart=True, timeout=0.05):
         for key, value in (meta or {}).items():
             self.db.execute("INSERT INTO meta VALUES (?, ?)", (key, str(value)))
@@ -234,12 +234,12 @@ class TestEnsureEmbedding(unittest.TestCase):
     def test_starts_the_index_candidate(self):
         ok, calls = self._ensure(meta={"embedding_model": "embeddinggemma-2", "embedding_dim": 768})
         self.assertTrue(ok)
-        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed", "embeddinggemma-2"]])
+        self.assertEqual(calls, [["/usr/bin/llama-rig", "up", "embed", "embeddinggemma-2"]])
 
     def test_no_meta_starts_the_slot_default(self):
         ok, calls = self._ensure()
         self.assertTrue(ok)
-        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed"]])
+        self.assertEqual(calls, [["/usr/bin/llama-rig", "up", "embed"]])
 
     def test_path_meta_selects_by_dimension(self):
         ok, calls = self._ensure(meta={
@@ -247,7 +247,7 @@ class TestEnsureEmbedding(unittest.TestCase):
             "embedding_dim": 384,
         })
         self.assertTrue(ok)
-        self.assertEqual(calls, [["/usr/bin/vram-rig-ctl", "up", "embed", "--dim", "384"]])
+        self.assertEqual(calls, [["/usr/bin/llama-rig", "up", "embed", "--dim", "384"]])
 
     def test_autostart_disabled_spawns_nothing(self):
         ok, calls = self._ensure(autostart=False)
@@ -267,7 +267,7 @@ class TestEnsureEmbedding(unittest.TestCase):
         db.commit()
         with mock.patch.object(rag_search, "EMBEDDING_URL", "http://127.0.0.1:9/v1/embeddings"):
             _rows, why = rag_search.meaning_leg(db, "anything")
-        self.assertIn("vram-rig-ctl up embed", why)
+        self.assertIn("llama-rig up embed", why)
 
 
 if __name__ == "__main__":

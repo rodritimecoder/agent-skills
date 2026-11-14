@@ -20,8 +20,8 @@ _spec.loader.exec_module(engine)
 class LightonStartCommand(unittest.TestCase):
     def test_rig_is_preferred(self):
         self.assertEqual(
-            engine.lighton_start_command(ctl="/usr/bin/vram-rig-ctl"),
-            ["/usr/bin/vram-rig-ctl", "up", "ocr"],
+            engine.lighton_start_command(ctl="/usr/bin/llama-rig"),
+            ["/usr/bin/llama-rig", "up", "ocr"],
         )
 
     def test_launcher_is_the_fallback(self):

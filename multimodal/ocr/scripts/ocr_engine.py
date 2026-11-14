@@ -39,7 +39,7 @@ def lighton_start_command(ctl: Optional[str] = None) -> Optional[list]:
     The rig applies the VRAM budget and pinned-King rules; spawning the launcher
     directly skips both, so it is only the fallback for a host without the rig.
     """
-    ctl = ctl or shutil.which("vram-rig-ctl")
+    ctl = ctl or shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
     if ctl:
         return [ctl, "up", "ocr"]
     if LIGHTON_LAUNCHER.is_file():

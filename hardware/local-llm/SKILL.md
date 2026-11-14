@@ -7,7 +7,7 @@ compatibility: "Requires dual AMD Radeon RX 9060 XT GPUs with Vulkan and the lla
 allowed-tools: "Bash(python3:*) Bash(local-llm:*) Bash(curl:*) Read"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8080`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If it is down, the client starts it via `vram-rig-ctl up 8080` (`--no-autostart` skips).
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8080`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If it is down, the client starts it via `llama-rig up 8080` (`--no-autostart` skips).
 
 # Local LLM — Qwen3.6-35B Genesis (`local-llm`)
 

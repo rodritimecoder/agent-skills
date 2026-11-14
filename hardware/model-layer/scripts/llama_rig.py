@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-vram_rig_ctl.py — Smart GPU VRAM, Port Switcher & llama-swap Controller
+llama_rig.py — Smart GPU VRAM, Port Switcher & llama-swap Controller
 Manages llama-swap (port 8000) and direct ports 8080-8090.
 """
 
@@ -414,7 +414,7 @@ def get_llama_swap_info(port=8000):
     running = []
     configured = []
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/running", headers={"User-Agent": "vram-rig-ctl"})
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/running", headers={"User-Agent": "llama-rig"})
         with urllib.request.urlopen(req, timeout=2) as resp:
             data = json.loads(resp.read().decode())
             running = data if isinstance(data, list) else data.get("models", [])
@@ -422,7 +422,7 @@ def get_llama_swap_info(port=8000):
         pass
 
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/v1/models", headers={"User-Agent": "vram-rig-ctl"})
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/v1/models", headers={"User-Agent": "llama-rig"})
         with urllib.request.urlopen(req, timeout=2) as resp:
             data = json.loads(resp.read().decode())
             configured = [m.get("id") for m in data.get("data", [])]
@@ -596,7 +596,7 @@ def cmd_swap(target_arg, candidate_arg=None, dry_run=False, dim=None):
     if target_port in active:
         print(f"ℹ️  Port {target_port} ({slot['alias']}) is already running.")
         if len(slot["candidates"]) > 1:
-            print(f"    Stop it first to change candidates: vram-rig-ctl down {target_port}")
+            print(f"    Stop it first to change candidates: llama-rig down {target_port}")
         return
 
     vram = get_vram_info()
@@ -632,7 +632,7 @@ def cmd_swap(target_arg, candidate_arg=None, dry_run=False, dim=None):
               f"--model '{cand['model']}' --launcher {cand['launcher']}")
     if king_evicted:
         print(f"ℹ️  Pinned King on :{pinned_port} was evicted. "
-              f"Restore it with: vram-rig-ctl up {pinned_port}")
+              f"Restore it with: llama-rig up {pinned_port}")
 
     for _ in range(40):
         time.sleep(0.5)
@@ -663,7 +663,7 @@ if __name__ == "__main__":
     p_kill.add_argument("target", nargs="?", help="Port, slot id, or alias")
     p_kill.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
-    p_down = sub.add_parser("down", help="Alias for kill (e.g. vram-rig-ctl down ocr)")
+    p_down = sub.add_parser("down", help="Alias for kill (e.g. llama-rig down ocr)")
     p_down.add_argument("target", nargs="?", help="Port, slot id, or alias")
     p_down.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
@@ -674,7 +674,7 @@ if __name__ == "__main__":
     p_swap.add_argument("--dry-run", action="store_true", help="Resolve and print the launch plan, start nothing")
     p_swap.add_argument("--dim", type=int, metavar="N", help="Embedding dimension to match (e.g. 384, 768)")
 
-    p_up = sub.add_parser("up", help="Alias for swap (e.g. vram-rig-ctl up ocr)")
+    p_up = sub.add_parser("up", help="Alias for swap (e.g. llama-rig up ocr)")
     p_up.add_argument("target", nargs="?", help="Port, slot id, alias, or candidate model")
     p_up.add_argument("candidate", nargs="?", help="Candidate within that slot (e.g. up embed embeddinggemma-2)")
     p_up.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
@@ -687,7 +687,7 @@ if __name__ == "__main__":
     elif args.action in ("kill", "down"):
         target = args.target or getattr(args, "opt_port", None)
         if not target:
-            sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl kill ocr)")
+            sys.exit("❌ Error: Target port or slot is required (e.g. llama-rig kill ocr)")
         kill_port(target)
     elif args.action == "evict-all":
         slots, reg = load_slots()
@@ -699,7 +699,7 @@ if __name__ == "__main__":
     elif args.action in ("swap", "up"):
         target = args.target or getattr(args, "opt_port", None)
         if not target:
-            sys.exit("❌ Error: Target port or slot is required (e.g. vram-rig-ctl swap ocr)")
+            sys.exit("❌ Error: Target port or slot is required (e.g. llama-rig swap ocr)")
         cmd_swap(target, args.candidate, args.dry_run, getattr(args, "dim", None))
     elif args.action == "llama-swap-up":
         cmd_llama_swap_up(args.port)

@@ -278,7 +278,7 @@ def run_audiocpp_raw(args_list: List[str]) -> subprocess.CompletedProcess:
 
 def ensure_audio_server(host: str = "127.0.0.1", port: int = 8081, timeout_s: float = 20.0) -> bool:
     """Mirror OCR's self-healing pattern: if the local audio server is down,
-    start it via `vram-rig-ctl up audio` and poll /health for up to timeout_s.
+    start it via `llama-rig up audio` and poll /health for up to timeout_s.
     Returns True when the server answers, False otherwise (callers then fall
     through to their existing offline error path unchanged)."""
     def _up() -> bool:
@@ -291,7 +291,7 @@ def ensure_audio_server(host: str = "127.0.0.1", port: int = 8081, timeout_s: fl
 
     if _up():
         return True
-    ctl = shutil.which("vram-rig-ctl")
+    ctl = shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
     if not ctl:
         return False
     try:
@@ -881,7 +881,7 @@ def main():
     parent_parser.add_argument("--quiet", "-q", action="store_true", help="Suppress console status messages")
     parent_parser.add_argument("--host", default=None, help="audio.cpp host (default: $AUDIOCPP_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
     parent_parser.add_argument("--port", type=int, default=8081, metavar="PORT", help="audio.cpp port (default: $AUDIOCPP_PORT or 8081)")
-    parent_parser.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local audio server (vram-rig-ctl up audio) before HTTP requests")
+    parent_parser.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local audio server (llama-rig up audio) before HTTP requests")
 
     parser = argparse.ArgumentParser(
         description="audiocpp — Unified Local Audio Engineering Hub (Vulkan / Dual-GPU)",

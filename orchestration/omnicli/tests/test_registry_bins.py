@@ -24,8 +24,8 @@ def doc(frontmatter: str) -> str:
 
 class TestParseBins(unittest.TestCase):
     def test_inline_list(self):
-        text = doc('name: x\ndescription: y\nmetadata:\n  bins: [vram-rig-ctl, other]')
-        self.assertEqual(registry.parse_bins(text), ["vram-rig-ctl", "other"])
+        text = doc('name: x\ndescription: y\nmetadata:\n  bins: [llama-rig, other]')
+        self.assertEqual(registry.parse_bins(text), ["llama-rig", "other"])
 
     def test_scalar_comma_separated(self):
         text = doc('name: x\ndescription: y\nmetadata:\n  bins: "verify-app, agentic"')
@@ -61,14 +61,14 @@ class TestResolveShim(unittest.TestCase):
         path.chmod(0o755 if executable else 0o644)
 
     def test_alias_resolves_after_skill_and_dir_names(self):
-        self._shim("vram-rig-ctl")
-        found = registry._resolve_shim("model-layer", "model-layer", "vram-rig-ctl", bindir=self.bindir)
-        self.assertTrue(found.endswith("vram-rig-ctl"))
+        self._shim("llama-rig")
+        found = registry._resolve_shim("model-layer", "model-layer", "llama-rig", bindir=self.bindir)
+        self.assertTrue(found.endswith("llama-rig"))
 
     def test_skill_name_wins_over_alias(self):
         self._shim("model-layer")
-        self._shim("vram-rig-ctl")
-        found = registry._resolve_shim("model-layer", "model-layer", "vram-rig-ctl", bindir=self.bindir)
+        self._shim("llama-rig")
+        found = registry._resolve_shim("model-layer", "model-layer", "llama-rig", bindir=self.bindir)
         self.assertTrue(found.endswith("/model-layer"))
 
     def test_non_executable_is_not_a_shim(self):
@@ -82,7 +82,7 @@ class TestResolveShim(unittest.TestCase):
 class TestLiveSkills(unittest.TestCase):
     """The three skills this change exists for, when their shims are installed."""
 
-    CASES = {"model-layer": "vram-rig-ctl", "verification": "verify-app",
+    CASES = {"model-layer": "llama-rig", "verification": "verify-app",
              "agentic-engineering": "agentic"}
 
     def test_declared_bins_match_installed_shims(self):

@@ -13,7 +13,7 @@ compatibility: "Requires MiniCPM-OCR-1.0 (llama-mtmd-cli) and sh/minicpm-ocr-jev
 allowed-tools: "Bash(kem-ocr:*) Bash(python3:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8090`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `vram-rig-ctl up ocr-jev`.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8090`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `llama-rig up ocr-jev`.
 
 # `kem-ocr` — Kem-pipeline OCR with Jev verification
 

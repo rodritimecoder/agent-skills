@@ -212,7 +212,7 @@ def parse_bins(content: str) -> list[str]:
     """Return the extra command names declared by ``metadata.bins``.
 
     A skill whose command is not named after the skill (``model-layer`` ships
-    ``vram-rig-ctl``) cannot be found by ``_resolve_shim`` today. The alias is
+    ``llama-rig``) cannot be found by ``_resolve_shim`` today. The alias is
     a property of the skill, so it lives in the skill's frontmatter — inside
     the ``metadata`` map, which the collection already uses and the spec audit
     already allows, rather than as a new top-level key.

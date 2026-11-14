@@ -15,7 +15,7 @@ compatibility: "Requires the PP-DocLayoutV3 ONNX model (Bei0001 export) and an O
 allowed-tools: "Bash(doc-layout:*) Bash(python3:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `vram-rig-ctl up ocr`.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `llama-rig up ocr`.
 
 # `doc-layout` — PP-DocLayoutV3 → crops → VLM → Markdown
 

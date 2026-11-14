@@ -307,6 +307,8 @@
   },
   "model-layer": {
     "aliases": [
+      "llama-rig",
+      "start the llama rig",
       "gpu memory",
       "vram",
       "how much gpu is free",

@@ -121,12 +121,12 @@ def is_genesis_online(endpoint: str = "http://127.0.0.1:8080") -> bool:
 
 def ensure_genesis(timeout_s: float = 60.0) -> bool:
     """Mirror OCR's self-healing pattern: if the local LLM server is down,
-    start it via `vram-rig-ctl up 8080` and poll health for up to timeout_s.
+    start it via `llama-rig up 8080` and poll health for up to timeout_s.
     Returns True when the server answers, False otherwise (callers then fall
     through to their existing offline error path unchanged)."""
     if is_genesis_online():
         return True
-    ctl = shutil.which("vram-rig-ctl")
+    ctl = shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
     if not ctl:
         return False
     try:
@@ -376,7 +376,7 @@ def main():
     chat_p.add_argument("--json", action="store_true", help="Wrap the reply in JSON")
     chat_p.add_argument("--project", help="Keep only these JSON fields, e.g. content")
     chat_p.add_argument("--fallback", action="store_true", help="Fallback to cloud if :8080 is offline")
-    chat_p.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local LLM server via vram-rig-ctl before reporting offline")
+    chat_p.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local LLM server via llama-rig before reporting offline")
 
     # models
     models_p = sub.add_parser("models", help="List available model candidates registered for :8080")

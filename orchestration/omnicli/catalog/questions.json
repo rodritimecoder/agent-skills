@@ -624,7 +624,7 @@
       },
       {
         "question": "is there one endpoint in front of all my models instead of many ports",
-        "quote": "plus the llama-swap rig (:8000) via vram-rig-ctl"
+        "quote": "plus the llama-swap rig (:8000) via llama-rig"
       },
       {
         "question": "a model server won't come up and I don't know why",
