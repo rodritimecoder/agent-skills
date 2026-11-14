@@ -103,6 +103,7 @@ class TestGraphMemorySearch(unittest.TestCase):
         ]
         env = os.environ.copy()
         env["RAG_DB_PATH"] = str(self.db_path)
+        env["GRAPH_MEMORY_AUTOSTART"] = "0"  # a formatting test must not boot a model server
         res = subprocess.run(cmd, env=env, capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertIn("48520_tut10.md", res.stdout)
@@ -120,6 +121,7 @@ class TestGraphMemorySearch(unittest.TestCase):
         ]
         env = os.environ.copy()
         env["RAG_DB_PATH"] = str(self.db_path)
+        env["GRAPH_MEMORY_AUTOSTART"] = "0"  # a formatting test must not boot a model server
         res = subprocess.run(cmd, env=env, capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, res.stderr)
         hits = json.loads(res.stdout)
