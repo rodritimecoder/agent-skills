@@ -38,8 +38,19 @@ class Identity(unittest.TestCase):
     def test_opencode_marker(self):
         self.assertEqual(self._identity({"OPENCODE": "1"})[0], "opencode")
 
-    def test_agy_marker(self):
-        self.assertEqual(self._identity({"ANTIGRAVITY_SESSION_ID": "a"})[0], "agy")
+    def test_agy_marker_is_its_liveness_variable(self):
+        self.assertEqual(self._identity({"ANTIGRAVITY_AGENT": "1"})[0], "agy")
+
+    def test_agy_beats_markers_inherited_from_the_outer_harness(self):
+        # A T3 Code shell that launches agy keeps T3CODE_CLI_PATH in the child.
+        harness, session = self._identity({
+            "T3CODE_CLI_PATH": "/x",
+            "OPENCODE_SESSION_ID": "ses_outer",
+            "ANTIGRAVITY_AGENT": "1",
+            "ANTIGRAVITY_CONVERSATION_ID": "conv_inner",
+        })
+        self.assertEqual(harness, "agy")
+        self.assertEqual(session, "conv_inner")
 
     def test_explicit_override_wins(self):
         self.assertEqual(self._identity({"OMNICLI_HARNESS": "boxxy", "T3CODE_CLI_PATH": "/x"})[0],

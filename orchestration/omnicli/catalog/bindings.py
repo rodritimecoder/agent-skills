@@ -63,21 +63,31 @@ _CALLS = 0
 _RECENT: collections.deque = collections.deque(maxlen=20)
 
 _HARNESS_MARKERS = (
-    ("t3-code", ("T3CODE_CLI_PATH", "T3CODE_SESSION_ID")),
+    # Liveness markers are set by the harness running *this* process, so they
+    # beat variables inherited from an outer agent: a shell in T3 Code that
+    # launches `agy` still carries T3CODE_CLI_PATH.
+    ("agy", ("ANTIGRAVITY_AGENT",)),
+    ("pi", ("PI_AGENT",)),
+    ("boxxy", ("BOXXY_TERMINAL",)),
+    ("t3-code", ("T3CODE_CLI_PATH",)),
     ("opencode", ("OPENCODE_SESSION_ID", "OPENCODE")),
-    ("agy", ("ORCA_ANTIGRAVITY_EVENT", "ANTIGRAVITY_SESSION_ID", "AGY_SESSION_ID")),
-    ("pi", ("PI_SESSION_ID", "PI_AGENT")),
-    ("boxxy", ("BOXXY_SESSION_ID", "BOXXY_TERMINAL")),
 )
+
+_SESSION_ENV = {
+    "agy": "ANTIGRAVITY_CONVERSATION_ID",
+    "t3-code": "OPENCODE_SESSION_ID",
+    "opencode": "OPENCODE_SESSION_ID",
+}
 
 
 def trace_identity():
-    """(harness, session) for one trace row: explicit env first, then markers.
+    """(harness, session) for one trace row: explicit env, then liveness markers.
 
-    T3 Code runs on OpenCode and exports both sets of variables, so its markers
-    are tested first. A session id is what makes "did a search lead anywhere"
-    answerable; without one, all calls from a process group still correlate via
-    the parent pid.
+    Nesting is the hard case. A T3 Code shell that launches `agy` inherits
+    T3CODE_CLI_PATH, so a first-match table that tests the outer harness first
+    blames the wrong one; per-process liveness variables go first instead. A
+    harness nested inside another (opencode inside agy) is still ambiguous —
+    set OMNICLI_HARNESS to settle it.
     """
     harness = (os.environ.get("OMNICLI_HARNESS") or "").strip()
     if not harness:
@@ -88,7 +98,7 @@ def trace_identity():
         else:
             harness = "cli"
     session = (os.environ.get("OMNICLI_SESSION")
-               or os.environ.get("OPENCODE_SESSION_ID")
+               or os.environ.get(_SESSION_ENV.get(harness, ""), "")
                or f"ppid:{os.getppid()}")
     return harness, session
 
@@ -360,12 +370,21 @@ async def parallel(calls, limit=8):
 # exist twice: once in the template above (for plan runs) and once here (for the
 # CLI). Keep the marker table in sync — `test_usage` asserts they agree.
 _HARNESS_MARKERS = (
-    ("t3-code", ("T3CODE_CLI_PATH", "T3CODE_SESSION_ID")),
+    # Liveness markers are set by the harness running *this* process, so they
+    # beat variables inherited from an outer agent: a shell in T3 Code that
+    # launches `agy` still carries T3CODE_CLI_PATH.
+    ("agy", ("ANTIGRAVITY_AGENT",)),
+    ("pi", ("PI_AGENT",)),
+    ("boxxy", ("BOXXY_TERMINAL",)),
+    ("t3-code", ("T3CODE_CLI_PATH",)),
     ("opencode", ("OPENCODE_SESSION_ID", "OPENCODE")),
-    ("agy", ("ORCA_ANTIGRAVITY_EVENT", "ANTIGRAVITY_SESSION_ID", "AGY_SESSION_ID")),
-    ("pi", ("PI_SESSION_ID", "PI_AGENT")),
-    ("boxxy", ("BOXXY_SESSION_ID", "BOXXY_TERMINAL")),
 )
+
+_SESSION_ENV = {
+    "agy": "ANTIGRAVITY_CONVERSATION_ID",
+    "t3-code": "OPENCODE_SESSION_ID",
+    "opencode": "OPENCODE_SESSION_ID",
+}
 
 
 def trace_identity():
@@ -379,7 +398,7 @@ def trace_identity():
         else:
             harness = "cli"
     session = (os.environ.get("OMNICLI_SESSION")
-               or os.environ.get("OPENCODE_SESSION_ID")
+               or os.environ.get(_SESSION_ENV.get(harness, ""), "")
                or f"ppid:{os.getppid()}")
     return harness, session
 
