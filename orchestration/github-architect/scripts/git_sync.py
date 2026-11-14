@@ -365,10 +365,15 @@ def stage3_commit(safe_files: list[str], message: str = None, repo: str = None) 
     # Stage explicitly by path (NEVER git add -A or git add .)
     for f in safe_files:
         target = Path(f) if repo is None else Path(repo) / f
-        if target.exists():
-            run_git(["add", "--", f], cwd=repo)
-        else:
+        if not target.exists():
             run_git(["rm", "--cached", "--", f], check=False, cwd=repo)
+        elif run_git(["check-ignore", "-q", "--", f], check=False, cwd=repo).returncode == 0:
+            # Ignored on purpose (e.g. .apiv snapshots untracked from the index).
+            # `git add` would either abort on the ignore rule or resurrect the
+            # file; the staged deletion is already the whole intent.
+            continue
+        else:
+            run_git(["add", "--", f], cwd=repo)
 
     commit_msg = compose_message(repo, message)
     if not estimate_body(commit_msg):
