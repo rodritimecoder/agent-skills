@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>glitch-console · VST3 control plate</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body {
+    display: grid;
+    place-items: start center;
+    min-height: 100vh;
+    padding: var(--s-8) var(--s-6);
+  }
+  .win--paper { width: min(1120px, 100%); }
+  .plate + .plate {
+    margin-top: var(--s-7);
+    padding-top: var(--s-6);
+    border-top: var(--b-1) solid var(--rule);
+  }
+  .plate__title { margin: 0 0 var(--s-2); }
+  .plate__note { margin: 0 0 var(--s-5); }
+
+  /* ── the comparison grid: one column per variant, one row per state ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 84px repeat(5, 1fr);
+    gap: var(--s-2) var(--s-5);
+    align-items: center;
+  }
+  .grid__head {
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+    padding-bottom: var(--s-2);
+    border-bottom: var(--b-1) solid var(--rule);
+  }
+  .grid__state {
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ── control: a chip that answers a pointer ───────────────────────── */
+  .ctl {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--text-2);
+    background: var(--ink-700);
+    border: var(--b-1) solid var(--rule);
+    border-radius: var(--r-0);
+    padding: var(--s-1) var(--s-3);
+    min-height: 24px;
+    white-space: nowrap;
+    transition: none;
+  }
+  .ctl__k {
+    color: var(--dim);
+    border-left: var(--b-1) solid var(--rule);
+    padding-left: var(--s-2);
+  }
+  .ctl__glyph { color: var(--mint); }
+  .ctl.is-hover { color: var(--text); border-color: var(--coral); }
+  .ctl.is-hover .ctl__label { text-decoration: underline; text-underline-offset: 2px; }
+  .ctl.is-active { color: var(--coral-hi); background: var(--ink-800); transform: translateY(1px); }
+  .ctl.is-focus { outline: var(--b-1) solid var(--yellow); outline-offset: 1px; }
+  .ctl.is-disabled { color: var(--dim); background: var(--ink-600); border-color: var(--ink-500); }
+  .ctl--danger.is-active, .ctl--danger { color: var(--pink); border-color: var(--pink); }
+  .ctl--ink { background: var(--ink-900); }
+
+  /* ── dial: a sprite atlas, 11 detents, stepped ────────────────────── */
+  .dial-row { display: flex; gap: var(--s-3); flex-wrap: wrap; align-items: flex-end; }
+  .dial {
+    display: grid;
+    gap: 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xs);
+    line-height: var(--lh-tight);
+    color: var(--rule);
+    background: var(--ink-800);
+    border: var(--b-1) solid var(--ink-700);
+    padding: var(--s-1) 0;
+    text-align: center;
+  }
+  .dial__arc { color: var(--rule); white-space: pre; }
+  .dial__ptr, .dial__arc { text-align: center; }
+  .dial__ptr { color: var(--coral); white-space: pre; }
+  .dial__val {
+    color: var(--text);
+    font-size: var(--fs-2xs);
+    letter-spacing: 0;
+    text-transform: none;
+    padding-top: var(--s-1);
+  }
+  .dial.is-hover { border-color: var(--coral); }
+  .dial.is-active .dial__val { color: var(--coral-hi); }
+  .dial.is-disabled { border-color: var(--ink-500); }
+  .dial.is-disabled .dial__ptr, .dial.is-disabled .dial__val { color: var(--dim); }
+
+  /* ── meters: the one interpolating primitive ───────────────────────── */
+  .meter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
+  .meter-pair figure { margin: 0; }
+  .meter-pair figcaption {
+    margin-top: var(--s-2);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .bar--demo { display: flex; gap: var(--b-1); }
+  .bar--demo .bar__cell { width: 10px; height: 12px; }
+  .bar--stepped .bar__cell:nth-child(-n+6) { background: var(--coral); animation: cellstep 1.2s steps(1) infinite; }
+  .bar--linear .bar__cell:nth-child(-n+6) { background: var(--mint); animation: cellfade 1.2s linear infinite; }
+  @keyframes cellstep { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.25; } }
+  @keyframes cellfade { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  /* ── the editor mock: 480 x 320, 4 x 4 parameters ──────────────────── */
+  .editor {
+    width: 480px;
+    height: 320px;
+    display: grid;
+    grid-template-rows: 24px 1fr 20px;
+    background: var(--ink-800);
+    border: var(--b-1) solid var(--rule);
+    box-shadow: var(--shadow-hard);
+  }
+  .editor__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: 0 var(--s-3);
+    border-bottom: var(--b-1) solid var(--rule);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .editor__bot { color: var(--coral); letter-spacing: 0; }
+  .editor__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 96px);
+    grid-auto-rows: 56px;
+    gap: var(--s-4);
+    padding: var(--s-4);
+    align-content: start;
+  }
+  .param { display: grid; grid-template-rows: 12px 24px 12px; gap: var(--s-2); }
+  .param__label {
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .param__value {
+    font-size: var(--fs-xs);
+    color: var(--text);
+    text-align: right;
+  }
+  .param__value span { color: var(--dim); }
+  .param__ctl { display: flex; align-items: center; }
+  .editor__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--s-3);
+    border-top: var(--b-1) solid var(--rule);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ── reflow schematic ──────────────────────────────────────────────── */
+  .reflow { display: flex; gap: var(--s-6); flex-wrap: wrap; align-items: flex-end; }
+  .reflow figure { margin: 0; }
+  .reflow figcaption {
+    margin-top: var(--s-2);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .wire {
+    display: grid;
+    gap: 2px;
+    padding: var(--s-1);
+    background: var(--ink-800);
+    border: var(--b-1) solid var(--rule);
+  }
+  .wire i { display: block; background: var(--ink-600); }
+  .wire--480 { grid-template-columns: repeat(4, 12px); }
+  .wire--640 { grid-template-columns: repeat(6, 12px); }
+  .wire--800 { grid-template-columns: repeat(7, 12px); }
+
+  .keybar { margin-top: var(--s-6); }
+</style>
+</head>
+<body>
+<main class="win win--paper">
+  <div class="win__bar">
+    <div class="win__dots">
+      <i class="win__dot win__dot--pink"></i>
+      <i class="win__dot win__dot--yellow"></i>
+      <i class="win__dot win__dot--mint"></i>
+    </div>
+    <span class="win__path">/glitch-console · profiles/vst3 · control plate</span>
+    <span class="win__chip">comparison, not prose</span>
+  </div>
+
+  <div class="win__body">
+    <p class="line line--cmd">&gt; design-pack plate vst3</p>
+    <p class="line line--tree">└ every control in every state, side by side — pick one, never invent a seventh</p>
+
+    <section class="plate">
+      <p class="line line--cmd plate__title">&gt; chip · button · toggle</p>
+      <p class="line line--dim plate__note">hover is an underline and a rule colour — never a fill, a filled cell reads as a meter</p>
+      <div class="grid">
+        <span class="grid__head">state</span>
+        <span class="grid__head">A · chip</span>
+        <span class="grid__head">B · chip + key</span>
+        <span class="grid__head">C · ink (panel)</span>
+        <span class="grid__head">D · icon + label</span>
+        <span class="grid__head">E · destructive</span>
+
+        <span class="grid__state">rest</span>
+        <span><span class="ctl"><span class="ctl__label">Bypass</span></span></span>
+        <span><span class="ctl"><span class="ctl__label">Render</span><span class="ctl__k">R</span></span></span>
+        <span><span class="ctl ctl--ink"><span class="ctl__label">Preset 04</span></span></span>
+        <span><span class="ctl"><span class="ctl__glyph">▶</span><span class="ctl__label">Audition</span></span></span>
+        <span><span class="ctl ctl--danger"><span class="ctl__label">Delete</span></span></span>
+
+        <span class="grid__state">hover</span>
+        <span><span class="ctl is-hover"><span class="ctl__label">Bypass</span></span></span>
+        <span><span class="ctl is-hover"><span class="ctl__label">Render</span><span class="ctl__k">R</span></span></span>
+        <span><span class="ctl ctl--ink is-hover"><span class="ctl__label">Preset 04</span></span></span>
+        <span><span class="ctl is-hover"><span class="ctl__glyph">▶</span><span class="ctl__label">Audition</span></span></span>
+        <span><span class="ctl ctl--danger is-hover"><span class="ctl__label">Delete</span></span></span>
+
+        <span class="grid__state">active</span>
+        <span><span class="ctl is-active"><span class="ctl__label">Bypass</span></span></span>
+        <span><span class="ctl is-active"><span class="ctl__label">Render</span><span class="ctl__k">R</span></span></span>
+        <span><span class="ctl ctl--ink is-active"><span class="ctl__label">Preset 04</span></span></span>
+        <span><span class="ctl is-active"><span class="ctl__glyph">◼</span><span class="ctl__label">Audition</span></span></span>
+        <span><span class="ctl ctl--danger is-active"><span class="ctl__label">Delete</span></span></span>
+
+        <span class="grid__state">focus</span>
+        <span><span class="ctl is-focus"><span class="ctl__label">Bypass</span></span></span>
+        <span><span class="ctl is-focus"><span class="ctl__label">Render</span><span class="ctl__k">R</span></span></span>
+        <span><span class="ctl ctl--ink is-focus"><span class="ctl__label">Preset 04</span></span></span>
+        <span><span class="ctl is-focus"><span class="ctl__glyph">▶</span><span class="ctl__label">Audition</span></span></span>
+        <span><span class="ctl ctl--danger is-focus"><span class="ctl__label">Delete</span></span></span>
+
+        <span class="grid__state">disabled</span>
+        <span><span class="ctl is-disabled"><span class="ctl__label">Bypass</span></span></span>
+        <span><span class="ctl is-disabled"><span class="ctl__label">Render</span><span class="ctl__k">R</span></span></span>
+        <span><span class="ctl ctl--ink is-disabled"><span class="ctl__label">Preset 04</span></span></span>
+        <span><span class="ctl is-disabled"><span class="ctl__glyph">▶</span><span class="ctl__label">Audition</span></span></span>
+        <span><span class="ctl ctl--danger is-disabled"><span class="ctl__label">Delete</span></span></span>
+      </div>
+      <p class="line line--dim plate__note">value stays readable when disabled — a value that vanishes cannot be compared</p>
+    </section>
+
+    <section class="plate">
+      <p class="line line--cmd plate__title">&gt; dial · 11 detents, stepped, integer cells</p>
+      <p class="line line--dim plate__note">a dial is a sprite atlas, not a seventh primitive: the pointer is a glyph, never a rotated arc</p>
+      <div class="dial-row">
+        <span class="dial"><span class="dial__ptr">▲          </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−5</span></span>
+        <span class="dial"><span class="dial__ptr"> ▲         </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−4</span></span>
+        <span class="dial"><span class="dial__ptr">  ▲        </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−3</span></span>
+        <span class="dial"><span class="dial__ptr">   ▲       </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−2</span></span>
+        <span class="dial"><span class="dial__ptr">    ▲      </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−1</span></span>
+        <span class="dial is-hover"><span class="dial__ptr">     ▲     </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">0</span></span>
+        <span class="dial"><span class="dial__ptr">      ▲    </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+1</span></span>
+        <span class="dial is-active"><span class="dial__ptr">       ▲   </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+2</span></span>
+        <span class="dial"><span class="dial__ptr">        ▲  </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+3</span></span>
+        <span class="dial"><span class="dial__ptr">         ▲ </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+4</span></span>
+        <span class="dial is-disabled"><span class="dial__ptr">          ▲</span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+5</span></span>
+      </div>
+    </section>
+
+    <section class="plate">
+      <p class="line line--cmd plate__title">&gt; meter · the one interpolating primitive</p>
+      <p class="line line--dim plate__note">value feedback eases; chrome never does — a stepped meter reads as a broken meter</p>
+      <div class="meter-pair">
+        <figure>
+          <div class="bar bar--demo bar--stepped">
+            <i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i>
+            <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+            <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          </div>
+          <figcaption>wrong for a meter · steps(1) · reads as broken</figcaption>
+        </figure>
+        <figure>
+          <div class="bar bar--demo bar--linear">
+            <i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i>
+            <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+            <i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i>
+          </div>
+          <figcaption>right for a meter · linear · 60 fps in the host</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="plate">
+      <p class="line line--cmd plate__title">&gt; assembled · 480 × 320 · 4 × 4 = 16 parameters</p>
+      <p class="line line--dim plate__note">the whole grid is built from the plate above — nothing here is new</p>
+      <div class="editor">
+        <div class="editor__head">
+          <span>718 engine · press</span>
+          <span class="editor__bot">▚▞▚ 2.4k</span>
+        </div>
+        <div class="editor__grid">
+          <div class="param"><span class="param__label">drive</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">  ▲  </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">6.2 <span>db</span></span></div>
+          <div class="param"><span class="param__label">mix</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">    ▲</span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">100 <span>%</span></span></div>
+          <div class="param"><span class="param__label">attack</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">fast</span></span></span><span class="param__value">12 <span>ms</span></span></div>
+          <div class="param"><span class="param__label">release</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">auto</span></span></span><span class="param__value">240 <span>ms</span></span></div>
+
+          <div class="param"><span class="param__label">tone</span><span class="param__ctl"><span class="dial"><span class="dial__ptr"> ▲   </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">−1.5 <span>db</span></span></div>
+          <div class="param"><span class="param__label">width</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">   ▲ </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">72 <span>%</span></span></div>
+          <div class="param"><span class="param__label">bypass</span><span class="param__ctl"><span class="ctl ctl--ink"><span class="ctl__label">off</span></span></span><span class="param__value">—</span></div>
+          <div class="param"><span class="param__label">sync</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">host</span></span></span><span class="param__value">120 <span>bpm</span></span></div>
+
+          <div class="param"><span class="param__label">level</span><span class="param__ctl"><span class="bar bar--demo bar--linear"><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i></span></span><span class="param__value">−8 <span>db</span></span></div>
+          <div class="param"><span class="param__label">gr</span><span class="param__ctl"><span class="bar bar--demo bar--linear"><i class="bar__cell"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i><i class="bar__cell bar__cell--dim"></i></span></span><span class="param__value">−2 <span>db</span></span></div>
+          <div class="param"><span class="param__label">mode</span><span class="param__ctl"><span class="ctl is-focus"><span class="ctl__label">clean</span></span></span><span class="param__value">—</span></div>
+          <div class="param"><span class="param__label">oversample</span><span class="param__ctl"><span class="ctl is-disabled"><span class="ctl__label">4×</span></span></span><span class="param__value">—</span></div>
+        </div>
+        <div class="editor__foot"><span>4 × 4 — 16 of 16 params</span><span>1 bypass · R render</span></div>
+      </div>
+    </section>
+
+    <section class="plate">
+      <p class="line line--cmd plate__title">&gt; reflow · columns change, type never does</p>
+      <p class="line line--dim plate__note">schematic, not to scale · 8 px inset · 24 px header · 20 px keybar</p>
+      <div class="reflow">
+        <figure>
+          <div class="wire wire--480"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <figcaption>480 × 320 · 4 × 4 · 16</figcaption>
+        </figure>
+        <figure>
+          <div class="wire wire--640"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <figcaption>640 × 400 · 6 × 5 · 30</figcaption>
+        </figure>
+        <figure>
+          <div class="wire wire--800"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <figcaption>800 × 600 · 7 × 8 · 56</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <div class="keybar">
+      <span class="keybar__k">1</span> bypass
+      <span class="keybar__k">R</span> render
+      <span class="keybar__k">space</span> audition
+      <span class="keybar__k">tab</span> next · focus ring is yellow
+    </div>
+  </div>
+</main>
+</body>
+</html>

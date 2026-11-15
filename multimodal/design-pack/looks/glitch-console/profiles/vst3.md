@@ -139,7 +139,8 @@ if the grid does not fit, drop whole cells and say so in the keybar
 ## 9 · Verification
 
 - 480 × 320 renders 16 parameter cells with 0 clipped labels and 0 scrollbars.
-- Every control exists in 5 states in `states.html` (add a VST3 section).
+- Every control exists in 5 states in `profiles/vst3-controls.html` — that plate is
+  the reference, and a new control must be added there before it ships.
 - A meter animating at 60 fps does not change any row height.
 - Press latency ≤ 100 ms, measured, not asserted.
 - No rendered type below 10 px; no `<button>` / `<input>` / `<select>` in markup.
@@ -147,6 +148,10 @@ if the grid does not fit, drop whole cells and say so in the keybar
 ---
 
 ## 10 · Open questions (decide before building specimens)
+
+0. **The plate** — `profiles/vst3-controls.html` is live and passes
+   `design-pack verify` (0 fail · 0 warn). Nothing in it is invented CSS: the
+   buttons are chips that answer a pointer, the dial is the sprite atlas.
 
 1. **Host framework** — JUCE (C++) vs a web-view editor. The tokens map to both;
    the dial atlas and the meter exception are C++-heavy either way.

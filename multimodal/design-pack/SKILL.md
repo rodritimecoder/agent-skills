@@ -83,7 +83,8 @@ modal or tooltip to a terminal look; drive actions via keyboard triggers (`1` Hi
 contract: fixed host window, 4 / 6 / 7 column anchors, a 10 px type floor, the dial
 as a sprite atlas rather than a seventh primitive, and the one written motion
 exception — *value feedback eases, chrome never does* — which lets meters run at
-the host frame rate while every other pixel stays stepped at 30 fps.
+the host frame rate while every other pixel stays stepped at 30 fps. The
+plate it is measured against: `profiles/vst3-controls.html`.
 
 
 ## Build a new look
