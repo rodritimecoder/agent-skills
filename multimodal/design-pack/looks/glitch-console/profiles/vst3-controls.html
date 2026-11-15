@@ -75,34 +75,20 @@
   .ctl--danger.is-active, .ctl--danger { color: var(--pink); border-color: var(--pink); }
   .ctl--ink { background: var(--ink-900); }
 
-  /* ── dial: a sprite atlas, 11 detents, stepped ────────────────────── */
-  .dial-row { display: flex; gap: var(--s-3); flex-wrap: wrap; align-items: flex-end; }
-  .dial {
-    display: grid;
-    gap: 0;
-    font-family: var(--font-mono);
-    font-size: var(--fs-2xs);
-    line-height: var(--lh-tight);
-    color: var(--rule);
-    background: var(--ink-800);
-    border: var(--b-1) solid var(--ink-700);
-    padding: var(--s-1) 0;
-    text-align: center;
-  }
-  .dial__arc { color: var(--rule); white-space: pre; }
-  .dial__ptr, .dial__arc { text-align: center; }
-  .dial__ptr { color: var(--coral); white-space: pre; }
-  .dial__val {
-    color: var(--text);
-    font-size: var(--fs-2xs);
-    letter-spacing: 0;
-    text-transform: none;
-    padding-top: var(--s-1);
-  }
-  .dial.is-hover { border-color: var(--coral); }
-  .dial.is-active .dial__val { color: var(--coral-hi); }
-  .dial.is-disabled { border-color: var(--ink-500); }
-  .dial.is-disabled .dial__ptr, .dial.is-disabled .dial__val { color: var(--dim); }
+  /* ── dial = a detent rail built from the meter primitive ───────────── */
+  .dial-row { display: flex; gap: var(--s-6); flex-wrap: wrap; align-items: flex-start; }
+  .dial { display: grid; gap: var(--s-1); }
+  .dial__rail { display: flex; gap: var(--b-1); }
+  .dial__rail i { display: block; width: 6px; height: 10px; background: var(--ink-600); }
+  .dial__rail i.on { background: var(--coral); }
+  .dial__rail i.mid { background: var(--yellow); }
+  .dial__val { font-size: var(--fs-2xs); letter-spacing: 0; color: var(--text); text-align: center; }
+  .dial__cap { font-size: var(--fs-2xs); letter-spacing: var(--track-label); text-transform: uppercase; color: var(--dim); }
+  .dial.is-hover .dial__cap { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
+  .dial.is-hover .dial__rail i.on { background: var(--coral-hi); }
+  .dial.is-active .dial__rail i.on { background: var(--yellow); }
+  .dial.is-disabled .dial__rail i.on { background: var(--ink-500); }
+  .dial.is-disabled .dial__val { color: var(--dim); }
 
   /* ── meters: the one interpolating primitive ───────────────────────── */
   .meter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
@@ -269,20 +255,13 @@
     </section>
 
     <section class="plate">
-      <p class="line line--cmd plate__title">&gt; dial · 11 detents, stepped, integer cells</p>
-      <p class="line line--dim plate__note">a dial is a sprite atlas, not a seventh primitive: the pointer is a glyph, never a rotated arc</p>
+      <p class="line line--cmd plate__title">&gt; dial · 11 detents, one lit cell</p>
+      <p class="line line--dim plate__note">a dial is a detent rail built from the meter primitive — 11 cells, one lit, no new primitive and no fake arc</p>
       <div class="dial-row">
-        <span class="dial"><span class="dial__ptr">▲          </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−5</span></span>
-        <span class="dial"><span class="dial__ptr"> ▲         </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−4</span></span>
-        <span class="dial"><span class="dial__ptr">  ▲        </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−3</span></span>
-        <span class="dial"><span class="dial__ptr">   ▲       </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−2</span></span>
-        <span class="dial"><span class="dial__ptr">    ▲      </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">−1</span></span>
-        <span class="dial is-hover"><span class="dial__ptr">     ▲     </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">0</span></span>
-        <span class="dial"><span class="dial__ptr">      ▲    </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+1</span></span>
-        <span class="dial is-active"><span class="dial__ptr">       ▲   </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+2</span></span>
-        <span class="dial"><span class="dial__ptr">        ▲  </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+3</span></span>
-        <span class="dial"><span class="dial__ptr">         ▲ </span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+4</span></span>
-        <span class="dial is-disabled"><span class="dial__ptr">          ▲</span><span class="dial__arc">╭─────────╮</span><span class="dial__val">+5</span></span>
+        <span class="dial"><span class="dial__cap">min  −5</span><span class="dial__rail"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="dial__val">−5.0 db</span></span>
+        <span class="dial is-hover"><span class="dial__cap">detent 5 · hover</span><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="dial__val">0.0 db</span></span>
+        <span class="dial is-active"><span class="dial__cap">max  +5</span><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i></span><span class="dial__val">+5.0 db</span></span>
+        <span class="dial is-disabled"><span class="dial__cap">disabled</span><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="dial__val">0.0 db</span></span>
       </div>
     </section>
 
@@ -318,13 +297,13 @@
           <span class="editor__bot">▚▞▚ 2.4k</span>
         </div>
         <div class="editor__grid">
-          <div class="param"><span class="param__label">drive</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">  ▲  </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">6.2 <span>db</span></span></div>
-          <div class="param"><span class="param__label">mix</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">    ▲</span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">100 <span>%</span></span></div>
+          <div class="param"><span class="param__label">drive</span><span class="param__ctl"><span class="dial"><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i></span></span></span><span class="param__value">6.2 <span>db</span></span></div>
+          <div class="param"><span class="param__label">mix</span><span class="param__ctl"><span class="dial"><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i></span></span></span><span class="param__value">100 <span>%</span></span></div>
           <div class="param"><span class="param__label">attack</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">fast</span></span></span><span class="param__value">12 <span>ms</span></span></div>
           <div class="param"><span class="param__label">release</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">auto</span></span></span><span class="param__value">240 <span>ms</span></span></div>
 
-          <div class="param"><span class="param__label">tone</span><span class="param__ctl"><span class="dial"><span class="dial__ptr"> ▲   </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">−1.5 <span>db</span></span></div>
-          <div class="param"><span class="param__label">width</span><span class="param__ctl"><span class="dial"><span class="dial__ptr">   ▲ </span><span class="dial__arc">╭───╮</span></span></span><span class="param__value">72 <span>%</span></span></div>
+          <div class="param"><span class="param__label">tone</span><span class="param__ctl"><span class="dial"><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span></span></span><span class="param__value">−1.5 <span>db</span></span></div>
+          <div class="param"><span class="param__label">width</span><span class="param__ctl"><span class="dial"><span class="dial__rail"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i></span></span></span><span class="param__value">72 <span>%</span></span></div>
           <div class="param"><span class="param__label">bypass</span><span class="param__ctl"><span class="ctl ctl--ink"><span class="ctl__label">off</span></span></span><span class="param__value">—</span></div>
           <div class="param"><span class="param__label">sync</span><span class="param__ctl"><span class="ctl"><span class="ctl__label">host</span></span></span><span class="param__value">120 <span>bpm</span></span></div>
 

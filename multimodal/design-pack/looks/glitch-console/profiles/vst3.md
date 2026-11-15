@@ -68,12 +68,15 @@ Three anchor sizes. The host may land anywhere between them; the layout rounds
 | `chip` | toggle, button, preset selector | now clickable: `rest` · `hover` · `active` · `focus` · `disabled` |
 | `rule` | section divider, cell underline | `hover` is a coral 1 px underline on the label — never a fill |
 | `meter` | level, gain reduction, spectrum | the only interpolating primitive |
-| `sprite` | **dial**, bot | one atlas family, stepped |
+| `meter` | **dial**, level, gain reduction, spectrum | a dial is a rail: 11 cells, one lit |
+| `sprite` | bot (header only) | one atlas family, stepped |
 
-**The dial is a sprite, not a seventh primitive.** A 3 × 3 ASCII glyph stepped
-through 11 detents (−5 … +5), drawn with `imageSmoothingEnabled = false` on the
-same integer cell grid as the bots. It answers to a parameter instead of a mood,
-which is a data change, not a new class.
+**A dial is a rail, not a knob.** Eleven cells (−5 … +5), one lit. A 10 px
+monospace cell cannot draw a rotate-able knob without lying about the geometry,
+and the pack already owns a stepped horizontal scale: the meter. So the
+parameter control *is* the meter primitive with exactly one cell lit — the same
+glyph the bots' `bop` uses to read a track. No new primitive, and no arc that
+has to be faked at 10 px.
 
 **One new block, no new component:** the *parameter row* = label + control +
 value. A block is a composition of primitives; that is where it belongs.
@@ -92,8 +95,8 @@ at runtime.
 - `rest` — `--ink-700` cell, `--text-2` label.
 - `hover` — label rule turns `--coral`, value brightens. **No background fill**:
   a filled cell reads as a meter at a glance.
-- `active` — value switches to `--coral-hi`, the glyph steps one frame (33 ms),
-  no tween.
+- `active` — the lit cell turns `--yellow` and the value goes `--coral-hi`;
+  one frame (33 ms), no tween.
 - `focus` — 1 px `--yellow` box on the cell, keyboard path only.
 - `disabled` — `--ink-600` cell, `--dim` label, value still readable (a value
   that vanishes cannot be compared).
