@@ -497,7 +497,20 @@ def changed_files_in(repo: str) -> list[str]:
     return files
 
 
-def guarded_commit(repo: str, message: str, excludes: list = None) -> dict:
+def _matches_patterns(rel_path: Path, patterns: list, is_excluded) -> bool:
+    if is_excluded(rel_path, patterns):
+        return True
+    rel_str = str(rel_path)
+    for pattern in patterns:
+        if not pattern:
+            continue
+        norm = pattern.rstrip("/")
+        if "/" in norm and (rel_str == norm or rel_str.startswith(norm + "/")):
+            return True
+    return False
+
+
+def guarded_commit(repo: str, message: str, excludes: list = None, includes: list = None) -> dict:
     """Stage and commit only the files that pass the secret guard.
 
     The content scan reads whole files rather than diffs: a brand-new file is
@@ -507,10 +520,14 @@ def guarded_commit(repo: str, message: str, excludes: list = None) -> dict:
     scan_file = _load_publication_guard()
     is_excluded = _load_exclude_matcher()
     excludes = excludes or []
+    includes = includes or []
     files = changed_files_in(repo)
     safe, blocked = [], []
     for rel in files:
-        if is_excluded(Path(rel), excludes):
+        rel_path = Path(rel)
+        if excludes and _matches_patterns(rel_path, excludes, is_excluded):
+            continue
+        if includes and not _matches_patterns(rel_path, includes, is_excluded):
             continue
         target = Path(repo) / rel
         if not target.is_file():
@@ -535,7 +552,7 @@ def guarded_commit(repo: str, message: str, excludes: list = None) -> dict:
 
 
 def cmd_guarded_commit(args) -> int:
-    result = guarded_commit(args.repo, args.message, args.exclude)
+    result = guarded_commit(args.repo, args.message, args.exclude, args.include)
     if args.json:
         print(json.dumps({
             "repo": args.repo,
@@ -615,6 +632,7 @@ def main(argv=None):
         gp.add_argument("--repo", required=True, help="Repository to commit in")
         gp.add_argument("-m", "--message", help="Commit message (default: derived from the staged diff)")
         gp.add_argument("--exclude", action="append", default=[], help="rsync-style exclude pattern (repeatable)")
+        gp.add_argument("--include", action="append", default=[], help="only stage paths matching pattern/prefix (repeatable)")
         gp.add_argument("--json", action="store_true")
         gargs = gp.parse_args(argv[1:])
         return cmd_guarded_commit(gargs)
