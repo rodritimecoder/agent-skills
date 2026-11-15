@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Acquisition and model-service helpers shared by videomine.py and vault_mine.py.
+"""Acquisition, model-service and speaker helpers shared by the video skills.
 
-Two failures this module removes.
+Three failures this module removes.
 
 1. A stopped OCR slot reported as "the server is down". `llama-rig up ocr`
    answers on :8085 in well under a second, so the pipeline starts the slot
@@ -14,10 +14,15 @@ Two failures this module removes.
    every later stage pays to decode those pixels. Measured on a 117 s video:
    default 33 MB / 6.2 s download / 4.4 s frame extraction; `res:1080` cap,
    eight fragments and a stream-copy remux 7.4 MB / 3.0 s / 0.9 s.
+
+3. An interview transcribed as one anonymous voice. Nemotron 3 Diarization
+   runs through `run-diarization.sh` at ~21x real time and needs no server, so
+   who-spoke-when costs a second on a reel and is worth having on a talk.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -193,3 +198,130 @@ def stop_child(child: subprocess.Popen | None) -> None:
         child.wait(timeout=5)
     except subprocess.TimeoutExpired:
         child.kill()
+
+
+# ── Speaker diarization (Nemotron 3, no server) ─────────────────────────────
+
+DIAR_SAMPLE_RATE = 16000
+
+
+def _ai_root() -> Path:
+    """The AI volume root: $AI_ROOT, else the nearest ancestor holding models/."""
+    env = os.environ.get("AI_ROOT")
+    if env:
+        return Path(env).expanduser()
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "models").is_dir():
+            return parent
+    return Path("/run/media/rodri/AI")
+
+
+def find_diarization_script() -> Path | None:
+    """Locate `run-diarization.sh` wherever this machine keeps it.
+
+    The audiocpp skill ships it, the AI drive keeps a copy in `sh/`, and some
+    installs symlink it onto PATH. Any of them is the same script.
+    """
+    explicit = os.environ.get("AUDIOCPP_DIAR")
+    candidates: list[Path] = [Path(explicit).expanduser()] if explicit else []
+    on_path = shutil.which("run-diarization")
+    if on_path:
+        candidates.append(Path(on_path))
+    root = _ai_root()
+    candidates += [
+        root / "sh" / "run-diarization.sh",
+        root / "skills" / "audiocpp" / "scripts" / "run-diarization.sh",
+        root / "workstation-clis" / "launchers" / "run-diarization.sh",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def run_diarization(
+    media: Path,
+    out_dir: Path,
+    *,
+    names: list[str] | None = None,
+    timeout_s: float = 1800.0,
+    log=print,
+) -> list[dict] | None:
+    """Who spoke when for `media` (audio or video), or None if it cannot run.
+
+    Ids are arrival order — `speaker_0` is whoever spoke first — so pass
+    `names=[...]` only after checking the first line of the transcript.
+    """
+    script = find_diarization_script()
+    if script is None:
+        log("[diar] run-diarization.sh not found (set AUDIOCPP_DIAR); no speaker labels.")
+        return None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = ["bash", str(script), str(media), "--out", str(out_dir), "-q"]
+    if names:
+        cmd += ["--names", ",".join(names)]
+    started = time.monotonic()
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        log(f"[diar] diarization timed out after {timeout_s:.0f}s; no speaker labels.")
+        return None
+    turns_file = out_dir / media.stem / "turns.json"
+    if res.returncode != 0 or not turns_file.is_file():
+        detail = ((res.stderr or res.stdout or "").strip().splitlines() or ["no output"])[-1]
+        log(f"[diar] diarization failed: {detail}")
+        return None
+    try:
+        raw = json.loads(turns_file.read_text(encoding="utf-8"))
+    except Exception as exc:
+        log(f"[diar] unreadable turns.json ({exc}); no speaker labels.")
+        return None
+    turns = [
+        {
+            "start": turn["start_sample"] / DIAR_SAMPLE_RATE,
+            "end": turn["end_sample"] / DIAR_SAMPLE_RATE,
+            "speaker": turn["speaker_id"],
+            "confidence": turn.get("confidence"),
+        }
+        for turn in raw
+        if "start_sample" in turn and "end_sample" in turn
+    ]
+    speakers = sorted({turn["speaker"] for turn in turns})
+    log(f"[diar] {len(turns)} turns, {len(speakers)} speakers in {time.monotonic() - started:.1f}s.")
+    return turns
+
+
+def speaker_labels(turns: list[dict], names: list[str] | None = None) -> dict[str, str]:
+    """Map model ids to display names in arrival order (`speaker_0` → names[0])."""
+    ordered: list[str] = []
+    for turn in turns:
+        if turn["speaker"] not in ordered:
+            ordered.append(turn["speaker"])
+    labels = {}
+    for index, speaker in enumerate(ordered):
+        if names and index < len(names) and names[index]:
+            labels[speaker] = names[index].strip()
+        else:
+            labels[speaker] = f"Speaker {index + 1}"
+    return labels
+
+
+def speaker_at(turns: list[dict], start: float, end: float | None = None) -> str | None:
+    """The speaker holding most of `[start, end)`; None when nothing overlaps."""
+    end = start + 0.5 if end is None else max(end, start + 0.01)
+    best, best_overlap = None, 0.0
+    for turn in turns:
+        overlap = min(end, turn["end"]) - max(start, turn["start"])
+        if overlap > best_overlap:
+            best, best_overlap = turn["speaker"], overlap
+    return best
+
+
+def talk_time(turns: list[dict], labels: dict[str, str] | None = None) -> list[tuple[str, float]]:
+    """Seconds spoken per speaker, longest first — the summary line of a talk."""
+    labels = labels or speaker_labels(turns)
+    totals: dict[str, float] = {}
+    for turn in turns:
+        totals[turn["speaker"]] = totals.get(turn["speaker"], 0.0) + max(0.0, turn["end"] - turn["start"])
+    return sorted(((labels[s], round(seconds, 1)) for s, seconds in totals.items()),
+                  key=lambda item: item[1], reverse=True)

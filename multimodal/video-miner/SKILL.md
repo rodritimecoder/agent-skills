@@ -3,7 +3,7 @@ name: video-miner
 
 description: "Extract, transcribe, and synthesize knowledge from video files or URLs into structured markdown notes using local verbatim speech-to-text, deterministic frame gating (perceptual dedup + blank rejection), and OCR with the kem-ocr structural gate. Built on ICM with staged folders and human review checkpoints. Use to turn a recorded lecture, talk, webinar or screen recording into study notes, to mine a pile of video for what it teaches, or to get a transcript plus slides out of video you already have. For audio with no picture, use audiocpp; for a Zoom cloud recording link, use zoom-recorder."
 
-compatibility: "Requires ffmpeg, `yt-dlp` and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K by default — verbatim, 15x real-time; `--asr-model nemotron` to switch). No ASR server is needed. OCR needs LightOnOCR (:8085) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill; the scripts start :8085 themselves through `llama-rig up ocr`, so a stopped slot is never a blocker. h2o-lightning-4b on :8083 is optional, only for --gate h2o."
+compatibility: "Requires ffmpeg, `yt-dlp` and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K by default — verbatim, word timings, 20x real-time; `--asr-model nemotron` for 78x without word timings). No ASR server is needed. OCR needs LightOnOCR (:8085) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill; the scripts start :8085 themselves through `llama-rig up ocr`, so a stopped slot is never a blocker. Speaker labels come from `run-diarization.sh` (Nemotron 3, ~150x real-time, no server). h2o-lightning-4b on :8083 is optional, only for --gate h2o."
 allowed-tools: "Bash(video-miner:*) Bash(ffmpeg:*) Bash(python3:*) Bash(llama-rig:*) Read Write"
 ---
 
@@ -23,7 +23,7 @@ Follows **Interpretable Context Methodology (ICM)**:
 | Stage | Job | Input | Output & Human Checkpoint |
 |---|---|---|---|
 | `01_acquire` | Download/link video & extract 16 kHz audio | Video URL or path | `output/audio.wav`, `video_meta.json` |
-| `02_audio_asr` | Transcribe speech via `audiocpp` (CrisperWhisper 2.0, verbatim + word timings) | `01_acquire/output/audio.wav` | `output/transcript.md` *(edit/correct terms)* |
+| `02_audio_asr` | Transcribe speech via `audiocpp` (CrisperWhisper 2.0, verbatim + word timings); `--diarize` adds `Name:` per turn | `01_acquire/output/audio.wav` | `output/transcript.md` *(edit/correct terms)* |
 | `03_visual_sample` | Keyframe (`-skip_frame nokey`), scene-cut, or fps sampling with PTS timing | `01_acquire/output/source_video.mp4` | `output/frames/`, `manifest.json` |
 | `04_visual_gate` | Perceptual dedup (dHash) + blank rejection, or h2o vision gate | `03_visual_sample/output/manifest.json` | `output/gated_frames.json` *(check kept frames)* |
 | `05_visual_ocr` | OCR via LightOnOCR-3-0.8B or MiniCPM-OCR-1.0 (+ structural gate) | `04_visual_gate/output/text_frames/` | `output/ocr_timeline.md` *(fix OCR typos)* |
@@ -183,6 +183,53 @@ that an unauthenticated attempt looks like a hang. Put a jar at
 `~/.config/yt-dlp/cookies.txt` (or set `YTDLP_COOKIES`) and it is passed through
 automatically.
 
+## Speech models and speakers
+
+Two ASR models are installed, and they are not interchangeable. Measured on the
+same 117 s technical video (454 words):
+
+| `--asr-model` | wall | word timings | technical terms |
+|---|---|---|---|
+| `crisperwhisper` (default) | 5.7 s (20x) | **yes** | "git", "VS Code" — correct |
+| `nemotron` | 1.5 s (78x) | no | "Get", "VSCOD", "RunGit Add" |
+
+`crisperwhisper` is the default because this skill mines *technical* video and
+because stage `02_audio_asr` needs word timings for its timestamps: audiocpp's
+own default is `nemotron`, which returns text without them, so the stage would
+collapse into one untimestamped blob. Reach for `nemotron` when the audio is
+long and the words are ordinary.
+
+### Speaker labels (`--diarize`)
+
+Diarization is one extra pass over the same recording with Nemotron 3, and it
+needs no server:
+
+```bash
+# ICM pipeline: labels land in 02_audio_asr/transcript.md and transcript.json
+python3 $CLI run ./my_video_run --diarize
+python3 $CLI run ./my_video_run --speaker-names Kem,Chase
+
+# Vault: same flags on `add` / `kem`
+vault-mine add "https://www.youtube.com/watch?v=..." --creator kem_glitch --diarize
+vault-mine add ./panel.mp4 --creator kem_glitch --speaker-names Kem,Chase,Vince
+```
+
+Measured: 0.8 s for 2 minutes of audio, 0.8 s for a 16 s two-voice clip that it
+split into 4/4 turns. A transcript paragraph breaks on a speaker change, so the
+label is true for its whole line:
+
+```markdown
+**[00:00] Speaker 1:** The pipeline downloads the reel, then transcribes it locally.
+
+**[00:04] Speaker 2:** Right, and the diarization pass should tell us who is speaking.
+```
+
+Ids are **arrival order**, not identity: `speaker_0` is whoever spoke first.
+Read the first line before trusting `--speaker-names`. With `--asr-model
+nemotron` there are no word timings, so labels land on whole segments instead of
+per turn — the stage says so in its log. Overlapping speech is not separated
+(crosstalk lands in one turn).
+
 ## Human Checkpoints & Editing
 
 Because every stage output is an edit surface:
@@ -211,6 +258,10 @@ vault-mine add "https://..." --model nemotron
 
 # Cap the download lower when the screen text is big:
 vault-mine add "https://..." --max-res 720
+
+# Label who said what (interviews, panels, two-person podcasts):
+vault-mine add "https://..." --diarize
+vault-mine add "https://..." --speaker-names Kem,Chase
 
 # Import an existing mined ICM workspace into the vault:
 vault-mine import ./my_video_run --creator "kem_glitch" --title "5-agents-worktree"

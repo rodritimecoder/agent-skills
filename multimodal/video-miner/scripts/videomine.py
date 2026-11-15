@@ -110,7 +110,12 @@ OCR_SLOT = os.environ.get("VIDEOMINE_OCR_SLOT", "ocr")
 OCR_WAIT_S = float(os.environ.get("VIDEOMINE_OCR_WAIT", "90"))
 HASH_DISTANCE = int(os.environ.get("VIDEOMINE_HASH_DISTANCE", "20"))
 TEXT_SIMILARITY = float(os.environ.get("VIDEOMINE_TEXT_SIMILARITY", "0.9"))
-ASR_MODEL = os.environ.get("VIDEOMINE_ASR_MODEL", "")
+# audiocpp's own default is now nemotron, which returns text without word
+# timings: stage 02 would lose every timestamp and the diarization split. Name
+# the verbatim model explicitly; --asr-model nemotron is still available.
+ASR_MODEL = os.environ.get("VIDEOMINE_ASR_MODEL", "crisperwhisper")
+DIARIZE = os.environ.get("VIDEOMINE_DIARIZE", "") not in ("", "0", "false")
+SPEAKER_NAMES = [n.strip() for n in os.environ.get("VIDEOMINE_SPEAKERS", "").split(",") if n.strip()] or None
 SAMPLE_MODE = os.environ.get("VIDEOMINE_SAMPLE", "auto")
 SAMPLE_FPS = float(os.environ.get("VIDEOMINE_SAMPLE_FPS", "1.0"))
 KEYFRAME_THRESHOLD_S = float(os.environ.get("VIDEOMINE_KEYFRAME_AFTER", "600"))
@@ -357,65 +362,64 @@ def run_stage_01_acquire(workspace: Path, video_source: str) -> None:
     print(f"[01_acquire] Done. Outputs in {out_dir}")
 
 
-def parse_asr_segments(raw: Any) -> list[dict]:
+def _segment_words(word_list: list[dict], time_of, joiner: str,
+                   turns: list[dict] | None = None) -> list[dict]:
+    """Split a word stream into segments on pauses, sentence ends and speaker turns.
+
+    `time_of(word)` returns `(start, end)` in seconds. A speaker change closes
+    the segment so a `speaker` field stays true for the whole line.
+    """
     segments = []
+    cur_words: list[str] = []
+    seg_start = None
+    last_end = 0.0
+    cur_speaker = None
+    for w in word_list:
+        w_text = w.get("word", "")
+        w_start, w_end = time_of(w)
+        speaker = procure.speaker_at(turns, w_start, w_end) if turns else None
+        if seg_start is None:
+            seg_start = w_start
+        broke = bool(cur_words) and (
+            (w_start - last_end > 1.2)
+            or joiner.join(cur_words).strip().endswith((".", "!", "?"))
+            or (turns and speaker != cur_speaker)
+        )
+        if broke:
+            segments.append({"start": seg_start, "end": last_end,
+                             "text": joiner.join(cur_words).strip()})
+            cur_words = []
+            seg_start = w_start
+        cur_speaker = speaker
+        cur_words.append(w_text)
+        last_end = w_end
+    if cur_words and seg_start is not None:
+        segments.append({"start": seg_start, "end": last_end,
+                         "text": joiner.join(cur_words).strip()})
+    return segments
+
+
+def parse_asr_segments(raw: Any, turns: list[dict] | None = None) -> list[dict]:
     if isinstance(raw, dict):
         if "words" in raw and raw["words"]:
-            word_list = raw["words"]
-            cur_words = []
-            seg_start = word_list[0].get("start_sec", 0.0)
-            last_end = seg_start
-            for w in word_list:
-                w_text = w.get("word", "")
-                w_start = w.get("start_sec", last_end)
-                w_end = w.get("end_sec", w_start)
-                if cur_words and ((w_start - last_end > 1.2) or ("".join(cur_words).strip().endswith((".", "!", "?")))):
-                    segments.append({
-                        "start": seg_start,
-                        "end": last_end,
-                        "text": "".join(cur_words).strip()
-                    })
-                    cur_words = []
-                    seg_start = w_start
-                cur_words.append(w_text)
-                last_end = w_end
-            if cur_words:
-                segments.append({
-                    "start": seg_start,
-                    "end": last_end,
-                    "text": "".join(cur_words).strip()
-                })
-            return segments
+            return _segment_words(
+                raw["words"],
+                lambda w: (w.get("start_sec", 0.0), w.get("end_sec", w.get("start_sec", 0.0))),
+                "",
+                turns,
+            )
         elif "segments" in raw:
             return raw["segments"]
         elif "text" in raw:
             return [{"start": 0.0, "end": 0.0, "text": raw["text"]}]
     elif isinstance(raw, list):
         if raw and isinstance(raw[0], dict) and "start_sample" in raw[0]:
-            cur_words = []
-            seg_start = raw[0].get("start_sample", 0) / 16000.0
-            last_end = seg_start
-            for w in raw:
-                w_text = w.get("word", "")
-                w_start = w.get("start_sample", 0) / 16000.0
-                w_end = w.get("end_sample", 0) / 16000.0
-                if cur_words and ((w_start - last_end > 1.2) or (" ".join(cur_words).strip().endswith((".", "!", "?")))):
-                    segments.append({
-                        "start": seg_start,
-                        "end": last_end,
-                        "text": " ".join(cur_words).strip()
-                    })
-                    cur_words = []
-                    seg_start = w_start
-                cur_words.append(w_text)
-                last_end = w_end
-            if cur_words:
-                segments.append({
-                    "start": seg_start,
-                    "end": last_end,
-                    "text": " ".join(cur_words).strip()
-                })
-            return segments
+            return _segment_words(
+                raw,
+                lambda w: (w.get("start_sample", 0) / 16000.0, w.get("end_sample", 0) / 16000.0),
+                " ",
+                turns,
+            )
         return raw
     return []
 
@@ -429,26 +433,52 @@ def run_stage_02_audio_asr(workspace: Path) -> None:
     if not audio_wav.exists():
         raise FileNotFoundError(f"Missing upstream audio: {audio_wav}")
 
-    print(f"[02_audio_asr] Transcribing speech (audiocpp, model={ASR_MODEL or 'crisperwhisper (audiocpp default)'})...")
+    print(f"[02_audio_asr] Transcribing speech (audiocpp, model={ASR_MODEL})...")
+    if DIARIZE and ASR_MODEL.startswith("nemotron"):
+        print("[02_audio_asr] Note: nemotron emits no word timings, so speaker "
+              "labels land on whole segments (use crisperwhisper for per-turn splits).")
     
     words_json = out_dir / "words.json"
     cmd = get_asr_cmd(audio_wav, details=True, offline=True, words_out=words_json, model=ASR_MODEL)
     res = subprocess.run(cmd, capture_output=True, text=True)
 
+    # Optional: who spoke when, one extra pass over the same recording. It runs
+    # before segmentation so the segments can break on a speaker change too.
+    turns = None
+    labels = {}
+    speaker_summary = []
+    if DIARIZE:
+        video = workspace / "stages" / "01_acquire" / "output" / "source_video.mp4"
+        if video.exists():
+            print("[02_audio_asr] Diarizing speakers (Nemotron 3)...")
+            turns = procure.run_diarization(video, stage_dir / "diar", names=SPEAKER_NAMES)
+            if turns:
+                labels = procure.speaker_labels(turns, SPEAKER_NAMES)
+                speaker_summary = procure.talk_time(turns, labels)
+                print("[02_audio_asr] " + " · ".join(f"{n} {s:.0f}s" for n, s in speaker_summary))
+        else:
+            print("[02_audio_asr] No source video for diarization; skipping speaker labels.")
+
     segments = []
     if words_json.is_file():
         try:
             raw_words = json.loads(words_json.read_text(encoding="utf-8"))
-            segments = parse_asr_segments(raw_words)
+            segments = parse_asr_segments(raw_words, turns=turns)
         except Exception:
             pass
 
     if not segments:
         try:
             raw = json.loads(res.stdout)
-            segments = parse_asr_segments(raw)
+            segments = parse_asr_segments(raw, turns=turns)
         except Exception:
             segments = [{"start": 0.0, "end": 0.0, "text": res.stdout.strip()}]
+
+    if turns:
+        for seg in segments:
+            speaker = procure.speaker_at(turns, seg.get("start", 0.0), seg.get("end", 0.0))
+            if speaker:
+                seg["speaker"] = labels.get(speaker, speaker)
 
     transcript_json = out_dir / "transcript.json"
     transcript_md = out_dir / "transcript.md"
@@ -457,11 +487,15 @@ def run_stage_02_audio_asr(workspace: Path) -> None:
     
     # Render readable transcript.md (edit surface!)
     md_lines = ["# Audio Transcript\n\n"]
+    if speaker_summary:
+        md_lines.append("**Speakers:** " + " · ".join(f"{n} {s:.0f}s" for n, s in speaker_summary) + "\n\n")
     for seg in segments:
         ts = format_timestamp(seg.get("start", 0.0))
         text = seg.get("text", "").strip()
+        speaker = seg.get("speaker")
         if text:
-            md_lines.append(f"**[{ts}]** {text}\n\n")
+            md_lines.append(f"**[{ts}] {speaker}:** {text}\n\n" if speaker
+                            else f"**[{ts}]** {text}\n\n")
             
     transcript_md.write_text("".join(md_lines), encoding="utf-8")
     print(f"[02_audio_asr] Done. Generated {len(segments)} timestamped segments in {transcript_md}")
@@ -1032,7 +1066,8 @@ def run_stage_06_synthesize(workspace: Path) -> None:
             "type": "spoken",
             "timestamp": t.get("start", 0.0),
             "end": t.get("end", 0.0),
-            "text": t.get("text", "")
+            "speaker": t.get("speaker"),
+            "text": t.get("text", ""),
         })
     for o in ocr_timeline:
         events.append({
@@ -1062,7 +1097,9 @@ def run_stage_06_synthesize(workspace: Path) -> None:
         else:
             text = ev["text"].strip()
             if text:
-                doc.append(f"> **[{ts_str}]** {text}\n\n")
+                speaker = ev.get("speaker")
+                who = f"] {speaker}:**" if speaker else "]**"
+                doc.append(f"> **[{ts_str}{who} {text}\n\n")
 
     final_md = out_dir / "mined_video.md"
     final_json = out_dir / "mined_video.json"
@@ -1228,6 +1265,8 @@ def main() -> None:
     p_step.add_argument("--sample", choices=["auto", "keyframe", "fps"], help="frame sampling (default: auto — keyframe over 10 min)")
     p_step.add_argument("--sample-fps", type=float, metavar="RATIO", help="fps for --sample fps (default: 1.0)")
     p_step.add_argument("--max-res", type=int, metavar="P", help="download resolution cap in lines (default: 1080)")
+    p_step.add_argument("--diarize", action="store_true", help="label speakers with Nemotron 3 diarization (one extra pass)")
+    p_step.add_argument("--speaker-names", metavar="A,B", help="names for speakers in arrival order (implies --diarize)")
 
     # run
     p_run = subparsers.add_parser("run", help="Run pipeline stages")
@@ -1240,6 +1279,8 @@ def main() -> None:
     p_run.add_argument("--sample", choices=["auto", "keyframe", "fps"], help="frame sampling (default: auto — keyframe over 10 min)")
     p_run.add_argument("--sample-fps", type=float, metavar="RATIO", help="fps for --sample fps (default: 1.0)")
     p_run.add_argument("--max-res", type=int, metavar="P", help="download resolution cap in lines (default: 1080)")
+    p_run.add_argument("--diarize", action="store_true", help="label speakers with Nemotron 3 diarization (one extra pass)")
+    p_run.add_argument("--speaker-names", metavar="A,B", help="names for speakers in arrival order (implies --diarize)")
 
     args = parser.parse_args()
 
@@ -1261,7 +1302,7 @@ def main() -> None:
         _STDOUT = sys.stdout
         sys.stdout = sys.stderr
 
-    global GATE_MODE, OCR_BACKEND, ASR_MODEL, SAMPLE_MODE, SAMPLE_FPS
+    global GATE_MODE, OCR_BACKEND, ASR_MODEL, SAMPLE_MODE, SAMPLE_FPS, DIARIZE, SPEAKER_NAMES
     if getattr(args, "gate", None):
         GATE_MODE = args.gate
     if getattr(args, "ocr", None):
@@ -1272,6 +1313,10 @@ def main() -> None:
         SAMPLE_MODE = args.sample
     if getattr(args, "sample_fps", None):
         SAMPLE_FPS = args.sample_fps
+    if getattr(args, "diarize", False) or getattr(args, "speaker_names", None):
+        DIARIZE = True
+    if getattr(args, "speaker_names", None):
+        SPEAKER_NAMES = [n.strip() for n in args.speaker_names.split(",") if n.strip()] or None
 
     if args.command == "init":
         init_workspace(args.workspace, args.source)

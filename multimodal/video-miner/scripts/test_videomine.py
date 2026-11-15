@@ -311,6 +311,69 @@ keeping<00:00:02.129><c> track</c><00:00:02.700><c> of</c>
         )
 
 
+class TestDiarization(unittest.TestCase):
+
+    TURNS = [
+        {"start": 0.2, "end": 3.6, "speaker": "speaker_0", "confidence": 0.96},
+        {"start": 4.6, "end": 8.0, "speaker": "speaker_1", "confidence": 0.98},
+        {"start": 8.8, "end": 11.9, "speaker": "speaker_0", "confidence": 0.99},
+    ]
+
+    def test_labels_follow_arrival_order(self):
+        labels = procure.speaker_labels(self.TURNS)
+        self.assertEqual(labels, {"speaker_0": "Speaker 1", "speaker_1": "Speaker 2"})
+        named = procure.speaker_labels(self.TURNS, ["Kem", "Chase"])
+        self.assertEqual(named, {"speaker_0": "Kem", "speaker_1": "Chase"})
+
+    def test_speaker_at_picks_the_dominant_turn(self):
+        self.assertEqual(procure.speaker_at(self.TURNS, 1.0, 2.0), "speaker_0")
+        self.assertEqual(procure.speaker_at(self.TURNS, 5.0, 7.0), "speaker_1")
+        # spans both, but 8.8-11.9 holds most of it
+        self.assertEqual(procure.speaker_at(self.TURNS, 7.0, 10.0), "speaker_0")
+        self.assertIsNone(procure.speaker_at(self.TURNS, 30.0, 31.0))
+
+    def test_talk_time(self):
+        totals = procure.talk_time(self.TURNS)
+        self.assertEqual([name for name, _ in totals], ["Speaker 1", "Speaker 2"])
+        self.assertAlmostEqual(dict(totals)["Speaker 1"], 6.5, places=1)
+
+    def test_words_split_on_speaker_change(self):
+        words = []
+        for start, end, text in ((0.5, 1.5, "first"), (2.0, 3.0, "sentence."),
+                                 (5.0, 6.0, "second"), (6.5, 7.5, "sentence.")):
+            words.append({"start_sample": int(start * 16000), "end_sample": int(end * 16000), "word": text})
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "words.json"
+            path.write_text(json.dumps(words), encoding="utf-8")
+            plain = vmine.format_word_blocks(path)
+            split = vmine.format_word_blocks(path, turns=self.TURNS)
+        self.assertEqual(len(plain), 1, "without turns the whole clip is one paragraph")
+        self.assertEqual(len(split), 2, "a speaker change closes the paragraph")
+        rendered = vmine.render_transcript(split, self.TURNS, procure.speaker_labels(self.TURNS))
+        self.assertIn("**[00:00] Speaker 1:** first sentence.", rendered)
+        self.assertIn("**[00:05] Speaker 2:** second sentence.", rendered)
+
+    def test_vtt_blocks_split_on_speaker_change(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:00.500 --> 00:00:02.000\nfirst sentence\n\n"
+            "00:00:05.000 --> 00:00:06.500\nsecond sentence\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "talk.vtt"
+            path.write_text(vtt, encoding="utf-8")
+            plain = vmine.parse_vtt_blocks(path)
+            split = vmine.parse_vtt_blocks(path, turns=self.TURNS)
+        self.assertEqual(len(plain), 2, "the 3 s gap already separates them")
+        self.assertEqual(len(split), 2)
+        self.assertEqual(split[0][2], "first sentence")
+        self.assertEqual(split[1][2], "second sentence")
+
+    def test_render_transcript_without_speakers_is_unchanged(self):
+        rendered = vmine.render_transcript([(0.0, 1.0, "hello")])
+        self.assertEqual(rendered, "**[00:00]** hello\n")
+
+
 class TestBatchSignatures(unittest.TestCase):
 
     def test_batch_matches_per_frame(self):

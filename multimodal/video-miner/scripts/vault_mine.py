@@ -52,6 +52,14 @@ def slugify(text: str) -> str:
     return re.sub(r"[-\s]+", "_", text)[:60]
 
 
+def parse_names(raw: Optional[str]) -> Optional[List[str]]:
+    """`--speaker-names "Kem, Chase"` → ['Kem', 'Chase'] (or None)."""
+    if not raw:
+        return None
+    names = [part.strip() for part in raw.split(",") if part.strip()]
+    return names or None
+
+
 def is_ocr_server_online(port: int = 8085, timeout: float = 0.5) -> bool:
     """Fast non-blocking probe to check if LightOnOCR HTTP server is live."""
     return procure.http_up(f"http://127.0.0.1:{port}/health", timeout=timeout)
@@ -141,36 +149,54 @@ def ocr_frame(image_path: Path, allow_cli_fallback: bool = False) -> str:
     return ""
 
 
-def format_words_to_transcript(words_json_path: Path) -> str:
-    """Format audiocpp word-level timestamps into readable, timestamped markdown paragraphs."""
+def format_word_blocks(words_json_path: Path, sample_rate: int = 16000,
+                       turns: Optional[List[dict]] = None) -> List[tuple[float, float, str]]:
+    """Group audiocpp word timings into (start, end, text) paragraphs.
+
+    15 s when the last word closes a sentence, 25 s at the latest. With
+    `turns`, a speaker change also closes the paragraph — otherwise a 16 s
+    exchange between two people fuses into one line and one label.
+    """
     try:
         words = json.loads(words_json_path.read_text(encoding="utf-8"))
-        if not words:
-            return ""
-        blocks = []
-        cur_words = []
-        cur_start = None
-
-        for w in words:
-            start_sec = w.get("start_sample", 0) / 16000.0
-            if cur_start is None:
-                cur_start = start_sec
-            cur_words.append(w.get("word", ""))
-            if (start_sec - cur_start >= 15.0 and w.get("word", "").endswith((".", "!", "?"))) or (start_sec - cur_start >= 25.0):
-                m = int(cur_start // 60)
-                s = int(cur_start % 60)
-                blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_words))
-                cur_words = []
-                cur_start = None
-
-        if cur_words:
-            m = int(cur_start // 60)
-            s = int(cur_start % 60)
-            blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_words))
-
-        return "\n\n".join(blocks) + "\n"
     except Exception:
-        return ""
+        return []
+    if not words:
+        return []
+    blocks: List[tuple[float, float, str]] = []
+    cur_words: List[str] = []
+    cur_start: Optional[float] = None
+    cur_end: Optional[float] = None
+    cur_speaker: Optional[str] = None
+
+    def flush() -> None:
+        nonlocal cur_words, cur_start, cur_end, cur_speaker
+        if cur_words and cur_start is not None:
+            blocks.append((cur_start, cur_end or cur_start, " ".join(cur_words)))
+        cur_words, cur_start, cur_end, cur_speaker = [], None, None, None
+
+    for w in words:
+        start_sec = w.get("start_sample", 0) / sample_rate
+        end_sec = w.get("end_sample", w.get("start_sample", 0)) / sample_rate
+        if turns:
+            speaker = procure.speaker_at(turns, start_sec, end_sec)
+            if cur_speaker is not None and speaker != cur_speaker:
+                flush()
+            cur_speaker = speaker
+        if cur_start is None:
+            cur_start = start_sec
+        cur_end = end_sec
+        word = w.get("word", "")
+        cur_words.append(word)
+        if (start_sec - cur_start >= 15.0 and word.endswith((".", "!", "?"))) or (start_sec - cur_start >= 25.0):
+            flush()
+    flush()
+    return blocks
+
+
+def format_words_to_transcript(words_json_path: Path) -> str:
+    """Format audiocpp word-level timestamps into readable, timestamped markdown paragraphs."""
+    return render_transcript(format_word_blocks(words_json_path))
 
 
 def _strip_rolling_overlap(seen_words: List[str], text: str) -> str:
@@ -188,19 +214,26 @@ def _strip_rolling_overlap(seen_words: List[str], text: str) -> str:
     return text
 
 
-def parse_vtt_to_transcript(vtt_file: Path) -> str:
-    """Parse VTT/SRT captions into timestamped markdown blocks grouped by ~15-30s."""
+def parse_vtt_blocks(vtt_file: Path,
+                     turns: Optional[List[dict]] = None) -> List[tuple[float, float, str]]:
+    """Parse VTT/SRT captions into (start, end, text) blocks grouped by ~15-30s."""
     try:
         if not vtt_file.is_file():
-            return ""
+            return []
         lines = vtt_file.read_text(encoding="utf-8", errors="replace").splitlines()
-        cues: List[tuple[int, str]] = []
-        ts_pattern = re.compile(r'(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,]\d{3}\s+-->')
+        cues: List[tuple[float, float, str]] = []
+        ts_pattern = re.compile(
+            r'(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,]\d{3}\s+-->\s+(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,]\d{3}'
+        )
         tag_pattern = re.compile(r'<[^>]+>')
 
-        cur_start_sec: Optional[int] = None
+        cur_start_sec: Optional[float] = None
+        cur_end_sec: Optional[float] = None
         cur_raw_lines: List[str] = []
         cur_has_timing = False
+
+        def to_secs(hours: Optional[str], mins: str, secs: str) -> float:
+            return (int(hours) if hours else 0) * 3600 + int(mins) * 60 + int(secs)
 
         def flush() -> None:
             nonlocal cur_raw_lines, cur_has_timing
@@ -213,7 +246,7 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
                     picked = [tag_pattern.sub('', ln) for ln in cur_raw_lines]
                 text_block = " ".join(p.strip() for p in picked if p.strip()).strip()
                 if text_block:
-                    cues.append((cur_start_sec, text_block))
+                    cues.append((cur_start_sec, cur_end_sec or cur_start_sec, text_block))
             cur_raw_lines = []
             cur_has_timing = False
 
@@ -224,10 +257,8 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
             m = ts_pattern.search(line_str)
             if m:
                 flush()
-                hours = int(m.group(1)) if m.group(1) else 0
-                mins = int(m.group(2))
-                secs = int(m.group(3))
-                cur_start_sec = hours * 3600 + mins * 60 + secs
+                cur_start_sec = to_secs(m.group(1), m.group(2), m.group(3))
+                cur_end_sec = to_secs(m.group(4), m.group(5), m.group(6))
             else:
                 cleaned = line_str.strip()
                 if cleaned and cleaned not in cur_raw_lines:
@@ -237,48 +268,73 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
         flush()
 
         if not cues:
-            return ""
+            return []
 
-        blocks: List[str] = []
-        cur_chunk_start: Optional[int] = None
+        blocks: List[tuple[float, float, str]] = []
+        cur_chunk_start: Optional[float] = None
+        cur_chunk_end: Optional[float] = None
         cur_chunk_text: List[str] = []
         seen_words: List[str] = []
-        last_cue_sec: Optional[int] = None
+        last_cue_sec: Optional[float] = None
+        cur_speaker: Optional[str] = None
 
-        for start_sec, text in cues:
+        for start_sec, end_sec, text in cues:
             text = _strip_rolling_overlap(seen_words, text)
             if not text.strip():
                 continue
             seen_words = (seen_words + text.split())[-64:]
-            # A gap in speech starts a new block, otherwise a cue a minute later
-            # inherits the timestamp of the previous paragraph.
-            if cur_chunk_text and last_cue_sec is not None and start_sec - last_cue_sec >= 5.0:
-                m = int(cur_chunk_start // 60)
-                s = int(cur_chunk_start % 60)
-                blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_chunk_text))
-                cur_chunk_start = None
-                cur_chunk_text = []
+            speaker = procure.speaker_at(turns, start_sec, end_sec) if turns else None
+            # A gap in speech — or a change of speaker — starts a new block,
+            # otherwise a cue a minute later inherits the previous paragraph.
+            broke_gap = (cur_chunk_text and last_cue_sec is not None
+                         and start_sec - last_cue_sec >= 5.0)
+            broke_speaker = bool(cur_chunk_text and turns and speaker != cur_speaker)
+            if broke_gap or broke_speaker:
+                blocks.append((cur_chunk_start, cur_chunk_end, " ".join(cur_chunk_text)))
+                cur_chunk_start, cur_chunk_end, cur_chunk_text = None, None, []
+            cur_speaker = speaker
             last_cue_sec = start_sec
             if cur_chunk_start is None:
                 cur_chunk_start = start_sec
+            cur_chunk_end = end_sec
             cur_chunk_text.append(text)
 
             elapsed = start_sec - cur_chunk_start
             if (elapsed >= 15.0 and text.endswith((".", "!", "?"))) or elapsed >= 30.0:
-                m = int(cur_chunk_start // 60)
-                s = int(cur_chunk_start % 60)
-                blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_chunk_text))
-                cur_chunk_start = None
-                cur_chunk_text = []
+                blocks.append((cur_chunk_start, cur_chunk_end, " ".join(cur_chunk_text)))
+                cur_chunk_start, cur_chunk_end, cur_chunk_text = None, None, []
 
         if cur_chunk_text and cur_chunk_start is not None:
-            m = int(cur_chunk_start // 60)
-            s = int(cur_chunk_start % 60)
-            blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_chunk_text))
-
-        return "\n\n".join(blocks) + "\n"
+            blocks.append((cur_chunk_start, cur_chunk_end, " ".join(cur_chunk_text)))
+        return blocks
     except Exception:
+        return []
+
+
+def render_transcript(blocks: List[tuple[float, float, str]],
+                      turns: Optional[List[dict]] = None,
+                      labels: Optional[Dict[str, str]] = None) -> str:
+    """Render blocks as `**[mm:ss] Name:** text` paragraphs.
+
+    Without `turns` this is the plain timestamped transcript; with them each
+    paragraph gains the speaker that holds most of its span.
+    """
+    if not blocks:
         return ""
+    lines = []
+    for start, end, text in blocks:
+        stamp = f"[{int(start // 60):02d}:{int(start % 60):02d}]"
+        name = None
+        if turns:
+            speaker = procure.speaker_at(turns, start, end)
+            name = (labels or {}).get(speaker, speaker) if speaker else None
+        lines.append(f"**{stamp} {name}:** {text}" if name else f"**{stamp}** {text}")
+    return "\n\n".join(lines) + "\n"
+
+
+def parse_vtt_to_transcript(vtt_file: Path) -> str:
+    """Parse VTT/SRT captions into timestamped markdown blocks grouped by ~15-30s."""
+    return render_transcript(parse_vtt_blocks(vtt_file))
 
 
 def update_vault_index(vault_dir: Path) -> None:
@@ -377,6 +433,8 @@ def fast_mine_video(
     run_ocr: str = "auto",  # auto, never, always
     asr_model: str = "crisperwhisper",
     prefer_asr: bool = False,
+    diarize: bool = False,
+    speaker_names: Optional[List[str]] = None,
 ) -> Path:
     """High-speed single-pass video mining pipeline."""
     t_start = time.perf_counter()
@@ -471,20 +529,32 @@ def fast_mine_video(
         shutil.copy2(str(source_mp4), str(dest_video))
         source_mp4.unlink(missing_ok=True)
 
-        # 2. Extract Transcript (Subtitles first, fallback to audiocpp ASR)
+        # 2a. Who spoke when, when asked: one pass over the same recording.
+        diar_turns = None
+        diar_labels = None
+        diar_summary: List[tuple[str, float]] = []
+        if diarize:
+            print("🗣️  Diarizing speakers (Nemotron 3)...")
+            diar_turns = procure.run_diarization(
+                dest_video, tmp_scratch / "diar", names=speaker_names, log=print
+            )
+            if diar_turns:
+                diar_labels = procure.speaker_labels(diar_turns, speaker_names)
+                diar_summary = procure.talk_time(diar_turns, diar_labels)
+
+        # 2b. Extract Transcript (Subtitles first, fallback to audiocpp ASR)
         vtt_candidates = list(tmp_scratch.glob("*.vtt")) + list(tmp_scratch.glob("*.srt"))
-        transcript_body = ""
+        blocks: List[tuple[float, float, str]] = []
         transcript_method = ""
         if vtt_candidates and not prefer_asr:
             print(f"📄 Found downloaded subtitles ({vtt_candidates[0].name}), parsing directly...")
-            vtt_parsed = parse_vtt_to_transcript(vtt_candidates[0])
-            if vtt_parsed:
-                transcript_body = vtt_parsed
+            blocks = parse_vtt_blocks(vtt_candidates[0], turns=diar_turns)
+            if blocks:
                 transcript_method = f"subtitles from `{vtt_candidates[0].name}`, downloaded by `yt-dlp`"
         elif vtt_candidates:
             print(f"📄 Ignoring downloaded subtitles ({vtt_candidates[0].name}) - prefer_asr is set")
 
-        if not transcript_body:
+        if not blocks:
             print(f"🎙️ [2/4] Extracting audio and transcribing with {asr_model} via audiocpp...")
             audio_wav = tmp_scratch / "audio.wav"
             ffmpeg_audio = [
@@ -519,13 +589,30 @@ def fast_mine_video(
 
             subprocess.run(cmd_asr, capture_output=True, text=True)
             if words_json.is_file():
-                formatted = format_words_to_transcript(words_json)
-                if formatted:
-                    transcript_body = formatted
-            if not transcript_body and transcript_raw.is_file():
-                transcript_body = transcript_raw.read_text(encoding="utf-8")
+                blocks = format_word_blocks(words_json, turns=diar_turns)
+            if not blocks and transcript_raw.is_file():
+                raw_text = transcript_raw.read_text(encoding="utf-8").strip()
+                if raw_text:
+                    blocks = [(0.0, 0.0, raw_text)]
+            if blocks:
+                source = "the local file" if Path(url_or_path).is_file() else "audio extracted with `yt-dlp`"
+                transcript_method = f"{source}, transcribed by `{asr_model}` through `audiocpp`"
+
+        transcript_body = render_transcript(blocks, diar_turns, diar_labels)
+        if diar_summary:
+            print("🗣️  " + " · ".join(f"{name} {secs:.0f}s" for name, secs in diar_summary))
 
         duration_sec = meta.get("duration") or 0
+        if not duration_sec:
+            try:
+                probe = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=nw=1:nk=1", str(dest_video)],
+                    capture_output=True, text=True, timeout=15,
+                )
+                duration_sec = float(probe.stdout.strip() or 0)
+            except Exception:
+                duration_sec = 0
         dur_m, dur_s = divmod(int(duration_sec), 60)
         dur_str = f"{dur_m:02d}:{dur_s:02d}" if duration_sec else "N/A"
         web_url = meta.get("webpage_url") or url_or_path
@@ -539,8 +626,10 @@ def fast_mine_video(
             f"- **Creator:** `{creator_name}`\n"
             f"- **Duration:** {dur_str}\n"
             f"- **Upload Date:** {date_str}\n"
-            f"- **Method:** {transcript_method}.\n\n"
-            f"---\n\n"
+            f"- **Method:** {transcript_method}.\n"
+            + (f"- **Speakers:** " + " · ".join(f"{name} {secs:.0f}s" for name, secs in diar_summary) + "\n"
+               if diar_summary else "")
+            + "\n---\n\n"
             + (transcript_body if transcript_body else "_No audio transcript captured._")
             + "\n"
         )
@@ -864,6 +953,10 @@ def main() -> int:
                             "use this when the creator mangles technical terms)")
     p_add.add_argument("--max-res", type=int, metavar="P",
                        help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
+    p_add.add_argument("--diarize", action="store_true",
+                       help="label speakers with Nemotron 3 diarization (one extra pass over the recording)")
+    p_add.add_argument("--speaker-names", metavar="A,B",
+                       help="names for speakers in arrival order (speaker_0=A); implies --diarize")
 
     # 2. import
     p_import = sub.add_parser("import", help="Import an existing videomine ICM workspace into the vault")
@@ -894,6 +987,10 @@ def main() -> int:
                        help="transcribe locally even when a subtitle track exists")
     p_kem.add_argument("--max-res", type=int, metavar="P",
                        help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
+    p_kem.add_argument("--diarize", action="store_true",
+                       help="label speakers with Nemotron 3 diarization (one extra pass over the recording)")
+    p_kem.add_argument("--speaker-names", metavar="A,B",
+                       help="names for speakers in arrival order (speaker_0=A); implies --diarize")
 
     args = parser.parse_args()
     v_dir = Path(args.vault_dir)
@@ -910,6 +1007,8 @@ def main() -> int:
             run_ocr=args.ocr,
             asr_model=args.model,
             prefer_asr=args.prefer_asr,
+            diarize=args.diarize or bool(args.speaker_names),
+            speaker_names=parse_names(args.speaker_names),
         )
         return 0
     elif args.cmd == "kem":
@@ -920,6 +1019,8 @@ def main() -> int:
             run_ocr=args.ocr,
             asr_model=args.model,
             prefer_asr=args.prefer_asr,
+            diarize=args.diarize or bool(args.speaker_names),
+            speaker_names=parse_names(args.speaker_names),
         )
         return 0
     elif args.cmd == "import":

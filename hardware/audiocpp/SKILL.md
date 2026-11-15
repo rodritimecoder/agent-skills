@@ -46,7 +46,7 @@ milliseconds.
 runs Nemotron 3 Diarization, and stamps an existing WebVTT/SRT with names.
 
 ```bash
-DIAR="/run/media/rodri/AI/audio.cpp/run-diarization.sh"
+DIAR="/run/media/rodri/AI/skills/audiocpp/scripts/run-diarization.sh"
 
 # 1. Who spoke when — turns.json + a talk-time summary
 "$DIAR" talk.mp4
