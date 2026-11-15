@@ -46,6 +46,36 @@
   .pose-strip { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: flex-start; }
   .pose-strip figure { margin: 0; }
   .pose-strip figcaption { color: var(--dim); font-size: var(--fs-2xs); margin-top: var(--s-2); }
+
+  .book-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); margin-bottom: var(--s-5); }
+  @media (max-width: 900px) { .book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 540px) { .book-grid { grid-template-columns: 1fr; } }
+
+  .prop-bar { display: flex; height: 28px; border: var(--b-1) solid var(--rule); margin-bottom: var(--s-3); }
+  .prop-seg { display: flex; align-items: center; padding: 0 var(--s-3); font-size: var(--fs-2xs); font-weight: 700; white-space: nowrap; overflow: hidden; }
+  .prop-seg--ink { flex: 78; background: var(--ink-800); color: var(--text); border-right: var(--b-1) solid var(--rule); }
+  .prop-seg--type { flex: 12; background: var(--ink-700); color: var(--text-2); border-right: var(--b-1) solid var(--rule); }
+  .prop-seg--paper { flex: 5; background: var(--paper); color: var(--on-accent); border-right: var(--b-1) solid var(--ink-950); }
+  .prop-seg--accent { flex: 5; background: var(--coral); color: var(--on-accent); }
+
+  .contrast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--s-3); margin-top: var(--s-5); }
+  .cr-card { border: var(--b-1) solid var(--rule); padding: var(--s-3) var(--s-4); display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); font-size: var(--fs-xs); }
+  .cr-card__ratio { font-weight: 700; font-size: var(--fs-sm); }
+
+  .dodont-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5); }
+  @media (max-width: 720px) { .dodont-pair { grid-template-columns: 1fr; } }
+  .dodont-card { border: var(--b-1) solid var(--rule); background: var(--ink-800); }
+  .dodont-card__head { display: flex; justify-content: space-between; align-items: center; padding: var(--s-2) var(--s-4); border-bottom: var(--b-1) solid var(--rule); font-size: var(--fs-2xs); letter-spacing: var(--track-label); text-transform: uppercase; }
+  .dodont-card__body { padding: var(--s-4); }
+  .bad-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+  .bad-card { border: var(--b-1) solid var(--rule); background: var(--ink-700); padding: var(--s-3); }
+  .bad-flood { background: var(--paper); color: var(--coral); padding: var(--s-4); border: var(--b-1) solid var(--ink-950); font-weight: 700; }
+  .bad-btn-row { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+  .bad-pill { border: var(--b-1) solid var(--dim); background: var(--ink-700); color: var(--text-2); padding: var(--s-1) var(--s-3); font-size: var(--fs-xs); }
+
+  .inv-strip { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-4); }
+  .inv-item { border: var(--b-1) solid var(--rule); background: var(--ink-800); padding: var(--s-2) var(--s-3); font-size: var(--fs-xs); color: var(--text-2); }
+  .inv-item b { color: var(--yellow); }
 </style>
 </head>
 <body>
@@ -121,18 +151,58 @@
     <div class="sec__head">
       <span class="sec__n">02</span>
       <h2 class="sec__title">Style Sheet</h2>
-      <span class="sec__note">idea · look · feel · sampled palette · type ladder</span>
+      <span class="sec__note">8-section spec · colour by proportion · contrast, measured</span>
+    </div>
+
+    <div class="book-grid">
+      <div class="win">
+        <div class="win__bar"><span class="label">1 · idea</span></div>
+        <div class="win__body"><p class="spec"><b>Terminal press constraint:</b> A terminal cannot draw web controls. Six primitives only (<code>.win</code>, <code>.line</code>, <code>.chip</code>, <code>.rule</code>, <code>.bar</code>, <code>.sprite</code>) on a strict character cell grid.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">2 · voice</span></div>
+        <div class="win__body"><p class="spec"><b>Deadpan site surveyor:</b> States what was measured, never apologises. Short lower-case or command-line nouns: <code>Tuning up.</code>, <code>3 of 3 passed</code>.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">3 · mark</span></div>
+        <div class="win__body"><p class="spec"><b>Four bots, one floor:</b> 16×10 pixel body inside 22×18 cells. <code>conductor</code> stands on a 2-row coral plate; workers share <code>REST_ROW = 6</code>.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">4 · colour</span></div>
+        <div class="win__body"><p class="spec"><b>By proportion, not list:</b> 78% dark ink surfaces, 12% crisp mono type/rules, 5% cream titlebar chrome, 5% semantic worker accents.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">5 · type</span></div>
+        <div class="win__body"><p class="spec"><b>FantasqueSansM Mono:</b> Strict monospace everywhere, 8-step scale (<code>10px</code> floor to <code>36px</code>), <code>0.12em</code> uppercase label tracking.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">6 · layout</span></div>
+        <div class="win__body"><p class="spec"><b>4px grid, 7 viewports:</b> Phone (375px) and VST3 (480×320) through monitor (1440×900). Zero overlap, zero horizontal overflow.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">7 · imagery</span></div>
+        <div class="win__body"><p class="spec"><b>Pixel sprites + halftone:</b> Integer-scaled <code>imageSmoothingEnabled = false</code> canvas art, Unicode glyphs (<code>♪ ✶ ■</code>), optional 24px poster dots.</p></div>
+      </div>
+      <div class="win">
+        <div class="win__bar"><span class="label">8 · texture &amp; motion</span></div>
+        <div class="win__body"><p class="spec"><b>Stepped 30 fps gate:</b> <code>0px</code> corners, 1px/2px hard borders, 8px solid shadow, irregular holds (<code>66–660 ms</code>). Chrome never eases.</p></div>
+      </div>
+    </div>
+
+    <div class="win" style="margin-bottom:var(--s-5)">
+      <div class="win__bar"><span class="label">colour by proportion · ink budget</span></div>
+      <div class="win__body stack">
+        <div class="prop-bar" aria-label="ink proportion bar">
+          <span class="prop-seg prop-seg--ink">78% INK GROUND/BODY</span>
+          <span class="prop-seg prop-seg--type">12% TYPE/RULE</span>
+          <span class="prop-seg prop-seg--paper">5% PAPER</span>
+          <span class="prop-seg prop-seg--accent">5% ACCENT</span>
+        </div>
+        <p class="spec">Surface stays dark (<code>--ink-800/900</code>); <code>--paper</code> is reserved for the top titlebar and flash impact; worker accents never flood panels.</p>
+      </div>
     </div>
 
     <div class="grid grid--two" style="margin-bottom:var(--s-5)">
-      <div class="win">
-        <div class="win__bar"><span class="label">idea · look · feel</span></div>
-        <div class="win__body stack">
-          <p class="spec"><b>Idea:</b> Deadpan terminal UI that moves in discrete pixels. States what was measured, never apologises. Zero web controls — no &lt;button&gt;, &lt;input&gt;, modal, or card-per-bot.</p>
-          <p class="spec"><b>Look:</b> Sampled dark terminal (#12131c) inside a crisp #0a0b10 frame with solid 8px offset shadow and cream #fef2da titlebar. One accent per bot: coral conductor, blue frontend, pink copy, mint tests, yellow attention.</p>
-          <p class="spec"><b>Feel:</b> Strict FantasqueSansM Nerd Font Mono grid, 0px corners, 1px/2px hard rules, 4px spacing ladder, 30 fps stepped motion only.</p>
-        </div>
-      </div>
       <div class="win">
         <div class="win__bar"><span class="label">type ladder · FantasqueSansM Nerd Font Mono</span></div>
         <div class="win__body">
@@ -144,6 +214,24 @@
           <div class="type-row"><span class="type-row__spec">--fs-sm · 14</span><span style="font-size:var(--fs-sm);color:var(--dim)">1 Hide   2 Stop   s Spawn   j Jump   g Ground</span></div>
           <div class="type-row"><span class="type-row__spec">--fs-xs · 12</span><span style="font-size:var(--fs-xs);color:var(--coral)">♪ orchestrator</span></div>
           <div class="type-row"><span class="type-row__spec">--fs-2xs · 10</span><span class="label">DESIGN PACK 01</span></div>
+        </div>
+      </div>
+
+      <div class="win">
+        <div class="win__bar"><span class="label">contrast, measured · WCAG ratios</span></div>
+        <div class="win__body">
+          <div class="contrast-grid">
+            <div class="cr-card" style="background:var(--paper);color:var(--on-accent)"><span>ink on paper</span><span class="cr-card__ratio">16.67:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--text)"><span>text on ink-800</span><span class="cr-card__ratio">14.64:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--yellow)"><span>yellow on ink</span><span class="cr-card__ratio">11.65:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--mint)"><span>mint on ink</span><span class="cr-card__ratio">9.66:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--blue)"><span>blue on ink</span><span class="cr-card__ratio">7.12:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--coral)"><span>coral on ink</span><span class="cr-card__ratio">6.34:1</span></div>
+            <div class="cr-card" style="background:var(--ink-800);color:var(--pink)"><span>pink on ink</span><span class="cr-card__ratio">5.82:1</span></div>
+            <div class="cr-card" style="background:var(--ink-700);color:var(--dim)"><span>dim on ink-700</span><span class="cr-card__ratio">5.20:1</span></div>
+            <div class="cr-card" data-dont style="background:var(--paper);color:var(--coral)"><span>AVOID coral/paper</span><span class="cr-card__ratio">2.63:1</span></div>
+          </div>
+          <p class="spec" style="margin-top:var(--s-4)">Every valid terminal pair passes <b>5.20:1+</b>. Coral text on cream paper scores <b>2.63:1</b> — which is why <code>.win__chip</code> sits on <code>--ink-800</code>.</p>
         </div>
       </div>
     </div>
@@ -248,6 +336,59 @@
             <figure><canvas class="sprite" data-sprite="copy" data-static data-pose="flash" style="--sprite-scale:4px"></canvas><figcaption>flash</figcaption></figure>
           </div>
           <p class="spec">Unified 22×18 grid (PAD_X 3): all 4 bots rest at <code>REST_ROW = 6</code> (rows 6–15), conductor platform anchored at <code>PLAT_ROW = 16</code> (rows 16–17). 6-row jump (<code>dy: -6</code>) clears row 0 cleanly. Moods (30 fps): <code>outputting</code> (dual-slot ♪/♫), <code>thinking</code> (1.25px dust band), <code>absorbing</code> (taste blocks + 72% paper flash), <code>aligning</code> (-2.5px star wave), <code>packet</code> (waiting hopper).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 03b do / don't — drawn comparisons ─────────────────────── -->
+  <section class="sec">
+    <div class="sec__head">
+      <span class="sec__n">03b</span>
+      <h2 class="sec__title">Do / Don't — Drawn Comparisons</h2>
+      <span class="sec__note">the same subject both sides · one structural reason each</span>
+    </div>
+
+    <div class="stack">
+      <div class="dodont-pair">
+        <div class="dodont-card">
+          <div class="dodont-card__head"><span style="color:var(--mint)">DO · unified stage</span><span class="label">shared baseline</span></div>
+          <div class="dodont-card__body">
+            <div class="stage" style="--sprite-scale:4px;padding-top:0;gap:var(--s-5)">
+              <figure class="bot"><canvas class="sprite" data-sprite="conductor" data-static data-pose="rest" style="--sprite-scale:4px"></canvas><figcaption><div class="bot__name">conductor</div></figcaption></figure>
+              <figure class="bot bot--blue"><canvas class="sprite" data-sprite="frontend" data-static data-pose="rest" style="--sprite-scale:4px"></canvas><figcaption><div class="bot__name">frontend</div></figcaption></figure>
+            </div>
+            <p class="spec" style="margin-top:var(--s-3)">One terminal floor, equal canvas grid (22×18), aligned at <code>REST_ROW = 6</code>.</p>
+          </div>
+        </div>
+        <div class="dodont-card" data-dont>
+          <div class="dodont-card__head"><span style="color:var(--pink)">DON'T · card per bot</span><span class="label">broken baseline</span></div>
+          <div class="dodont-card__body">
+            <div class="bad-cards">
+              <div class="bad-card"><div class="bot__name" style="color:var(--coral)">conductor</div><p class="spec">boxed card</p></div>
+              <div class="bad-card"><div class="bot__name" style="color:var(--blue)">frontend</div><p class="spec">separate panel<br>drifting height</p></div>
+            </div>
+            <p class="spec" style="margin-top:var(--s-3)">Cards break the single terminal plane and misalign worker baselines.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dodont-pair">
+        <div class="dodont-card">
+          <div class="dodont-card__head"><span style="color:var(--mint)">DO · dark ink + keybar</span><span class="label">6 primitives</span></div>
+          <div class="dodont-card__body stack">
+            <p class="line line--sm"><span class="bullet--coral">●</span>Alignment first.</p>
+            <div class="keybar" style="margin-top:0"><span><b class="keybar__k">s</b>Spawn</span><span><b class="keybar__k">j</b>Jump</span><span><b class="keybar__k">2</b>Stop</span></div>
+            <p class="spec">78% dark <code>--ink-800</code> ground; actions stay inline as key triggers.</p>
+          </div>
+        </div>
+        <div class="dodont-card" data-dont>
+          <div class="dodont-card__head"><span style="color:var(--pink)">DON'T · flood + web pills</span><span class="label">2.63:1 contrast</span></div>
+          <div class="dodont-card__body stack">
+            <div class="bad-flood">CORAL ON PAPER FLOOD · 2.63:1 FAILS LEGIBILITY</div>
+            <div class="bad-btn-row"><span class="bad-pill">Submit</span><span class="bad-pill">Cancel</span><span class="bad-pill">Settings…</span></div>
+            <p class="spec">Never flood panels with <code>--paper</code> or coral-on-paper, and never pack web action buttons inside a terminal window.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -433,14 +574,23 @@
       </div>
 
       <div class="win">
-        <div class="win__bar"><span class="label">gate · design_pack.py</span></div>
+        <div class="win__bar"><span class="label">gates · verify + check</span></div>
         <div class="win__body stack">
-<pre class="snip">python3 multimodal/design-pack/scripts/design_pack.py verify \
-  multimodal/design-pack/looks/glitch-console/</pre>
-          <p class="spec">Strict mode fails on any undeclared colour, non-pack font, off-scale font size, radius &gt; 2px, or eased animation.</p>
+<pre class="snip">design-pack verify looks/glitch-console/
+design-pack check  looks/glitch-console/</pre>
+          <p class="spec"><code>verify</code> fails on undeclared colour, font, size, radius, or eased curve. <code>check</code> runs headless Chromium across 7 viewports for overlap, clipping, keyboard reachability, ≤100 ms press latency, and ≥3:1 contrast.</p>
           <p class="spec">JS API: <code>Pixels.staggerSpawn(root, 330)</code>, <code>Pixels.spawn(c)</code>, <code>Pixels.spawnFrame(c, f)</code>, <code>Pixels.jump(c)</code>, <code>Pixels.setPaused(bool)</code>, <code>Pixels.communicate(stage)</code>, <code>Pixels.setMood(c, mood)</code>, <code>Pixels.cycleMood(root)</code>, <code>Pixels.pose(c, pose, scale, mood, step)</code>.</p>
         </div>
       </div>
+    </div>
+
+    <div class="inv-strip" aria-label="countable surface inventory">
+      <span class="inv-item"><b>6</b> primitives</span>
+      <span class="inv-item"><b>4</b> bots (22×18 grid)</span>
+      <span class="inv-item"><b>5</b> stepped moods</span>
+      <span class="inv-item"><b>13</b> irregular holds</span>
+      <span class="inv-item"><b>7</b> viewports</span>
+      <span class="inv-item"><b>≤100 ms</b> press latency</span>
     </div>
   </section>
 

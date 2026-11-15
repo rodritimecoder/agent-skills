@@ -12,7 +12,8 @@
     min-height: 100vh;
     padding: var(--s-8) var(--s-6);
   }
-  .win--paper { width: min(1120px, 100%); }
+  .win--paper { width: min(1120px, 100%); min-width: 0; }
+  .win__body, .plate { min-width: 0; }
   .plate + .plate {
     margin-top: var(--s-7);
     padding-top: var(--s-6);
@@ -20,11 +21,13 @@
   }
   .plate__title { margin: 0 0 var(--s-2); }
   .plate__note { margin: 0 0 var(--s-5); }
+  .plate__scroll { overflow-x: auto; max-width: 100%; }
 
   /* ── the comparison grid: one column per variant, one row per state ── */
   .grid {
     display: grid;
     grid-template-columns: 84px repeat(5, 1fr);
+    min-width: 520px;
     gap: var(--s-2) var(--s-5);
     align-items: center;
   }
@@ -92,6 +95,7 @@
 
   /* ── meters: the one interpolating primitive ───────────────────────── */
   .meter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
+  @media (max-width: 560px) { .meter-pair { grid-template-columns: 1fr; } }
   .meter-pair figure { margin: 0; }
   .meter-pair figcaption {
     margin-top: var(--s-2);
@@ -208,6 +212,7 @@
     <section class="plate">
       <p class="line line--cmd plate__title">&gt; chip · button · toggle</p>
       <p class="line line--dim plate__note">hover is an underline and a rule colour — never a fill, a filled cell reads as a meter</p>
+      <div class="plate__scroll">
       <div class="grid">
         <span class="grid__head">state</span>
         <span class="grid__head">A · chip</span>
@@ -251,6 +256,7 @@
         <span><span class="ctl is-disabled"><span class="ctl__glyph">▶</span><span class="ctl__label">Audition</span></span></span>
         <span><span class="ctl ctl--danger is-disabled"><span class="ctl__label">Delete</span></span></span>
       </div>
+      </div>
       <p class="line line--dim plate__note">value stays readable when disabled — a value that vanishes cannot be compared</p>
     </section>
 
@@ -291,6 +297,7 @@
     <section class="plate">
       <p class="line line--cmd plate__title">&gt; assembled · 480 × 320 · 4 × 4 = 16 parameters</p>
       <p class="line line--dim plate__note">the whole grid is built from the plate above — nothing here is new</p>
+      <div class="plate__scroll">
       <div class="editor">
         <div class="editor__head">
           <span>718 engine · press</span>
@@ -313,6 +320,7 @@
           <div class="param"><span class="param__label">oversample</span><span class="param__ctl"><span class="ctl is-disabled"><span class="ctl__label">4×</span></span></span><span class="param__value">—</span></div>
         </div>
         <div class="editor__foot"><span>4 × 4 — 16 of 16 params</span><span>1 bypass · R render</span></div>
+      </div>
       </div>
     </section>
 

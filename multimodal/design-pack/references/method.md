@@ -32,16 +32,20 @@ you like in each one; that note is what aligns the model to you. Public domain o
 own, and *"always respect people's creative work. We're here to be inspired not to
 steal."*
 
-### 2 · Style sheet — foundations, components, behaviour
+### 2 · Style sheet — the 8-section book skeleton
 
-Foundations is three questions in order:
+From Kem's *Design Lab* follow-up (`DfudeDMtl2P`), the concrete Zone 2 content template is an **8-section skeleton**, with two structural conventions:
 
-- **The idea** — the overall concept, its voice, and the rules your references follow.
-- **The look** — *what each colour is for* and *what each font does*. Roles, not swatches.
-- **The feel** — surface, texture, line, shape, spacing.
+1. **Idea** — the overall concept and the press/substrate constraint that enforces it.
+2. **Voice** — copy tone and length rules.
+3. **Mark** — signature sprites/icons and their placement.
+4. **Colour** — specified **by proportion** (ink budget, e.g. 78% ink / 12% type / 5% paper / 5% accent), not a flat swatch list, paired with **contrast, measured**.
+5. **Type** — font stack, discrete size ladder, tracking.
+6. **Layout** — grid/window geometry, spacing steps, target viewports.
+7. **Imagery** — sprites, halftones, or illustration rules.
+8. **Texture & Motion** — surfaces, borders, shadows, and an enumerated table of timing tokens.
 
-Components is *"every piece you'll need, like buttons, sliders, forms — each one drawn
-in all of its states."* Behaviour is *"simply how things move."*
+Two rules carry it: **every section terminates in drawn `do, don't` pairs** (not prose warnings alone), and **comparisons beat descriptions** (put rejected candidates tagged `AVOID` beside the chosen direction).
 
 > *"Find one style sheet you like, give it to the model as the format and ask it to fill
 > it in from your references. Once you've done one, it is reusable and the model sticks
@@ -69,14 +73,16 @@ several unrelated aesthetics to make that point.
 
 A retrieval target, not documentation. Cheapest RAG corpus you will ever build.
 
-## What the reel leaves open, and what this skill adds
+## What the reels leave open, and what this skill adds
 
-| Gap in the reel | What `design-pack` does |
+| Gap in the reels | What `design-pack` does |
 | :--- | :--- |
 | never renders the same brief twice, prose vs pack | `pack.html` is the honest half: one page, every state, rendered |
-| no verifier — "the model sticks to it" is asserted | `design-pack verify` fails on an undeclared colour, font, radius or eased curve |
+| no static token gate | `design-pack verify` fails on an undeclared colour, font, radius or eased curve |
+| `check_components.py` shown only as a passing clip | `design-pack check` (`check_components.py`) runs headless Chromium across 7 viewports for overlap, clipping, keyboard reachability, ≤100 ms press latency, and ≥3:1 contrast — plus a failing control test |
 | zone 1 has no artefact in the reel | the look's `README.md` records which image every value came from |
-| no cost model for zone 3 | the gate makes the cheap path the correct path: copy a token, never a hex |
+| no cost model for zone 3 | the gates make the cheap path the correct path: copy a token, never a hex |
 
 The last row is the point. A pack that only documents is obeyed until it is
-inconvenient. A pack with a failing gate is obeyed because the build breaks otherwise.
+inconvenient. A pack with failing conformance and behaviour gates is obeyed because
+the build breaks otherwise — ending with human sign-off for taste.

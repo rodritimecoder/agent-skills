@@ -13,8 +13,9 @@ read it in one pass and put it back down. Refined from Kem's *Design Pack* reel
 pack is one page you tell the model to read **before** it does any design work.
 
 The difference from a prompt library: every value here came off a real image, every
-component is drawn in every state, and `design-pack verify` **fails** when a page
-steps outside the pack.
+component is drawn in every state, `design-pack verify` **fails** on token drift, and
+`design-pack check` **fails** on layout overlap, clipping, missing keyboard triggers,
+slow presses (`> 100 ms`), or low contrast.
 
 ## Layout
 
@@ -23,15 +24,17 @@ looks/glitch-console/     the shipped look — dark terminal, pixel sprites
   README.md               what this look is, and where each value came from
   tokens.css              the contract: ink, paper, accents, type, space, motion
   sprites.js              ASCII pixel maps -> canvas, stepped, no easing
-  pack.html               the retrieval target: everything on one page
+  pack.html               the retrieval target: 8-section spec, proportions, do/don't, blocks
   states.html             the spawn in five frames, for design review
   examples/               terminal.html · board.html · alignment.html · timing.html
+  profiles/               substrate profiles (vst3.md + vst3-controls.html)
   traces/conductor_t4/    a measured pose: crop.json + grid.json + frame.png
   traces/conductor_jump_t543/   the jump: 6 rows, 300 ms, platform pinned
   traces/spawn_t18/       the spawn: 5 x 2-row steps + a 23-frame colour ramp
-scripts/design_pack.py    look · tokens · sprite · verify
+scripts/design_pack.py    look · tokens · sprite · verify · check
+scripts/check_components.py  Playwright behaviour & layout gate (7 viewports, <=100ms, contrast)
 scripts/sprite_forge.py   crop · grid · map · verify · motion · motion-verify
-references/method.md      the five zones, with provenance
+references/method.md      the five zones + 8-section template, with provenance
 ```
 
 ## Quick use
@@ -39,7 +42,8 @@ references/method.md      the five zones, with provenance
 ```bash
 design-pack look                          # what looks exist
 design-pack tokens glitch-console         # the declared values
-design-pack verify page.html              # the gate (exit 1 on drift)
+design-pack verify page.html              # static token gate (exit 1 on drift)
+design-pack check page.html               # runtime behaviour gate (7 viewports, <=100ms, overlap, clipping)
 design-pack verify ./dist --json          # whole builds
 design-pack sprite conductor              # the 16x10 map, for debugging
 ```
@@ -48,15 +52,16 @@ design-pack sprite conductor              # the 16x10 map, for debugging
 
 | Zone | What goes in it | Cost |
 | :--- | :--- | :--- |
-| 1 references | real images of one style, each with a note on what you like | minutes |
-| 2 style sheet | **idea** (concept, voice, rules) → **look** (what each colour/font is *for*) → **feel** (surface, texture, line, shape, spacing) | one borrowed format, filled in |
+| 1 references | real images of one style + `AVOID` comparisons, each with a note on what you like | minutes |
+| 2 style sheet | **8 sections** (Idea / Voice / Mark / Colour by proportion & contrast / Type / Layout / Imagery / Texture & Motion) + drawn `do, don't` pairs | one borrowed format, filled in |
 | 3 components | every piece in **every** state, then its motion | the real work |
 | 4 blocks | full screens assembled from 3 | cheap once 3 exists |
-| 5 design pack | one page with swatches, type, states, snippets | assembly |
+| 5 design pack | one page with proportions, contrast, type, states, `do/don't`, snippets | assembly |
 
 **Zone 2 is load-bearing.** Do not author a style sheet from nothing: find one you
-like, hand it over *as the format*, and fill it from the references. Format transfers,
-content must be yours.
+like, hand it over *as the format*, and fill it from the references. Specify colour
+**by proportion** (not just a flat hex list) and end sections in **drawn `do, don't`
+pairs**. Format transfers, content must be yours.
 
 ### A terminal has six primitives, not sixty components
 
@@ -78,18 +83,19 @@ or a line that asks the question inline. Do not add a `<button>`, `<input>`, sel
 modal or tooltip to a terminal look; drive actions via keyboard triggers (`1` Hide,
 `2` Stop, `s` Spawn, `j` Jump, `m` Moods, `g` Ground, `c` Comm ping).
 
-**Substrates.** The six primitives hold off the web page too.
-[`profiles/vst3.md`](looks/glitch-console/profiles/vst3.md) is the plugin-editor
-contract: fixed host window, 4 / 6 / 7 column anchors, a 10 px type floor, the dial
-as a detent rail borrowed from the meter primitive (not a seventh component), and the one written motion
-exception — *value feedback eases, chrome never does* — which lets meters run at
-the host frame rate while every other pixel stays stepped at 30 fps. The
-plate it is measured against: `profiles/vst3-controls.html`.
+**Base look vs substrate profiles.** The core `glitch-console` look stays strictly
+zero-pointer terminal. When targeting a non-terminal substrate (like a DAW plugin),
+add a **profile** that inherits all tokens and writes down its exact exceptions rather
+than mutating the core look: [`profiles/vst3.md`](looks/glitch-console/profiles/vst3.md)
+is the plugin-editor contract (fixed host window, 4 / 6 / 7 column anchors, 10 px type
+floor, clickable `.ctl` chips, the dial as a detent rail borrowed from the meter
+primitive, and the single motion exception — *value feedback eases, chrome never does* —
+measured against `profiles/vst3-controls.html`).
 
 
 ## Build a new look
 
-1. **Collect references.** One style only. Public domain, or your own work. Write down
+1. **Collect references.** One style only (plus rejected `AVOID` directions). Public domain, or your own work. Write down
    what you actually like about each image — that note is the annotation.
 2. **Copy the closest look.** `cp -r looks/glitch-console looks/<name>`.
 3. **Sample the references, do not guess.** Pull real hexes out of the frames:
@@ -101,21 +107,20 @@ plate it is measured against: `profiles/vst3-controls.html`.
        print("#%02x%02x%02x" % c, k)
    PY
    ```
-4. **Fill tokens.css, then pack.html.** Every state of every component. If a state
-   has no drawing, the model will invent one.
-5. **Gate it.** `design-pack verify looks/<name>/pack.html`, then verify a page you
-   generated with it. A pack that cannot fail is not a pack.
+4. **Fill tokens.css, then pack.html.** Use the 8-section skeleton, specify ink proportions and measured contrast, draw every component state, and add `do / don't` pairs.
+5. **Gate it.** Run both `design-pack verify looks/<name>/pack.html` and `design-pack check looks/<name>/pack.html`, then run them on pages you generated with it. A pack that cannot fail is not a pack.
 
 ## Use the pack when writing UI
 
 - Read `pack.html` (or at least `tokens.css` + `README.md`) **before** designing.
-- Use `var(--token)` for every colour, size and radius. A raw hex is a drift.
+- Use `var(--token)` for every colour, size and radius. Keep the ink proportion (`~78%` dark ink ground/body, `~12%` type/rules, `~5%` paper chrome, `~5%` semantic accents).
 - Take components from zone 3 rather than inventing a control. In a terminal look
   there are six primitives and no seventh — see the table above.
 - Motion is stepped: quantise to `floor(t / (1000/fps))`, never an eased property.
-- Run `design-pack verify <file>` on what you produced. It fails on an undeclared
-  colour, an off-ladder font or size, a radius, and any eased curve; `--loose` only
-  demotes the last three to warnings. Treat FAIL as a build error, not a suggestion.
+- Run **both** gates on what you produced:
+  - `design-pack verify <file>` (static conformance: undeclared colour, off-ladder font/size, radius, easing).
+  - `design-pack check <file>` (runtime behaviour across 7 viewports: overlap, clipping, keyboard reachability, ≤100 ms interaction response, ≥3:1 contrast — then wait for human sign-off).
+  Treat FAIL as a build error, not a suggestion.
 
 ## Sprite pipeline (this look)
 

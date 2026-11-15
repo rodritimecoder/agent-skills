@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fail control — deliberate drift &amp; layout defects</title>
+<style>
+  body {
+    background: #111111;
+    color: #222222;
+    font-family: Inter, sans-serif;
+    font-size: 8px;
+  }
+  .win {
+    width: 900px;
+    border-radius: 12px;
+    background: #ff00ff;
+    transition: transform 0.2s ease-in-out;
+  }
+  .stage {
+    display: flex;
+  }
+  .bot {
+    width: 120px;
+    height: 80px;
+    margin-right: -40px;
+  }
+</style>
+</head>
+<body>
+<main class="win">
+  <div class="stage">
+    <div class="bot">bot a</div>
+    <div class="bot">bot b</div>
+  </div>
+  <button type="button">forbidden button</button>
+  <p style="color: #d900d9; background: #ff00ff;">low contrast text</p>
+  <div class="keybar">
+    <span><b class="keybar__k">x</b>Slow</span>
+  </div>
+</main>
+<script>
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "x") {
+      const end = performance.now() + 140;
+      while (performance.now() < end) {}
+    }
+  });
+</script>
+</body>
+</html>

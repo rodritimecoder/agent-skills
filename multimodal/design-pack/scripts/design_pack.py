@@ -9,7 +9,8 @@ demotes everything but colour to a warning, for a first pass on an old page.
     design-pack look                     # what looks exist
     design-pack tokens glitch-console    # the declared values
     design-pack sprite conductor         # the ASCII map, for debugging
-    design-pack verify page.html [...]   # the gate
+    design-pack verify page.html [...]   # the token conformance gate
+    design-pack check page.html [...]    # the component behaviour & layout gate
 
 Exit codes: 0 pass, 1 fail, 2 usage error.
 """
@@ -242,6 +243,18 @@ def cmd_sprite(args) -> int:
     return 0
 
 
+def cmd_check(args) -> int:
+    from check_components import run_check
+    return run_check(
+        args.files,
+        viewports=args.viewports,
+        allow_controls=args.allow_controls,
+        max_press_ms=args.max_press_ms,
+        min_contrast=args.min_contrast,
+        as_json=args.json,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="design-pack", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -252,6 +265,15 @@ def main() -> int:
     p.add_argument("--json", action="store_true")
     p.add_argument("--loose", action="store_true", help="demote everything but colour to a warning")
     p.set_defaults(func=cmd_verify)
+
+    p = sub.add_parser("check", help="check rendered component behaviour, overlap, clipping, keyboard, viewports, latency, and contrast")
+    p.add_argument("files", nargs="+")
+    p.add_argument("--viewports", default="375x812,480x320,640x400,768x1024,800x600,1280x800,1440x900")
+    p.add_argument("--allow-controls", action="store_true")
+    p.add_argument("--max-press-ms", type=float, default=100.0)
+    p.add_argument("--min-contrast", type=float, default=3.0)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("look", help="list looks")
     p.set_defaults(func=cmd_look)
