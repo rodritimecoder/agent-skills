@@ -20,6 +20,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import procure
+
 try:
     from PIL import Image
 except ImportError:
@@ -50,18 +52,13 @@ def slugify(text: str) -> str:
     return re.sub(r"[-\s]+", "_", text)[:60]
 
 
-def is_ocr_server_online(port: int = 8085, timeout: float = 0.3) -> bool:
+def is_ocr_server_online(port: int = 8085, timeout: float = 0.5) -> bool:
     """Fast non-blocking probe to check if LightOnOCR HTTP server is live."""
-    try:
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/health")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+    return procure.http_up(f"http://127.0.0.1:{port}/health", timeout=timeout)
 
 
 def ocr_frame_http(image_path: Path, port: int = 8085) -> str:
-    """Fast OCR via local LightOnOCR server (<500ms per frame)."""
+    """OCR via local LightOnOCR server (<1s per frame once the model is warm)."""
     try:
         import base64
         img_bytes = image_path.read_bytes()
@@ -85,7 +82,9 @@ def ocr_frame_http(image_path: Path, port: int = 8085) -> str:
             data=payload,
             headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
+        # 4 s was below the time a large frame takes on a cold slot, so the
+        # request timed out and the caller silently recorded "no text".
+        with urllib.request.urlopen(req, timeout=90.0) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             msg = data["choices"][0]["message"]
             return (msg.get("content") or msg.get("reasoning_content") or "").strip()
@@ -268,6 +267,9 @@ def update_vault_index(vault_dir: Path) -> None:
 
 
 def dhash(img: Any, hash_size: int = 8) -> List[bool]:
+    # draft() lets libjpeg decode at 1/8 scale: the hash needs 9x8 grey pixels,
+    # not the 1080p frame. Measured 12x faster on a 58-frame reel (1.98 s → 0.16 s).
+    img.draft("L", (hash_size * 2, hash_size * 2))
     img = img.convert("L").resize((hash_size + 1, hash_size), getattr(getattr(Image, "Resampling", Image), "LANCZOS", 1))
     diff = []
     for row in range(hash_size):
@@ -352,8 +354,9 @@ def fast_mine_video(
         title_name = title
         meta: Dict[str, Any] = {}
 
-        # 1. Acquire video (Single-pass download with info json)
-        print(f"📥 [1/4] Acquiring video: {url_or_path}...")
+        # 1. Acquire video (single pass: media + metadata + any subtitle track)
+        kind = "short-form" if procure.is_short_form(url_or_path) else "video"
+        print(f"📥 [1/4] Acquiring {kind}: {url_or_path}...")
         if Path(url_or_path).is_file():
             shutil.copy2(url_or_path, source_mp4)
             if not title_name:
@@ -364,15 +367,17 @@ def fast_mine_video(
             dl_cmd = [
                 "yt-dlp",
                 "--no-playlist",
+                "--no-progress",
+                *procure.download_args(url_or_path),
                 "--write-info-json",
                 "--write-subs",
                 "--write-auto-subs",
                 "--sub-lang", "en.*,en",
                 "--sub-format", "vtt/srt",
-                "--merge-output-format", "mp4",
                 "-o", str(tmp_scratch / "source.%(ext)s"),
                 url_or_path
             ]
+            dl_started = time.perf_counter()
             res = subprocess.run(dl_cmd, capture_output=True, text=True)
             if res.returncode != 0:
                 sys.exit(f"❌ Failed to download video: {res.stderr.strip()[:300]}")
@@ -383,6 +388,9 @@ def fast_mine_video(
                 source_mp4 = source_candidates[0]
             else:
                 sys.exit(f"❌ Could not find downloaded video in {tmp_scratch}")
+
+            print(f"✅ Downloaded {max(p.stat().st_size for p in source_candidates) / 1e6:.1f} MB "
+                  f"in {time.perf_counter() - dl_started:.1f}s")
 
             for p in tmp_scratch.glob("*.info.json"):
                 try:
@@ -540,11 +548,23 @@ def fast_mine_video(
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         should_ocr = False
         allow_cli = False
-        if run_ocr == "always":
-            should_ocr = True
-            allow_cli = True
-        elif run_ocr == "auto":
-            should_ocr = is_ocr_server_online()
+        if run_ocr != "never":
+            # `auto` used to mean "OCR only if somebody else had already started
+            # the slot", which read downstream as "the server is down". Start it.
+            should_ocr, ocr_how, _ocr_child = procure.ensure_service(
+                "http://127.0.0.1:8085/v1/chat/completions",
+                slot=os.environ.get("VAULT_OCR_SLOT", "ocr"),
+                wait_s=float(os.environ.get("VAULT_OCR_WAIT", "90")),
+            )
+            if should_ocr and ocr_how == "llama-rig":
+                print("   (the OCR slot was down; started it — it stays warm for the next reel)")
+            if not should_ocr:
+                if run_ocr == "always":
+                    sys.exit("❌ --ocr always was requested but the OCR server could not start "
+                             "(llama-rig up ocr).")
+                print("⚠️  LightOnOCR is unavailable on :8085 — visuals are indexed without text.")
+                print("   Start it with: llama-rig up ocr")
+                allow_cli = os.environ.get("VAULT_OCR_CLI_FALLBACK") == "1"
 
         caption = (meta.get("description") or "").replace("\n", " ").strip()
         likes = meta.get("like_count") or 0
@@ -688,10 +708,18 @@ def import_workspace(workspace_dir: Path, creator: str, title: str, vault_dir: P
         "",
     ]
 
+    ocr_ready = False
+    if run_ocr:
+        ocr_ready, _, _child = procure.ensure_service(
+            "http://127.0.0.1:8085/v1/chat/completions",
+            slot=os.environ.get("VAULT_OCR_SLOT", "ocr"),
+            wait_s=float(os.environ.get("VAULT_OCR_WAIT", "90")),
+        )
+
     for cf in copied_frames[:4]:
         notes_lines.append(f"### Visual: `{cf.name}`\n")
         notes_lines.append(f"![{cf.name}](visuals/{cf.name})\n")
-        if run_ocr and is_ocr_server_online():
+        if ocr_ready:
             ocr_text = ocr_frame_http(cf)
             if ocr_text:
                 notes_lines.append("```markdown")
@@ -767,6 +795,12 @@ def list_vault_videos(vault_dir: Path, creator_filter: str | None = None, limit:
 
 
 def main() -> int:
+    # Stream progress: piped output is block-buffered, so a 20 s run used to
+    # print nothing until it exited and looked like a hang.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
     parser = argparse.ArgumentParser(description="High-speed video mining and archiving into Creator Video Vault.")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -776,11 +810,13 @@ def main() -> int:
     p_add.add_argument("--creator", help="Creator name / handle")
     p_add.add_argument("--title", help="Video title or slug")
     p_add.add_argument("--vault-dir", default=str(DEFAULT_VAULT_DIR), help="Path to vault root")
-    p_add.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (if :8085 live), never, or always")
+    p_add.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8085 if down), never, or always (fail if it cannot start)")
     p_add.add_argument("--model", "-m", default="crisperwhisper", help="ASR model slug (crisperwhisper [default], nemotron)")
     p_add.add_argument("--prefer-asr", action="store_true",
                        help="transcribe locally even when a subtitle track exists "
                             "(YouTube auto-captions repeat each line three times)")
+    p_add.add_argument("--max-res", type=int, metavar="P",
+                       help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
 
     # 2. import
     p_import = sub.add_parser("import", help="Import an existing videomine ICM workspace into the vault")
@@ -805,14 +841,18 @@ def main() -> int:
     p_kem = sub.add_parser("kem", help="Mine a Kem Glitch reel directly into the vault (automatic metadata, dHash dedup, ledger, FTS)")
     p_kem.add_argument("url", help="Instagram or YouTube URL of the reel")
     p_kem.add_argument("--vault-dir", default=str(DEFAULT_VAULT_DIR), help="Path to vault root")
-    p_kem.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (if :8085 live), never, or always")
+    p_kem.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8085 if down), never, or always (fail if it cannot start)")
     p_kem.add_argument("--model", "-m", default="crisperwhisper", help="ASR model slug (crisperwhisper [default], nemotron)")
     p_kem.add_argument("--prefer-asr", action="store_true",
                        help="transcribe locally even when a subtitle track exists")
+    p_kem.add_argument("--max-res", type=int, metavar="P",
+                       help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
 
     args = parser.parse_args()
     v_dir = Path(args.vault_dir)
     v_dir.mkdir(parents=True, exist_ok=True)
+    if getattr(args, "max_res", None):
+        os.environ["VIDEOMINE_MAX_RES"] = str(args.max_res)
 
     if args.cmd == "add":
         dest = fast_mine_video(

@@ -3,11 +3,11 @@ name: video-miner
 
 description: "Extract, transcribe, and synthesize knowledge from video files or URLs into structured markdown notes using local verbatim speech-to-text, deterministic frame gating (perceptual dedup + blank rejection), and OCR with the kem-ocr structural gate. Built on ICM with staged folders and human review checkpoints. Use to turn a recorded lecture, talk, webinar or screen recording into study notes, to mine a pile of video for what it teaches, or to get a transcript plus slides out of video you already have. For audio with no picture, use audiocpp; for a Zoom cloud recording link, use zoom-recorder."
 
-compatibility: "Requires ffmpeg and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K by default — verbatim, 15x real-time; `--asr-model nemotron` to switch). No ASR server is needed. OCR needs either LightOnOCR (:8085) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill. h2o-lightning-4b on :8083 is optional, only for --gate h2o."
-allowed-tools: "Bash(video-miner:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"
+compatibility: "Requires ffmpeg, `yt-dlp` and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K by default — verbatim, 15x real-time; `--asr-model nemotron` to switch). No ASR server is needed. OCR needs LightOnOCR (:8085) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill; the scripts start :8085 themselves through `llama-rig up ocr`, so a stopped slot is never a blocker. h2o-lightning-4b on :8083 is optional, only for --gate h2o."
+allowed-tools: "Bash(video-miner:*) Bash(ffmpeg:*) Bash(python3:*) Bash(llama-rig:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `llama-rig up ocr`.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before swapping or debugging the model. A stopped slot is not an error: the pipeline runs `llama-rig up ocr` itself, and the slot stays warm for the next run (`llama-rig down ocr` frees the VRAM).
 
 # video-miner
 
@@ -40,6 +40,10 @@ python3 $CLI init ./my_video_run "https://www.youtube.com/watch?v=..."
 # Or with a local video file:
 python3 $CLI init ./lecture_run ~/Videos/lecture.mp4
 ```
+
+> **Short-form (Shorts, Reels, TikTok) goes to `vault-mine`, not to the 6-stage
+> workspace** — one download, one transcript, a notes file, no stage ceremony.
+> See [Creator Video Vault](#-creator-video-vault-vault-mine).
 
 ### 2. Check pipeline status (ASCII diagram or Token-Shielded table)
 
@@ -113,14 +117,24 @@ keep more. Frames with no luminance spread are dropped as blank.
 `--gate h2o` spends a vision decision per frame and is the right choice for
 talking-head footage where the screen is not the subject.
 
-`--ocr lighton` (default) keeps LightOnOCR-3-0.8B. `--ocr minicpm` runs
-MiniCPM-OCR-1.0 with `Text Recognition:` and then applies the `kem-ocr`
-structural gate (`text` mode): frames whose OCR is empty, repetitive or
-non-textual are dropped before they reach the timeline. Frames whose text is
-≥90% the same as the previous kept frame are dropped too, so a slide that sits
-on screen for a minute becomes one entry instead of ten. The gate is imported
-from the sibling `kem-ocr` skill; if that skill is missing the OCR still runs
-and the structural field is simply absent.
+`--ocr lighton` (default) keeps LightOnOCR-0.8B on `:8085`. `--ocr minicpm` runs
+MiniCPM-OCR-1.0 on `:18499` (a throwaway child that is stopped when the stage
+ends) with `Text Recognition:` and then applies the `kem-ocr` structural gate
+(`text` mode): frames whose OCR is empty, repetitive or non-textual are dropped
+before they reach the timeline. Frames whose text is ≥90% the same as the
+previous kept frame are dropped too, so a slide that sits on screen for a minute
+becomes one entry instead of ten. The gate is imported from the sibling
+`kem-ocr` skill; if that skill is missing the OCR still runs and the structural
+field is simply absent.
+
+**The OCR slot starts itself.** Stage `05_visual_ocr` probes `:8085`; if nothing
+answers it runs `llama-rig up ocr` (measured 1.1 s from cold to serving) and
+says so in the log. The slot is then left running, because that warm server is
+what makes a repeated run cheap. If the backend genuinely cannot start, the
+stage fails with the one command that fixes it rather than writing an empty
+timeline that would mark the stage COMPLETE and let `06_synthesize` emit
+visual-less notes that look successful. Never report "the server is down" — run
+`llama-rig up ocr` or let the stage do it.
 
 ### Frame sampling modes (`03_visual_sample`)
 
@@ -143,6 +157,32 @@ changes every few seconds. A slide deck collapses much harder.
 The final synthesized markdown document is emitted at:
 `./my_video_run/stages/06_synthesize/output/mined_video.md`
 
+## Speed
+
+Acquisition is the stage that used to decide the wall clock, and it is tuned:
+
+| | default yt-dlp | this skill |
+|---|---|---|
+| 117 s video | 33 MB (4K AV1) / 6.2 s | 7.4 MB (1080p) / 3.0 s |
+| frame extraction after | 4.4 s | 0.9 s |
+| 8 min video | 15.0 s | 9.6 s |
+
+`-S res:1080` caps by the *smaller* dimension, so a 720x1280 reel is capped at
+720 wide and a 2160p lecture at 1080 tall; `--concurrent-fragments 8` fetches
+DASH segments in parallel and `--remux-video mp4` stream-copies instead of
+re-encoding. Override the cap with `--max-res 720` (or `VIDEOMINE_MAX_RES`) when
+the on-screen text is large; raise it to `1440` only for dense code screens.
+
+Everything else that looked slow was overhead, not work: the signature gate now
+decodes every frame in **one** ffmpeg pass instead of one process per frame, the
+dHash gate reads JPEGs through `Image.draft()` at 1/8 scale (12x faster, same
+hashes), and the acquisition step no longer runs yt-dlp twice.
+
+Instagram and TikTok serve the media only to a logged-in session often enough
+that an unauthenticated attempt looks like a hang. Put a jar at
+`~/.config/yt-dlp/cookies.txt` (or set `YTDLP_COOKIES`) and it is passed through
+automatically.
+
 ## Human Checkpoints & Editing
 
 Because every stage output is an edit surface:
@@ -163,11 +203,14 @@ vault-mine list --table --limit 10
 # Filter vault by creator:
 vault-mine list --creator "kem_glitch" --table
 
-# Fast single-pass video mining directly from URL into the vault (~12s end-to-end):
+# Fast single-pass video mining directly from URL into the vault (~7-13s end-to-end):
 vault-mine add "https://www.instagram.com/reel/..." --creator "kem_glitch" --title "graph-memory-rant"
 
 # Ultra-fast mining with Nemotron streaming STT:
 vault-mine add "https://..." --model nemotron
+
+# Cap the download lower when the screen text is big:
+vault-mine add "https://..." --max-res 720
 
 # Import an existing mined ICM workspace into the vault:
 vault-mine import ./my_video_run --creator "kem_glitch" --title "5-agents-worktree"
@@ -175,6 +218,13 @@ vault-mine import ./my_video_run --creator "kem_glitch" --title "5-agents-worktr
 # Rebuild vault catalog index:
 vault-mine reindex
 ```
+
+A reel is mined in one pass: download (with its info JSON and any subtitle
+track), transcript, dHash-deduped keyframes, notes. `--ocr auto` (default)
+starts `:8085` through `llama-rig` when it is down, then OCRs the four sampled
+frames; `--ocr never` skips it; `--ocr always` refuses to finish without it
+instead of quietly writing notes with no diagram text. Progress streams line by
+line — a run never goes silent for its whole duration.
 
 ## Tests
 

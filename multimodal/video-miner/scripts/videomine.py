@@ -32,6 +32,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import procure
+
 SKILL_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = SKILL_DIR / "_templates" / "workspace"
 
@@ -104,6 +106,8 @@ KEM_SCRIPTS = Path(os.environ.get("KEM_OCR_SCRIPTS", Path(__file__).resolve().pa
 
 GATE_MODE = os.environ.get("VIDEOMINE_GATE", "hash")
 OCR_BACKEND = os.environ.get("VIDEOMINE_OCR", "lighton")
+OCR_SLOT = os.environ.get("VIDEOMINE_OCR_SLOT", "ocr")
+OCR_WAIT_S = float(os.environ.get("VIDEOMINE_OCR_WAIT", "90"))
 HASH_DISTANCE = int(os.environ.get("VIDEOMINE_HASH_DISTANCE", "20"))
 TEXT_SIMILARITY = float(os.environ.get("VIDEOMINE_TEXT_SIMILARITY", "0.9"))
 ASR_MODEL = os.environ.get("VIDEOMINE_ASR_MODEL", "")
@@ -292,28 +296,35 @@ def run_stage_01_acquire(workspace: Path, video_source: str) -> None:
     meta_json = out_dir / "video_meta.json"
     
     if video_source.startswith("http://") or video_source.startswith("https://"):
-        print("[01_acquire] Downloading with yt-dlp...")
-        # Download video stream
+        kind = "short-form" if procure.is_short_form(video_source) else "video"
+        print(f"[01_acquire] Downloading {kind} with yt-dlp "
+              f"(res<={procure.max_res()}p, {procure.DEFAULT_FRAGMENTS} fragments)...")
+        started = time.perf_counter()
         cmd = [
             "yt-dlp",
             "--no-playlist",
-            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-            "-o", str(target_mp4),
-            video_source
+            "--no-progress",
+            *procure.download_args(video_source),
+            "-o", str(out_dir / "source_video.%(ext)s"),
+            video_source,
         ]
         subprocess.run(cmd, check=True)
-
-        # Attempt to grab subtitles if available, but don't fail if rate-limited
-        try:
-            cmd_sub = [
-                "yt-dlp", "--no-playlist", "--skip-download",
-                "--write-auto-sub", "--write-sub", "--sub-lang", "en", "--sub-format", "vtt",
-                "-o", str(out_dir / "source_video.%(ext)s"),
-                video_source
-            ]
-            subprocess.run(cmd_sub, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
+        media = [p for p in out_dir.glob("source_video.*")
+                 if p.suffix.lower() in (".mp4", ".mkv", ".webm", ".mov", ".m4v")]
+        if not media:
+            raise FileNotFoundError(f"yt-dlp reported success but wrote no media file in {out_dir}")
+        target_mp4 = sorted(media, key=lambda p: p.stat().st_size)[-1]
+        if target_mp4.suffix.lower() != ".mp4":
+            remuxed = out_dir / "source_video.mp4"
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(target_mp4),
+                 "-c", "copy", str(remuxed)],
+                check=True,
+            )
+            target_mp4.unlink(missing_ok=True)
+            target_mp4 = remuxed
+        print(f"[01_acquire] Downloaded {target_mp4.stat().st_size / 1e6:.1f} MB "
+              f"in {time.perf_counter() - started:.1f}s")
     else:
         src_path = Path(video_source).expanduser().resolve()
         if not src_path.exists():
@@ -557,6 +568,50 @@ def run_stage_03_visual_sample(workspace: Path) -> None:
     print(f"[03_visual_sample] Sampled {len(manifest)} frames ({mode}) into {frames_dir}")
 
 
+def frame_signatures(paths: list[Path]) -> list[dict]:
+    """Sign every frame in one ffmpeg pass instead of one process per frame.
+
+    Same decode and scale as `frame_signature`, but a single short-lived
+    process instead of N — on 96 frames the process spawn alone cost ~5 s.
+    The batch pass needs the whole directory in name order, so anything
+    irregular (a missing frame, mixed extensions) falls back to per-frame.
+    """
+    w, h = GRID * BLOCK_W, GRID * BLOCK_H
+    frame_bytes = w * h
+    ordered = sorted(p for p in paths if p.exists())
+    if not ordered:
+        return []
+    suffixes = {p.suffix.lower() for p in ordered}
+    if len(suffixes) == 1:
+        suffix = next(iter(suffixes))
+        sibling_files = sorted(ordered[0].parent.glob(f"*{suffix}"))
+        if sibling_files == ordered:
+            res = subprocess.run(
+                ["ffmpeg", "-v", "error", "-pattern_type", "glob",
+                 "-i", str(ordered[0].parent / f"*{suffix}"),
+                 "-vf", f"scale={w}:{h},format=gray", "-f", "rawvideo", "-"],
+                capture_output=True,
+            )
+            raw = res.stdout
+            if len(raw) >= frame_bytes * len(ordered):
+                signatures = []
+                for index in range(len(ordered)):
+                    px = raw[index * frame_bytes:(index + 1) * frame_bytes]
+                    hashes = []
+                    for gy in range(GRID):
+                        for gx in range(GRID):
+                            bits = 0
+                            for r in range(BLOCK_H):
+                                for c in range(BLOCK_W - 1):
+                                    i = (gy * BLOCK_H + r) * w + gx * BLOCK_W + c
+                                    bits = (bits << 1) | (px[i] < px[i + 1])
+                            hashes.append(bits)
+                    signatures.append({"hashes": hashes, "luma": round(sum(px) / len(px), 1),
+                                       "spread": float(max(px) - min(px))})
+                return signatures
+    return [frame_signature(p) for p in ordered]
+
+
 def frame_signature(path: Path) -> dict:
     w, h = GRID * BLOCK_W, GRID * BLOCK_H
     res = subprocess.run(
@@ -654,12 +709,19 @@ def run_stage_04_visual_gate(workspace: Path) -> None:
     last_kept_name = None
     counts = {"new": 0, "duplicate": 0, "blank": 0, "no-text": 0}
 
+    frame_paths = [workspace / item["path"] for item in manifest]
+    signatures = frame_signatures(frame_paths)
+    signature_index = 0
     for item in manifest:
         frame_path = workspace / item["path"]
         if not frame_path.exists():
             continue
 
-        sig = frame_signature(frame_path)
+        if signature_index < len(signatures):
+            sig = signatures[signature_index]
+            signature_index += 1
+        else:
+            sig = frame_signature(frame_path)
         blank = sig["spread"] < 8.0
         duplicate_of = None
         if not blank and last_kept_sig is not None and signature_distance(sig, last_kept_sig) <= HASH_DISTANCE:
@@ -763,46 +825,38 @@ def run_stage_05_visual_ocr(workspace: Path) -> None:
             raise FileNotFoundError(f"Missing {OCR_BACKEND} {kind}: {path}")
 
 
-    server_proc = None
-    started_server = False
+    spawn_cmd = None
+    slot = OCR_SLOT
+    if OCR_BACKEND == "minicpm":
+        spawn_cmd = [
+            str(ocr_bin),
+            "-m", str(ocr_model),
+            "--mmproj", str(ocr_mmproj),
+            "--port", str(ocr_port),
+            "-ngl", "99",
+            "-c", "8192",
+            "--reasoning", "off",
+        ]
+        slot = None
+
+    ocr_ok, ocr_how, server_proc = procure.ensure_service(
+        ocr_url, slot=slot, spawn_cmd=spawn_cmd, wait_s=OCR_WAIT_S
+    )
+    started_server = ocr_how == "spawned"
+    if ocr_ok and ocr_how == "llama-rig":
+        print(f"[05_visual_ocr] The slot was down; started it. It stays up for the next run "
+              f"(`llama-rig down {slot}` frees the VRAM).")
+    if not ocr_ok:
+        # Leave the stage PENDING instead of writing an empty timeline: an
+        # empty `[]` would mark 05_visual_ocr COMPLETE and let 06_synthesize
+        # emit notes with no visual text while looking successful.
+        raise RuntimeError(
+            f"{OCR_BACKEND} is not answering on {ocr_url}. Start it with "
+            f"`llama-rig up {slot or 'ocr'}` and re-run `step`."
+        )
 
     def is_server_listening(url: str, timeout: float = 1.0) -> bool:
-        try:
-            health_url = url.replace("/v1/chat/completions", "/health")
-            req = urllib.request.Request(health_url)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.status in (200, 404)
-        except Exception:
-            return False
-
-    # Check if a server is already listening, or spawn an ephemeral one for speed
-    if not is_server_listening(ocr_url):
-        if ocr_bin.exists():
-            print(f"[05_visual_ocr] Spawning ephemeral {OCR_BACKEND} server on port {ocr_port}...")
-            cmd = [
-                str(ocr_bin),
-                "-m", str(ocr_model),
-                "--mmproj", str(ocr_mmproj),
-                "--port", str(ocr_port),
-                "-ngl", "99",
-                "-c", "8192" if OCR_BACKEND == "minicpm" else "4096",
-            ]
-            if OCR_BACKEND == "minicpm":
-                cmd += ["--reasoning", "off"]
-            server_proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            started_server = True
-            for _ in range(30):
-                time.sleep(0.5)
-                if is_server_listening(ocr_url):
-                    print(f"[05_visual_ocr] Server ready on http://127.0.0.1:{ocr_port}")
-                    break
-            else:
-                print("[05_visual_ocr] Warning: Server start timed out, falling back to CLI if needed.")
-
+        return procure.http_up(url.replace("/v1/chat/completions", "/health"), timeout=timeout)
 
     def minicpm_single_frame(frame_file: Path) -> str:
         if not is_server_listening(ocr_url):
@@ -938,13 +992,9 @@ def run_stage_05_visual_ocr(workspace: Path) -> None:
                 last_text = text_out
 
     finally:
-        if started_server and server_proc is not None:
-            print(f"[05_visual_ocr] Stopping ephemeral {OCR_BACKEND} server...")
-            server_proc.terminate()
-            try:
-                server_proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server_proc.kill()
+        if started_server:
+            print(f"[05_visual_ocr] Stopping the throwaway {OCR_BACKEND} server...")
+            procure.stop_child(server_proc)
 
     ocr_json.write_text(json.dumps(ocr_entries, indent=2), encoding="utf-8")
     
@@ -1177,6 +1227,7 @@ def main() -> None:
     p_step.add_argument("--asr-model", help="audiocpp ASR slug (default: crisperwhisper); e.g. nemotron")
     p_step.add_argument("--sample", choices=["auto", "keyframe", "fps"], help="frame sampling (default: auto — keyframe over 10 min)")
     p_step.add_argument("--sample-fps", type=float, metavar="RATIO", help="fps for --sample fps (default: 1.0)")
+    p_step.add_argument("--max-res", type=int, metavar="P", help="download resolution cap in lines (default: 1080)")
 
     # run
     p_run = subparsers.add_parser("run", help="Run pipeline stages")
@@ -1188,8 +1239,19 @@ def main() -> None:
     p_run.add_argument("--asr-model", help="audiocpp ASR slug (default: crisperwhisper); e.g. nemotron")
     p_run.add_argument("--sample", choices=["auto", "keyframe", "fps"], help="frame sampling (default: auto — keyframe over 10 min)")
     p_run.add_argument("--sample-fps", type=float, metavar="RATIO", help="fps for --sample fps (default: 1.0)")
+    p_run.add_argument("--max-res", type=int, metavar="P", help="download resolution cap in lines (default: 1080)")
 
     args = parser.parse_args()
+
+    # Line-buffered: a piped run must stream its progress, not dump everything
+    # at exit. A 20 s run that prints nothing reads as a hang to an agent.
+    if not getattr(args, "json", False):
+        try:
+            sys.stdout.reconfigure(line_buffering=True)
+        except (AttributeError, ValueError):
+            pass
+    if getattr(args, "max_res", None):
+        os.environ["VIDEOMINE_MAX_RES"] = str(args.max_res)
 
     # In --json mode every log line belongs on stderr: capture the real stdout
     # for the JSON document, then point sys.stdout at stderr so all existing
