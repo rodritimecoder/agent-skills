@@ -78,6 +78,14 @@ or a line that asks the question inline. Do not add a `<button>`, `<input>`, sel
 modal or tooltip to a terminal look; drive actions via keyboard triggers (`1` Hide,
 `2` Stop, `s` Spawn, `j` Jump, `m` Moods, `g` Ground, `c` Comm ping).
 
+**Substrates.** The six primitives hold off the web page too.
+[`profiles/vst3.md`](looks/glitch-console/profiles/vst3.md) is the plugin-editor
+contract: fixed host window, 4 / 6 / 7 column anchors, a 10 px type floor, the dial
+as a sprite atlas rather than a seventh primitive, and the one written motion
+exception — *value feedback eases, chrome never does* — which lets meters run at
+the host frame rate while every other pixel stays stepped at 30 fps.
+
+
 ## Build a new look
 
 1. **Collect references.** One style only. Public domain, or your own work. Write down
