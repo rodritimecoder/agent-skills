@@ -16,7 +16,7 @@ Three failures this module removes.
    eight fragments and a stream-copy remux 7.4 MB / 3.0 s / 0.9 s.
 
 3. An interview transcribed as one anonymous voice. Nemotron 3 Diarization
-   runs through `run-diarization.sh` at ~21x real time and needs no server, so
+   runs through `audiocpp diarize` at ~21x+ real time and needs no server, so
    who-spoke-when costs a second on a reel and is worth having on a talk.
 """
 
@@ -26,6 +26,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -216,12 +217,28 @@ def _ai_root() -> Path:
     return Path("/run/media/rodri/AI")
 
 
-def find_diarization_script() -> Path | None:
-    """Locate `run-diarization.sh` wherever this machine keeps it.
+def find_audiocpp_cmd() -> list[str] | None:
+    """Locate the `audiocpp` CLI wrapper."""
+    on_path = shutil.which("audiocpp")
+    if on_path:
+        return [on_path]
+    root = _ai_root()
+    candidates = [
+        Path(__file__).resolve().parents[3] / "hardware" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+        root / "skills" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+        root / "skills" / "hardware" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+        Path.home() / ".gemini" / "config" / "skills" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+        Path.home() / ".config" / "opencode" / "skills" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+        Path.home() / ".pi" / "agent" / "skills" / "audiocpp" / "scripts" / "audiocpp_cli.py",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return [sys.executable, str(candidate)]
+    return None
 
-    The audiocpp skill ships it, the AI drive keeps a copy in `sh/`, and some
-    installs symlink it onto PATH. Any of them is the same script.
-    """
+
+def find_diarization_script() -> Path | None:
+    """Locate `run-diarization.sh` if present (compatibility fallback)."""
     explicit = os.environ.get("AUDIOCPP_DIAR")
     candidates: list[Path] = [Path(explicit).expanduser()] if explicit else []
     on_path = shutil.which("run-diarization")
@@ -252,40 +269,74 @@ def run_diarization(
     Ids are arrival order — `speaker_0` is whoever spoke first — so pass
     `names=[...]` only after checking the first line of the transcript.
     """
-    script = find_diarization_script()
-    if script is None:
-        log("[diar] run-diarization.sh not found (set AUDIOCPP_DIAR); no speaker labels.")
-        return None
-    out_dir.mkdir(parents=True, exist_ok=True)
-    cmd = ["bash", str(script), str(media), "--out", str(out_dir), "-q"]
-    if names:
-        cmd += ["--names", ",".join(names)]
+    explicit = os.environ.get("AUDIOCPP_DIAR")
+    audiocpp_cmd = None if explicit else find_audiocpp_cmd()
+    if audiocpp_cmd is not None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [*audiocpp_cmd, "diarize", str(media), "--out", str(out_dir), "--json", "--quiet"]
+        if names:
+            cmd += ["--names", ",".join(names)]
+    else:
+        script = find_diarization_script()
+        if script is None:
+            log("[diar] audiocpp diarize not found; no speaker labels.")
+            return None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        cmd = ["bash", str(script), str(media), "--out", str(out_dir), "-q"]
+        if names:
+            cmd += ["--names", ",".join(names)]
+
     started = time.monotonic()
     try:
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
     except subprocess.TimeoutExpired:
         log(f"[diar] diarization timed out after {timeout_s:.0f}s; no speaker labels.")
         return None
+
     turns_file = out_dir / media.stem / "turns.json"
-    if res.returncode != 0 or not turns_file.is_file():
+    if res.returncode != 0:
         detail = ((res.stderr or res.stdout or "").strip().splitlines() or ["no output"])[-1]
         log(f"[diar] diarization failed: {detail}")
         return None
-    try:
-        raw = json.loads(turns_file.read_text(encoding="utf-8"))
-    except Exception as exc:
-        log(f"[diar] unreadable turns.json ({exc}); no speaker labels.")
-        return None
-    turns = [
-        {
-            "start": turn["start_sample"] / DIAR_SAMPLE_RATE,
-            "end": turn["end_sample"] / DIAR_SAMPLE_RATE,
-            "speaker": turn["speaker_id"],
-            "confidence": turn.get("confidence"),
-        }
-        for turn in raw
-        if "start_sample" in turn and "end_sample" in turn
-    ]
+
+    turns: list[dict] | None = None
+    if audiocpp_cmd is not None and res.stdout.strip():
+        try:
+            payload = json.loads(res.stdout)
+            turns = [
+                {
+                    "start": float(turn["start"]),
+                    "end": float(turn["end"]),
+                    "speaker": turn["speaker"],
+                    "confidence": turn.get("confidence"),
+                }
+                for turn in payload.get("turns", [])
+                if "start" in turn and "end" in turn and "speaker" in turn
+            ]
+        except Exception:
+            turns = None
+
+    if turns is None:
+        if not turns_file.is_file():
+            detail = ((res.stderr or res.stdout or "").strip().splitlines() or ["no output"])[-1]
+            log(f"[diar] diarization failed: {detail}")
+            return None
+        try:
+            raw = json.loads(turns_file.read_text(encoding="utf-8"))
+        except Exception as exc:
+            log(f"[diar] unreadable turns.json ({exc}); no speaker labels.")
+            return None
+        turns = [
+            {
+                "start": turn["start_sample"] / DIAR_SAMPLE_RATE,
+                "end": turn["end_sample"] / DIAR_SAMPLE_RATE,
+                "speaker": turn["speaker_id"],
+                "confidence": turn.get("confidence"),
+            }
+            for turn in raw
+            if "start_sample" in turn and "end_sample" in turn
+        ]
+
     speakers = sorted({turn["speaker"] for turn in turns})
     log(f"[diar] {len(turns)} turns, {len(speakers)} speakers in {time.monotonic() - started:.1f}s.")
     return turns

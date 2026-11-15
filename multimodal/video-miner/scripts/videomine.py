@@ -448,16 +448,12 @@ def run_stage_02_audio_asr(workspace: Path) -> None:
     labels = {}
     speaker_summary = []
     if DIARIZE:
-        video = workspace / "stages" / "01_acquire" / "output" / "source_video.mp4"
-        if video.exists():
-            print("[02_audio_asr] Diarizing speakers (Nemotron 3)...")
-            turns = procure.run_diarization(video, stage_dir / "diar", names=SPEAKER_NAMES)
-            if turns:
-                labels = procure.speaker_labels(turns, SPEAKER_NAMES)
-                speaker_summary = procure.talk_time(turns, labels)
-                print("[02_audio_asr] " + " · ".join(f"{n} {s:.0f}s" for n, s in speaker_summary))
-        else:
-            print("[02_audio_asr] No source video for diarization; skipping speaker labels.")
+        print("[02_audio_asr] Diarizing speakers (Nemotron 3)...")
+        turns = procure.run_diarization(audio_wav, stage_dir / "diar", names=SPEAKER_NAMES)
+        if turns:
+            labels = procure.speaker_labels(turns, SPEAKER_NAMES)
+            speaker_summary = procure.talk_time(turns, labels)
+            print("[02_audio_asr] " + " · ".join(f"{n} {s:.0f}s" for n, s in speaker_summary))
 
     segments = []
     if words_json.is_file():

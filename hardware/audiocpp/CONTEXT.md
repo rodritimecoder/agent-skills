@@ -21,9 +21,10 @@ Reference, every run:
 
 Two paths, and they do not share a transport:
 
-- **ASR** — `scripts/audiocpp_cli.py asr` resolves the slug to a `family` + path and
-  runs the `audiocpp_cli` **binary** (`--task asr --family … --model <gguf>`). Word
-  timestamps (`--words-out`) exist only on this path, which is why the miner uses it.
+- **ASR & Diarization** — `scripts/audiocpp_cli.py asr` and `scripts/audiocpp_cli.py diarize`
+  resolve the slug to a `family` + path and run the `audiocpp_cli` **binary**
+  (`--task asr` / `--task diar`). Word timestamps (`--words-out`) and speaker turns
+  exist only on this path, which is why `video-miner` uses it.
 - **TTS / align** — the same wrapper, but requests reach the **server** on `:8081`
   (`/v1/audio/speech`, `/v1/audio/transcriptions`), which lazy-loads up to 3 models.
 

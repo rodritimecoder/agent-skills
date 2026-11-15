@@ -42,28 +42,33 @@ milliseconds.
 
 ## 🎙️ Speaker Diarization
 
-`run-diarization.sh` is the one-shot tool: it extracts a 16 kHz mono track,
-runs Nemotron 3 Diarization, and stamps an existing WebVTT/SRT with names.
+`audiocpp diarize` runs Nemotron 3 Diarization (`--task diar`) over a recording,
+decoding via `ffmpeg` only when the input is not already 16 kHz mono PCM WAV,
+and optionally stamps an existing WebVTT/SRT with speaker names (`run-diarization.sh`
+is kept as a thin compatibility wrapper).
 
 ```bash
-DIAR="/run/media/rodri/AI/skills/audiocpp/scripts/run-diarization.sh"
+AC="/run/media/rodri/AI/skills/audiocpp/scripts/audiocpp_cli.py"
 
-# 1. Who spoke when — turns.json + a talk-time summary
-"$DIAR" talk.mp4
+# 1. Who spoke when — JSON or <input>.diar/turns.json + talk-time summary
+python3 $AC diarize talk.mp4 --json
+python3 $AC diarize talk.mp4
 
 # 2. Label an existing transcript with real speaker turns
-"$DIAR" talk.mp4 --vtt talk.vtt --names Kem,Chase,Vince
+python3 $AC diarize talk.mp4 --vtt talk.vtt --names Kem,Chase,Vince
 
 # 3. Swap ids if arrival order guessed wrong (or add the 4th name)
-"$DIAR" talk.mp4 --vtt talk.vtt --map 0=Chase,1=Kem,2=Vince
+python3 $AC diarize talk.mp4 --vtt talk.vtt --map 0=Chase,1=Kem,2=Vince
 
 # 4. A directory of recordings, one output folder each
-"$DIAR" recordings/ --out /tmp/diar
+python3 $AC diarize recordings/ --out /tmp/diar
 ```
 
-Output lands in `<input>.diar/`: `turns.json` (raw, samples at 16 kHz),
-`transcript.vtt` (`<v Name>` voice spans), `transcript.srt`, `transcript.txt`,
-`summary.json` (talk time, share, turn count, mean confidence per speaker).
+Output lands in `<input>.diar/` (or `<out>/<basename>/`, and no directory is left
+behind for `--json` without `--out`/`--vtt`): `turns.json` (raw, samples at
+16 kHz), `transcript.vtt` (`<v Name>` voice spans), `transcript.srt`,
+`transcript.txt`, `summary.json` (talk time, share, turn count, mean confidence
+per speaker).
 
 - **BF16 is the default and is parity-safe.** `--precision q8_0` is 102 MB
   instead of 189 MB but can move speaker boundaries and change turn counts.

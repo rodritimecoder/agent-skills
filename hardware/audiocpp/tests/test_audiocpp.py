@@ -134,6 +134,43 @@ class TestAudiocppDeterministic(unittest.TestCase):
         self.assertGreater(len(data["kokoro_voices"]), 0)
         print(f"  ✓ voices json contract ({len(data['kokoro_voices'])} kokoro + {len(data['reference_voices'])} reference) · verified")
 
+    def test_09_diarize_json_and_vtt(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            vtt = tmp / "sample.vtt"
+            vtt.write_text("WEBVTT\n\n00:00:00.000 --> 00:00:02.000\nAudio intelligence test.\n", encoding="utf-8")
+            out_dir = tmp / "diar_out"
+            cmd = [
+                "python3", AUDIOCPP_PY, "diarize", TMP_WAV,
+                "--vtt", str(vtt), "--names", "Host", "--out", str(out_dir), "--json", "--quiet",
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, f"Diarize --json failed: {res.stderr}")
+            data = json.loads(res.stdout)
+            self.assertEqual(data["task"], "diar")
+            self.assertGreaterEqual(len(data["turns"]), 1)
+            self.assertEqual(data["speakers"][0]["name"], "Host")
+            stem_dir = out_dir / Path(TMP_WAV).stem
+            self.assertTrue((stem_dir / "turns.json").is_file())
+            self.assertTrue((stem_dir / "transcript.vtt").is_file())
+            self.assertTrue((stem_dir / "summary.json").is_file())
+            self.assertIn("<v Host>", (stem_dir / "transcript.vtt").read_text(encoding="utf-8"))
+            print(f"  ✓ diarize json + vtt ({len(data['turns'])} turns, wall={data['wall_ms']}ms) · verified")
+
+    def test_10_run_diarization_shim(self):
+        import tempfile
+        shim = Path(AUDIOCPP_PY).with_name("run-diarization.sh")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cmd = ["bash", str(shim), TMP_WAV, "--out", tmpdir, "-q"]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, f"run-diarization.sh shim failed: {res.stderr}")
+            turns_file = Path(tmpdir) / Path(TMP_WAV).stem / "turns.json"
+            self.assertTrue(turns_file.is_file())
+            turns = json.loads(turns_file.read_text(encoding="utf-8"))
+            self.assertGreaterEqual(len(turns), 1)
+            print("  ✓ run-diarization.sh shim · verified")
+
 
 if __name__ == "__main__":
     print("\n🧪 Running audiocpp Deterministic Test Suite:")

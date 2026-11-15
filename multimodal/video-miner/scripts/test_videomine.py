@@ -373,6 +373,25 @@ class TestDiarization(unittest.TestCase):
         rendered = vmine.render_transcript([(0.0, 1.0, "hello")])
         self.assertEqual(rendered, "**[00:00]** hello\n")
 
+    def test_run_diarization_invokes_audiocpp_diarize(self):
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            payload = {"turns": self.TURNS}
+            return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(payload), stderr="")
+
+        with tempfile.TemporaryDirectory() as d:
+            media = Path(d) / "clip.wav"
+            media.write_bytes(b"")
+            with patch.object(procure, "find_audiocpp_cmd", return_value=["audiocpp"]), \
+                 patch.object(procure.subprocess, "run", side_effect=fake_run):
+                turns = procure.run_diarization(media, Path(d) / "diar", names=["Kem", "Chase"], log=lambda *_: None)
+        self.assertEqual(len(turns), 3)
+        self.assertEqual(calls[0][:4], ["audiocpp", "diarize", str(media), "--out"])
+        self.assertIn("--json", calls[0])
+        self.assertIn("--names", calls[0])
+
 
 class TestBatchSignatures(unittest.TestCase):
 
