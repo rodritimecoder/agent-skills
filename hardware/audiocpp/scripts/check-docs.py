@@ -97,8 +97,11 @@ def cli_registry() -> dict:
     """
     import importlib.util
 
+    scripts = ROOT / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
     spec = importlib.util.spec_from_file_location(
-        "audiocpp_cli_under_test", ROOT / "scripts/audiocpp_cli.py"
+        "audiocpp_cli_under_test", scripts / "audiocpp_cli.py"
     )
     if spec is None or spec.loader is None:
         return {}
@@ -166,7 +169,7 @@ def main() -> int:
     m = re.search(r"\*\*Defaults:\*\*\s+tts\s+`([^`]+)`\s+·\s+asr\s+`([^`]+)`", read(ROOT / "CONTEXT.md"))
     if check(m is not None, "CONTEXT.md declares Defaults"):
         default_tts, default_asr = m.group(1), m.group(2)
-        cli_src = read(ROOT / "scripts/audiocpp_cli.py")
+        cli_src = read(ROOT / "scripts/audiocpp_core.py")
         for const, want in (("DEFAULT_TTS", default_tts), ("DEFAULT_ASR", default_asr)):
             got = re.search(rf'^{const}\s*=\s*"([^"]+)"', cli_src, re.M)
             check(

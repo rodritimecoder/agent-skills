@@ -12,6 +12,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.dirname(__file__))
 
 import videomine as vm
+import videomine_core as vm_core
 import vault_mine as vmine
 import procure
 
@@ -53,10 +54,10 @@ class TestVideomineTokenShielding(unittest.TestCase):
             def read(self):
                 return self.body
 
-        with patch.object(vm.urllib.request, "urlopen",
+        with patch.object(vm_core.urllib.request, "urlopen",
                           return_value=Response("/models/h2o-lightning-4b-Q4_K_M.gguf")):
             self.assertTrue(vm._decision_model_is_h2o())
-        with patch.object(vm.urllib.request, "urlopen",
+        with patch.object(vm_core.urllib.request, "urlopen",
                           return_value=Response("/models/vllm-d3-nano-Q4_K_M.gguf")):
             self.assertFalse(vm._decision_model_is_h2o())
 
