@@ -226,6 +226,13 @@ frames; `--ocr never` skips it; `--ocr always` refuses to finish without it
 instead of quietly writing notes with no diagram text. Progress streams line by
 line — a run never goes silent for its whole duration.
 
+YouTube rolling captions are parsed as *increments*: each cue in an auto-named
+`.vtt` restates the previous line, so the parser keeps the tag-carrying line,
+trims the overlap with what it already emitted, and starts a new timestamped
+paragraph after a 5 s gap. The transcript in `transcript.md` is the spoken text
+once, not three times. `--prefer-asr` still forces `audiocpp` when the caption
+track mangles the technical terms.
+
 ## Tests
 
 ```bash

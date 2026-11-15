@@ -259,6 +259,58 @@ class TestProcure(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 5.0)
 
 
+class TestCaptionParsing(unittest.TestCase):
+
+    ROLLING = """WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.000 --> 00:00:02.000 align:start position:0%
+ 
+get<00:00:00.570><c> a</c><00:00:00.750><c> system</c><00:00:01.319><c> for</c>
+
+00:00:02.000 --> 00:00:02.010 align:start position:0%
+get a system for
+ 
+
+00:00:02.010 --> 00:00:03.860 align:start position:0%
+get a system for
+keeping<00:00:02.129><c> track</c><00:00:02.700><c> of</c>
+"""
+
+    def test_rolling_captions_are_not_repeated(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "auto.vtt"
+            path.write_text(self.ROLLING, encoding="utf-8")
+            out = vmine.parse_vtt_to_transcript(path)
+        self.assertIn("get a system for", out)
+        self.assertIn("keeping track of", out)
+        self.assertEqual(out.count("get a system for"), 1, out)
+        self.assertNotIn("<c>", out, "timing tags must not survive into the transcript")
+
+    def test_manual_srt_keeps_every_line(self):
+        srt = (
+            "1\n00:00:01,000 --> 00:00:03,000\nFirst line of dialogue\nsecond line of the cue\n\n"
+            "2\n00:00:40,000 --> 00:00:41,000\nAnother cue entirely\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "manual.srt"
+            path.write_text(srt, encoding="utf-8")
+            out = vmine.parse_vtt_to_transcript(path)
+        self.assertIn("First line of dialogue", out)
+        self.assertIn("second line of the cue", out)
+        self.assertIn("Another cue entirely", out)
+        self.assertIn("**[00:40]**", out)
+
+    def test_overlap_trim_is_a_noop_without_overlap(self):
+        self.assertEqual(
+            vmine._strip_rolling_overlap("alpha beta".split(), "gamma delta"), "gamma delta"
+        )
+        self.assertEqual(
+            vmine._strip_rolling_overlap("alpha beta gamma".split(), "beta gamma delta"), "delta"
+        )
+
+
 class TestBatchSignatures(unittest.TestCase):
 
     def test_batch_matches_per_frame(self):

@@ -173,17 +173,49 @@ def format_words_to_transcript(words_json_path: Path) -> str:
         return ""
 
 
+def _strip_rolling_overlap(seen_words: List[str], text: str) -> str:
+    """Drop the part of `text` that repeats the tail of what was already said.
+
+    YouTube auto-captions are rolling: every cue re-states the previous line
+    and appends the new words. Concatenating the cues verbatim repeats most of
+    the transcript two or three times, which is what the vault notes used to
+    contain. Manual captions have no overlap, so this is a no-op for them.
+    """
+    new_words = text.split()
+    for k in range(min(len(seen_words), len(new_words)), 0, -1):
+        if seen_words[-k:] == new_words[:k]:
+            return " ".join(new_words[k:])
+    return text
+
+
 def parse_vtt_to_transcript(vtt_file: Path) -> str:
-    """Parse VTT/SRT subtitle file into timestamped markdown blocks grouped by ~15-25s."""
+    """Parse VTT/SRT captions into timestamped markdown blocks grouped by ~15-30s."""
     try:
         if not vtt_file.is_file():
             return ""
         lines = vtt_file.read_text(encoding="utf-8", errors="replace").splitlines()
         cues: List[tuple[int, str]] = []
-        ts_pattern = re.compile(r'(?:(\d{1,2}):)?(\d{2}):(\d{2})\.\d{3}\s+-->')
+        ts_pattern = re.compile(r'(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,]\d{3}\s+-->')
+        tag_pattern = re.compile(r'<[^>]+>')
 
         cur_start_sec: Optional[int] = None
-        cur_text_lines: List[str] = []
+        cur_raw_lines: List[str] = []
+        cur_has_timing = False
+
+        def flush() -> None:
+            nonlocal cur_raw_lines, cur_has_timing
+            if cur_start_sec is not None and cur_raw_lines:
+                if cur_has_timing:
+                    # In a rolling caption only the tag-carrying lines hold the
+                    # new words; the untagged line is the previous cue restated.
+                    picked = [tag_pattern.sub('', ln) for ln in cur_raw_lines if '<' in ln]
+                else:
+                    picked = [tag_pattern.sub('', ln) for ln in cur_raw_lines]
+                text_block = " ".join(p.strip() for p in picked if p.strip()).strip()
+                if text_block:
+                    cues.append((cur_start_sec, text_block))
+            cur_raw_lines = []
+            cur_has_timing = False
 
         for line in lines:
             line_str = line.strip()
@@ -191,24 +223,18 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
                 continue
             m = ts_pattern.search(line_str)
             if m:
-                if cur_start_sec is not None and cur_text_lines:
-                    text_block = " ".join(cur_text_lines).strip()
-                    if text_block:
-                        cues.append((cur_start_sec, text_block))
-                    cur_text_lines = []
+                flush()
                 hours = int(m.group(1)) if m.group(1) else 0
                 mins = int(m.group(2))
                 secs = int(m.group(3))
                 cur_start_sec = hours * 3600 + mins * 60 + secs
             else:
-                cleaned = re.sub(r'<[^>]+>', '', line_str).strip()
-                if cleaned and (not cur_text_lines or cur_text_lines[-1] != cleaned):
-                    cur_text_lines.append(cleaned)
-
-        if cur_start_sec is not None and cur_text_lines:
-            text_block = " ".join(cur_text_lines).strip()
-            if text_block:
-                cues.append((cur_start_sec, text_block))
+                cleaned = line_str.strip()
+                if cleaned and cleaned not in cur_raw_lines:
+                    cur_raw_lines.append(cleaned)
+                    if "<" in cleaned and "<c>" in cleaned or re.search(r'<\d{2}:\d{2}', cleaned):
+                        cur_has_timing = True
+        flush()
 
         if not cues:
             return ""
@@ -216,8 +242,23 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
         blocks: List[str] = []
         cur_chunk_start: Optional[int] = None
         cur_chunk_text: List[str] = []
+        seen_words: List[str] = []
+        last_cue_sec: Optional[int] = None
 
         for start_sec, text in cues:
+            text = _strip_rolling_overlap(seen_words, text)
+            if not text.strip():
+                continue
+            seen_words = (seen_words + text.split())[-64:]
+            # A gap in speech starts a new block, otherwise a cue a minute later
+            # inherits the timestamp of the previous paragraph.
+            if cur_chunk_text and last_cue_sec is not None and start_sec - last_cue_sec >= 5.0:
+                m = int(cur_chunk_start // 60)
+                s = int(cur_chunk_start % 60)
+                blocks.append(f"**[{m:02d}:{s:02d}]** " + " ".join(cur_chunk_text))
+                cur_chunk_start = None
+                cur_chunk_text = []
+            last_cue_sec = start_sec
             if cur_chunk_start is None:
                 cur_chunk_start = start_sec
             cur_chunk_text.append(text)
@@ -433,11 +474,13 @@ def fast_mine_video(
         # 2. Extract Transcript (Subtitles first, fallback to audiocpp ASR)
         vtt_candidates = list(tmp_scratch.glob("*.vtt")) + list(tmp_scratch.glob("*.srt"))
         transcript_body = ""
+        transcript_method = ""
         if vtt_candidates and not prefer_asr:
             print(f"📄 Found downloaded subtitles ({vtt_candidates[0].name}), parsing directly...")
             vtt_parsed = parse_vtt_to_transcript(vtt_candidates[0])
             if vtt_parsed:
                 transcript_body = vtt_parsed
+                transcript_method = f"subtitles from `{vtt_candidates[0].name}`, downloaded by `yt-dlp`"
         elif vtt_candidates:
             print(f"📄 Ignoring downloaded subtitles ({vtt_candidates[0].name}) - prefer_asr is set")
 
@@ -486,6 +529,9 @@ def fast_mine_video(
         dur_m, dur_s = divmod(int(duration_sec), 60)
         dur_str = f"{dur_m:02d}:{dur_s:02d}" if duration_sec else "N/A"
         web_url = meta.get("webpage_url") or url_or_path
+        transcript_method = transcript_method or (
+            f"audio extracted with `yt-dlp`, transcribed by `{asr_model}` through `audiocpp`"
+        )
 
         full_transcript = (
             f"# Transcript — {title_name}\n\n"
@@ -493,7 +539,7 @@ def fast_mine_video(
             f"- **Creator:** `{creator_name}`\n"
             f"- **Duration:** {dur_str}\n"
             f"- **Upload Date:** {date_str}\n"
-            f"- **Method:** audio extracted with `yt-dlp`, transcribed by `{asr_model}` through `audiocpp`.\n\n"
+            f"- **Method:** {transcript_method}.\n\n"
             f"---\n\n"
             + (transcript_body if transcript_body else "_No audio transcript captured._")
             + "\n"
@@ -814,7 +860,8 @@ def main() -> int:
     p_add.add_argument("--model", "-m", default="crisperwhisper", help="ASR model slug (crisperwhisper [default], nemotron)")
     p_add.add_argument("--prefer-asr", action="store_true",
                        help="transcribe locally even when a subtitle track exists "
-                            "(YouTube auto-captions repeat each line three times)")
+                            "(rolling auto-captions are de-duplicated either way; "
+                            "use this when the creator mangles technical terms)")
     p_add.add_argument("--max-res", type=int, metavar="P",
                        help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
 
