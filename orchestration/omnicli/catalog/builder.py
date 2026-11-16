@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
-from . import argspec, policy, registry
+from . import argspec, policy, registry, schema_extract
 from .textutil import expand_cjk
 
 HERE = Path(__file__).resolve().parent
@@ -49,8 +49,19 @@ def db_path() -> Path:
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
     p = path or db_path()
+    read_only = os.environ.get("OMNICLI_DB_RO", "").strip().lower() in (
+        "1", "true", "yes")
+    # A read-only mount is not writable, so neither the parent mkdir nor the
+    # schema executescript can run. `immutable=1` also skips SQLite's locking,
+    # which is what keeps a fan-out of parallel readers from serialising on
+    # the catalog file.
+    if read_only and p.is_file():
+        con = sqlite3.connect(f"{p.resolve().as_uri()}?immutable=1",
+                              uri=True, timeout=30.0)
+        con.row_factory = sqlite3.Row
+        return con
     p.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(str(p))
+    con = sqlite3.connect(str(p), timeout=30.0)
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
     return con
@@ -114,6 +125,14 @@ def _store_contract(con: sqlite3.Connection, path: str, mtime_ns: int,
     )
 
 
+def _parent_option_schema(parent_schema: dict) -> dict:
+    """The parent's options, as a schema: no positionals are inherited."""
+    return schema_extract.merge_parent_schema(
+        {"type": "object", "properties": {}, "required": [],
+         "additionalProperties": False, "x-command": False, "x-commands": []},
+        parent_schema)
+
+
 def _subcommand_contract(con: sqlite3.Connection, tool: dict, sub: str,
                          parent_contract: dict | None,
                          skill_python: str | None,
@@ -131,6 +150,9 @@ def _subcommand_contract(con: sqlite3.Connection, tool: dict, sub: str,
     """
     path = tool.get("path")
     parent = parent_contract or {}
+    parent_schema = parent.get("inputSchema")
+    if not isinstance(parent_schema, dict):
+        parent_schema = {}
     fallback = {
         "usage": f"{tool['argv'][-1] if tool.get('argv') else tool['id']} {sub} [options]",
         "flags": parent.get("flags", []),
@@ -139,6 +161,11 @@ def _subcommand_contract(con: sqlite3.Connection, tool: dict, sub: str,
         "help": parent.get("help", ""),
         "parent_help_excerpt": "\n".join(parent.get("help", "").splitlines()[:12]),
     }
+    if parent_schema:
+        # The subcommand's own help could not be read, but it still accepts
+        # whatever the parent declared. That is less than the truth and far
+        # more than nothing.
+        fallback["inputSchema"] = _parent_option_schema(parent_schema)
     if not path:
         return fallback
     try:
@@ -188,6 +215,16 @@ def _subcommand_contract(con: sqlite3.Connection, tool: dict, sub: str,
         if p.flag and p.flag not in own_flags
     ]
     out["parent_help_excerpt"] = "\n".join(parent.get("help", "").splitlines()[:12])
+    # Same inheritance, expressed as schema: a subcommand's call must be able
+    # to carry the parent's globals, and the child's own properties win where
+    # the subparser re-declared them.
+    if parent_schema:
+        child_schema = out.get("inputSchema")
+        if isinstance(child_schema, dict) and child_schema:
+            out["inputSchema"] = schema_extract.merge_parent_schema(
+                child_schema, parent_schema)
+        else:
+            out["inputSchema"] = _parent_option_schema(parent_schema)
     return out
 
 

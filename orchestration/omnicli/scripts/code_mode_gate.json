@@ -14,6 +14,7 @@
     "--scorecard": "output path",
     "--batch": "path to a batch JSON file (decide)",
     "--viewport": "geometry string such as '1280x720' (verification)",
+    "t3-browser-hands/scripts/t3_locate|--offset": "dx,dy pixel offset spec, genuinely text",
     "companion/scripts/companion:doctor|--port": "inherited root flag that doctor does not accept; contract-extraction leak, tracked in tier-c"
   },
   "deferred": {

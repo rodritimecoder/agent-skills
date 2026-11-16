@@ -41,7 +41,7 @@ server to attach:
 ```
 
 - **Surface Discovery:** Any skill symlinked in `surface/` is discovered instantly by OpenCode's internal skill crawler.
-- **Code Mode:** That skill teaches `omnicli search` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.py`.
+- **Code Mode:** That skill teaches `omnicli search` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.mjs`.
 
 ---
 

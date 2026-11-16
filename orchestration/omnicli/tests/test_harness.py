@@ -90,6 +90,31 @@ class TestHarnessVerification(unittest.TestCase):
         self.assertIsInstance(checks["agy_route_hook"]["passed"], bool)
         self.assertIn("agy_omnicli_hook.py", checks["agy_route_hook"]["detail"])
 
+    def test_t3_code_code_mode_bindings_are_javascript(self):
+        res = harness.verify_harness("t3-code")
+        checks = {c["check"]: c for c in res["checks"]}
+        self.assertIn("code_mode_sdk_bindings", checks)
+        detail = checks["code_mode_sdk_bindings"]["detail"]
+        self.assertIn("omnicli_tools.mjs", detail)
+        self.assertIn("omnicli_tools.d.ts", detail)
+
+    def test_agy_js_bindings_sdk_is_wired(self):
+        res = harness.verify_harness("agy")
+        checks = {c["check"]: c for c in res["checks"]}
+        self.assertIn("js_bindings_sdk", checks)
+        self.assertIsInstance(checks["js_bindings_sdk"]["passed"], bool)
+        detail = checks["js_bindings_sdk"]["detail"]
+        self.assertIn("omnicli_tools.mjs", detail)
+        self.assertIn("omnicli_tools.d.ts", detail)
+
+    def test_config_snippets_are_javascript_first(self):
+        for h_id in ("agy", "boxxy"):
+            snippet = harness.HARNESS_SPECS[h_id]["config_snippet"]
+            self.assertNotIn("omnicli_tools.py", snippet, f"{h_id} still prescribes Python bindings")
+            self.assertNotIn("plan.py", snippet, f"{h_id} still prescribes a Python plan")
+        self.assertIn("plan.mjs", harness.HARNESS_SPECS["boxxy"]["config_snippet"])
+        self.assertIn("await search(", harness.HARNESS_SPECS["agy"]["config_snippet"])
+
     def test_verify_all(self):
         res = harness.verify_all()
         self.assertIn(res["status"], ("PASS", "FAIL"))

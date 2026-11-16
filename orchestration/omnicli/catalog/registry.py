@@ -26,6 +26,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import schema_extract
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # Where skills live. First hit wins; mirrors of the same collection live in
@@ -396,7 +398,7 @@ def _usage_subcommands(usage: str) -> list[str]:
 # Bumped whenever the *parser* changes, not the scripts. The contract cache
 # is keyed on the script's mtime, so a parser fix would otherwise keep
 # serving the contracts the old parser produced.
-CONTRACT_PARSER_VERSION = 7
+CONTRACT_PARSER_VERSION = 8
 
 
 def parse_help_contract(help_text: str) -> dict[str, Any]:
@@ -582,6 +584,10 @@ def extract_contract(path: Path, timeout: float = 12.0,
     * Output without a "usage:" line is rejected. A shell script that ran a
       model instead of printing usage would otherwise have its model output
       stored as if it were a contract.
+
+    A readable contract carries ``inputSchema`` as well: the exact JSON Schema
+    of the parser for a Python script, and a schema rebuilt from the parsed
+    help for anything else.
     """
     empty: dict[str, Any] = {
         "usage": "", "flags": [], "positionals": [], "subcommands": [], "help": "",
@@ -602,25 +608,32 @@ def extract_contract(path: Path, timeout: float = 12.0,
         return empty
 
     interp = python or sys.executable
-    try:
-        if path.suffix == ".py":
-            cmd = [interp, str(path)] + list(args or []) + ["--help"]
-        else:
+    schema: dict[str, Any] | None = None
+    out = ""
+    if path.suffix == ".py":
+        # One run yields both halves of the contract: the help text the
+        # catalog searches on, and the exact schema of the parser that
+        # printed it. Running the script twice would double the cost of
+        # indexing sixty-odd CLIs for no extra information.
+        schema, out = schema_extract.extract_argparse_schema(
+            path, args=list(args or []), python=interp, timeout=timeout)
+    else:
+        try:
             cmd = [str(path)] + list(args or []) + ["--help"]
-        # Run in a scratch directory. A script whose first positional is a
-        # workspace will treat "--help" as one and create it; inheriting the
-        # caller's cwd drops that directory into whatever repo omnicli was
-        # invoked from.
-        with tempfile.TemporaryDirectory(prefix="omnicli-contract-") as scratch:
-            proc = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout,
-                stdin=subprocess.DEVNULL, cwd=scratch,
-            )
-        out = (proc.stdout or "") + (proc.stderr or "")
-    except subprocess.TimeoutExpired:
-        out = ""
-    except OSError:
-        out = ""
+            # Run in a scratch directory. A script whose first positional is a
+            # workspace will treat "--help" as one and create it; inheriting the
+            # caller's cwd drops that directory into whatever repo omnicli was
+            # invoked from.
+            with tempfile.TemporaryDirectory(prefix="omnicli-contract-") as scratch:
+                proc = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=timeout,
+                    stdin=subprocess.DEVNULL, cwd=scratch,
+                )
+            out = (proc.stdout or "") + (proc.stderr or "")
+        except subprocess.TimeoutExpired:
+            out = ""
+        except OSError:
+            out = ""
 
     if "usage:" not in out.lower():
         # Not a usage message. Keep the docstring as a summary but do not
@@ -630,6 +643,10 @@ def extract_contract(path: Path, timeout: float = 12.0,
                 "help": "", "summary": summary}
 
     contract = parse_help_contract(out)
+    # The schema is the half of the contract the help text loses. A non
+    # argparse script still has a usage line worth a schema, so the parsed
+    # contract supplies one rather than leaving the tool untyped.
+    contract["inputSchema"] = schema or schema_extract.contract_to_input_schema(contract)
     if path.suffix == ".py" and not contract.get("summary"):
         contract["summary"] = _docstring_summary(path)
     return contract

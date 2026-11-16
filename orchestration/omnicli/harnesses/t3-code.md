@@ -25,7 +25,7 @@ omnicli harness verify t3-code
 | `omnicli_search` / `tools.omnicli.search` | Rank catalogued tools by intent. Use **before** hand-writing a script or reading a skill. |
 | `omnicli_describe` / `tools.omnicli.describe` | Read one tool's contract (`--section`, `--doc`), not a whole `SKILL.md`. |
 | `omnicli_invoke` / `tools.omnicli.invoke` | Run one tool; 8 KB cap, optional `project` fields and `buffer`. |
-| `omnicli_exec` / `tools.omnicli.exec` | Run a Python plan in one turn; bubblewrap, 100-call budget, optional memory cap. |
+| `omnicli_exec` / `tools.omnicli.exec` | Run a JavaScript plan in one turn; `node:vm` under bubblewrap, 100-call budget, optional memory cap. |
 
 The plugin also:
 
@@ -48,34 +48,39 @@ omnicli invoke zoom-recorder/scripts/zoom_download \
   -- --url "https://zoom.us/rec/..."
 ```
 
-### Path 3 — Python Code Mode (`omnicli exec`)
+### Path 3 — JavaScript Code Mode (`omnicli exec`)
 
-For multi-step plans and heavy parsing, run sandboxed Python in one turn with zero file staging overhead:
+For multi-step plans and heavy parsing, run sandboxed JavaScript in one turn with zero file staging overhead:
 
 ```bash
-# Inline execution
-omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'
+# Inline execution (the bindings are already globals)
+omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
 
 # Piped stdin execution
 cat << 'EOF' | omnicli exec -
-from omnicli_tools import search, invoke, zoom
-hits = search("audio transcription", limit=3)
-print(hits)
+import { search } from "omnicli_tools";
+const hits = await search("audio transcription", 3);
+console.log(hits);
 EOF
 
 # File execution
-omnicli exec plan.py --sandbox write
+omnicli exec plan.mjs --sandbox write
 ```
 
-```python
-from omnicli_tools import search, invoke, zoom
+```js
+import { search, zoom } from "omnicli_tools";
 
-hits = search("audio transcription", limit=3)
-result = zoom(url="https://zoom.us/rec/share/abc", format="md")
-print(result["output"][:300])
+const hits = await search("audio transcription", 3);
+const result = zoom({ url: "https://zoom.us/rec/share/abc", format: "md" });
+console.log(result.output.slice(0, 300));
 ```
 
-Use `strict` when the plan handles untrusted input; `--max-calls` and `--mem-limit` are enforced inside the bwrap sandbox.
+Scripts run through `node:vm` inside `bwrap`, against generated
+`omnicli_tools.mjs` bindings and their `omnicli_tools.d.ts` declarations. Use
+`strict` when the plan handles untrusted input; `--max-calls` and `--mem-limit`
+(a JS heap cap plus a floored `RLIMIT_AS`) are enforced inside the sandbox.
+Python plans are retired — `omnicli exec plan.py` exits 2 with the migration
+text.
 
 ---
 

@@ -12,6 +12,8 @@ import contextlib
 import io
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -22,7 +24,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-from catalog import bindings  # noqa: E402
+from catalog import bindings, builder  # noqa: E402
 from omnicli import _parse_since, cmd_usage  # noqa: E402
 
 
@@ -142,6 +144,73 @@ class Aggregation(unittest.TestCase):
         buf = io.StringIO()
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(buf):
             cmd_usage(trace=str(self.path), as_json=True)
+
+
+class JsBindings(unittest.TestCase):
+    """The generated JS module has to answer what the Python CLI answers.
+
+    Identity is the seam that drifts: it exists twice because the sandboxed
+    module cannot import `catalog`. These tests run the generated file through
+    `node` instead of trusting the two copies to stay in sync.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.node = shutil.which("node")
+        if not cls.node:
+            raise unittest.SkipTest("node not installed")
+        cls.tmp = tempfile.TemporaryDirectory()
+        con = builder.connect()
+        try:
+            cls.out = bindings.write(con, Path(cls.tmp.name))
+        finally:
+            con.close()
+        cls.module = cls.out / "omnicli_tools.mjs"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def _node_identity(self, env):
+        probe = Path(self.tmp.name) / "identity_probe.mjs"
+        probe.write_text(
+            'import { traceIdentity } from "./omnicli_tools.mjs";\n'
+            "process.stdout.write(JSON.stringify(traceIdentity()));\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [self.node, str(probe)], capture_output=True, text=True, timeout=60,
+            cwd=self.tmp.name, env=dict(env),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)
+
+    def test_generated_module_is_valid_esm(self):
+        proc = subprocess.run([self.node, "--check", str(self.module)],
+                              capture_output=True, text=True, timeout=120)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((self.out / "omnicli_tools.d.ts").is_file())
+
+    def test_trace_identity_agrees_with_the_cli(self):
+        cases = [
+            {"T3CODE_CLI_PATH": "/x", "OPENCODE_SESSION_ID": "ses_t3"},
+            {"ANTIGRAVITY_AGENT": "1", "ANTIGRAVITY_CONVERSATION_ID": "conv_1"},
+            {"OPENCODE": "1", "OPENCODE_SESSION_ID": "ses_oc"},
+            {"OMNICLI_HARNESS": "boxxy"},
+            {"OMNICLI_HARNESS": "agy", "ANTIGRAVITY_AGENT": "1",
+             "T3CODE_CLI_PATH": "/x", "OPENCODE_SESSION_ID": "ses_outer"},
+            {},
+        ]
+        for env in cases:
+            with self.subTest(env=env):
+                with mock.patch.dict(os.environ, env, clear=True):
+                    expected = bindings.trace_identity()
+                actual = self._node_identity(env)
+                self.assertEqual(actual[0], expected[0], env)
+                # A ppid fallback names two different processes by design;
+                # every explicit session must match exactly.
+                if not expected[1].startswith("ppid:"):
+                    self.assertEqual(actual[1], expected[1], env)
 
 
 if __name__ == "__main__":

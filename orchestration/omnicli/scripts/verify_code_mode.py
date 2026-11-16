@@ -132,6 +132,29 @@ def check_output(rows: list[dict], cfg: dict, tier: str) -> list[dict]:
     return found
 
 
+def _catalog_flag_types(con) -> dict[str, dict[str, str]]:
+    """skill -> {flag: JSON-Schema type} from each tool's ``inputSchema``."""
+    out: dict[str, dict[str, str]] = {}
+    try:
+        rows = con.execute("select skill, contract from tools").fetchall()
+    except Exception:
+        return out
+    for row in rows:
+        try:
+            contract = json.loads(row["contract"] or "{}")
+        except (TypeError, ValueError):
+            continue
+        props = (contract.get("inputSchema") or {}).get("properties") or {}
+        flags = out.setdefault(str(row["skill"]), {})
+        for prop in props.values():
+            if not isinstance(prop, dict):
+                continue
+            flag, kind = prop.get("x-flag"), prop.get("type")
+            if flag and kind:
+                flags[str(flag).split()[0]] = str(kind)
+    return out
+
+
 def check_declared_types(db: Path, skills: set[str] | None) -> list[dict]:
     """Flag add_argument(type=int) paired with a metavar that binds a float.
 
@@ -140,6 +163,11 @@ def check_declared_types(db: Path, skills: set[str] | None) -> list[dict]:
     when its metavar is ``TIMEOUT`` or ``SECONDS`` — ``--interval TIMEOUT``
     says int to argparse and float to every generated plan. Only the source
     can answer this, so this check reads it.
+
+    The extracted ``inputSchema`` is the stronger answer when it is present: a
+    flag the catalog already types as ``integer``/``number`` is correct even if
+    its metavar reads like the other type, so only a genuine disagreement (or a
+    schema-less skill) is reported.
     """
     import sqlite3
 
@@ -148,6 +176,7 @@ def check_declared_types(db: Path, skills: set[str] | None) -> list[dict]:
     con = sqlite3.connect(str(db))
     con.row_factory = sqlite3.Row
     rows = [dict(r) for r in con.execute("select name, path from skills")]
+    catalog_types = _catalog_flag_types(con)
     con.close()
     if skills is not None:
         rows = [r for r in rows if r["name"] in skills]
@@ -177,12 +206,16 @@ def check_declared_types(db: Path, skills: set[str] | None) -> list[dict]:
                     continue
                 if not (isinstance(metavar, ast.Constant) and isinstance(metavar.value, str)):
                     continue
+                flags = [a.value for a in node.args if isinstance(a, ast.Constant) and str(a.value).startswith("-")]
+                schema = catalog_types.get(skill["name"], {})
+                expected = "integer" if declared.id == "int" else "number"
+                if any(schema.get(flag) == expected for flag in flags):
+                    continue
                 hints = argspec.INT_HINTS if declared.id == "int" else argspec.FLOAT_HINTS
                 if metavar.value.upper() in hints:
                     continue
                 binds = "float" if metavar.value.upper() in argspec.FLOAT_HINTS else (
                     "int" if metavar.value.upper() in argspec.INT_HINTS else "str")
-                flags = [a.value for a in node.args if isinstance(a, ast.Constant) and str(a.value).startswith("-")]
                 found.append({
                     "rule": "declared", "skill": skill["name"], "tool": f"{file.relative_to(root)}:{node.lineno}",
                     "flag": ",".join(flags) or "?",

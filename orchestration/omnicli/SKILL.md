@@ -1,7 +1,7 @@
 ---
 name: omnicli
 
-description: "Unified tool execution gateway and Python Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.py`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8085)."
+description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8085)."
 
 compatibility: "Requires the local inference servers it fronts: :8080, :8081, :8083, :8084 and :8085, plus the optional embedding server :8087, which supplies the dense leg of hybrid search (the catalog works without it, on BM25 alone). The decision port speaks either native /v1/systemone or the pplx-decider joint protocol v3; the protocol is auto-detected from the served model."
 allowed-tools: "Bash(omnicli:*) Read"
@@ -17,7 +17,7 @@ Nothing else enters the context window.
                   ┌── CLI (shell harnesses) ──────────────────────┐
    agent ────────▶│  omnicli search | describe | invoke | status │
                   ├── Code Mode (one plan, one turn) ────────────┤
-                  │  omnicli exec plan.py --sandbox strict       │
+                  │  omnicli exec plan.mjs --sandbox strict      │
                   └──────────────────────────────────────────────┘
                                         │
                         ┌───────────────▼───────────────┐
@@ -197,7 +197,7 @@ that is what you ask for.
 
 `omnicli spec --grep <re> --stubs` is the wide-angle version: annotated
 signatures for every matching tool, in one bounded reply. It is what an agent
-reads before writing a plan, and `spec(grep=...)` returns the same thing
+reads before writing a plan, and `spec({ grep })` returns the same thing
 *inside* the plan.
 
 The skills themselves are **never modified**. The catalog is an index over
@@ -241,50 +241,62 @@ Unknown `--omni-*` flags are reported instead of silently dropped.
 
 ---
 
-## 🐍 One plan, one turn — `omnicli exec`
+## ⚡ One plan, one turn — `omnicli exec`
 
 Step 3 is one tool call per turn. When a job has several steps, write one
-Python plan instead: the intermediates stay in variables and only what you
-print comes back.
+JavaScript plan instead: the intermediates stay in variables and only what you
+print comes back. Plans run on `node:vm` under `vm_runner.mjs` inside `bwrap`;
+Python plans are retired (`.py` or `--lang py` exits 2 with the migration text).
 
 ```bash
 omnicli spec --grep zoom --stubs   # the typed surface for just those tools
-omnicli bindings                   # writes ~/.local/share/omnicli/bindings/omnicli_tools.py
-omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'  # inline
-cat plan.py | omnicli exec -       # piped stdin
-omnicli exec plan.py               # runs file in bubblewrap; prints only the plan's stdout
-omnicli exec plan.py --sandbox strict
+omnicli bindings                   # writes omnicli_tools.mjs + omnicli_tools.d.ts
+omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'   # inline
+cat plan.mjs | omnicli exec -      # piped stdin
+omnicli exec plan.mjs              # runs file in bubblewrap; prints only the plan's stdout
+omnicli exec plan.mjs --sandbox strict
 ```
 
-```python
-from omnicli_tools import search, spec, zoom, invoke
+```js
+import { search, spec, zoom, invoke, parallel, emitResult } from "omnicli_tools";
 
-print(len(spec(grep="zoom")))            # query 481 contracts without loading them
-zoom(url="https://zoom.us/rec/share/x", format="md")   # one annotated function per tool
+console.log(spec({ grep: "zoom" }).length);   // query every contract without loading it
 
-rows = search("audio transcription", limit=3)          # discovery inside the plan
-print(invoke(f"{rows[0]['skill']}/scripts/audiocpp_cli", "asr", "talk.wav")["output"][:200])
+const [notes, hits] = await parallel([        // thunks fan out; order is preserved
+  () => zoom({ url: "https://zoom.us/rec/share/x", format: "md" }),
+  () => search("audio transcription", 3),
+]);
+invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"]);
+
+emitResult({ notes: notes.output.slice(0, 200), hits: hits.length });
 ```
 
-Every catalogued tool is generated as a function with the flags, metavars and
-choices recovered from its own `--help`: `url: str` is required, `format` is
-`Literal["md","vtt","txt","all"]`, `video` is a bool. A wrong argument fails
-at import time, not at call forty.
+A plan needs no boilerplate: `search`, `spec`, `describe`, `invoke`, `output`,
+`parallel`, `emitResult` and one async function per catalogued tool are already
+globals inside the VM. The `import` above is optional — a file plan uses it for
+editor and type-checking support, and both forms resolve to the same module.
+`omnicli_tools.d.ts` carries that surface as TypeScript declarations, so the
+model can read a contract instead of guessing one.
+
+Every per-tool function takes **one options object** — `zoom({ url, format })`,
+not `zoom(url, format)` — validated against that tool's extracted JSON Schema
+(`inputSchema`) before dispatch, so an unknown, missing or mistyped argument
+throws `TypeError` at the call site instead of at call forty.
 
 | Property | Behaviour |
 |---|---|
 | **Policy** | every call shells out to `omnicli invoke`, so the enable gate, projection and 8 KB cap still apply |
-| **Surface** | one annotated function per tool, plus `spec()` to filter the catalog in-plan |
+| **Surface** | one async function per tool generated from its `inputSchema`, plus `spec()` to filter the catalog in-plan |
 | **Discovery** | `search()`, `spec()` and `describe()` are callable *inside* the plan — definitions never enter the window |
 | **Isolation (`write`)** | bubblewrap: writes land only in the workspace and an ephemeral `/tmp`; `/` is read-only |
 | **Isolation (`strict`)** | no network, home masked, and every tool call crosses one UNIX socket to the parent; the plan holds no credentials and cannot open a socket |
-| **Isolation (memory)** | `--mem-limit MiB` is opt-in: unset is no cap at all. Because the right number belongs to the plan (a 64 MiB one-liner and a 200 MiB allocation cannot share a default), setting it caps `RLIMIT_AS` for the plan and every child it spawns |
+| **Isolation (memory)** | `--mem-limit MiB` is opt-in: unset is no cap at all. Setting it caps Node's JS heap with `--max-old-space-size=<MiB>` *and* sets `RLIMIT_AS` to `max(MiB, 2048)` MiB, because V8 reserves ~1.5 GiB of address space for its CodeRange and a lower rlimit aborts Node before the plan starts |
 | **Allowlist** | a strict plan can reach `search`, `list`, `tools`, `describe`, `invoke`, `policy`, `spec` — `exec` is refused with rc 126 and recorded in `bridge_denied` |
-| **Concurrency** | sync calls are serial; `parallel()` runs the `a*` twins at once (default fan-out 8), so ten independent calls cost about one call's latency |
-| **Call budget** | `--max-calls` (default 100, `0` = unlimited) reserves each slot *before* dispatch; over budget raises `RuntimeError` at the call site naming the count and the calls just made |
-| **Result** | `emit_result(value)` sends one value back on its own channel: `exec --json` reports it under `result`, while `stdout` stays the plan's printed text |
+| **Concurrency** | `parallel(calls, limit = 8)` fans out async thunks `() => ...`; every binding is natively async, so there are no `a*` twins to remember |
+| **Call budget** | `--max-calls` (default 100, `0` = unlimited) reserves each slot *before* dispatch; over budget throws at the call site naming the count and the calls just made |
+| **Result** | `emitResult(value)` (alias `emit_result`) sends one value back on its own channel: `exec --json` reports it under `result`, while `stdout` stays the plan's printed text |
 | **Trace** | each call appends a `kind=call` row (with `t`) and then a `kind=done` row (with `ms`, `rc`) to `.omnicli_trace.jsonl`; `exec --json` reports `tool_calls`, `bridge_calls`, seconds and bytes |
-| **Escape hatch** | `--no-sandbox` runs unsandboxed; `--workspace DIR` chooses the writable root |
+| **Escape hatch** | `--sandbox none` (`--no-sandbox`) runs unsandboxed; `--workspace DIR` chooses the writable root |
 
 Token arithmetic: a 9-step job becomes **one** model turn. The plan's own
 reads and writes never cross the boundary.
@@ -301,7 +313,7 @@ workstation harness in the `harnesses/` directory:
 | Harness | Guide | Primary Face | Key Primitives |
 |---|---|---|---|
 | **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | Native tools + Code Mode | `omnicli_*` tools, `omnicli exec` plans, `html_preview` visuals, reactive wakeups |
-| **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Hooks + Python Bindings | `PreToolUse` gate, `PreInvocation` routing, `run_workflow`, subagents |
+| **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Hooks + JS Bindings | `PreToolUse` gate, `PreInvocation` routing, `omnicli exec plan.mjs`, subagents |
 | **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | Native tools + Code Mode | `omnicli_*` plugin tools, skills path, local daemons (:8080-:8085) |
 | **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI | Fast sub-10ms terminal tool calls, strict 8KB token budget cap |
 | **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Direct CLI + Sandbox | Bubblewrap sandboxing (`--sandbox strict`), hot-reloading, WAL safety |
@@ -456,10 +468,10 @@ uses the BM25 catalog instead of the old substring scorer.
 1. **Uber's MCP Gateway**: [Designing an MCP Gateway](https://www.uber.com/au/en/blog/designing-mcp-gateway/)  
    *Architecture*: AutoCrawler catalog ingestion → SQLite FTS registry → 4 core meta-tools (`discover`, `describe`, `invoke`, `status`) → bounded responses with byte caps and JSON projections. Eliminates catalog bloat and context poisoning across large fleets of tools.
 2. **Cloudflare's Code Mode**: [Code Mode: execute code to invoke tools instead of LLM function calling](https://blog.cloudflare.com/code-mode/)  
-   *Architecture*: Replaces multi-step JSON function calling roundtrips with sandboxed code execution (`omnicli exec`) against typed SDK bindings (`omnicli_tools.py`). Intermediates stay in memory; only synthesized results enter context.
+   *Architecture*: Replaces multi-step JSON function calling roundtrips with sandboxed code execution (`omnicli exec`) against typed SDK bindings (`omnicli_tools.mjs` + `omnicli_tools.d.ts`). Intermediates stay in memory; only synthesized results enter context.
 3. **MCP, evaluated and removed.** A stdio JSON-RPC server was built, tested (28
    conformance checks) and retired: routing intermediate data across round-trips
-   burns prompt tokens and causes quadratic context decay, while Python variables
-   cost nothing. The code is preserved at `archived/omnicli-mcp/` for reference,
-   not wired to any verb.
+   burns prompt tokens and causes quadratic context decay, while JavaScript
+   variables cost nothing. The code is preserved at `archived/omnicli-mcp/` for
+   reference, not wired to any verb.
 

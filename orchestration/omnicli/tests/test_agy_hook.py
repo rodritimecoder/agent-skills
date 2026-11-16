@@ -286,6 +286,114 @@ class TestAgyOmnicliHook(unittest.TestCase):
         )
         self.assertEqual(self._streak(session_id), 1)
 
+    # --- js code mode routing & mixed inline probe gate --------------------
+
+    def test_routing_teaches_js_code_mode(self):
+        self.assertIn("node:vm", hook.ROUTING)
+        self.assertIn("plan.mjs", hook.ROUTING)
+        self.assertIn("omnicli exec -c", hook.ROUTING)
+        self.assertIn("node -e", hook.ROUTING)
+        self.assertNotIn("plan.py", hook.ROUTING)
+        self.assertNotIn("Python Code Mode", hook.ROUTING)
+
+    def test_inline_probe_detection_covers_python_and_node(self):
+        for cmd in (
+            "python3 -c 'print(1)'",
+            "node -e 'console.log(1)'",
+            "node --eval 'console.log(1)'",
+            "node -p '1+1'",
+            "/usr/bin/node --print '1+1'",
+            "cd /tmp && /home/rodri/.nvm/versions/node/v26.10.0/bin/node -e '1'",
+        ):
+            self.assertTrue(hook._is_inline_probe(cmd), cmd)
+        for cmd in (
+            "node script.js",
+            "node --check foo.js",
+            "node --test",
+            "node -v",
+            "python3 foo.py",
+            "python3 -m unittest discover",
+        ):
+            self.assertFalse(hook._is_inline_probe(cmd), cmd)
+        # Backwards-compatible alias still speaks Python only.
+        self.assertTrue(hook._is_inline_py_probe("python3 -c 'print(1)'"))
+        self.assertFalse(hook._is_inline_py_probe("node -e '1'"))
+
+    def test_third_consecutive_node_probe_denied(self):
+        variants = (
+            "node -e 'console.log(1)'",
+            "node --eval 'console.log(2)'",
+            "/usr/local/bin/node -p '1+1'",
+        )
+        for idx, probe in enumerate(variants):
+            session_id = f"ses-node-loop-{idx}"
+            self.assertEqual(self._shell(session_id, probe)["decision"], "allow")
+            self.assertEqual(self._streak(session_id), 1)
+            self.assertEqual(self._shell(session_id, probe)["decision"], "allow")
+            self.assertEqual(self._streak(session_id), 2)
+
+            res = self._shell(session_id, probe)
+            self.assertEqual(res["decision"], "deny")
+            self.assertIn("Denied by agy-omnicli-route", res["reason"])
+            self.assertIn("node -e", res["reason"])
+            self.assertIn("python3 -c", res["reason"])
+            self.assertIn("omnicli exec -c", res["reason"])
+            self.assertEqual(self._streak(session_id), 2)
+
+    def test_mixed_python_and_node_probes_share_the_streak(self):
+        session_id = "ses-mixed-probe"
+        self.assertEqual(
+            self._shell(session_id, "python3 -c 'print(1)'")["decision"], "allow"
+        )
+        self.assertEqual(
+            self._shell(session_id, "node -e 'console.log(2)'")["decision"], "allow"
+        )
+        res = self._shell(session_id, "node --eval 'console.log(3)'")
+        self.assertEqual(res["decision"], "deny")
+        self.assertIn("omnicli exec -c", res["reason"])
+
+    def test_mixed_streak_reset_by_omnicli_exec_and_write_tools(self):
+        session_id = "ses-mixed-reset"
+        for probe in ("python3 -c 'print(1)'", "node -e 'console.log(2)'"):
+            self.assertEqual(self._shell(session_id, probe)["decision"], "allow")
+        self.assertEqual(self._streak(session_id), 2)
+
+        self.assertEqual(
+            self._shell(session_id, "omnicli exec -c 'console.log(42)'")["decision"],
+            "allow",
+        )
+        self.assertEqual(self._streak(session_id), 0)
+        self.assertEqual(
+            self._shell(session_id, "node -e 'console.log(3)'")["decision"], "allow"
+        )
+        self.assertEqual(self._streak(session_id), 1)
+
+        self.assertEqual(
+            self._shell(session_id, "node -e 'console.log(4)'")["decision"], "allow"
+        )
+        self.assertEqual(self._streak(session_id), 2)
+
+        res = hook.handle_pre_tool_use({
+            "conversationId": session_id,
+            "cwd": "/home/rodri/my-app",
+            "toolCall": {
+                "name": "write_to_file",
+                "args": {"TargetFile": "/home/rodri/my-app/plan.mjs", "CodeContent": "x"},
+            },
+        })
+        self.assertEqual(res["decision"], "allow")
+        self.assertEqual(self._streak(session_id), 0)
+        self.assertEqual(
+            self._shell(session_id, "node -e 'console.log(5)'")["decision"], "allow"
+        )
+
+    def test_non_inline_node_commands_never_increment_or_deny(self):
+        session_id = "ses-js-nonprobe"
+        for _ in range(5):
+            for cmd in ("node script.js", "node --check foo.js", "node --test"):
+                self.assertEqual(self._shell(session_id, cmd)["decision"], "allow")
+        self.assertEqual(self._streak(session_id), 0)
+
     # --- periodic / post-compaction injection -----------------------------
 
     def test_pre_invocation_periodic_reinjection_and_compaction(self):

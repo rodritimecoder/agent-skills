@@ -33,7 +33,7 @@ const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as na
 - omnicli_search / tools.omnicli.search — find catalogued tools by intent.
 - omnicli_describe / tools.omnicli.describe — read one tool's contract before calling it.
 - omnicli_invoke / tools.omnicli.invoke — run one catalogued tool; output is capped at 8 KB.
-- omnicli_exec / tools.omnicli.exec — run a Python plan when a job needs two or more catalogue calls or heavy parsing.
+- omnicli_exec / tools.omnicli.exec — run a JavaScript Code Mode plan (\`node:vm\` + \`omnicli_tools\`) when a job needs two or more catalogue calls or heavy parsing; use \`omnicli spec --stubs\` for \`.d.ts\` signatures.
 Rules: discover with search, never by reading or grepping skill directories. Inside execute use tools.omnicli.* — the bare search() helper indexes tool names, not the omnicli catalogue. Ordinary code and file work in the current repo still uses the native tools.`;
 
 const NATIVE_READ_TOOLS = new Set(["read", "grep", "glob", "list", "ls"]);
@@ -143,7 +143,7 @@ export default {
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "omnicli",
-        description: "Workstation tool catalogue: search, describe, invoke, and run Python plans over 550+ local tools.",
+        description: "Workstation tool catalogue: search, describe, invoke, and run JavaScript Code Mode plans over 550+ local tools.",
       });
 
       editor.add(
@@ -221,11 +221,11 @@ export default {
       editor.add(
         def(
           "exec",
-          "Run a Python Code Mode plan over the catalogue in one turn. Use for multi-step jobs: import from omnicli_tools, print only the synthesis.",
+          "Run a JavaScript Code Mode plan over the catalogue in one turn (omnicli_tools globals / imports, console.log() only the synthesis, optional emitResult()).",
           {
             type: "object",
             properties: {
-              script: { type: "string", description: "Python plan source." },
+              script: { type: "string", description: "JavaScript plan source." },
               sandbox: { type: "string", enum: ["write", "strict", "none"], description: "Sandbox mode (default write)." },
               max_calls: { type: "integer", minimum: 0, maximum: 1000, description: "Tool-call budget (default 100)." },
               mem_limit: { type: "integer", minimum: 64, maximum: 8192, description: "Optional RLIMIT_AS in MiB." },
@@ -236,7 +236,7 @@ export default {
           },
           async ({ script, sandbox = "write", max_calls = 100, mem_limit, workspace }) => {
             await mkdir(PLANS_DIR, { recursive: true });
-            const file = join(PLANS_DIR, `plan-${Date.now()}-${process.pid}.py`);
+            const file = join(PLANS_DIR, `plan-${Date.now()}-${process.pid}.mjs`);
             await writeFile(file, String(script), "utf8");
             const argv = ["exec", file, "--sandbox", String(sandbox), "--max-calls", String(max_calls), "--json"];
             if (mem_limit) argv.push("--mem-limit", String(mem_limit));

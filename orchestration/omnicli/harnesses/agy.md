@@ -2,7 +2,7 @@
 
 > *"Antigravity is Google DeepMind's agentic CLI engine powering Gemini models with native Python workflow graphs."*
 
-This guide specifies how `omnicli` integrates with **Antigravity CLI (`agy`)** as a native tool execution engine and Python binding provider.
+This guide specifies how `omnicli` integrates with **Antigravity CLI (`agy`)** as a native tool execution engine and JavaScript binding provider.
 
 ---
 
@@ -55,42 +55,24 @@ Antigravity enforces Kem's Law: *"A skill is instructions the model may ignore; 
 
 ---
 
-## 🐍 Native Python Workflow Execution (`run_workflow`)
+## 🐍 Code Mode inside a workflow (`run_workflow`)
 
-`omnicli bindings` produces typed Python modules (`omnicli_tools.py`) directly importable by Antigravity workflow scripts.
+`run_workflow` is Python, so a workflow orchestrates and the tool work happens in
+one JavaScript plan: `omnicli bindings` generates `omnicli_tools.mjs` (plus
+`omnicli_tools.d.ts`) and a workflow step runs it through `omnicli exec`.
 
 ### Pattern: Multi-Agent Pipeline with omnicli Tools
 
 ```python
 # Workflow script passed to run_workflow
-from omnicli_tools import search, invoke, describe
-
 phase("discovery")
-log("Finding candidate tools for video transcription...")
-tools = search("transcribe lecture video", limit=3)
-
-phase("parallel_execution")
-# Process multiple items in parallel using Antigravity's native primitives
-items = [
-    {"url": "https://zoom.us/rec/session1", "dest": "notes/session1.md"},
-    {"url": "https://zoom.us/rec/session2", "dest": "notes/session2.md"}
-]
-
-async def transcribe_job(item):
-    # Call omnicli tool with strict output bounding
-    res = invoke(
-        "zoom-recorder/scripts/zoom_download",
-        "--url", item["url"],
-        "--omni-project", "status,markdown_path"
-    )
-    return res
-
-results = await parallel(items, transcribe_job)
+log("Downloading candidate lecture recordings...")
+run_command("omnicli exec plans/fetch_sessions.mjs --sandbox strict")
 
 phase("summary_agent")
 # Launch subagent to evaluate transcribed notes
 evaluator = agent(
-    prompt=f"Summarize transcribed lectures: {results}",
+    prompt="Summarize the transcribed lectures in notes/",
     role="Lecture Summarizer",
     workspace="inherit"
 )
@@ -98,29 +80,54 @@ summary = await evaluator
 log(f"Finished pipeline: {summary}")
 ```
 
+`plans/fetch_sessions.mjs` keeps the fan-out inside one turn:
+
+```js
+import { invoke, parallel, emitResult } from "omnicli_tools";
+
+const ITEMS = [
+  { url: "https://zoom.us/rec/session1", dest: "notes/session1" },
+  { url: "https://zoom.us/rec/session2", dest: "notes/session2" },
+];
+
+const results = await parallel(
+  ITEMS.map((item) => () => invoke(
+    "zoom-recorder/scripts/zoom_download",
+    { url: item.url, out_dir: item.dest, project: "status,markdown_path" },
+  )),
+  4,
+);
+
+emitResult(results.map((res) => ({ tool: res.tool, exit: res.exit_code, bytes: res.bytes })));
+```
+
 ---
 
-## 💻 Python Code Mode in Shell (`omnicli exec`)
+## 💻 JavaScript Code Mode in Shell (`omnicli exec`)
 
-When an agent needs to perform multi-step data exploration, inspect binary formats/archives (like `app.asar`), or chain multiple tool calls, **never run serial `python3 -c` commands**. Instead, run sandboxed Python Code Mode in a single turn via `omnicli exec`:
+When an agent needs to perform multi-step data exploration, inspect binary formats/archives (like `app.asar`), or chain multiple tool calls, **never run serial `python3 -c` commands**. Instead, run sandboxed JavaScript Code Mode in a single turn via `omnicli exec`:
 
 ```bash
-# Inline execution (zero file staging overhead)
-omnicli exec -c 'from omnicli_tools import search; print(search("audio", limit=2))'
+# Inline execution (zero file staging overhead; globals need no import)
+omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
 
 # Piped stdin execution
 cat << 'EOF' | omnicli exec -
-import json
-from omnicli_tools import search
-results = search("ocr text extraction", limit=3)
-print(json.dumps([r["id"] for r in results]))
+import { search } from "omnicli_tools";
+const results = await search("ocr text extraction", 3);
+console.log(results.map((r) => r.skill));
 EOF
 
 # File-based execution
-omnicli exec plan.py --sandbox write
+omnicli exec plan.mjs --sandbox write
 ```
 
-Inside `omnicli exec`, bubblewrap isolates the process, enforces `--max-calls` (default 100), optional memory limits (`--mem-limit`), and pre-loads typed `omnicli_tools` bindings.
+Inside `omnicli exec`, `node:vm` runs the plan under bubblewrap, enforces
+`--max-calls` (default 100), and exposes `search`, `spec`, `describe`, `invoke`,
+`output`, `parallel`, `emitResult` and one async function per catalogued tool as
+globals. Optional `--mem-limit MiB` caps Node's heap
+(`--max-old-space-size`) and sets a floored `RLIMIT_AS` of `max(MiB, 2048)` MiB.
+Python plans are retired: `omnicli exec plan.py` exits 2 with the migration text.
 
 ---
 

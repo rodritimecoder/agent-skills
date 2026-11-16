@@ -16,15 +16,18 @@ Boxxy operates with:
 
 ## 🛡️ Sandboxed Plan Execution (`omnicli exec`)
 
-Boxxy agents frequently generate Python multi-step scripts to execute complex tasks. `omnicli` provides bubblewrap-based sandboxing natively matched to Boxxy's containment requirements:
+Boxxy agents frequently generate JavaScript multi-step plans to execute complex tasks. `omnicli` provides bubblewrap-based sandboxing natively matched to Boxxy's containment requirements:
 
 ```bash
 # Execute plan in write-isolated bubblewrap container
-omnicli exec plan.py --sandbox write
+omnicli exec plan.mjs --sandbox write
 
 # Execute plan in strict isolation (network unshared, home masked, IPC locked)
-omnicli exec plan.py --sandbox strict
+omnicli exec plan.mjs --sandbox strict
 ```
+
+Plans run on `node:vm` inside that container, with generated `omnicli_tools.mjs`
+bindings (plus `omnicli_tools.d.ts` declarations) already on the global scope.
 
 ### Sandbox Guarantees
 
@@ -34,7 +37,7 @@ omnicli exec plan.py --sandbox strict
 | **`strict`** | Home masked; ephemeral `/tmp`; root `/` read-only | Unshared (offline) | Crossed via UNIX bridge socket (`bridge.sock`) |
 | **`none`** | Host environment | Normal | Direct |
 
-In `strict` mode, the plan holds zero credentials and cannot open network sockets; every tool call crosses an authenticated UNIX socket to the parent gateway.
+In `strict` mode, the plan holds zero credentials and cannot open network sockets; every tool call crosses an authenticated UNIX socket to the parent gateway. `--mem-limit MiB` caps Node's heap (`--max-old-space-size=<MiB>`) and sets a floored `RLIMIT_AS` of `max(MiB, 2048)` MiB.
 
 ---
 

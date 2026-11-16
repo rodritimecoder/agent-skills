@@ -32,8 +32,8 @@ ROUTING = (
     "- omnicli search \"<intent>\" — find catalogued tools by intent.\n"
     "- omnicli describe <tool_id> — read one tool's contract before calling it.\n"
     "- omnicli invoke <tool_id> — run one catalogued tool; output is capped at 8 KB.\n"
-    "- omnicli exec -c '<python code>' or omnicli exec plan.py — run Python Code Mode in sandbox with omnicli_tools bindings.\n"
-    "Rules: For multi-step exploration or data parsing (≥ 2 tool calls or parsing files/binaries), DO NOT probe incrementally with python3 -c / bash. Run a Code Mode script via omnicli exec in one turn.\n"
+    "- omnicli exec -c '<js code>' or omnicli exec plan.mjs — run JS Code Mode in sandboxed node:vm with typed omnicli_tools bindings (omnicli spec --stubs for .d.ts).\n"
+    "Rules: For multi-step exploration or data parsing (≥ 2 tool calls or parsing files/binaries), DO NOT probe incrementally with python3 -c / node -e / bash. Run a JS Code Mode script via omnicli exec in one turn.\n"
     "Discover with search, never by viewing or grepping skill directories. "
     "Ordinary code and file work in the current repo still uses native tools."
 )
@@ -69,6 +69,10 @@ OMNICLI_CMD = re.compile(
 INLINE_PY_PROBE = re.compile(
     r"(?:^|[;&|()]\s*|\b(?:sudo|command|exec|env)\s+)"
     r"(?:[^\s;&|()]*/)?python(?:3(?:\.\d+)?)?\s+-c(?:\s|$)"
+)
+INLINE_JS_PROBE = re.compile(
+    r"(?:^|[;&|()]\s*|\b(?:sudo|command|exec|env)\s+)"
+    r"(?:[^\s;&|()]*/)?node(?:js)?\s+(?:-e|--eval|-p|--print)(?:\s|$)"
 )
 
 
@@ -182,6 +186,12 @@ def _is_inline_py_probe(cmd: str) -> bool:
     if not isinstance(cmd, str) or not cmd:
         return False
     return bool(INLINE_PY_PROBE.search(cmd))
+
+
+def _is_inline_probe(cmd: str) -> bool:
+    if not isinstance(cmd, str) or not cmd:
+        return False
+    return bool(INLINE_PY_PROBE.search(cmd) or INLINE_JS_PROBE.search(cmd))
 
 
 def _log_route(row: dict) -> None:
@@ -378,7 +388,7 @@ def handle_pre_tool_use(payload: dict) -> dict:
 
     if tool_name in SHELL_TOOLS:
         cmd = args.get("CommandLine") or args.get("command") or ""
-        if _is_inline_py_probe(cmd):
+        if _is_inline_probe(cmd):
             streak = _read_py_streak(session_id)
             if streak >= 2:
                 _log_route({
@@ -391,9 +401,10 @@ def handle_pre_tool_use(payload: dict) -> dict:
                 return {
                     "decision": "deny",
                     "reason": (
-                        "Denied by agy-omnicli-route: detected 3+ consecutive `python3 -c` probes. "
+                        "Denied by agy-omnicli-route: detected 3+ consecutive inline probes "
+                        "(`python3 -c` / `node -e`). "
                         "Combine multi-step inspection or parsing into a single "
-                        "`omnicli exec -c '...'` or `omnicli exec - << 'EOF'` Code Mode script."
+                        "`omnicli exec -c '...'` or `omnicli exec - << 'EOF'` JS Code Mode script."
                     ),
                 }
             _write_py_streak(session_id, streak + 1)

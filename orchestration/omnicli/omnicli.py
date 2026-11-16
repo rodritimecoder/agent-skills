@@ -5,7 +5,7 @@ omnicli — the Uber OmniCLI: one late-binding gateway to every local tool.
 One gateway, two surfaces over one catalog:
 
   CLI        omnicli search | describe | invoke | status
-  Code Mode  omnicli exec plan.py  (typed SDK, sandboxed, one turn)
+  Code Mode  omnicli exec plan.mjs  (typed JS SDK, sandboxed node:vm, one turn)
 
 The catalog is a BM25 (SQLite FTS5) index over the full body of every skill,
 with hand-curated aliases in a separately weighted column. An agent discovers
@@ -28,7 +28,6 @@ import shutil
 import statistics
 import subprocess
 import sys
-import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -50,11 +49,13 @@ try:
     from catalog import argspec as argspec_mod
     from catalog import bindings as bindings_mod
     from catalog import bridge as bridge_mod
+    from catalog import exec_runner as exec_runner_mod
     from catalog import harness as harness_mod
     from catalog import resolve as resolve_mod
     from catalog import builder, health, invoke, policy, registry, search, vectors  # noqa: E402
 except ImportError:  # pragma: no cover - degraded install
     aliases_mod = bindings_mod = bridge_mod = argspec_mod = harness_mod = None
+    exec_runner_mod = None
     builder = registry = search = health = invoke = policy = None  # type: ignore
 
 # The response cap. An agent must never be able to pull an unbounded payload
@@ -125,30 +126,6 @@ def _parse_since(spec: str) -> float:
         return datetime.datetime.fromisoformat(raw).timestamp()
     except ValueError:
         sys.exit(f"❌ Error: --since wants 30m, 24h, 7d, 2w or an ISO date, got {spec!r}")
-
-
-def _merge_exec_trace(trace: Path, start: int) -> None:
-    """Copy the rows a plan wrote into the per-user usage trace.
-
-    The sandbox has `/` read-only, so the child can only write inside its
-    workspace. The parent process is unsandboxed and owns the merge, which also
-    keeps Code Mode rows from being counted twice.
-    """
-    try:
-        lines = trace.read_text(encoding="utf-8", errors="ignore").splitlines()
-    except OSError:
-        return
-    fresh = [line for line in lines[start:] if line.strip()]
-    if not fresh:
-        return
-    target = _user_trace_path()
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with open(target, "a", encoding="utf-8") as fh:
-            for line in fresh:
-                fh.write(line.rstrip("\n") + "\n")
-    except OSError:
-        pass
 
 
 def _load_trace(path: Path) -> list:
@@ -1388,18 +1365,6 @@ def cmd_questions(skill_id: str | None = None, build: str | None = None,
 # exec / bindings
 # --------------------------------------------------------------------------
 
-def _bwrap_works() -> bool:
-    exe = shutil.which("bwrap")
-    if not exe:
-        return False
-    try:
-        probe = subprocess.run([exe, "--ro-bind", "/", "/", "true"],
-                               capture_output=True, timeout=5)
-        return probe.returncode == 0
-    except Exception:
-        return False
-
-
 def _clip(text: str, max_bytes: int, hint: str) -> str:
     data = text.encode("utf-8", errors="replace")
     if len(data) <= max_bytes:
@@ -1443,30 +1408,34 @@ def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None
 
     sigs = argspec_mod.signatures(rows)
     if as_json:
-        payload = [{
-            "id": s.id,
-            "fn": s.func,
-            "skill": s.skill,
-            "kind": s.kind,
-            "summary": s.summary[:200],
-            "signature": s.line(),
-            "required": [p.name for p in s.ordered_positionals() if p.required]
-                        + [p.name for p in s.params if p.required],
-            "params": {p.name: {"flag": p.flag, "type": p.kind if p.kind != "choices" else p.choices}
-                       for p in s.params},
-            "positionals": [p.name for p in s.ordered_positionals()],
-            "commands": s.commands[:40],
-            "enabled": bool(rows[i]["enabled"]),
-        } for i, s in enumerate(sigs)]
+        payload = []
+        for i, s in enumerate(sigs):
+            contract = rows[i]["contract"]
+            if isinstance(contract, str):
+                contract = json.loads(contract or "{}")
+            payload.append({
+                "id": s.id,
+                "fn": s.func,
+                "skill": s.skill,
+                "kind": s.kind,
+                "summary": s.summary[:200],
+                "signature": s.ts_sig(),
+                "inputSchema": contract.get("inputSchema"),
+                "required": [p.name for p in s.ordered_positionals() if p.required]
+                            + [p.name for p in s.params if p.required],
+                "params": {p.name: {"flag": p.flag, "type": p.kind if p.kind != "choices" else p.choices}
+                           for p in s.params},
+                "positionals": [p.name for p in s.ordered_positionals()],
+                "commands": s.commands[:40],
+                "enabled": bool(rows[i]["enabled"]),
+            })
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
 
     lines = [f"🔎 [omnicli spec] {len(sigs)} of {con.execute('SELECT COUNT(*) FROM tools').fetchone()[0]} tools"]
     for sig in sigs:
         if stubs:
-            lines.append(f"  {sig.line()}")
-            if sig.summary:
-                lines.append(f"      # {sig.summary[:110]}")
+            lines.append("  " + argspec_mod.ts_stub(sig).replace("\n", "\n  "))
         else:
             lines.append(f"  {sig.id:<58} {sig.kind:<10} {sig.func}")
     text = _clip("\n".join(lines) + "\n", max_bytes,
@@ -1491,7 +1460,8 @@ def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
         target = bindings_mod.ensure(con, fingerprint, target)
     payload = {
         "dir": str(target),
-        "module": str(target / "omnicli_tools.py"),
+        "module": str(target / "omnicli_tools.mjs"),
+        "types": str(target / "omnicli_tools.d.ts"),
         "tools": built.get("tools"),
         "skills": built.get("skills"),
         "fingerprint": fingerprint,
@@ -1499,222 +1469,23 @@ def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
     if as_json:
         print(json.dumps(payload, indent=2))
     else:
-        print(f"🐍 Bindings written to {payload['module']}")
+        print(f"⚡ Bindings written to {payload['module']}")
+        print(f"   Types: {payload['types']}")
         print(f"   {payload['tools']} tools · {payload['skills']} skills · fingerprint {fingerprint[:12]}")
 
 
 def cmd_exec(script: str | None = None, code: str | None = None,
              workspace: str | None = None, out_path: str | None = None,
              sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
-             max_calls: int = 100, mem_limit: int | None = None):
-    con = _require_catalog()
-    if builder is None or bindings_mod is None:
+             max_calls: int = 100, mem_limit: int | None = None,
+             lang: str | None = None):
+    """Run one JavaScript plan inside `node:vm`, sandboxed by default."""
+    if exec_runner_mod is None:
         sys.exit("❌ Error: omnicli catalog package not importable.")
-    if sandbox not in ("write", "strict", "none"):
-        sys.exit(f"❌ Error: unknown sandbox mode {sandbox!r}")
-    if max_calls < 0:
-        sys.exit(f"❌ Error: --max-calls must be 0 (unlimited) or positive, not {max_calls}")
-    if mem_limit is not None and mem_limit <= 0:
-        sys.exit(f"❌ Error: --mem-limit must be a positive number of MiB, not {mem_limit}")
-    if mem_limit is not None and sandbox == "none":
-        sys.exit("❌ Error: --mem-limit needs a sandbox; --sandbox none runs without an rlimit")
-
-    if not script and code is None:
-        sys.exit("❌ Error: exec requires a plan script, -c/--code, or '-' from stdin.")
-    if script and code is not None:
-        sys.exit("❌ Error: cannot pass both a plan script and -c/--code.")
-
-    inline_code: str | None = None
-    if code is not None:
-        inline_code = code
-    elif script == "-":
-        inline_code = sys.stdin.read()
-
-    is_inline = inline_code is not None
-
-    work = Path(workspace).resolve() if workspace else (
-        Path.cwd().resolve() if is_inline else Path(script).resolve().parent
-    )
-    if not work.is_dir():
-        sys.exit(f"❌ Error: workspace {work} is not a directory")
-
-    script_path: Path
-    if is_inline:
-        temp_plan = tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".py",
-            prefix=".omnicli_inline_plan_",
-            dir=str(work),
-            delete=False,
-            encoding="utf-8",
-        )
-        temp_plan.write(inline_code)
-        temp_plan.flush()
-        temp_plan.close()
-        script_path = Path(temp_plan.name).resolve()
-    else:
-        script_path = Path(script).resolve()
-        if not script_path.is_file():
-            sys.exit(f"❌ Error: no plan script at {script_path}")
-
-    built = builder.ensure_built(con, progress=False)
-    fingerprint = builder.meta_get(con, "fingerprint", "")
-    bindings_dir = bindings_mod.ensure(con, fingerprint)
-
-    trace = work / ".omnicli_trace.jsonl"
-    seen = 0
-    if trace.is_file():
-        # One workspace keeps one trace log; count only rows this run appends.
-        seen = sum(1 for line in trace.read_text(encoding="utf-8").splitlines() if line.strip())
-    result_file = work / ".omnicli_result.json"
-    if result_file.exists():
-        result_file.unlink()
-
-    env = os.environ.copy()
-    env["OMNICLI_BIN"] = shutil.which("omnicli") or str(SCRIPT_PATH)
-    env["OMNICLI_TRACE"] = str(trace)
-    env["OMNICLI_RESULT"] = str(result_file)
-    env["OMNICLI_MAX_CALLS"] = str(max_calls)
-    env["OMNICLI_TRUST_INDEX"] = "1"
-    env["PYTHONUNBUFFERED"] = "1"
-    env["PYTHONPATH"] = str(bindings_dir) + (
-        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
-
-    cmd = [sys.executable, str(script_path)]
-    runtime: Path | None = None
-    serving = None
-    bridge_server = None
-    sandboxed = False
-
-    if sandbox != "none":
-        if not _bwrap_works():
-            sys.exit("❌ Error: bubblewrap is not available; pass --sandbox none to run unsandboxed.")
-        sandboxed = True
-        base = [
-            "bwrap", "--die-with-parent", "--unshare-pid", "--unshare-ipc",
-            "--unshare-uts", "--ro-bind", "/", "/", "--tmpfs", "/tmp",
-            "--dev", "/dev", "--proc", "/proc",
-        ]
-        tail: list[str] = []
-
-        if sandbox == "strict":
-            if bridge_mod is None:
-                sys.exit("❌ Error: omnicli catalog package not importable.")
-            runtime = Path(tempfile.mkdtemp(prefix="omnicli-strict-"))
-            shim = bridge_mod.write_shim(runtime / "bin")
-            shim_dir = shim.parent
-            serving = bridge_mod.Serving(runtime / "bridge.sock", SCRIPT_PATH, timeout)
-            bridge_server = serving.__enter__()
-            base += [
-                "--unshare-net",
-                "--tmpfs", str(Path.home()),
-                "--bind", str(work), str(work),
-                "--dir", "/tmp/omnicli",
-                "--ro-bind", str(bindings_dir), "/tmp/omnicli/bindings",
-                "--ro-bind", str(shim_dir), "/tmp/omnicli/bin",
-                "--bind", str(runtime), "/tmp/omnicli/bridge",
-            ]
-            tail = [
-                "--setenv", "OMNICLI_BRIDGE", "/tmp/omnicli/bridge/bridge.sock",
-                "--setenv", "OMNICLI_BIN", "/tmp/omnicli/bin/omnicli",
-                "--setenv", "PYTHONPATH", "/tmp/omnicli/bindings",
-            ]
-        cmd = base + [
-            "--bind", str(work), str(work), "--chdir", str(work),
-            "--setenv", "HOME", str(work),
-        ] + tail + [sys.executable, str(script_path)]
-
-        if mem_limit is not None:
-            if not shutil.which("prlimit"):
-                sys.exit("❌ Error: --mem-limit needs prlimit (util-linux) to set RLIMIT_AS")
-            # bwrap has no --rlimit-* option, so the cap is set on bwrap itself;
-            # the plan and every process it spawns inherit it. Soft = hard, so the
-            # plan cannot raise its own ceiling back up.
-            cap = mem_limit * 1024 * 1024
-            cmd = ["prlimit", f"--as={cap}:{cap}", "--"] + cmd
-
-    started = time.time()
-    if os.environ.get("OMNICLI_EXEC_DEBUG"):
-        print(" ".join(cmd), file=sys.stderr)
-    try:
-        proc = subprocess.run(cmd, cwd=str(work), env=env, capture_output=True,
-                              text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        sys.exit(f"❌ Error: plan exceeded {timeout:g}s")
-    finally:
-        if is_inline and script_path.is_file():
-            script_path.unlink(missing_ok=True)
-        if serving is not None:
-            serving.__exit__()
-        if runtime is not None:
-            shutil.rmtree(runtime, ignore_errors=True)
-    elapsed = time.time() - started
-
-    stderr_text = proc.stderr
-    if proc.returncode != 0 and mem_limit is not None and (
-        "MemoryError" in proc.stderr or "can't start new thread" in proc.stderr
-    ):
-        stderr_text += (
-            f"\n[omnicli] this plan ran under --mem-limit {mem_limit} MiB (RLIMIT_AS). "
-            "A MemoryError or thread-creation failure above is the cap, not the plan's logic.\n"
-        )
-
-    calls = 0
-    if trace.is_file():
-        rows = [line for line in trace.read_text(encoding="utf-8").splitlines() if line.strip()]
-        for line in rows[seen:]:
-            try:
-                kind = json.loads(line).get("kind")
-            except (ValueError, AttributeError):
-                kind = None
-            if kind in (None, "call"):
-                calls += 1
-
-    result = None
-    if result_file.is_file():
-        try:
-            result = json.loads(result_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            result = None
-        result_file.unlink(missing_ok=True)
-
-    if out_path:
-        target = Path(out_path).resolve()
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(proc.stdout, encoding="utf-8")
-
-    bridge_calls = getattr(bridge_server, "calls", 0)
-    bridge_denied = getattr(bridge_server, "denied", [])
-    if as_json:
-        plan_desc = "<stdin>" if script == "-" else ("<inline>" if code is not None else str(script_path))
-        print(json.dumps({
-            "plan": plan_desc,
-            "sandboxed": sandboxed,
-            "sandbox": sandbox,
-            "mem_limit": mem_limit,
-            "exit_code": proc.returncode,
-            "seconds": round(elapsed, 3),
-            "tool_calls": calls,
-            "bridge_calls": bridge_calls,
-            "bridge_denied": bridge_denied,
-            "tools": built.get("tools"),
-            "result": result,
-            "stdout": proc.stdout,
-            "stderr": stderr_text[-2000:],
-        }, indent=2))
-        if proc.returncode != 0 and stderr_text:
-            sys.stderr.write(stderr_text if stderr_text.endswith("\n") else stderr_text + "\n")
-    else:
-        sys.stdout.write(proc.stdout)
-        if stderr_text:
-            sys.stderr.write(stderr_text if stderr_text.endswith("\n") else stderr_text + "\n")
-        detail = f"sandbox={sandbox}"
-        if bridge_calls:
-            detail += f" · bridge={bridge_calls} call(s)"
-        print(f"🐍 [exec] {calls} tool call(s) in one turn · {elapsed:.2f}s · {detail}",
-              file=sys.stderr)
-    _merge_exec_trace(trace, seen)
-    sys.exit(proc.returncode)
+    exec_runner_mod.run(script=script, code=code, workspace=workspace,
+                        out_path=out_path, sandbox=sandbox, timeout=timeout,
+                        as_json=as_json, max_calls=max_calls, mem_limit=mem_limit,
+                        lang=lang)
 
 
 # --------------------------------------------------------------------------
@@ -1947,24 +1718,26 @@ def main():
     p.add_argument("--grep", default=None, help="Case-insensitive regex over id and summary")
     p.add_argument("--kind", default=None, choices=["script", "cli", "subcommand", "endpoint"])
     p.add_argument("--enabled", action="store_true", help="Only tools that passed the gate")
-    p.add_argument("--stubs", action="store_true", help="Print annotated signatures instead of ids")
+    p.add_argument("--stubs", action="store_true", help="Print TypeScript signatures instead of ids")
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--omni-max-bytes", type=int, metavar="N", default=DEFAULT_MAX_BYTES)
     p.add_argument("--json", action="store_true")
 
-    p = sub.add_parser("bindings", help="Write the Python bindings used by `omnicli exec`")
+    p = sub.add_parser("bindings", help="Write the JS bindings (`omnicli_tools.mjs` + `.d.ts`) that `omnicli exec` loads")
     p.add_argument("--out", default=None, help="Output directory (default ~/.local/share/omnicli/bindings)")
-    p.add_argument("--stubs", action="store_true", help="Print the generated signatures instead of writing")
+    p.add_argument("--stubs", action="store_true", help="Print the generated TypeScript signatures instead of writing")
     p.add_argument("--skill", default=None, help="With --stubs: only this skill")
     p.add_argument("--grep", default=None, help="With --stubs: only matching ids or summaries")
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("exec", aliases=["plan"],
-                       help="Run one plan script with tool bindings, in a sandbox")
+                       help="Run one JavaScript plan with tool bindings, in a sandbox")
     p.add_argument("script", nargs="?", default=None,
-                   help="Path to the Python plan, or '-' to read from stdin")
+                   help="Path to the plan (.mjs/.js), or '-' to read from stdin")
     p.add_argument("-c", "--code", default=None,
-                   help="Inline Python code string to execute as a plan")
+                   help="Inline JavaScript to execute as a plan")
+    p.add_argument("--lang", default=None,
+                   help="Plan language; JavaScript (js) only, Python plans are retired")
     p.add_argument("--workspace", default=None, help="Writable directory (default: the script's folder or cwd)")
     p.add_argument("--out", default=None, help="Also write the plan's stdout to this file")
     p.add_argument("--sandbox", choices=["write", "strict", "none"], default="write",
@@ -1976,8 +1749,9 @@ def main():
     p.add_argument("--max-calls", type=int, default=100, metavar="N",
                    help="Tool calls one plan may make; 0 = unlimited (default 100)")
     p.add_argument("--mem-limit", type=int, default=None, metavar="MiB",
-                   help="Address-space cap in MiB (RLIMIT_AS) on the plan process and "
-                        "every child it spawns; unset = no cap, needs a sandbox")
+                   help="JS heap cap in MiB (node --max-old-space-size) plus an "
+                        "RLIMIT_AS floor of 2048 MiB on the plan process; "
+                        "unset = no cap, needs a sandbox")
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("status", aliases=["health"],
@@ -2060,7 +1834,8 @@ def main():
         mode = "none" if args.no_sandbox else args.sandbox
         cmd_exec(script=args.script, code=args.code, workspace=args.workspace,
                  out_path=args.out, sandbox=mode, timeout=args.timeout,
-                 as_json=args.json, max_calls=args.max_calls, mem_limit=args.mem_limit)
+                 as_json=args.json, max_calls=args.max_calls,
+                 mem_limit=args.mem_limit, lang=args.lang)
     elif args.action in ("status", "health"):
         cmd_status(as_json=args.json)
     elif args.action == "usage":

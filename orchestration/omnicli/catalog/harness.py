@@ -66,10 +66,10 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
         },
         "config_snippet": (
             "# 1) Wire agy lifecycle hook in ~/.gemini/config/hooks.json under 'omnicli-route'\n"
-            "# 2) In Antigravity run_workflow or subagent script:\n"
-            "from omnicli_tools import search, invoke, describe, spec\n\n"
-            "tools = search(\"your task intent\", limit=3)\n"
-            "result = invoke(tools[0][\"id\"], [\"--help\"])\n"
+            "# 2) Inside an Antigravity workflow, use JavaScript Code Mode:\n"
+            "omnicli exec -c 'const rows = await search(\"your task intent\", 3); console.log(rows);'\n"
+            "# ...or a plan file importing the generated JS bindings:\n"
+            "omnicli exec plan.mjs\n"
         ),
     },
     "opencode": {
@@ -122,7 +122,7 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
             "BOXXY_HARNESS": ".+",
             "BOXXY_ROOT": ".+",
         },
-        "config_snippet": "# Sandboxed plan execution in Boxxy:\nomnicli exec plan.py --sandbox strict\n# Real-time telemetry check:\nomnicli status --json\n",
+        "config_snippet": "# Sandboxed plan execution in Boxxy:\nomnicli exec plan.mjs --sandbox strict\n# Real-time telemetry check:\nomnicli status --json\n",
     },
 }
 
@@ -301,38 +301,50 @@ def verify_harness(query: str) -> dict[str, Any]:
 
     # Check 5: Protocol-specific verification
     if h_id == "t3-code":
-        # Verify Code Mode SDK bindings exist and can import
-        bindings_py = Path(os.path.expanduser("~/.local/share/omnicli/bindings/omnicli_tools.py"))
-        has_bindings = bindings_py.is_file() and bindings_py.stat().st_size > 1000
+        # Verify the generated JavaScript Code Mode bindings and their types
+        b_dir = Path(os.path.expanduser("~/.local/share/omnicli/bindings"))
+        module_path = b_dir / "omnicli_tools.mjs"
+        types_path = b_dir / "omnicli_tools.d.ts"
+        module_bytes = module_path.stat().st_size if module_path.is_file() else 0
+        types_bytes = types_path.stat().st_size if types_path.is_file() else 0
+        has_bindings = module_bytes > 1000 and types_bytes > 500
         checks.append({
             "check": "code_mode_sdk_bindings",
             "passed": has_bindings,
-            "detail": f"Bindings valid at {bindings_py}" if has_bindings else "Bindings not found or empty",
+            "detail": (
+                f"omnicli_tools.mjs={module_bytes}B omnicli_tools.d.ts={types_bytes}B at {b_dir}"
+                if has_bindings else
+                f"Bindings missing, empty, or stubbed: omnicli_tools.mjs={module_bytes}B "
+                f"omnicli_tools.d.ts={types_bytes}B at {b_dir}"
+            ),
         })
         checks.append(_native_tool_plugin_check())
 
     elif h_id == "agy":
-        # Verify Python bindings generation
+        # Verify JavaScript bindings generation (module + TypeScript declarations)
         try:
             from . import bindings, builder
             con = builder.connect()
             try:
                 fingerprint = builder.meta_get(con, "fingerprint", "")
                 b_dir = bindings.ensure(con, fingerprint)
-                module_path = b_dir / "omnicli_tools.py"
             finally:
                 con.close()
-            checks.append({
-                "check": "python_bindings_sdk",
-                "passed": module_path.is_file(),
-                "detail": f"Bindings valid at {module_path}",
-            })
+            module_path = b_dir / "omnicli_tools.mjs"
+            types_path = b_dir / "omnicli_tools.d.ts"
+            passed = module_path.is_file() and types_path.is_file()
+            detail = (
+                f"omnicli_tools.mjs={module_path.is_file()} "
+                f"omnicli_tools.d.ts={types_path.is_file()} at {b_dir}"
+            )
         except Exception as exc:
-            checks.append({
-                "check": "python_bindings_sdk",
-                "passed": False,
-                "detail": f"Bindings check failed: {exc}",
-            })
+            passed = False
+            detail = f"JS bindings check failed: {exc}"
+        checks.append({
+            "check": "js_bindings_sdk",
+            "passed": passed,
+            "detail": detail,
+        })
         checks.append(_agy_route_hook_check())
 
     elif h_id == "opencode":

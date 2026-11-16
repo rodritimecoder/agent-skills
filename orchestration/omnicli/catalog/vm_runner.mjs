@@ -1,0 +1,161 @@
+// omnicli Code Mode runner: one plan, one vm context, every tool call in memory.
+// Invoked as: node --experimental-vm-modules vm_runner.mjs <script_path>
+import fs from "node:fs";
+import module from "node:module";
+import path from "node:path";
+import vm from "node:vm";
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptPath = path.resolve(process.argv[2] || "");
+if (!process.argv[2]) {
+  process.stderr.write("omnicli: vm_runner needs a script path\n");
+  process.exit(2);
+}
+
+const bindingsDir = process.env.OMNICLI_BINDINGS_DIR || "";
+const omnicliTools = await import(
+  pathToFileURL(path.join(bindingsDir, "omnicli_tools.mjs")).href
+);
+
+let source = fs.readFileSync(scriptPath, "utf8");
+if (source.startsWith("#!")) {
+  // Keep the shebang's line so stack traces still point at the real line.
+  const newline = source.indexOf("\n");
+  source = newline === -1 ? "\n" : "\n" + source.slice(newline + 1);
+}
+
+const baseRequire = createRequire(scriptPath);
+const require = (specifier) =>
+  specifier === "omnicli_tools" || specifier === "omnicli_tools.mjs"
+    ? omnicliTools
+    : baseRequire(specifier);
+require.resolve = baseRequire.resolve;
+require.cache = baseRequire.cache;
+require.main = baseRequire.main;
+
+const sandbox = {
+  ...omnicliTools,
+  omnicli_tools: omnicliTools,
+  console,
+  Buffer,
+  URL,
+  URLSearchParams,
+  TextEncoder,
+  TextDecoder,
+  AbortController,
+  AbortSignal,
+  setTimeout,
+  clearTimeout,
+  setInterval,
+  clearInterval,
+  queueMicrotask,
+  structuredClone,
+  fetch,
+  process,
+  require,
+  __filename: scriptPath,
+  __dirname: path.dirname(scriptPath),
+};
+const context = vm.createContext(sandbox);
+sandbox.globalThis = sandbox;
+
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+function synthetic(identifier, namespace) {
+  const names = Object.keys(namespace).filter((name) => IDENTIFIER.test(name));
+  return new vm.SyntheticModule(
+    names,
+    function () {
+      for (const name of names) this.setExport(name, namespace[name]);
+    },
+    { identifier, context },
+  );
+}
+
+const bindingsModule = synthetic("omnicli_tools", omnicliTools);
+const files = new Map([[pathToFileURL(scriptPath).href, null]]);
+const builtins = new Set(module.builtinModules);
+
+function resolveFile(specifier, referencing) {
+  if (specifier.startsWith("file://")) return specifier;
+  const from = referencing && String(referencing.identifier).startsWith("file:")
+    ? path.dirname(fileURLToPath(referencing.identifier))
+    : path.dirname(scriptPath);
+  const target = path.resolve(from, specifier);
+  if (!fs.existsSync(target)) {
+    for (const ext of [".mjs", ".js"]) {
+      if (fs.existsSync(target + ext)) return pathToFileURL(target + ext).href;
+    }
+  }
+  return pathToFileURL(target).href;
+}
+
+async function ready(mod) {
+  if (mod.status === "unlinked") await mod.link(() => undefined);
+  return mod;
+}
+
+async function load(specifier, referencing) {
+  if (specifier === "omnicli_tools" || specifier === "omnicli_tools.mjs") {
+    return ready(bindingsModule);
+  }
+  if (specifier.startsWith("node:") || builtins.has(specifier)) {
+    return ready(synthetic(specifier, await import(specifier)));
+  }
+  const url = resolveFile(specifier, referencing);
+  if (files.get(url)) return ready(files.get(url));
+  const filename = fileURLToPath(url);
+  const mod = new vm.SourceTextModule(fs.readFileSync(filename, "utf8"), {
+    identifier: url,
+    context,
+    initializeImportMeta(meta) {
+      meta.url = url;
+      meta.filename = filename;
+      meta.dirname = path.dirname(filename);
+    },
+    importModuleDynamically: dynamicImport,
+  });
+  files.set(url, mod);
+  await mod.link(linker);
+  return mod;
+}
+
+function linker(specifier, referencing) {
+  return load(specifier, referencing);
+}
+
+async function dynamicImport(specifier, referencing) {
+  return ready(await load(specifier, referencing));
+}
+
+const ESM_IMPORT = /^[ \t]*import[\s"']/m; // static import, never `import(` or `import.meta`
+const ESM_EXPORT = /^[ \t]*export[ \t]+(?:default|const|let|var|async|function|class|\{|\*)/m;
+
+try {
+  if (ESM_IMPORT.test(source) || ESM_EXPORT.test(source)) {
+    const mod = new vm.SourceTextModule(source, {
+      identifier: pathToFileURL(scriptPath).href,
+      context,
+      initializeImportMeta(meta) {
+        meta.url = pathToFileURL(scriptPath).href;
+        meta.filename = scriptPath;
+        meta.dirname = path.dirname(scriptPath);
+      },
+      importModuleDynamically: dynamicImport,
+    });
+    files.set(pathToFileURL(scriptPath).href, mod);
+    await mod.link(linker);
+    await mod.evaluate();
+  } else {
+    const wrapped = '(async () => {\n"use strict";\n' + source + "\n})()";
+    await vm.runInContext(wrapped, context, {
+      filename: scriptPath,
+      lineOffset: -2,
+    });
+  }
+} catch (err) {
+  const text = (err && (err.stack || err.message)) || String(err);
+  process.stderr.write(text.endsWith("\n") ? text : text + "\n");
+  process.exitCode = err && typeof err.exitCode === "number" ? err.exitCode : 1;
+}
