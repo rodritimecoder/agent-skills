@@ -1386,31 +1386,30 @@ def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None
     if argspec_mod is None:
         sys.exit("❌ Error: omnicli catalog package not importable.")
 
-    sql = "SELECT id, skill, kind, summary, contract, enabled FROM tools"
-    clauses, params = [], []
-    if skill:
-        clauses.append("skill = ?")
-        params.append(skill)
-    if kind:
-        clauses.append("kind = ?")
-        params.append(kind)
-    if only_enabled:
-        clauses.append("enabled = 1")
-    if clauses:
-        sql += " WHERE " + " AND ".join(clauses)
-    rows = con.execute(sql + " ORDER BY id", params).fetchall()
+    all_rows = con.execute(
+        "SELECT id, skill, kind, summary, contract, enabled FROM tools ORDER BY id"
+    ).fetchall()
+    all_sigs = argspec_mod.signatures(all_rows)
 
     pattern = re.compile(grep, re.IGNORECASE) if grep else None
-    if pattern:
-        rows = [r for r in rows if pattern.search(r["id"]) or pattern.search(r["summary"] or "")]
+    pairs = []
+    for row, sig in zip(all_rows, all_sigs):
+        if skill and sig.skill != skill:
+            continue
+        if kind and sig.kind != kind:
+            continue
+        if only_enabled and not row["enabled"]:
+            continue
+        if pattern and not (pattern.search(sig.id) or pattern.search(sig.summary or "")):
+            continue
+        pairs.append((row, sig))
     if limit:
-        rows = rows[: int(limit)]
+        pairs = pairs[: int(limit)]
 
-    sigs = argspec_mod.signatures(rows)
     if as_json:
         payload = []
-        for i, s in enumerate(sigs):
-            contract = rows[i]["contract"]
+        for row, s in pairs:
+            contract = row["contract"]
             if isinstance(contract, str):
                 contract = json.loads(contract or "{}")
             payload.append({
@@ -1427,13 +1426,13 @@ def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None
                            for p in s.params},
                 "positionals": [p.name for p in s.ordered_positionals()],
                 "commands": s.commands[:40],
-                "enabled": bool(rows[i]["enabled"]),
+                "enabled": bool(row["enabled"]),
             })
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
 
-    lines = [f"🔎 [omnicli spec] {len(sigs)} of {con.execute('SELECT COUNT(*) FROM tools').fetchone()[0]} tools"]
-    for sig in sigs:
+    lines = [f"🔎 [omnicli spec] {len(pairs)} of {len(all_rows)} tools"]
+    for _row, sig in pairs:
         if stubs:
             lines.append("  " + argspec_mod.ts_stub(sig).replace("\n", "\n  "))
         else:

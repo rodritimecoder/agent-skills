@@ -116,6 +116,18 @@ console.log(JSON.stringify(seen));
         for name in ("unknown", "missing", "enum", "type"):
             self.assertEqual(payload[name], "TypeError", f"{name}: {payload[name]}")
 
+    def test_filtered_spec_stubs_match_bindings_disambiguation(self):
+        # Filtering by --grep must not erase earlier-alphabetical collisions
+        # like `design-pack/...:check`, or `spec --stubs` prints `check(...)`
+        # while the module exports `guard_hooks_check(...)`.
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "spec", "--grep", "guard-hooks/scripts/guard:check", "--stubs"],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("declare function guard_hooks_check(", proc.stdout)
+        self.assertNotIn("declare function check(", proc.stdout)
+
     def _probe(self, source: str) -> subprocess.CompletedProcess:
         proc = _node_probe(self.out, source)
         self.assertEqual(proc.returncode, 0, proc.stderr)
