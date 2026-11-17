@@ -45,5 +45,27 @@ class TestDecisionModelGuard(unittest.TestCase):
         self.assertIn("expected h2o-lightning-4b", str(error.exception))
 
 
+class TestBoxEndpointPort(unittest.TestCase):
+    """Box transport has one name: CLIP_BOX_PORT for the shim, DECISION_PORT otherwise."""
+
+    def test_explicit_clip_box_port_always_wins(self):
+        with patch.dict(os.environ, {"CLIP_BOX_PORT": "8761"}):
+            self.assertEqual(decision_model.box_endpoint_port("h2o-lightning-4b"), 8761)
+
+    def test_box_follows_a_box_capable_decision_slot(self):
+        environment = {k: v for k, v in os.environ.items() if k != "CLIP_BOX_PORT"}
+        with patch.dict(os.environ, environment, clear=True), \
+             patch.object(decision_model.urllib.request, "urlopen",
+                          return_value=Response("/models/h2o-lightning-4b-Q4_K_M.gguf")):
+            self.assertEqual(decision_model.box_endpoint_port(), decision_model.DECISION_PORT)
+
+    def test_standalone_shim_is_the_fallback_on_a_non_box_slot(self):
+        environment = {k: v for k, v in os.environ.items() if k != "CLIP_BOX_PORT"}
+        with patch.dict(os.environ, environment, clear=True), \
+             patch.object(decision_model.urllib.request, "urlopen",
+                          return_value=Response("/models/vllm-d3-nano-Q4_K_M.gguf")):
+            self.assertEqual(decision_model.box_endpoint_port(), 8761)
+
+
 if __name__ == "__main__":
     unittest.main()

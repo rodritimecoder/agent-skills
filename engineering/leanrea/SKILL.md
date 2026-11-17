@@ -1,6 +1,14 @@
 ---
 name: leanrea
-description: Reverse engineer shipped software with plain local CLI tools, no MCP needed. Covers Electron/JS bundles, native Mach-O/ELF/PE, Go/Rust/.NET/Flutter/WASM binaries, APKs, SQLite, pcaps, firmware and websites. Use to explain how a feature works, extract versions and dependencies, compare builds, or rebuild a feature — including a closed-source, proprietary, packaged or commercial desktop app whose source you do not have (unpacking app.asar, decompiling, extracting strings, reading an embedded SQLite database, inspecting a network capture). Not a browser test harness; use verification or playwright to check a running page.
+description: >-
+  Use this skill when you must reverse engineer shipped software with plain local CLI tools,
+  no MCP and no source — the leanrea fast path: Electron/JS bundles, native Mach-O/ELF/PE, Go,
+  Rust, .NET, Flutter, WASM, Android APKs, SQLite, pcaps/HAR, firmware images, and websites. Use it
+  to explain how a feature works, extract versions and dependencies, compare builds, or
+  rebuild a feature in a closed-source, proprietary, packaged, or commercial desktop app whose
+  source you do not have: unpacking app.asar, decompiling, extracting strings, reading an
+  embedded SQLite database, inspecting a network capture. Not a browser test harness; use
+  verification or playwright to check a running page.
 ---
 
 # leanrea: fast path

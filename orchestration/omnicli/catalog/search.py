@@ -63,6 +63,27 @@ STOPWORDS = {
     "should", "so", "some", "that", "the", "their", "then", "there", "these",
     "they", "this", "to", "tool", "use", "want", "was", "we", "what", "when",
     "where", "which", "who", "why", "will", "with", "you", "your",
+
+    # Conversational filler. A routing query is a sentence, and these words
+    # carry no domain signal — but IDF does not know that. "sure" is rare in a
+    # corpus of technical docs, so a body line reading "make sure doctor
+    # reports…" scored 3.2 and out-voted a curated alias for "make sure no
+    # secrets get committed". Dropping the filler is what stops incidental
+    # English from beating a deliberate routing signal. Measured on both sets:
+    # paraphrase top-1 21 -> 26, golden 57 -> 58, top-3 unchanged on both.
+    "really", "actually", "just", "going", "think", "thinking", "thing",
+    "things", "stuff", "kind", "sort", "pretty", "cool", "because", "yeah",
+    "ngl", "uh", "hmm", "ok", "okay", "lets", "got", "im", "ive", "dont",
+    "doesnt", "gonna", "wanna",
+
+    # The act of answering, not the subject. "explain why it needs search from
+    # graph mode" routes on graph/mode/search, not on "explain". The trailing
+    # group is morphology the naive tokenizer does not fold: "looking" is the
+    # same narration as "look", which is already dropped.
+    "no", "sure", "make", "look", "looks", "looking", "looked", "now", "right",
+    "much", "many", "needs", "using", "mean", "means", "explain", "say", "tell",
+    "one", "them", "into", "back", "again", "put", "work", "works", "done",
+    "already",
 }
 
 EMBEDDING_URL = vectors.EMBEDDING_URL

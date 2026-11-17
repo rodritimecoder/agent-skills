@@ -2,10 +2,10 @@
 name: parallel-test-lane
 
 description: >
-  AI blast radius containment and parallel test runner (Glitch Cat Club; Reel DbSgqTXt-3c).
-  Partitions test suites into sequential-isolated vs independent parallel worker lanes across CPU cores,
-  slashing 40-60 minute regression suites down to 7-8 minutes with clean non-interleaved output buffering
-  and aggregated pass/fail reporting.
+  AI blast radius containment and parallel test runner. Partitions test suites into sequential-
+  isolated vs independent parallel worker lanes across CPU cores, slashing 40-60 minute regression
+  suites down to 7-8 minutes with clean non-interleaved output buffering and aggregated pass/fail
+  reporting.
 
 compatibility: "Requires Python 3.10+ and a pytest suite to partition."
 allowed-tools: "Bash(parallel-test-lane:*) Bash(python3:*) Bash(pytest:*) Read Write"

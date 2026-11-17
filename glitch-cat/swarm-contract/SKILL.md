@@ -2,9 +2,9 @@
 name: swarm-contract
 
 description: >
-  Dynamic agent swarm governance via the tripartite contract and hard budget ceiling (Glitch Cat Club / Kem Glitch;
-  Reel DeW6_fqt-cq). Enforces (1) explicit hit-list goals, (2) strict scorecard schema validation for all workers
-  (rejecting vague markdown summaries), and (3) an immutable financial/token spending ceiling that halts execution
+  Dynamic agent swarm governance via the tripartite contract and hard budget ceiling. Enforces (1)
+  explicit hit-list goals, (2) strict scorecard schema validation for all workers (rejecting vague
+  markdown summaries), and (3) an immutable financial/token spending ceiling that halts execution
   in code before budget overruns.
 
 compatibility: "Requires Python 3.10+. No network access needed."

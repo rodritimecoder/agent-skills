@@ -1,11 +1,9 @@
 ---
 name: kem-thought
 description: >
-  Kem's 32 steering principles and the /kem-mode contract, distilled from the
-  Glitch Cat Club transcripts. Load when the operator says "use kem mode",
-  "what would kem do", or names a principle; or when a task turns on a gate,
-  a control run, deterministic step ownership, or a claim that needs
-  measurement before it ships.
+  Kem's 32 steering principles and the /kem-mode contract. Load when the operator says "use kem
+  mode", "what would kem do", or names a principle; or when a task turns on a gate, a control run,
+  deterministic step ownership, or a claim that needs measurement before it ships.
 ---
 
 # Kem Thought (`kem-thought`)
@@ -14,7 +12,7 @@ Kem's Law: **a skill is instructions the model may follow; a hook is code that A
 His Second Law: **code decides wherever it can; a model should only judge when it's absolutely necessary.**
 
 This suite is the thinking layer: 32 steering principles extracted from Kem Glitch's own
-transcripts (all quotes and sources in `references/provenance.md`), plus the voice guide in
+transcripts (all quotes and sources in `SOURCES.md`), plus the voice guide in
 `references/voice.md`. It is the Kem counterpart to Lauren Tan's `pstack` principles — same
 shape, different spine: Lauren steers by subtraction and taste, Kem steers by determinism
 and evidence.
@@ -125,6 +123,6 @@ deflate the hype, name the mechanism, show the numbers, say where it breaks.
 ### Provenance
 
 Every principle cites the reel it came from, with a timestamp and a verbatim quote.
-`references/provenance.md` maps principle → source → vault path, and lists the transcripts
+`SOURCES.md` maps principle → source → vault path, and lists the transcripts
 mined. Quotes are Kem's words; the rules are the distillation. Where they disagree, the
 quote wins.

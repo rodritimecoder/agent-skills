@@ -2,9 +2,9 @@
 name: graph-memory
 
 description: >
-  Unified Glitch Cat Club Knowledge Graph & Hybrid RAG Engine (Glitch Cat Club; Reel DcTIPKyt7Am):
-  deterministic SQLite k-hop graph traversal (<2ms), entity deduplication via UUID5 & aliases,
-  and hybrid BM25 + bge-small-en-v1.5 (384d) RRF search with exact-quote distillation.
+  Unified Knowledge Graph & Hybrid RAG Engine: deterministic SQLite k-hop graph traversal (<2ms),
+  entity deduplication via UUID5 & aliases, and hybrid BM25 + bge-small-en-v1.5 (384d) RRF search
+  with exact-quote distillation.
 
 compatibility: "Requires the local embedding endpoint on :8087 for the hybrid BM25 and vector leg. The slot also hosts EmbeddingGemma-2 (768d); an index built with one is not comparable with the other, so rag.db records which model built it."
 allowed-tools: "Bash(graph-memory:*) Bash(python3:*) Read Write"

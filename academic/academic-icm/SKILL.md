@@ -2,11 +2,14 @@
 name: academic-icm
 
 description: >
-  Unified Academic ICM (Interpretable Context Methodology) Suite & Orchestrator. Unifies Canvas LMS
-  ingestion (canvas-cli), Zoom cloud lecture & slide extraction (zoom-recorder), active-recall Cornell
-  notes (cornell-notes), and OKF curriculum architecture into a single late-binding academic hub.
+  Use when a whole university course needs one hub: pull Canvas LMS courses, modules, assignments and
+  grades (canvas-cli), grab Zoom cloud lecture recordings and slide keyframes (zoom-recorder), then
+  build Cornell notes, Anki TSV decks and an interactive study portal with spaced-repetition review.
+  CLI `academic-icm` subcommands: canvas, zoom, graph index/search/recall, cornell --anki, srs review,
+  verify (5 gates), smart-check, status, audit, compile, serve --port 8765, stamp-video.
+  Not for one-file jobs — it assumes a whole course.
 
-compatibility: "Requires the canvas-cli, zoom-recorder and cornell-notes skills, and network access for the material it ingests."
+compatibility: "Requires the canvas-cli, zoom-recorder and cornell-notes skills, an embedding server on :8087 (`/v1/embeddings`, graph index/search), and network access for the material it ingests."
 allowed-tools: "Bash(academic-icm:*) Bash(canvas-cli:*) Bash(python3:*) Read"
 ---
 
@@ -15,8 +18,14 @@ allowed-tools: "Bash(academic-icm:*) Bash(canvas-cli:*) Bash(python3:*) Read"
 > **Unified Academic Intelligence Suite & ICM Pipeline Orchestrator for University Knowledge Workspaces.**  
 > Solves the seam between raw Canvas LMS downloads, Zoom lecture recordings, Markdown conversions, Cornell study sheets, and the OKF Knowledge Cosmos graph.
 
-> [!NOTE]
-> **Superseded by [`academic-pipeline-v2`](../academic-pipeline-v2/SKILL.md)**: The v2 pipeline inverts the architecture by sifting early with parallel classifiers, keeping structure in OKF v0.2 folders, and producing 3 focused HTML targets (`graph.html`, `anki.html`, `cornell.html`) instead of the monolithic v1 cosmos.
+> [!IMPORTANT]
+> **Status: active.** `academic-icm` remains the live skill for course ETL — Canvas and Zoom
+> ingestion through Cornell notes, Anki decks and the study portal. [`academic-pipeline-v2`](../academic-pipeline-v2/SKILL.md)
+> is still under validation (`status: draft`) and has not yet carried one real course through all
+> five of its gates. Route live course builds here; route nothing to v2 until its ledger
+> shows a full green run on real material. The two are not interchangeable: v2 inverts the
+> architecture with early parallel sifting, OKF v0.2 folders and three focused HTML targets
+> (`graph.html`, `anki.html`, `cornell.html`) instead of the monolithic v1 cosmos.
 
 ---
 

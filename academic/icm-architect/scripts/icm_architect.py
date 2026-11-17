@@ -80,8 +80,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
         "engine": "hybrid_rrf",
         "fts_enabled": True,
         "embedding_endpoints": [
-            "http://127.0.0.1:8082/v1/embeddings",
-            "http://127.0.0.1:8080/v1/embeddings"
+            "http://127.0.0.1:8087/v1/embeddings"
         ],
         "model": "EmbeddingGemma-2",
         "dim": 768,

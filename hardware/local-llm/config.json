@@ -4,7 +4,7 @@
   "description": "Client for the local Qwen3.6-35B-A3B Uncensored Genesis server on :8080 with dual-GPU Vulkan offload",
   "default_endpoint": "http://127.0.0.1:8080",
   "model_name": "qwen3.6-35b-genesis",
-  "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+  "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
   "defaults": {
     "temperature": 0.7,
     "top_p": 0.8,

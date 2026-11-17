@@ -189,9 +189,10 @@
     },
     {
       "query": "holy shit i want a acitivity apge cf and github and tailscale? so its shows all my connected tailscale devices then the main thing is my linux pc and then resources then the vram switcher stuff?",
-      "top1": "deck",
-      "expect": ["deck"],
-      "kind": "harvested"
+      "top1": "tailscale-ops",
+      "expect": ["tailscale-ops"],
+      "kind": "harvested",
+      "note": "The activity page is now an independent tailnet page, not a skill; `tailscale-ops` owns exposing it."
     },
     {
       "query": "can you find anything omarchy linux and rocm?",
@@ -228,14 +229,14 @@
     },
     {
       "query": "where is the total amount on this receipt",
-      "top1": "clip-box",
-      "expect": ["clip-box", "ocr"],
+      "top1": "jev-decision",
+      "expect": ["jev-decision", "ocr"],
       "kind": "authored"
     },
     {
       "query": "read the text out of this screenshot for me",
       "top1": "ocr",
-      "expect": ["ocr", "kem-ocr"],
+      "expect": ["ocr"],
       "kind": "authored"
     },
     {

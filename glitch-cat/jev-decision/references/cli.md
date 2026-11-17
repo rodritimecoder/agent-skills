@@ -16,7 +16,7 @@ Everything the SKILL.md quickstart leaves out. Paths are relative to the skill r
 | `--json` | all | Structured output instead of the compact line. Works before or after the subcommand. |
 | `--out FILE` | all | Write the JSON to `FILE`, print one pointer line. |
 | `--require-server` | all | Exit `3` instead of falling back to the keyword heuristic. |
-| `--host`, `--port` | all | Override the endpoint (default `127.0.0.1:8083`; honors `$JEV_HOST`). |
+| `--host`, `--port` | all | Override the endpoint (default `127.0.0.1:8083`; honors `$JEV_HOST`, `$JEV_PORT`, `$DECISION_PORT`). An explicit `--port` always wins over the environment. |
 
 ---
 

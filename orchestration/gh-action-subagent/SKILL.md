@@ -2,9 +2,12 @@
 name: gh-action-subagent
 
 description: >
-  Spawn isolated cloud subagents inside GitHub Actions VMs with full Linux shell,
-  Git, and headless Chrome CDP browser skills. Use when delegating parallel coding tasks,
-  running browser E2E checks in a sandbox, or fixing issues asynchronously via Pull Requests.
+  Use when delegating parallel coding tasks to an isolated cloud machine, running
+  browser E2E checks in a sandbox, or fixing issues asynchronously through pull
+  requests. Spawns isolated subagents inside GitHub Actions VMs with a full Linux
+  shell, Git, and headless Chrome CDP browser skills, one workflow VM per job,
+  work returned as a branch or PR. Requires an OpenCode Go token in the
+  repository secrets plus an authenticated GitHub CLI or GITHUB_TOKEN.
 
 compatibility: "Requires network access to GitHub Actions, an authenticated GitHub CLI or GITHUB_TOKEN, and an OpenCode Go token in the repository secrets."
 allowed-tools: "Bash(gh:*) Bash(python3:*) Read Write"

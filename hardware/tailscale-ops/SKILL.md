@@ -3,9 +3,8 @@ name: tailscale-ops
 
 description: >
   Runtime Tailscale network operations for discovering online homelab/desktop nodes,
-  exposing local web servers or LLM ports over private HTTPS (tailscale serve),
-  opening temporary public webhook endpoints (tailscale funnel), and transferring
-  artifacts across devices (tailscale file cp).
+  reconciling the declared tailnet surface (root page plus explicitly served UIs),
+  and transferring artifacts across devices (tailscale file cp).
 
 compatibility: "Requires the tailscale CLI and a running tailscaled daemon."
 allowed-tools: "Bash(tailscale-ops:*) Bash(tailscale:*) Read"
@@ -13,60 +12,85 @@ allowed-tools: "Bash(tailscale-ops:*) Bash(tailscale:*) Read"
 
 # Tailscale Operations Skill (`tailscale-ops`)
 
-Use this skill whenever you need to check if a remote compute/GPU node is online, expose a local dev server or LLM endpoint safely, receive external webhooks, or send files to another machine on the tailnet.
+Use this skill to check whether a remote compute/GPU node is online, to apply or
+inspect what this workstation advertises on the tailnet, or to send files to
+another machine.
+
+## Policy: the manifest owns the tailnet
+
+`ports.json` declares the entire tailnet surface, and `tailscale-ops sync`
+reconciles the machine to it:
+
+```json
+"tailscale": { "root": 3773, "paths": { "/chat": 7778 } }
+```
+
+- `tailscale.root` is the `:443 /` backend (t3-code).
+- `tailscale.paths` are extra `:443` path handlers (`/chat` -> companion).
+- An infra or slot entry with `"expose": "serve"` gets its own
+  `https://host:<port>/` frontend.
+- **Everything else is loopback** — `expose: loopback` is the default, and
+  ports absent from the manifest never leave the machine.
+
+`sync` turns off any serve frontend the manifest does not name, so a hand-run
+`tailscale serve` survives only until the next sync. `ports.py check` reads the
+live serve/funnel config and fails on any drift: an undeclared port, a retired
+port (never reuse), a hijacked root handler, or a public funnel port that lacks
+`"expose": "funnel"`.
 
 ## Commands
 
-### 1. Discover Online Nodes & Tailscale IPs
-Check which machines on the tailnet are currently awake and get their `100.x.y.z` IPv4 addresses and DNS names:
+### 1. Reconcile the tailnet surface (`sync`)
+Apply the root page, path handlers and `expose: serve` ports, then remove every
+frontend the manifest does not declare:
+```bash
+tailscale-ops sync
+```
+Run it after editing `ports.json` and `python3 ports.py render --write`.
+
+### 2. Inspect the surface (`status`)
+Print the declared surface and the live `tailscale serve` state:
+```bash
+tailscale-ops status
+```
+
+### 3. Discover online nodes (`peers`)
+Check which machines on the tailnet are awake and get their `100.x.y.z` IPv4
+addresses and DNS names:
 ```bash
 tailscale-ops peers
 ```
 
-### 2. Check if a Specific Host/Port is Reachable
-Before routing heavy jobs to a remote GPU host, verify both the node and target port (e.g., `8080` or `4000`) respond:
+### 4. Check host/port reachability (`check-port`)
+Before routing heavy jobs to a remote GPU host, verify both the node and the
+target port respond:
 ```bash
 tailscale-ops check-port <hostname-or-ip> <port>
 ```
 
-### 3. Expose Entire Workstation AI Inference Matrix (`serve-mesh`)
-Expose the locally-running inference endpoints and fast-CDP browser DevTools (`:8080–:8090`, `:9222`, `:3010`, `:4000`, `:8000`) over private Tailscale HTTPS simultaneously with 1 command:
-```bash
-tailscale-ops serve-mesh
-```
-
-View active tunnels and full URL registry:
-```bash
-tailscale-ops mesh-status
-```
-
-### 4. Diagnostic Health Check (`doctor`)
+### 5. Diagnostic health check (`doctor`)
 Inspect daemon state, local IP, DNS, and connected peers:
 ```bash
 tailscale-ops doctor
 ```
 
-### 5. Expose a Single Local Port Privately (`serve-on`)
-Expose a single dev server or local API (`localhost:3000` or `localhost:8000`) with automatic HTTPS strictly inside the tailnet:
-```bash
-tailscale-ops serve-on 4000
-```
-
-
-### 4. Expose a Local Port Publicly for Webhooks (`funnel`)
-Open a temporary public HTTPS tunnel (ports 443, 8443, or 10000) so external services (GitHub Actions, PostHog, webhooks) can reach a local listener:
-```bash
-tailscale-ops funnel-on 8080
-```
-
-### 5. Tear Down All Active Serve / Funnel Tunnels
-Always clean up temporary tunnels once verification or webhook testing finishes:
+### 6. Tear down all tunnels (`reset-tunnels`)
+Clear every serve and funnel frontend. `sync` afterwards restores the declared
+surface:
 ```bash
 tailscale-ops reset-tunnels
 ```
 
-### 6. Send Files to Another Tailnet Device (`file cp`)
-Beam build artifacts, logs, or screenshots directly to another online node without configuring SCP/SSH keys:
+### 7. Send files to another device (`send-file`)
+Beam build artifacts, logs, or screenshots to an online node without configuring
+SCP/SSH keys:
 ```bash
 tailscale-ops send-file ./artifact.zip <target-hostname>:
 ```
+
+## Public exposure (funnel)
+
+This skill never opens a public tunnel. Public exposure is opt-in in the
+manifest: mark the port `"expose": "funnel"`, render, then run `tailscale
+funnel` yourself. `ports.py check` fails when a live funnel serves a port that
+is not marked `funnel`, so a public listener cannot go unnoticed.

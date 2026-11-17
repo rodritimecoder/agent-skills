@@ -7,12 +7,16 @@
     decide.py --state-file notes.md --question "..." --options keep,draft,discard
     decide.py --model vllm ...     # vllm-d3-mini via /v1/systemone (:8083, default)
     decide.py --model jev ...      # Jev-Style-2B (no server needed)
-    decide.py --model imajev ...   # Imajev/OneJev-4B fallback (llama-server :8089)
-    decide.py --model jpt ...      # JPT-4B (llama-server + :8080; started on demand)
+    decide.py --model imajev ...   # Imajev-4B fallback (llama-server :8089)
     decide.py --batch q.json       # {"state": ..., "questions": {qid: {...}}}
 
+Decision routing only ever targets the decision slots: the primary on :8083
+(vllm/d3/pplx, native /v1/systemone) and the auxiliary on :8089 (onejev/imajev).
+:8085 and :8090 belong to the OCR slots, so nothing here launches or posts to
+them; `jev` runs a GGUF locally and needs no port at all.
+
 Output:
-    {"model": "jpt", "type": "choice", "answer": "billing",
+    {"model": "imajev", "type": "choice", "answer": "billing",
      "p": {"billing": 0.96, "tech": 0.03, "sales": 0.01}, "confidence": 0.84}
 """
 from __future__ import annotations
@@ -28,13 +32,7 @@ import time
 import urllib.error
 import urllib.request
 
-JPT_DIR = pathlib.Path("/run/media/rodri/AI/sh/jpt-4b")
-JPT_MODELS = pathlib.Path("/run/media/rodri/AI/models/prithivMLmods/jpt-4b-GGUF")
-JPT_GGUF = str(JPT_MODELS / "jpt-4b.Q4_K_M.gguf")
-JPT_MMPROJ = str(JPT_MODELS / "jpt-4b.mmproj-bf16.gguf")
 JEV_DIR = pathlib.Path(os.environ.get("JEV_DIR", "/home/rodri/build/jev-env"))
-DEFAULT_PORT = int(os.environ.get("JPT_ENGINE_PORT", "8090"))
-ENGINE_PORT = int(os.environ.get("JPT_ENGINE_PORT", "8090"))
 
 # ---- vllm-d3-mini backend (premier) ----------------------------------------
 # Served by llama.cpp >= b11729 on VLLM_PORT (sh/vllm-d3-mini.sh). Native
@@ -59,82 +57,9 @@ IMAJEV_IMAGE = os.environ.get("IMAJEV_IMAGE", "")
 _LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- Jev-Style-2B backend ---------------------------------------------------
-# Plain stock llama.cpp on :8085 (sh/jev-style-2b.sh). Its calibration
-# temperature is baked into the weights, so NO client-side temperature divide.
-# Prompt format and the candidate-floor trick follow the author's own
-# jev_style_client.py verbatim, because that is what the model was tuned on.
-JEVSTYLE_PORT = int(os.environ.get("JEVSTYLE_PORT", "8085"))
-JEVSTYLE_HEADER = ("You are a decision function. Read the state, then answer the "
-                   "question by choosing exactly one option.\n\n")
-JEVSTYLE_MAX_OPTIONS = 20   # servers return at most ~20 candidates per position
-
-
-def ensure_jevstyle(port=JEVSTYLE_PORT, timeout=10):
-    if _health(f"http://127.0.0.1:{port}/health"):
-        return
-    launcher = pathlib.Path("/run/media/rodri/AI/sh/jev-style-2b.sh")
-    if not launcher.exists():
-        raise SystemExit(f"jev-style launcher missing: {launcher}")
-    subprocess.Popen([str(launcher)], stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, start_new_session=True)
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if _health(f"http://127.0.0.1:{port}/health"):
-            return
-        time.sleep(1.0)
-    raise SystemExit(f"jev-style-2b did not come up on :{port} - start sh/jev-style-2b.sh")
-
-
-def _build_jevstyle_prompt(state, question, options):
-    lines = "\n".join(f"{_LETTERS[i]}. {o}" for i, o in enumerate(options))
-    return (f"{JEVSTYLE_HEADER}[State]\n{state}\n\n[Question]\n{question}\n\n"
-            f"[Options]\n{lines}\n\nAnswer:")
-
-
-def _top_logprobs(port, prompt, timeout=180):
-    """{token: logprob} at the first generated position, via chat completions."""
-    req = urllib.request.Request(
-        f"http://127.0.0.1:{port}/v1/chat/completions",
-        data=json.dumps({"model": "jev", "max_tokens": 1, "temperature": 0,
-                         "logprobs": True, "top_logprobs": 20,
-                         "messages": [{"role": "user", "content": prompt}]}).encode(),
-        headers={"Content-Type": "application/json"})
-    res = json.load(urllib.request.urlopen(req, timeout=timeout))
-    tops = res["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
-    return {t["token"]: t["logprob"] for t in tops}
-
-
-def _softmax_over_labels(top, options, T=1.0):
-    """Renormalise over the option labels only. Options absent from the
-    candidate list get a floor (min - 5.0) rather than being dropped."""
-    floor = min(top.values()) - 5.0
-    logits = []
-    for i in range(len(options)):
-        lt = _LETTERS[i]
-        logits.append(max((lp for tok, lp in top.items()
-                           if tok.strip() == lt), default=floor))
-    mx = max(logits)
-    exps = [math.exp((x - mx) / T) for x in logits]
-    tot = math.fsum(exps)
-    return [e / tot for e in exps]
-
-
-def _wrap(typ, options, probs):
-    dist = {o: round(p, 4) for o, p in zip(options, probs)}
-    if typ == "noul":
-        nq = [dist.get("yes", 0.0), dist.get("no", 0.0)]
-        tot = nq[0] + nq[1]
-        nq = [p / tot for p in nq] if tot else [0.5, 0.5]
-        return {"type": "noul",
-                "probabilities": {"true": round(nq[0], 4), "false": round(nq[1], 4)},
-                "confidence": round(_concentration(nq), 4)}
-    if typ == "score":
-        return {"type": "score", "probabilities": dist,
-                "score": sum(float(o) * p for o, p in zip(options, probs))}
-    best = max(dist, key=dist.get)
-    ent = -math.fsum(p * math.log(p) for p in probs if p > 0)
-    return {"type": "choice", "answer": best, "probabilities": dist,
-            "confidence": round(min(1.0, max(0.0, 1 - ent / math.log(len(probs)))), 4)}
+# No server: `--model jev` runs the GGUF locally in JEV_DIR's venv (ask_jev).
+# It used to squat on :8085, which is now the LightOnOCR slot - a decision
+# server has no business binding an OCR port.
 
 
 def _concentration(probs):
@@ -144,22 +69,6 @@ def _concentration(probs):
         return 1.0
     ent = -math.fsum(p * math.log(p) for p in probs if p > 0)
     return min(1.0, max(0.0, 1 - ent / math.log(k)))
-
-
-def ask_jevstyle(state, question, opts, typ, port=JEVSTYLE_PORT, timeout=180):
-    """Jev-Style-2B: renormalised softmax over labels, T already baked in."""
-    if typ == "noul":
-        options = ["yes", "no"]
-    elif isinstance(opts, dict):
-        options = list(opts.keys())
-    elif isinstance(opts, (list, tuple)):
-        options = [str(o) for o in opts]
-    else:
-        raise SystemExit("jev-style needs options (or use --type noul)")
-    if not 2 <= len(options) <= JEVSTYLE_MAX_OPTIONS:
-        raise SystemExit(f"need 2..{JEVSTYLE_MAX_OPTIONS} options, got {len(options)}")
-    top = _top_logprobs(port, _build_jevstyle_prompt(state, question, options), timeout)
-    return _wrap(typ, options, _softmax_over_labels(top, options, T=1.0))
 
 
 def ensure_vllm(port=VLLM_PORT, timeout=180):
@@ -508,76 +417,24 @@ def ask_imajev(state, question, opts, typ, port=IMAJEV_PORT, timeout=180):
 
 
 def _health(url, timeout=3):
+    """Is something already answering on this port?
+
+    llama.cpp says `{"status": "ok"}`, the h2o shim says `{"ok": true}`. Both
+    mean the slot is up; treating either as down would start a second candidate
+    on a port that is already serving.
+    """
     try:
         with urllib.request.urlopen(url, timeout=timeout) as r:
-            return json.load(r).get("status") == "ok"
+            if r.status not in (200, None):
+                return False
+            body = json.load(r)
+            return body.get("status") == "ok" or body.get("ok") is True
     except Exception:  # noqa: BLE001 - "is it up" is the only question
         return False
 
 
-def ensure_jpt(port=DEFAULT_PORT, timeout=180):
-    """Start the JPT-4B llama-server engine directly.
-
-    We talk to the engine, not to jpt_api.py's /v1/systemone wrapper, so this
-    backend needs exactly ONE port. jpt_llamacpp.JPTLlamaCpp already does the
-    /tokenize + /completion work against the engine.
-    """
-    api = f"http://127.0.0.1:{port}/health"
-    if _health(api):
-        return api
-    binary = pathlib.Path("/run/media/rodri/AI/llama.cpp/build/bin/llama-server")
-    if not binary.exists():
-        raise SystemExit(f"llama-server missing: {binary}")
-    log = pathlib.Path(f"/tmp/jpt-4b-engine-{port}.log")
-    with open(log, "ab") as out:
-        subprocess.Popen(
-            [str(binary), "-m", JPT_GGUF, "-mm", JPT_MMPROJ,
-             "--host", "127.0.0.1", "--port", str(port),
-             "-ngl", "99", "-c", "16384", "--no-webui"],
-            stdout=out, stderr=out, start_new_session=True)
-    t0 = time.time()
-    while time.time() - t0 < timeout:
-        if _health(api):
-            return api
-        time.sleep(1)
-    raise SystemExit(f"jpt-4b engine did not come up on :{port} — see {log}")
-
-
-def ask_jpt(port, state, question, opts, typ):
-    """One JPT-4B decision via the engine, using the author's own client."""
-    sys.path.insert(0, str(JPT_DIR))
-    from jpt_llamacpp import JPTLlamaCpp
-
-    if typ == "noul":
-        q = {"type": "noul", "instructions": question}
-    else:
-        if isinstance(opts, dict):
-            criteria = opts
-        elif isinstance(opts, (list, tuple)):
-            criteria = {str(i): str(o) for i, o in enumerate(opts)}
-        else:
-            raise SystemExit("jpt needs options (or use --type noul)")
-        q = {"type": typ, "instructions": question, "criteria": criteria}
-
-    eng = JPTLlamaCpp(url=f"http://127.0.0.1:{port}")
-    if not eng.health():
-        raise SystemExit(f"jpt-4b engine not answering on :{port}")
-
-    out = eng.decide(state, {"answer": q})["answer"]
-    probs = out.get("probabilities") or {}
-    # jpt keys the result as choice/score/noul; flatten() wants "answer".
-    ans = {"type": out.get("type", typ), "probabilities": probs,
-           "confidence": out.get("confidence", 0.0)}
-    if ans["type"] == "noul":
-        ans["noul"] = probs.get("true", 0.0)
-    elif ans["type"] == "score":
-        ans["score"] = out.get("score")
-    else:
-        ans["answer"] = out.get("choice")
-    return ans
-
-
 def ask_jev(state, question, opts, typ):
+    """Jev-Style-2B, in-process: no server, no port, no auto-start."""
     py = JEV_DIR / ".venv" / "bin" / "python"
     if not py.is_file():
         raise SystemExit(f"jev venv missing: {py}")
@@ -604,7 +461,7 @@ def _jev_default():
 
 
 def flatten(qid, a):
-    """llm2jev answer shape -> {answer, p, confidence}. Handles both backends (jpt already matches this)."""
+    """llm2jev answer shape -> {answer, p, confidence}."""
     typ = a.get("type")
     probs = a.get("probabilities") or {}
     if typ is None:                                   # jev-style result: infer the type from the keys
@@ -635,7 +492,7 @@ def flatten(qid, a):
 
 def _norm_answer(answer, opts):
     """Map a model's answer onto the human label so different backends compare
-    fairly. jpt returns the criteria KEY ("0"), imajev/jev return the LABEL
+    fairly. imajev/jev may return the criteria KEY ("0") rather than the LABEL
     ("trivial") - they are the same option but different strings."""
     s = str(answer)
     if isinstance(opts, (list, tuple)):
@@ -664,13 +521,7 @@ def _run_one(model, state, question, opts, typ, a):
         port = IMAJEV_PORT if a.port is None else a.port
         raw = ask_imajev(state, question, opts, typ, port=port, timeout=a.timeout)
     elif model == "jev":
-        ensure_jevstyle(JEVSTYLE_PORT, a.timeout)
-        port = JEVSTYLE_PORT if a.port is None else a.port
-        raw = ask_jevstyle(state, question, opts, typ, port=port, timeout=a.timeout)
-    elif model == "jpt":
-        port = DEFAULT_PORT if a.port is None else a.port
-        ensure_jpt(port, a.timeout)
-        raw = ask_jpt(port, state, question, opts, typ)
+        raw = ask_jev(state, question, opts, typ)
     else:
         raise SystemExit(f"unknown model: {model}")
     return flatten("answer", raw)
@@ -687,21 +538,22 @@ def main():
     ap.add_argument("--question", help="same as the second positional")
     ap.add_argument("--options", help="same as the third positional")
     ap.add_argument("--model", default=os.environ.get("JEV_CLI_MODEL", "auto"),
-                    choices=["auto", "vllm", "d3", "pplx", "onejev", "imajev", "jev", "jpt"],
+                    choices=["auto", "vllm", "d3", "pplx", "onejev", "imajev", "jev"],
                     help="auto=pick the protocol from the model actually serving :8083 (default), "
-                         "vllm=vllm-d3-mini native /v1/systemone, "
+                         "vllm=vllm-d3-mini native /v1/systemone on :8083, "
                          "d3=alias for vllm, "
-                         "pplx=pplx-decider-flash v1.2 joint protocol v3 (highest accuracy), "
+                         "pplx=pplx-decider-flash v1.2 joint protocol v3 on :8083 (highest accuracy), "
                          "onejev=OneJev1.5-4B vision+decision fallback on :8089, "
                          "imajev=Imajev-4B alias on :8089, "
-                         "jev=Jev-Style-2B on :8085, jpt=JPT-4B System One on :8090")
+                         "jev=Jev-Style-2B run locally (no server, no port)")
     ap.add_argument("--state-file", help="read the state from a file")
     ap.add_argument("--type", default="auto", choices=["auto", "choice", "score", "noul"])
     ap.add_argument("--port", type=int, default=None,
-                    help="model server port (default: vllm 8083, onejev/imajev 8089, jev 8085, jpt 8090)")
+                    help="model server port (default: vllm/pplx 8083, onejev/imajev 8089; "
+                         "jev needs none)")
     ap.add_argument("--cross-check", metavar="MODEL[,MODEL...]", default=None,
                     help="run 2+ models on the same question and flag disagreement, "
-                         "e.g. --cross-check imajev,jpt (implies the first as primary)")
+                         "e.g. --cross-check imajev,vllm (implies the first as primary)")
     ap.add_argument("--batch", help="batch file: {\"state\":..., \"questions\": {qid: question}}")
     ap.add_argument("--threshold", type=float, default=0.5, help="noul answer cutoff")
     ap.add_argument("--raw", action="store_true", help="print the engine's full answer objects")
@@ -719,21 +571,7 @@ def main():
             print(json.dumps({"model": "vllm", "answers":
                               [flatten(q, answers[q]) for q in answers]}, indent=1))
             return
-        if a.model == "jpt":
-            port = DEFAULT_PORT if a.port is None else a.port
-            ensure_jpt(port, a.timeout)
-            st = payload.get("state", "")
-            answers = {}
-            for qid, spec in (payload.get("questions") or {}).items():
-                if isinstance(spec, dict):
-                    answers[qid] = ask_jpt(port, st, spec.get("instructions", ""),
-                                           spec.get("criteria"), spec.get("type", "noul"))
-                else:
-                    answers[qid] = ask_jpt(port, st, str(spec), None, "noul")
-            print(json.dumps({"model": "jpt", "answers": answers if a.raw else
-                              [flatten(q, answers[q]) for q in answers]}, indent=1))
-            return
-        raise SystemExit("batch mode supports --model vllm or jpt")
+        raise SystemExit("batch mode supports --model vllm")
 
     state = pathlib.Path(a.state_file).read_text(errors="replace") if a.state_file \
         else (a.state or a.state_pos)
@@ -774,9 +612,10 @@ def main():
     elif typ == "score":
         q["criteria"] = opts
 
-    if a.port is None:
-        a.port = {"auto": VLLM_PORT, "vllm": VLLM_PORT, "d3": VLLM_PORT, "pplx": PPLX_PORT,
-                  "onejev": IMAJEV_PORT, "imajev": IMAJEV_PORT, "jev": JEVSTYLE_PORT}.get(a.model, DEFAULT_PORT)
+    if a.port is None and a.model != "jev":
+        a.port = {"auto": VLLM_PORT, "vllm": VLLM_PORT, "d3": VLLM_PORT,
+                  "pplx": PPLX_PORT, "onejev": IMAJEV_PORT,
+                  "imajev": IMAJEV_PORT}.get(a.model, VLLM_PORT)
 
     if a.model == "auto":
         served = _served_decision_type(a.port)
@@ -788,17 +627,13 @@ def main():
     elif a.model == "pplx":
         ensure_pplx(a.port, a.timeout)
         ans = ask_pplx(state, question, opts, typ, port=a.port, timeout=a.timeout)
-    elif a.model == "jpt":
-        ensure_jpt(a.port, a.timeout)
-        ans = ask_jpt(a.port, state, question, opts, typ)
     elif a.model in ("onejev", "imajev"):
         ensure_imajev(a.port, a.timeout)
         ans = ask_imajev(state, question, opts, typ, port=a.port, timeout=a.timeout)
     elif a.model == "jev":
-        ensure_jevstyle(a.port, a.timeout)
-        ans = ask_jevstyle(state, question, opts, typ, port=a.port, timeout=a.timeout)
-    else:
         ans = ask_jev(state, question, opts, typ)
+    else:
+        raise SystemExit(f"unknown model: {a.model}")
 
     if a.raw:
         print(json.dumps(ans, indent=1))

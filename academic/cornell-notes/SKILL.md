@@ -4,7 +4,9 @@ name: cornell-notes
 description: >
   Convert existing Markdown notes into print-ready Cornell Notes HTML with
   active-recall cue–note pairs, a self-quiz mode, and spaced repetition.
-  Use for revision notes, study sheets, or Anki export from a .md file.
+  Use for revision notes, study sheets, or Anki export from a .md file, and for
+  print-fit questions about that output — fitting the sheet onto one page
+  instead of two, margins, font size or page breaks on the generated PDF.
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(cornell-notes:*) Bash(python3:*) Read Write"

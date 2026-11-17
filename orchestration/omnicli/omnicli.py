@@ -472,7 +472,7 @@ def cmd_status(as_json: bool = False):
               f"{catalog_info['docs']} docs")
         print(f"   🔎 Retrieval tier: {tier}")
         print(f"   💾 Index   : {catalog_info.get('db')}")
-    print("   💡 Tip: `tailscale-ops serve-mesh` exposes all services over private HTTPS.")
+    print("   💡 Tip: `tailscale-ops sync` reconciles the tailnet surface to ports.json.")
     print()
 
 

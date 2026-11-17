@@ -6,7 +6,9 @@ description: >
   pages, announcements and the calendar. Use for anything school, university or class related
   — the course portal, student portal, learning management system (LMS) or gradebook —
   assignments, homework, what is due this week or next, deadlines, marks and results,
-  readings, lecture material a teacher posted, or course announcements.
+  readings, lecture material a teacher posted, or course announcements. Also use it when the
+  question is about the Canvas setup itself — where the API key or token goes, which config
+  file holds it, or why a call is unauthenticated.
 
 compatibility: "Requires network access to a Canvas LMS instance and a Canvas API token (CANVAS_API_KEY)."
 allowed-tools: "Bash(canvas-cli:*) Bash(python3:*) Read"

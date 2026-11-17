@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -159,6 +160,102 @@ class TestSubcommandArgvOrder(unittest.TestCase):
         cmd = invoke.build_cmd(["python3", "tool.py", "sub"], ["--x", "1"],
                                python="python3", skill_dir="/s")
         self.assertEqual(cmd, ["python3", "tool.py", "sub", "--x", "1"])
+
+
+class TestNodeArgv(unittest.TestCase):
+    """A JS tool runs under node, exactly as a Python tool runs under python."""
+
+    def test_node_placeholder_is_substituted(self):
+        cmd = invoke.build_cmd(
+            ["{node}", "{skill}/scripts/tool.mjs"], ["--json"],
+            python="python3", skill_dir="/skill", node="/opt/node/bin/node")
+        self.assertEqual(cmd, ["/opt/node/bin/node",
+                               "/skill/scripts/tool.mjs", "--json"])
+
+    def test_node_placeholder_falls_back_to_path(self):
+        cmd = invoke.build_cmd(["{node}", "tool.mjs"], [], python="python3",
+                               skill_dir="/skill")
+        self.assertNotEqual(cmd[0], "{node}")
+        self.assertEqual(Path(cmd[0]).name, "node")
+
+
+class TestJsDiscovery(unittest.TestCase):
+    """JS tools are discovered, but only when they are actually CLI entries."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.skill = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, rel: str, body: str = "console.log('x');\n",
+              mode: int = 0o644) -> Path:
+        path = self.skill / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        path.chmod(mode)
+        return path
+
+    def found(self) -> set[str]:
+        return {p.relative_to(self.skill).as_posix()
+                for p in registry._iter_scripts(self.skill)}
+
+    def test_executable_js_entries_are_discovered(self):
+        executable = self.write("scripts/tool.mjs", "#!/usr/bin/env node\n",
+                                0o755)
+        shebang = self.write("bin/cli.js", "#!/usr/bin/env node\n")
+        deno = self.write("scripts/run.mjs", "#!/usr/bin/env deno run\n")
+        bun = self.write("scripts/run.js", "#!/usr/bin/env bun\n")
+
+        self.assertEqual(self.found(), {
+            "scripts/tool.mjs", "bin/cli.js", "scripts/run.mjs", "scripts/run.js"})
+        for path in (executable, shebang, deno, bun):
+            self.assertTrue(registry._is_cli_entry(path), str(path))
+
+    def test_assets_tests_and_libraries_are_not_discovered(self):
+        self.write("scripts/tool.mjs", "#!/usr/bin/env node\n", 0o755)
+        self.write("scripts/d3.min.js", mode=0o755)
+        self.write("scripts/tool.test.mjs", mode=0o755)
+        self.write("scripts/test_tool.js", mode=0o755)
+        self.write("scripts/tool_test.js", mode=0o755)
+        self.write("assets/app.js", mode=0o755)
+        self.write("plugin/hook.js", mode=0o755)
+        self.write("examples/demo.mjs", mode=0o755)
+        helper = self.write("scripts/helper.js")
+        renderer = self.write("scripts/render.mjs")
+
+        self.assertEqual(self.found(), {
+            "scripts/tool.mjs", "scripts/helper.js", "scripts/render.mjs"})
+        self.assertFalse(registry._is_cli_entry(helper),
+                         "a non-executable helper has no entry point")
+        self.assertFalse(registry._is_cli_entry(renderer))
+
+    def test_discover_tools_runs_js_with_node(self):
+        self.write("scripts/tool.mjs",
+                   "/**\n * Wrap a workspace into markdown.\n */\n"
+                   "console.log('x');\n", 0o755)
+        tools = registry.discover_tools(
+            {"name": "demo", "path": str(self.skill), "cli": None})
+
+        self.assertEqual([t["id"] for t in tools], ["demo/scripts/tool"])
+        self.assertEqual(Path(tools[0]["argv"][1]),
+                         self.skill / "scripts" / "tool.mjs")
+        self.assertEqual(Path(tools[0]["argv"][0]).name, "node")
+        self.assertEqual(tools[0]["summary"], "Wrap a workspace into markdown.")
+
+    def test_custom_parse_args_is_not_help_safe(self):
+        """`check_runner.mjs` has its own `parseArgs()` and launches Chromium."""
+        custom = self.write("check_runner.mjs", (
+            "#!/usr/bin/env node\n"
+            "function parseArgs(argv) { return { values: {}, positionals: argv }; }\n"
+            "console.log(parseArgs(process.argv.slice(2)));\n"), 0o755)
+        util = self.write("node_cli.mjs", (
+            "#!/usr/bin/env node\n"
+            "import { parseArgs } from 'node:util';\n"))
+
+        self.assertFalse(registry._mentions_help(custom))
+        self.assertTrue(registry._mentions_help(util))
 
 
 class TestOutputCap(unittest.TestCase):

@@ -4,6 +4,9 @@
 Output is one compact line by default. `--json` prints the structured result,
 `--out FILE` writes the JSON to disk and keeps stdout to one pointer line, so a
 caller pays a handful of tokens instead of a full payload.
+
+`box` (visual grounding) delegates to `decision-model box`, so the geometry
+client, its gates and its exit codes stay in one place.
 """
 import argparse
 import json
@@ -65,6 +68,71 @@ def ensure_decision_server(engine=None, host: str = "127.0.0.1", port: int = 808
             return True
         time.sleep(0.5)
     return False
+
+
+_DECISION_MODEL_ENV = "JEV_DECISION_MODEL"
+
+
+def _decision_model_script() -> Path | None:
+    """Where `box` lives: this checkout first, `decision-model` on PATH second."""
+    override = os.environ.get(_DECISION_MODEL_ENV, "").strip()
+    if override:
+        candidate = Path(override).expanduser()
+        return candidate if candidate.is_file() else None
+    sibling = (Path(__file__).resolve().parents[2]
+               / "hardware" / "decision-model" / "scripts" / "decision_model.py")
+    if sibling.is_file():
+        return sibling
+    found = shutil.which("decision-model")
+    return Path(found) if found else None
+
+
+def _run_box(args) -> int:
+    """Forward to `decision-model box` and return its exit code unchanged.
+
+    Exit 2 is the gate rejecting a hit (absent target, low present/confidence);
+    callers such as `t3-locate` branch on it, so it must not be flattened.
+    """
+    target = _decision_model_script()
+    if target is None:
+        raise _die(
+            "Error: decision-model was not found — looked for "
+            "hardware/decision-model/scripts/decision_model.py and `decision-model` on PATH.\n"
+            f"       Set {_DECISION_MODEL_ENV} to the client's path to override.",
+            3,
+        )
+    cmd = ([sys.executable, str(target)] if target.suffix == ".py" else [str(target)])
+    cmd += [
+        "box",
+        "--image", str(args.image),
+        "--target", args.target,
+        "--min-present", str(args.min_present),
+        "--min-confidence", str(args.min_confidence),
+        "--timeout", str(args.timeout),
+    ]
+    if args.crop:
+        cmd += ["--crop", args.crop]
+    if args.json:
+        cmd.append("--json")
+
+    env = os.environ.copy()
+    env["DECISION_PORT"] = str(args.port)
+    if getattr(args, "host", None):
+        env["DECISION_HOST"] = args.host
+
+    if not args.json:
+        return subprocess.call(cmd, env=env)
+    proc = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    sys.stderr.write(proc.stderr)
+    out = (proc.stdout or "").strip()
+    if out:
+        try:
+            json.loads(out)
+        except json.JSONDecodeError:
+            print(f"jev box: non-JSON stdout from decision-model: {out[:400]}", file=sys.stderr)
+            return 1
+        print(out)
+    return proc.returncode
 
 
 def _context(args) -> str:
@@ -130,7 +198,7 @@ def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
     default_port = int(os.environ.get("JEV_PORT", os.environ.get("DECISION_PORT", "8083")))
     parent_parser.add_argument("--host", default=None, help="Decision host (default: $JEV_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
-    parent_parser.add_argument("--port", type=int, default=default_port, metavar="PORT", help=f"Decision service port (default: {default_port} = h2o-lightning-4b / gliclass-edge)")
+    parent_parser.add_argument("--port", type=int, default=None, metavar="PORT", help=f"Decision service port (default: {default_port} = h2o-lightning-4b / gliclass-edge)")
     parent_parser.add_argument("--json", action="store_true", help="Output in JSON format")
     parent_parser.add_argument("--out", default=None, help="Write the JSON result here and print a one-line pointer")
     parent_parser.add_argument("--require-server", action="store_true",
@@ -152,8 +220,9 @@ def main():
         description="JEV decision engine — h2o-lightning-4b native /v1/systemone, vision-capable",
         epilog=(
             "Primitives: bool (binary), choice (constrained enum), score (0.0-1.0), "
-            "composite (gate + action + quality).\n"
-            "Exit codes: 0 answered · 2 usage error · 3 --require-server but no server."
+            "composite (gate + action + quality), box (visual grounding).\n"
+            "Exit codes: 0 answered · 2 usage error or gate rejection (box) · "
+            "3 --require-server but no server / decision-model missing."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         parents=[parent_parser],
@@ -192,6 +261,33 @@ def main():
     p_comp.add_argument("--criteria", default=None, help="Optional quality criteria")
     p_comp.add_argument("--image", default=None, help="Optional image path or base64 data for vision decision")
 
+    # box — visual grounding, delegated to decision-model
+    box_parent = argparse.ArgumentParser(add_help=False)
+    box_parent.add_argument("--host", default=argparse.SUPPRESS)
+    box_parent.add_argument("--port", type=int, default=argparse.SUPPRESS, metavar="PORT")
+    box_parent.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+
+    p_box = subparsers.add_parser(
+        "box", parents=[box_parent],
+        help="Visual grounding: gated bounding box in an image",
+        description=(
+            "Locate a phrase in an image: `box` fractions, pixel coordinates, a\n"
+            "tightness confidence and a `present` probability that gates the answer.\n"
+            "Delegates to `decision-model box`; the gates and the geometry client live there.\n\n"
+            "Exit codes match that client: 0 accepted · 2 rejected by a gate · 1 request error."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_box.add_argument("--image", required=True, help="Image to search (PNG/JPG)")
+    p_box.add_argument("--target", required=True, help="Object or phrase to locate")
+    p_box.add_argument("--crop", default=None, help="Save the accepted region here (needs Pillow)")
+    p_box.add_argument("--min-present", type=float, default=0.5, metavar="SCORE",
+                       help="Reject below this presence probability (default: 0.5)")
+    p_box.add_argument("--min-confidence", type=float, default=0.3, metavar="SCORE",
+                       help="Reject below this tightness confidence (default: 0.30)")
+    p_box.add_argument("--timeout", type=float, default=120.0, metavar="SECONDS",
+                       help="Request timeout in seconds (default: 120)")
+
     # batch
     p_batch = subparsers.add_parser(
         "batch", parents=[sub_parent],
@@ -221,7 +317,11 @@ def main():
     p_doc = subparsers.add_parser("doctor", parents=[sub_parent], help="Probe the decision server")
 
     args = parser.parse_args()
-    args.port = getattr(args, "port", 8083)
+    if args.command == "box":
+        args.port = args.port if getattr(args, "port", None) is not None else int(
+            os.environ.get("DECISION_PORT", "8083"))
+    else:
+        args.port = args.port if getattr(args, "port", None) is not None else default_port
     args.json = getattr(args, "json", False)
     if getattr(args, "options", None):
         args.options = _split_options(args.options)
@@ -245,6 +345,9 @@ def main():
         else:
             print(f"{status} {model} {endpoint}")
         return 0 if online else 3
+
+    if args.command == "box":
+        return _run_box(args)
 
     if not getattr(args, "no_autostart", False):
         ensure_decision_server(engine)

@@ -2,14 +2,14 @@
 name: cf-architect
 
 description: >
-  Cloudflare architecture for agents and personal infrastructure. Probe what an
-  account can actually do before designing (read-only), run free-tier budget
-  math on a concrete workload, and choose between Durable Objects, Containers,
-  R2 and Cloudflare Tunnel. Carries the `cf` CLI papercuts: npm allow-scripts
-  gating, the R2 dashboard toggle, and the beta `cf dev` config trap. Use when
-  asked to deploy, host, or scale something on Cloudflare, to decide whether a
-  workload fits the free plan, to expose a local GPU box or dev server, or to
-  design real-time, stateful, multiplayer or per-agent infrastructure.
+  Use when deploying, hosting or scaling something on Cloudflare, deciding
+  whether a workload fits the free plan, exposing a local GPU box or dev server
+  through Cloudflare Tunnel, or designing real-time, stateful, multiplayer or
+  per-agent infrastructure on Workers. Probe what an account can actually do
+  before designing (read-only), run free-tier budget math on a concrete
+  workload, and choose between Durable Objects, Containers, R2 and Workers.
+  Carries the `cf` CLI papercuts: npm allow-scripts gating, the R2 dashboard
+  toggle, and the beta `cf dev` config trap.
 
 compatibility: "Requires the cf CLI (v0.15+). `probe` is read-only and never mutates the account."
 allowed-tools: "Bash(cf-architect:*) Bash(cf:*) Bash(npm:*) Read"

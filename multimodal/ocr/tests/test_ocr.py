@@ -18,7 +18,7 @@ class TestUnifiedOCRDeterministic(unittest.TestCase):
             health = json.loads(probe.stdout)
         except json.JSONDecodeError:
             raise unittest.SkipTest("ocr doctor did not return JSON; the local engines are not installed")
-        if not (health.get("lighton_models_ready") and health.get("crisp_models_ready")):
+        if not health.get("models_ready"):
             raise unittest.SkipTest("the OCR model weights are not on this machine")
 
     def test_01_doctor(self):
@@ -26,9 +26,9 @@ class TestUnifiedOCRDeterministic(unittest.TestCase):
         res = subprocess.run(cmd, capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, f"Doctor failed: {res.stderr}")
         data = json.loads(res.stdout)
-        self.assertEqual(data["premier_engine"], "LightOnOCR-3-0.8B")
-        self.assertTrue(data["lighton_models_ready"])
-        self.assertTrue(data["crisp_models_ready"])
+        self.assertEqual(data["engine"], "LightOnOCR-3-0.8B")
+        self.assertEqual(data["port"], 8085)
+        self.assertTrue(data["models_ready"])
         print("  ✓ doctor health check · verified")
 
     def test_02_lighton_document_ocr(self):
@@ -50,21 +50,6 @@ class TestUnifiedOCRDeterministic(unittest.TestCase):
         self.assertIn("latency_ms", data)
         print(f"  ✓ premier LightOnOCR JSON contract ({data['latency_ms']}ms) · verified")
 
-    def test_03b_oxr_document_contract(self):
-        probe = subprocess.run(["python3", OCR_PY, "doctor", "--json"], capture_output=True, text=True)
-        health = json.loads(probe.stdout)
-        if not health.get("oxr_models_ready"):
-            raise unittest.SkipTest("OXR weights are not on this machine")
-        cmd = ["python3", OCR_PY, "read", str(SAMPLE_IMG), "--engine", "oxr", "--json"]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0, f"OXR failed: {res.stderr}")
-        data = json.loads(res.stdout)
-        self.assertEqual(data["task"], "document_ocr")
-        self.assertEqual(data["engine"], "oxr-1.0")
-        self.assertIn("LLaMA", data["text"])
-        self.assertTrue(data["source"].startswith("oxr"))
-        print(f"  ✓ OXR-1.0 layout-aware document JSON ({data['latency_ms']}ms, {data['pages_count']} page) · verified")
-
     def test_03c_lighton_grounding_assets(self):
         import tempfile
         page = Path("/run/media/rodri/AI/CrispEmbed/tests/regression/images/page_transcoda.png")
@@ -82,27 +67,6 @@ class TestUnifiedOCRDeterministic(unittest.TestCase):
         for asset in data["assets"]:
             self.assertTrue(Path(asset["path"]).is_file())
         print(f"  ✓ LightOnOCR grounding + {len(data['assets'])} figure crop(s) · verified")
-
-    def test_04_crispembed_spatial_boxes(self):
-        cmd = ["python3", OCR_PY, str(SAMPLE_IMG), "--boxes", "--json"]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0, f"Spatial OCR failed: {res.stderr}")
-        data = json.loads(res.stdout)
-        self.assertEqual(data["task"], "spatial_ocr")
-        self.assertEqual(data["engine"], "crispembed")
-        self.assertGreaterEqual(data["n_regions"], 1)
-        for r in data["results"]:
-            self.assertEqual(len(r["bbox"]), 4)
-            self.assertGreaterEqual(r["confidence"], 0.0)
-        print(f"  ✓ spatial CrispEmbed boxes ({data['n_regions']} regions, {data['latency_ms']}ms) · verified")
-
-    def test_05_spatial_subcommand(self):
-        cmd = ["python3", OCR_PY, "spatial", str(SAMPLE_IMG), "--json"]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0, f"Spatial subcommand failed: {res.stderr}")
-        data = json.loads(res.stdout)
-        self.assertEqual(data["task"], "spatial_ocr")
-        print("  ✓ spatial subcommand · verified")
 
     def test_06_remote_tailscale_ocr(self):
         host = "rodri-x870-taichi-creator.tail2975a8.ts.net"

@@ -2,21 +2,23 @@
 name: agent-reach
 
 description: >
-  Internet and social media research router. MUST USE to search, look up, research, scrape, or
-  gather intelligence across 16 web platforms — including auth-walled sites, video transcripts,
-  and structured feeds: Reddit, Twitter/X, LinkedIn, Boss Zhipin (招聘/求职), YouTube captions,
-  Bilibili (B站), Xiaohongshu (小红书/RED), V2EX, Xueqiu (雪球 finance/stocks), GitHub code/repos,
-  RSS feeds, and web articles (via Jina Reader).
+  Internet and social media research router. Use this skill whenever the user asks you to
+  find anything about a topic online — a Linux distro or desktop environment, a driver or
+  ROCm/AMD compatibility issue, an open-source project, a product, a person, or what people
+  are saying about something — across auth-walled sites, video transcripts and structured
+  feeds: Reddit, Twitter/X, LinkedIn, Boss Zhipin (招聘/求职), YouTube captions, Bilibili
+  (B站), Xiaohongshu (小红书/RED), V2EX, Xueqiu (雪球 finance/stocks), GitHub code/repos,
+  RSS feeds, and web articles via Jina Reader.
 
-  Features deterministic token shielding and table projection via reach_filter.py (CLI and Python
-  Code Mode API for omnicli). Zero config for 6 public channels.
-  Run `agent-reach doctor --json` to verify active backends before dispatching.
+  Features deterministic token shielding and table projection via reach_filter.py (CLI and
+  Python Code Mode API for omnicli). Zero config for 6 public channels. Run
+  `agent-reach doctor --json` to verify active backends before dispatching.
 
-  NOT for: Writing reports, translation, data analysis (use agent compute); posting/commenting/liking
-  (read-only).
+  NOT for: writing reports, translation, or data analysis (use agent compute); posting,
+  commenting or liking (read-only); searching this machine's own notes (use notes-index).
 
-  [Routing]: SKILL.md contains routing tables and quick recipes. Load specialized reference runbooks
-  on-demand: references/{search,social,career,dev,web,video,finance}.md.
+  [Routing]: SKILL.md contains routing tables and quick recipes. Load specialized reference
+  runbooks on-demand: references/{search,social,career,dev,web,video,finance}.md.
 
 compatibility: "Requires network access. Multi-backend routing via OpenCLI, dedicated CLIs, or direct APIs."
 allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Bash(opencli:*) Bash(rdt:*) Bash(twitter:*) Read"

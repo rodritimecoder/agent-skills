@@ -3,7 +3,8 @@ name: playwright
 description: >
   Agent-facing browser control through official Playwright: CDP attach, locator actionability,
   AI-mode accessibility refs, interactive codegen, screenshots, and JavaScript evaluation. Use
-  frontend-uat for the JEV-driven user-journey workflow.
+  frontend-uat for the JEV-driven user-journey workflow. Rust developers writing against the
+  playwright-rs crate get the full guide in references/playwright-rs.md.
 compatibility: "Needs a Chromium CDP endpoint: the headless shell on :9222 for unattended work, or a headed Chromium on :9224 when a person must see and drive the page. Backed by official Playwright 1.64+ with zero-compile Node.js CLI."
 allowed-tools: "Bash(playwright-rs:*) Bash(fast-cdp:*) Bash(playwright:*) Bash(python3:*) Bash(npx:*) Read Write"
 ---
@@ -166,7 +167,10 @@ npx playwright test
 npx playwright codegen http://localhost:3000
 ```
 
-When writing Rust tests against the crate itself, use the local
-`playwright-rs-usage` skill (vendored from
+When writing Rust tests against the crate itself, read
+[`references/playwright-rs.md`](references/playwright-rs.md) — the object model
+(`Browser`/`Context`/`Page`/`Locator`), the `locator!()` macro, builder-pattern
+options, auto-wait semantics, adding the crate and installing its browsers, and
+capturing traces for failure diagnosis (vendored from
 [padamson/playwright-rust](https://github.com/padamson/playwright-rust/tree/main/skills/playwright-rs-usage),
 Apache-2.0).

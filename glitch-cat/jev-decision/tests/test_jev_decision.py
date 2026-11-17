@@ -6,6 +6,7 @@ contract other skills rely on (`--json` before the subcommand, `--context-file`,
 `--require-server`, the batch schema).
 """
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -275,6 +276,46 @@ class TestCliContract(unittest.TestCase):
         self.assertNotEqual(res["source"], "heuristic_fallback")
         if engine.model_name:
             self.assertEqual(res["source"], engine.model_name)
+
+
+    def test_21_box_delegation_preserves_the_gate_exit_code(self):
+        """`jev box` forwards to `decision-model box`; exit 2 is the gate, not an error."""
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = Path(tmp) / "decision_model.py"
+            stub.write_text(
+                "import json, os, sys\n"
+                "assert sys.argv[1] == 'box', sys.argv\n"
+                "print(json.dumps({'accepted': False, 'present': 0.11,\n"
+                "                  'env_port': os.environ.get('DECISION_PORT'),\n"
+                "                  'box_port': os.environ.get('BOX_PORT')}))\n"
+                "sys.exit(2)\n", encoding="utf-8")
+            env = {**os.environ, "JEV_DECISION_MODEL": str(stub)}
+            env.pop("BOX_PORT", None)
+            reject = subprocess.run(
+                [sys.executable, str(CLI), "box", "--image", "x.png", "--target", "y",
+                 "--port", "8761", "--json"],
+                capture_output=True, text=True, timeout=60, env=env)
+            stub.write_text(stub.read_text().replace("sys.exit(2)", "sys.exit(1)"),
+                            encoding="utf-8")
+            error = subprocess.run(
+                [sys.executable, str(CLI), "box", "--image", "x.png", "--target", "y",
+                 "--json"],
+                capture_output=True, text=True, timeout=60, env=env)
+        self.assertEqual(reject.returncode, 2, reject.stdout + reject.stderr)
+        payload = json.loads(reject.stdout)
+        self.assertFalse(payload["accepted"])
+        self.assertEqual(payload["env_port"], "8761",
+                         "transport reaches the client as DECISION_PORT")
+        self.assertIsNone(payload["box_port"], "BOX_PORT is no longer part of the contract")
+        self.assertEqual(error.returncode, 1, "a request error is not a rejection")
+
+    def test_22_box_missing_client_is_a_dependency_error(self):
+        proc = subprocess.run(
+            [sys.executable, str(CLI), "box", "--image", "x.png", "--target", "y"],
+            capture_output=True, text=True, timeout=60,
+            env={**os.environ, "JEV_DECISION_MODEL": "/nonexistent/decision_model.py"})
+        self.assertEqual(proc.returncode, 3, proc.stdout + proc.stderr)
+        self.assertIn("decision-model", proc.stderr)
 
 
 if __name__ == "__main__":

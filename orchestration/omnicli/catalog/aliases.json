@@ -12,10 +12,7 @@
       "local endpoints",
       "speech to text locally",
       "read text from an image locally",
-      "what is running locally",
-      "local llm",
-      "local llm chat completion",
-      "run the local llm"
+      "what is running locally"
     ],
     "tags": [
       "inference",
@@ -51,7 +48,13 @@
       "course hub",
       "canvas zoom cornell",
       "lecture study pipeline",
-      "academic orchestrator"
+      "academic orchestrator",
+      "smart check notes",
+      "verify week notes",
+      "study portal server",
+      "stamp video timestamps",
+      "note quality audit",
+      "srs review deck"
     ],
     "tags": [
       "education",
@@ -150,7 +153,9 @@
       "reading list",
       "course files",
       "what is due",
-      "unit assessment"
+      "unit assessment",
+      "canvas api key",
+      "canvas token"
     ],
     "tags": [
       "education",
@@ -201,7 +206,12 @@
       "ci runner",
       "cloud sandbox",
       "spawn agent in cloud",
-      "pull request from agent"
+      "pull request from agent",
+      "github actions subagent",
+      "cloud subagent",
+      "remote agent vm",
+      "browser sandbox ci",
+      "fix issue pull request"
     ],
     "tags": [
       "github",
@@ -227,7 +237,13 @@
       "prevent a token leak",
       "secret scanning before a push",
       "committed credentials",
-      "guard the commit against secrets"
+      "guard the commit against secrets",
+      "commit and push",
+      "push my changes",
+      "make repo private",
+      "shield secrets",
+      "bootstrap workstation",
+      "git hygiene"
     ],
     "tags": [
       "git",
@@ -298,11 +314,22 @@
       "argmax over labels",
       "how likely",
       "calibrated",
-      "front end visual test"
+      "front end visual test",
+      "bounding box",
+      "locate object in image",
+      "where is it in image",
+      "object detection box",
+      "crop image region",
+      "click coordinates on screenshot",
+      "is it in the photo",
+      "visual grounding box",
+      "image region coordinates",
+      "find element on screen"
     ],
     "tags": [
       "classification",
-      "decision"
+      "decision",
+      "grounding"
     ]
   },
   "model-layer": {
@@ -341,7 +368,8 @@
       "word document to text",
       "powerpoint to markdown",
       "excel spreadsheet",
-      "unreadable binary office file"
+      "unreadable binary office file",
+      "markitdown converter"
     ],
     "tags": [
       "documents",
@@ -371,7 +399,11 @@
       "extract text from picture",
       "recognise handwriting",
       "slide text",
-      "screenshot to markdown"
+      "screenshot to markdown",
+      "image to markdown",
+      "lightonocr speed engine",
+      "text bounding boxes",
+      "scene text coordinates"
     ],
     "tags": [
       "vision",
@@ -384,7 +416,13 @@
       "provenance",
       "validate schema",
       "open knowledge format",
-      "trust tier"
+      "trust tier",
+      "okf bundle",
+      "scaffold knowledge bundle",
+      "validate okf",
+      "knowledge graph viz",
+      "curriculum tree compile",
+      "bundle frontmatter schema"
     ],
     "tags": [
       "knowledge",
@@ -398,7 +436,14 @@
       "compound bash batch",
       "text embeddings api",
       "speech synthesis api",
-      "cheap subagent"
+      "cheap subagent",
+      "free openrouter",
+      "no cost inference",
+      "free api calls",
+      "hosted embeddings",
+      "batch shell commands",
+      "free tts",
+      "coding loop free"
     ],
     "tags": [
       "cloud",
@@ -420,7 +465,12 @@
       "quality rules",
       "rules before pushing code",
       "pre push review",
-      "code review before commit"
+      "code review before commit",
+      "audit repo health",
+      "yagni minimal diff",
+      "ai tell removal",
+      "typescript discipline review",
+      "review hub cli"
     ],
     "tags": [
       "code",
@@ -440,7 +490,13 @@
       "podman",
       "cpu pinned",
       "blast radius",
-      "run untrusted code safely"
+      "run untrusted code safely",
+      "podman sandbox",
+      "cpu pinned sandbox",
+      "isolated build",
+      "untrusted script",
+      "rootless container",
+      "subagent spaces"
     ],
     "tags": [
       "sandbox",
@@ -469,7 +525,12 @@
       "key frames",
       "summarise a recording",
       "slides from video",
-      "video knowledge notes"
+      "video knowledge notes",
+      "video miner pipeline",
+      "lecture recordings",
+      "recorded lecture",
+      "screen recording notes",
+      "video to markdown notes"
     ],
     "tags": [
       "video",
@@ -694,8 +755,17 @@
       "drive a browser",
       "capture a screenshot of a page",
       "cdp browser control",
-      "playwright"
-    ]
+      "playwright",
+      "click and fill form",
+      "headless chromium control",
+      "rust playwright code",
+      "locator macro rust",
+      "cargo playwright dependency",
+      "playwright traces rust",
+      "rust browser automation api",
+      "playwright rs crate"
+    ],
+    "tags": []
   },
   "omnicli": {
     "aliases": [
@@ -708,7 +778,12 @@
       "discover a tool",
       "tool contract",
       "what can this machine do",
-      "list my tools"
+      "list my tools",
+      "code mode",
+      "javascript code mode",
+      "omnicli sdk",
+      "exec a plan",
+      "code mode treatment"
     ],
     "tags": [
       "gateway",
@@ -716,5 +791,185 @@
     ],
     "index_body": false,
     "index_tools": false
+  },
+  "local-llm": {
+    "aliases": [
+      "local llm",
+      "local model",
+      "genesis",
+      "35b",
+      "write a python script",
+      "offline coding model",
+      "local coder",
+      "draft code offline"
+    ],
+    "tags": [
+      "local",
+      "inference",
+      "coding"
+    ]
+  },
+  "academic-pipeline-v2": {
+    "aliases": [
+      "course notes pipeline",
+      "lecture pipeline rebuild",
+      "text first ingestion",
+      "five stage pipeline",
+      "constellation graph html",
+      "anki html hub",
+      "cornell html sheet",
+      "pipeline micro gates",
+      "run pipeline",
+      "step ledger"
+    ],
+    "tags": []
+  },
+  "gws-docs": {
+    "aliases": [
+      "read google doc",
+      "google doc contents",
+      "docs batchupdate",
+      "create blank doc",
+      "gws docs get",
+      "inspect doc formatting"
+    ],
+    "tags": []
+  },
+  "gws-docs-write": {
+    "aliases": [
+      "append to doc",
+      "add paragraph to doc",
+      "append text google docs",
+      "write to doc",
+      "insert text end of doc",
+      "gws docs write"
+    ],
+    "tags": []
+  },
+  "gws-drive": {
+    "aliases": [
+      "google drive files",
+      "find file in drive",
+      "upload to drive",
+      "download from drive",
+      "share folder",
+      "list shared drives",
+      "move file drive",
+      "export doc to pdf",
+      "gws drive files"
+    ],
+    "tags": []
+  },
+  "gws-shared": {
+    "aliases": [
+      "gws auth login",
+      "google workspace cli setup",
+      "gws credentials",
+      "gws global flags",
+      "gws output format",
+      "service account google"
+    ],
+    "tags": []
+  },
+  "leanrea": {
+    "aliases": [
+      "reverse engineer binary",
+      "unpack app asar",
+      "decompile app",
+      "extract strings binary",
+      "closed source app internals",
+      "inspect apk",
+      "analyze macho elf pe",
+      "read embedded sqlite",
+      "flutter snapshot hash",
+      "go buildinfo deps",
+      "firmware unpack"
+    ],
+    "tags": []
+  },
+  "design-pack": {
+    "aliases": [
+      "design system pack",
+      "design tokens css",
+      "ui style guide",
+      "retro terminal ui",
+      "pixel ui kit",
+      "make ui match reference",
+      "component states spec",
+      "design pack"
+    ],
+    "tags": []
+  },
+  "doc-layout": {
+    "aliases": [
+      "document layout analysis",
+      "pp doclayoutv3",
+      "page layout regions",
+      "pdf to markdown layout",
+      "extract figures from pdf",
+      "reading order extraction",
+      "table and formula regions",
+      "multi column pdf parsing"
+    ],
+    "tags": []
+  },
+  "t3-browser-hands": {
+    "aliases": [
+      "t3 preview pane",
+      "preview tools browser",
+      "drive logged in browser",
+      "canvas ui automation",
+      "t3 code browser",
+      "vision click coordinates"
+    ],
+    "tags": []
+  },
+  "cf-architect": {
+    "aliases": [
+      "cloudflare account",
+      "cloudflare workers",
+      "durable objects",
+      "cloudflare tunnel",
+      "r2 bucket",
+      "free tier limits",
+      "cf cli",
+      "expose gpu box",
+      "serverless design"
+    ],
+    "tags": []
+  },
+  "companion": {
+    "aliases": [
+      "talk to the model",
+      "voice chat page",
+      "pixel avatar",
+      "hold to talk",
+      "speech interface",
+      "voice interface homelab"
+    ],
+    "tags": []
+  },
+  "deck": {
+    "aliases": [
+      "homelab dashboard",
+      "what is running",
+      "vram usage",
+      "gpu status page",
+      "model loaded",
+      "tailscale devices online",
+      "status page"
+    ],
+    "tags": []
+  },
+  "free-swarm": {
+    "aliases": [
+      "several models answer",
+      "second opinion",
+      "model panel",
+      "majority vote",
+      "cheap parallel review",
+      "fan out question"
+    ],
+    "tags": []
   }
 }

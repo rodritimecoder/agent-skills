@@ -22,7 +22,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 DECISION_PORT = int(os.environ.get("DECISION_PORT", 8083))
-BOX_PORT = int(os.environ.get("BOX_PORT", DECISION_PORT))
+# The standalone h2o shim is its own port (:8761, slot `decision-box`). Box answers
+# normally come from a box-capable occupant of the decision slot itself, so
+# CLIP_BOX_PORT is the override you set when another candidate holds :8083.
+CLIP_BOX_PORT = int(os.environ.get("CLIP_BOX_PORT", 8761))
 DEFAULT_HOST = os.environ.get("DECISION_HOST", "127.0.0.1")
 SCORE_LEVELS = ["0.0", "0.25", "0.5", "0.75", "1.0"]
 BOX_MIN_PRESENT = float(os.environ.get("BOX_MIN_PRESENT", 0.5))
@@ -52,6 +55,22 @@ def primitives(model_id: str) -> list[str]:
     if box_capable(model_id):
         caps.append("box")
     return caps
+
+
+def box_endpoint_port(model_id: str | None = None) -> int:
+    """Where `box` is answered.
+
+    An explicit CLIP_BOX_PORT names the standalone h2o shim and always wins.
+    Otherwise the box primitive follows the decision slot, where the box-capable
+    candidates (h2o-lightning, Valen) serve boxes on their decision port.
+    """
+    if os.environ.get("CLIP_BOX_PORT"):
+        return CLIP_BOX_PORT
+    try:
+        model = served_model(DECISION_PORT) if model_id is None else model_id
+    except SystemExit:
+        return DECISION_PORT
+    return DECISION_PORT if box_capable(model) else CLIP_BOX_PORT
 
 
 def gate_box(answer: dict, min_present: float = BOX_MIN_PRESENT,
@@ -237,12 +256,13 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
             min_present: float = BOX_MIN_PRESENT,
             min_confidence: float = BOX_MIN_CONFIDENCE,
             timeout: float = 120.0) -> int:
-    model = served_model(BOX_PORT)
+    port = box_endpoint_port()
+    model = served_model(port)
     if not box_capable(model):
         raise SystemExit(
-            f"decision-model error: :{BOX_PORT} serves {model}, which has no box primitive. "
+            f"decision-model error: :{port} serves {model}, which has no box primitive. "
             f"Box answers come from h2o-lightning (h2o.sh) or Valen-Decision-1.5 (valen.sh) "
-            f"on slot :8083, or point BOX_PORT at a running standalone h2oai shim (:8761)."
+            f"on slot :{DECISION_PORT}, or point CLIP_BOX_PORT at a running standalone h2oai shim (:8761)."
         )
 
     if is_valen(model):
@@ -260,7 +280,7 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
             "questions": {"loc": {"type": "box", "instructions": f"{target} in `{ref}`"}},
             "assets": {ref: {"type": "image", "format": fmt, "data_base64": b64}},
         }
-    res = post_systemone(payload, port=BOX_PORT, timeout=timeout)
+    res = post_systemone(payload, port=port, timeout=timeout)
     ans = normalize_box_answer(res.get("answers", {}).get("loc", {}))
     box = ans["box"]
     present = ans.get("present")
@@ -334,22 +354,24 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
 def cmd_caps(json_mode: bool = False) -> int:
     model = served_model(DECISION_PORT)
     caps = primitives(model)
+    box_port = box_endpoint_port(model)
     payload = {
         "model": model,
         "slot": DECISION_PORT,
-        "box_port": BOX_PORT,
+        "box_port": box_port,
         "primitives": caps,
         "vision": "box" in caps,
         "note": None if "box" in caps else (
             "box needs h2o-lightning (h2o.sh) or Valen-Decision-1.5 (valen.sh); "
-            "this endpoint answers noul, choice and score only"
+            "this endpoint answers noul, choice and score only. "
+            "Point CLIP_BOX_PORT at a standalone shim (:8761)."
         ),
     }
     if json_mode:
         print(json.dumps(payload, indent=2))
     else:
         print(f"model       {model}")
-        print(f"slot        :{DECISION_PORT}  (box on :{BOX_PORT})")
+        print(f"slot        :{DECISION_PORT}  (box on :{box_port})")
         print(f"primitives  {', '.join(caps)}")
         if payload["note"]:
             print(f"note        {payload['note']}")
@@ -363,9 +385,10 @@ def cmd_doctor(json_mode: bool = False) -> int:
     except Exception:
         pass
 
+    box_port = box_endpoint_port(model or None)
     box_up = False
     try:
-        urllib.request.urlopen(f"http://{DEFAULT_HOST}:{BOX_PORT}/health", timeout=2)
+        urllib.request.urlopen(f"http://{DEFAULT_HOST}:{box_port}/health", timeout=2)
         box_up = True
     except Exception:
         pass
@@ -376,7 +399,7 @@ def cmd_doctor(json_mode: bool = False) -> int:
             "decision_port": DECISION_PORT,
             "decision_online": bool(model),
             "model": model or None,
-            "box_port": BOX_PORT,
+            "box_port": box_port,
             "box_online": box_up,
             "status": "online" if online else "offline",
         }, indent=2))
@@ -384,8 +407,8 @@ def cmd_doctor(json_mode: bool = False) -> int:
         print("🩺 Checking Decision Model endpoints...")
         print(f"  :{DECISION_PORT} (Native /v1/systemone): {'🟢 ONLINE' if model else '⚪ OFFLINE'}"
               + (f" — {model}" if model else ""))
-        where = "same port" if BOX_PORT == DECISION_PORT else f":{BOX_PORT}"
-        print(f"  :{BOX_PORT} (Visual Box Shim, {where})       : {'🟢 ONLINE' if box_up else '⚪ OFFLINE'}")
+        where = "same port" if box_port == DECISION_PORT else f":{box_port}"
+        print(f"  :{box_port} (Visual Box Shim, {where})       : {'🟢 ONLINE' if box_up else '⚪ OFFLINE'}")
     return 0 if online else 1
 
 def main() -> int:

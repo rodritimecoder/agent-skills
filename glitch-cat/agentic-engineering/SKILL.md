@@ -2,9 +2,9 @@
 name: agentic-engineering
 
 description: >
-  Autonomous production engineering pipeline implementing Kem's 7-step software factory (Glitch Cat Club;
-  Reel DehIT3lNgHC). Operates target-local Markdown Kanban boards (.kanban/), event-driven Listeners,
-  Fresh-Context Unbiased Judges, Task Splitters, and multi-model parallel sandboxes.
+  Autonomous production engineering pipeline implementing Kem's 7-step software factory. Operates
+  target-local Markdown Kanban boards (.kanban/), event-driven Listeners, Fresh-Context Unbiased
+  Judges, Task Splitters, and multi-model parallel sandboxes.
 
 metadata:
   bins: agentic

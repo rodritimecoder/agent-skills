@@ -2,12 +2,12 @@
 name: free-swarm
 
 description: >
-  Nine zero-cost OpenCode models, each published as a named read-only subagent so a session
-  can fan a task out to all of them at once. Use when a question deserves several independent
-  answers, when one model's blind spot should be covered by another, for a second opinion, a
-  panel or ensemble of different models, majority votes, long-context reads, or cheap parallel
-  review — while the main session keeps its own model. Not for coordinating file edits across
-  agents (worktree-harness) or for choosing the cheapest model for one prompt (eval-router).
+  Use when a question deserves several independent answers, for a second
+  opinion, a panel or ensemble of different models, majority votes, long-context
+  reads, or cheap parallel review — while the main session keeps its own model.
+  Nine zero-cost OpenCode models, each published as a named read-only subagent,
+  so one session can fan a task out to all of them at once. Read-only: no file
+  edits, no GPU, no API keys.
 
 compatibility: "OpenCode v2 with the opencode provider. No API keys, no GPU, no network beyond OpenCode's own free tier."
 allowed-tools: "Bash(python3:*) Bash(opencode:*) Read"

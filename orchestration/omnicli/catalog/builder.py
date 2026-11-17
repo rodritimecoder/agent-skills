@@ -526,7 +526,15 @@ def build(
         # routing intent, not incidental prose — so they share a column and a
         # weight. Prose stays in the body, where incidental matches cannot
         # out-vote a precise curated signal.
-        alias_text = " ".join(aliases + tags)
+        #
+        # The skill's own name belongs in that column too. The FTS `skill`
+        # column is UNINDEXED, so without this a query that *names* a skill
+        # ("is the video miner also using crisper whisper") cannot reach it
+        # from the name alone, and loses to whatever unrelated doc happens to
+        # contain the words. De-hyphenated, because users type the name with
+        # spaces.
+        name_text = name.replace("-", " ")
+        alias_text = " ".join([name_text] + aliases + tags)
         tag_text = " ".join(tags)
         doc_rows.append((
             name, "skill", name, s["md_path"] or "",

@@ -217,9 +217,16 @@ def _split_parent_args(extra_args: list[str], parent_params: list[dict]) -> tupl
 
 
 def build_cmd(argv: list[str], extra_args: list[str], *, python: str,
-              skill_dir: Any, parent_params: list[dict] | None = None) -> list[str]:
-    rendered = [str(a).replace("{python}", python).replace("{skill}", str(skill_dir))
-                for a in argv]
+              skill_dir: Any, parent_params: list[dict] | None = None,
+              node: str | None = None) -> list[str]:
+    node_bin = node or shutil.which("node") or "node"
+    rendered = [
+        str(a)
+        .replace("{python}", python)
+        .replace("{node}", node_bin)
+        .replace("{skill}", str(skill_dir))
+        for a in argv
+    ]
     extra = [str(a) for a in extra_args]
     if parent_params and len(rendered) >= 2:
         before, after = _split_parent_args(extra, parent_params)

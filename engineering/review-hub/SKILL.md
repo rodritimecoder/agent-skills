@@ -1,13 +1,14 @@
 ---
 name: review-hub
 
-description: >
-  Unified Code Review, Architecture Audit, and Quality Enforcement Gateway. Late-binding
-  dispatch hub for 8 core engineering review suites: Ponytail (minimal diff & YAGNI), pstack (23 playbooks),
-  Poteto Mode (domain modeling & discipline), Thermo-Nuclear (harsh architectural audit),
-  Unslop (31 AI tell elimination rules), TypeScript (type discipline), No-Comments (comment constraints),
-  and Verification (grounded verification). Provides full pre-flight response projection (--project)
-  and disk buffering (--out) to eliminate context bloat.
+description: >-
+  Use this skill when you need to review a git diff, run a code review, audit an architecture
+  or repo, or enforce quality rules: dispatch through the `review-hub` CLI (`review-hub review`,
+  `review-hub audit`, `review-hub list`, `review-hub inspect`, `review-hub search`). Late-binding
+  gateway to 8 suites: Ponytail (minimal diff, YAGNI), pstack (23 playbooks), Poteto (domain
+  modeling), Thermo-Nuclear (harsh architectural audit), Unslop (31 AI-tell rules), TypeScript
+  (type discipline), No-Comments, and Verification (grounded verification). Supports pre-flight
+  response projection (`--project`) and disk buffering (`--out`) to keep context lean.
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(review-hub:*) Bash(python3:*) Read Write"

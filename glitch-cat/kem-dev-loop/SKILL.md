@@ -1,11 +1,13 @@
 ---
 name: kem-dev-loop
 description: >
-  Kem Glitch's 6-phase autonomous AI development lifecycle (Glitch Cat Club; Reel DemLMidtxxj).
-  The CLI holds the order: a builder cannot be dispatched before hidden holdouts exist,
-  and validation refuses a gate that postdates the dispatch or a builder that exited
-  non-zero. Use for FULL_ROUTE work that needs plan approval, anti-sycophancy holdouts,
-  and grounded evidence.
+  The kem dev loop:'s 6-phase autonomous AI development lifecycle. The CLI holds the order — a
+  builder cannot be dispatched before hidden holdouts exist, and validation refuses a gate that
+  postdates the dispatch or a builder that exited non-zero. Use for FULL_ROUTE work that needs
+  plan approval, anti-sycophancy holdouts and grounded evidence; also when the user says "kem dev
+  loop", "dev loop", "the loop", or asks whether AGENTS.md should mandate a development lifecycle
+  with dispatch and validation gates. Not the 32 steering principles or the /kem-mode contract —
+  those are kem-thought.
 compatibility: "Requires python3 and git. The decision model on :8083 is optional."
 allowed-tools: "Bash(kem-dev-loop:*) Bash(jev:*) Bash(review-hub:*) Bash(git:*) Read Write"
 ---

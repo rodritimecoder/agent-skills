@@ -2,17 +2,16 @@
 name: verification
 
 description: >
-  Hands-and-eyes verification gate (Glitch Cat Club / Kem Glitch; Reel DfAIPrAtteM).
-  Opens the app like a person on a real viewport, watches what the browser actually did
-  behind the screen (console, exceptions, failed requests), compares before/after pixels,
-  walks every Storybook state, and reports what real users are hitting — then emits one
-  PASS/FAIL artifact instead of a claim. Use when an agent says a UI change is done, when a
-  button or layout must be proven on mobile, when a flow looks fine but an order or action
-  silently fails, when a change must not move a single pixel, or when you need a repeatable
-  check the next agent can run instead of re-improvising. Also forges a project-local,
-  harness-agnostic `verify-<app>` from the five-question repo interview (`forge`), and proves
-  the gate can fail by breaking one feature on purpose (`control`). Complements frontend-uat
-  (single sub-second journey) and playwright (the driver underneath).
+  Hands-and-eyes verification gate. Opens the app like a person on a real viewport, watches what
+  the browser actually did behind the screen (console, exceptions, failed requests), compares
+  before/after pixels, walks every Storybook state, and reports what real users are hitting — then
+  emits one PASS/FAIL artifact instead of a claim. Use when an agent says a UI change is done,
+  when a button or layout must be proven on mobile, when a flow looks fine but an order or action
+  silently fails, when a change must not move a single pixel, or when you need a repeatable check
+  the next agent can run instead of re-improvising. Also forges a project-local, harness-agnostic
+  `verify-<app>` from the five-question repo interview (`forge`), and proves the gate can fail by
+  breaking one feature on purpose (`control`). Complements frontend-uat (single sub-second
+  journey) and playwright (the driver underneath).
 
 metadata:
   bins: verify-app

@@ -1,7 +1,14 @@
 ---
 name: okf-architect
 
-description: Autonomous Open Knowledge Format (OKF v0.2) architect and validator. Design, scaffold, validate, and maintain agent-friendly knowledge bundles adhering to Google's Open Knowledge Format specification. Use whenever asked to create an OKF bundle, validate OKF compliance, scaffold concepts with provenance, trust tiers, and lifecycle signals, generate progressive-disclosure index.md and log.md files, or structure knowledge for AI agents and cross-organizational exchange.
+description: >
+  Use when creating, validating or repairing an Open Knowledge Format (OKF v0.2) bundle with the
+  okf / okf-architect CLI: design the concept tree, scaffold a spec-compliant bundle, validate
+  existing ones, refresh progressive-disclosure index.md and log.md, and carry provenance, trust
+  tiers (unverified, machine-confirmed, human-reviewed), lifecycle status, stale_after and attested
+  computations in YAML frontmatter. Commands: validate, scaffold, index, viz (static knowledge graph
+  viz.html), compile-tree (CURRICULUM_TREE.md to study portal). Plain Markdown plus frontmatter,
+  no SDK, no network. Not for a prose write-up of findings.
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(okf-architect:*) Bash(python3:*) Read Write"

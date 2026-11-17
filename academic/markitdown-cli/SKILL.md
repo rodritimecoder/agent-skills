@@ -2,9 +2,12 @@
 name: markitdown-cli
 
 description: >
-  Convert documents to Markdown with MarkItDown: PDF, DOCX, PPTX, XLSX, HTML,
-  CSV, JSON, XML, EPUB, ZIP, Outlook .msg, notebooks, images with optional
-  local OCR, and URLs. Use to read a document or attachment into text.
+  Use when you must read a file the agent cannot open, or turn it into Markdown with MarkItDown
+  (markitdown-cli, scripts/markitdown_cli.py): PDF, DOCX, PPTX, XLSX, XLS, EPUB, RTF, Outlook .msg,
+  HTML, CSV, TSV, JSON, XML, YAML, ipynb, ZIP, images, or a URL (YouTube, Wikipedia, RSS, Bing).
+  One file to stdout, -o to a path, -r over a tree, -i - from stdin. Token-saving flags --outline,
+  --section, --grep, -p heading,words -n 15, --table. Scans and screenshots: --ocr against a local
+  vision model. Legacy binary .doc/.ppt/.xls are not converted — save as .docx first.
 
 compatibility: "Requires the markitdown package. OCR needs a local OpenAI-compatible server (MARKITDOWN_OCR_BASE_URL); the optional LLM clients need ANTHROPIC_API_KEY."
 allowed-tools: "Bash(markitdown-cli:*) Bash(python3:*) Read Write"

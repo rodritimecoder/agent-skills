@@ -1,17 +1,14 @@
 ---
 name: omnicli
-
 description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8085)."
-
-compatibility: "Requires the local inference servers it fronts: :8080, :8081, :8083, :8084 and :8085, plus the optional embedding server :8087, which supplies the dense leg of hybrid search (the catalog works without it, on BM25 alone). The decision port speaks either native /v1/systemone or the pplx-decider joint protocol v3; the protocol is auto-detected from the served model."
 allowed-tools: "Bash(omnicli:*) Read"
 ---
 
 # `omnicli` — The Uber OmniCLI
 
-One gateway, two surfaces, one catalog. An agent discovers a tool by *intent*,
-pulls the contract for that one tool, invokes it, and gets a bounded response.
-Nothing else enters the context window.
+One gateway, two surfaces, one catalog. Discover a tool by *intent*, pull the
+contract for that one tool, and invoke it with a bounded response — nothing
+else enters the context window.
 
 ```
                   ┌── CLI (shell harnesses) ──────────────────────┐
@@ -27,7 +24,7 @@ Nothing else enters the context window.
                         └───────────────┬───────────────┘
                                         │
                         ┌───────────────▼───────────────┐
-                        │  556 tools  (data plane)       │
+                        │  580+ tools  (data plane)      │
                         │  scripts · CLIs · endpoints    │
                         └───────────────────────────────┘
 ```
@@ -44,434 +41,117 @@ omnicli search "turn a recorded podcast into readable text"
 omnicli search "调研一下这个话题在网上的讨论"
 ```
 
-BM25 over the **full body** of every skill, with hand-curated aliases in a
-separately weighted column. A curated alias ("podcast" → audio tooling) is
-deliberate author intent and outranks incidental prose.
+BM25 over every skill's full body + curated aliases (weight 12) matches exact
+tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
+`bge-small-en-v1.5` leg over descriptions (`K=60`) and damps multi-chunk bodies
+(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when `:8087` is offline.
+See [references/retrieval-architecture.md](references/retrieval-architecture.md)
+for benchmarks and ranking internals.
 
-```
-🔍 [omnicli] intent: 'transcribe a zoom lecture recording'   tier=bm25(gated)
-
-  1. zoom-recorder   score=0.91  lex=34.25  coord=0.75  chunks=22
-       zoom-recorder/scripts/zoom_download
-       Download transcripts, audio, and visual keyframe slides from Zoom cloud...
-       → omnicli tools zoom-recorder
-```
-
-### Two legs, fused by rank
-
-BM25 plus curated aliases is close to saturated on the golden set, and it is
-the leg that matches exact tokens (`:8083`, `canvas-cli`). What it cannot do is
-recognise a paraphrase. The second leg embeds each skill's **description** with
-`bge-small-en-v1.5` (384d, `-ngl 0` — CPU only, zero VRAM) and the two rankings
-are fused with reciprocal rank fusion, `K=60`.
-
-`fusion=auto` fuses only when BM25's own margin is thin (below
-`RERANK_GATE_MARGIN`), because fusion buys unseen phrasings and costs tuned
-ones:
-
-| mode | golden top-1 | held-out top-1 | median latency |
-|---|---|---|---|
-| `--fusion never` | 59/61 | 24/30 | 3.8 ms |
-| `--fusion auto` (default) | 56/61 | 26/30 | 4.5 ms |
-| `--fusion always` | 52/61 | 28/30 | 12.8 ms |
-
-The golden set shares this catalog's vocabulary, so the lexical leg wins it.
-The held-out set is paraphrased intent, authored by this catalog's own author —
-which means it is **a ceiling, not a forecast**: the descriptions were written
-with those 30 queries in view. Read it as "the mechanism responds", not as an
-expected accuracy.
-
-### The description field is the cheapest lever
-
-Frontmatter `description` is the only per-skill text both legs see: BM25
-indexes it as a `skill`-kind doc row, and the dense leg embeds it. The Agent
-Skills spec asks for exactly the two things routing needs — *"when to use it"*
-and *"specific keywords that help agents identify relevant tasks"*.
-
-Twelve descriptions rewritten to that pattern (same claims, plus user
-vocabulary and one differentiator apiece) moved held-out BM25 from 12/30 to
-19/30 before any dense leg was involved, at a cost of one golden case. The
-useful vocabulary is the user's ("school portal", "closed source", "second
-opinion"), not the system's.
-
-### Distilled questions: built, measured, left off (negative result)
-
-Cerebras' internal RAG found embeddings over raw text insufficient and fixed it
-by embedding *the question someone would search for* — "a question meets a
-question". That was applied here: 228 questions across 55 skills, generated in
-six parallel batches, each carrying a verbatim quote from its own description.
-The gate is code (`catalog/questions.py`): the quote must be a real span, the
-question may not name the skill, and it must sit within 0.45 cosine of its own
-description embedding. A deliberately off-topic question with a valid stolen
-quote is rejected, and a test asserts it.
-
-The routing effect is **zero**:
-
-| rows embedded | golden top-1 (auto / always) | paraphrase top-1 (auto / always) |
-|---|---|---|
-| description only | 55/61 · 53/61 | 24/39 · 26/39 |
-| description + questions | 56/61 · 52/61 | 24/39 · 26/39 |
-
-Why it cannot be converted: on this corpus **every BM25 top-1 miss is also a
-dense top-1 miss** — the oracle rescue potential is 0/61 on golden and 3/39 on
-paraphrase. Fusion has nothing to promote. Questions alone are weaker than
-descriptions (dense top-1 34/61 golden, 12/39 paraphrase, versus 46/61 and
-16/39), and max-pooling both buys paraphrase recall (16→18) by spending golden
-precision (46→42).
-
-Two levers explain it. Descriptions were already rewritten with the user's
-vocabulary, which is the same fix questions apply, so the headroom was spent.
-What remains in the paraphrase misses is *proper nouns* — `deskforge`,
-`litellm`, `navidc` — and those belong in the curated alias column (weight 12),
-not in an embedding.
-
-So the snapshot ships, and stays off: `OMNICLI_QUESTIONS=1 omnicli index`.
-`omnicli questions <skill>` lists the questions and re-checks each quote against
-the current description, so an edited `SKILL.md` cannot leave a stale claim
-indexed. The machinery is kept because it is cheap, reversible, and the next
-corpus that has not already spent the description lever may not be neutral.
-
-### Body length is a ranking bias
-
-BM25 normalises per chunk (`b=0.75`), but aggregation takes the best chunk per
-skill, so a 93-chunk body gets 93 chances at one good chunk while a 1-chunk
-skill gets one. `CHUNK_PENALTY_ALPHA` (default `0.2`, env
-`OMNICLI_CHUNK_ALPHA`) damps the score by `chunks**-alpha`, which removed the
-`icm-architect` hijack of generic queries. Measured: held-out `fusion=always`
-top-3 went 29/30 → 30/30 and top-1 26/30 → 28/30 between alpha 0 and 0.2, for
-one golden case. Above 0.3 the tuned set starts paying for it.
-
-Every result names the legs that found it (`found_by`) and the fused score is
-normalised to 0-1 while `lexical_score` keeps the BM25 value. When :8087 is
-down the tier says `bm25 (dense offline)`, `dense.reason` carries the error,
-and the result set is exactly what BM25 found — retrieval gets worse, it does
-not fail. Vectors are keyed to a fingerprint of each description, so an edited
-`SKILL.md` re-embeds on the next `omnicli index` without a full rebuild.
-
-### Discovery does not imply exposure
-
-A tool is catalogued the moment it is discovered, and runnable only once it
-has been enabled. `omnicli tools` marks disabled tools, `omnicli describe`
-still returns their contract, and `omnicli invoke` refuses them with the exact
-command that would open the gate:
+### 2. `omnicli describe <tool_id|skill>` — get one contract
 
 ```bash
-omnicli policy            # 532/556 enabled, plus the recent decisions
-omnicli enable <tool_id>  # record the decision against the contract hash
+omnicli describe zoom-recorder/scripts/zoom_download   # one tool's usage, flags, inputSchema
+omnicli describe canvas-cli                             # skill frontmatter + section outline
+omnicli describe canvas-cli --section "token shield"    # load only one section
+omnicli spec --grep zoom --stubs                        # typed .d.ts signatures for matching tools
+```
+
+Skills are **never modified**; the catalog is a read-only index (`catalog.db`).
+Newly discovered tools start disabled until opened via the policy gate:
+
+```bash
+omnicli policy            # view enabled/disabled state + audit log
+omnicli enable <tool_id>  # allow execution against current contract hash
 omnicli disable <tool_id>
 ```
-
-Tools that existed when the gate was introduced were grandfathered; tools new
-relative to the previous catalog start disabled. The decision log
-(`policy.log.jsonl`) is append-only and survives a rebuild.
-
-### 2. `omnicli describe <tool_id>` — get one contract
-
-```bash
-omnicli describe zoom-recorder/scripts/zoom_download
-```
-
-Returns the usage line, every flag, positionals and subcommands — extracted
-from the tool's own `--help` at index time. **One** tool per call.
-
-Given a **skill name** instead of a tool id, it returns the skill itself: its
-frontmatter and a section outline, with a token estimate per section. Add
-`--section "<heading>"` to read just that one section.
-
-```bash
-omnicli describe canvas-cli
-# 📖 [canvas-cli]  ~739 tokens, 13 sections, 22 tools
-#    Sections:
-#      Canvas LMS (`canvas-cli`)                          60 tok
-#        🏛️ The Command Groups                            187 tok
-#        🛡️ Token Shielding                               121 tok
-#    Read one:  omnicli describe canvas-cli --section "token shield"
-
-omnicli describe canvas-cli --section "token shield"
-# 📖 [canvas-cli] section: 🛡️ Token Shielding  (~121 tokens)
-```
-
-This is the spec's progressive disclosure, routed through the gateway: the
-outline first, then one section. A skill's body is never fetched whole unless
-that is what you ask for.
-
-`omnicli spec --grep <re> --stubs` is the wide-angle version: annotated
-signatures for every matching tool, in one bounded reply. It is what an agent
-reads before writing a plan, and `spec({ grep })` returns the same thing
-*inside* the plan.
-
-The skills themselves are **never modified**. The catalog is an index over
-them: it reads the files, it does not own them. Delete `catalog.db` and every
-skill still works exactly as before.
 
 ### 3. `omnicli invoke <tool_id> [args]` — run it, bounded
 
 ```bash
 omnicli invoke zoom-recorder/scripts/zoom_download -- --url "https://zoom.us/rec/abc"
-
-# keep only the fields you need
 omnicli invoke local/decide --omni-project "answer,confidence"
-
-# keep the full payload on disk, read only what matters
 omnicli invoke local/llm --omni-buffer /tmp/out.md
 ```
 
-**Every response is capped** (default 8 KB) with a head+tail preview and a
-pointer to the full output. An agent cannot flood its context window by
-forgetting a flag.
-
-**Flag names are prefixed `--omni-`** so they never collide with the target
-tool's own flags (`--out`, `--project` and `--json` are all real flags on
-real tools here). Anything after the tool id that is *not* `--omni-*` is
-passed to the tool untouched; `--` forces that split explicitly.
+Every reply is capped (default 8 KB) with a head+tail preview. Gateway flags
+are prefixed `--omni-` so they never collide with tool flags (`--` forces the
+split explicitly):
 
 | Flag | Effect |
 |---|---|
-| `--omni-buffer FILE` | write the full, **unfiltered** stdout to a file, print a preview |
-| `--omni-project a,b.c` | keep these JSON fields; dotted paths and list elements supported |
+| `--omni-buffer FILE` | Write full, unfiltered stdout to disk and print a bounded preview |
+| `--omni-project a,b.c` | Keep only specified JSON fields (dotted paths & arrays supported) |
 | `--omni-jq EXPR` | JQ filter expression |
-| `--omni-grep RE` | keep only matching lines |
-| `--omni-max-bytes N` | hard cap on returned bytes (default 8000) |
-| `--omni-json` | wrap the result in JSON |
-
-A cap is a budget to fill, not a reason to return only a banner: at 250 bytes
-the reply is 250 bytes of head, banner and tail. A projection that cannot be
-applied says so; it never returns the unfiltered payload as though it worked.
-Unknown `--omni-*` flags are reported instead of silently dropped.
+| `--omni-grep RE` | Keep only matching lines |
+| `--omni-max-bytes N` | Hard cap on returned bytes (default 8000) |
+| `--omni-json` | Wrap output and metadata in JSON |
 
 ---
 
 ## ⚡ One plan, one turn — `omnicli exec`
 
-Step 3 is one tool call per turn. When a job has several steps, write one
-JavaScript plan instead: the intermediates stay in variables and only what you
-print comes back. Plans run on `node:vm` under `vm_runner.mjs` inside `bwrap`;
-Python plans are retired (`.py` or `--lang py` exits 2 with the migration text).
+For multi-step workflows (≥2 calls or intermediate parsing), run one JavaScript
+plan inside `node:vm` + `bwrap` instead of round-tripping intermediate payloads
+through context. (Python plans are retired; `.py` / `--lang py` exits 2.)
 
 ```bash
-omnicli spec --grep zoom --stubs   # the typed surface for just those tools
-omnicli bindings                   # writes omnicli_tools.mjs + omnicli_tools.d.ts
-omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'   # inline
-cat plan.mjs | omnicli exec -      # piped stdin
-omnicli exec plan.mjs              # runs file in bubblewrap; prints only the plan's stdout
-omnicli exec plan.mjs --sandbox strict
+omnicli spec --grep zoom --stubs
+omnicli bindings                                                      # writes omnicli_tools.mjs + .d.ts
+omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
+omnicli exec plan.mjs --sandbox strict                                # write (default) | strict | none
 ```
 
 ```js
 import { search, spec, zoom, invoke, parallel, emitResult } from "omnicli_tools";
 
-console.log(spec({ grep: "zoom" }).length);   // query every contract without loading it
-
-const [notes, hits] = await parallel([        // thunks fan out; order is preserved
+const [notes, hits] = await parallel([
   () => zoom({ url: "https://zoom.us/rec/share/x", format: "md" }),
   () => search("audio transcription", 3),
 ]);
-invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"]);
-
-emitResult({ notes: notes.output.slice(0, 200), hits: hits.length });
+const asr = await invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"]);
+emitResult({ notes: notes.output.slice(0, 200), hits: hits.length, asr: asr.exit_code });
 ```
 
-A plan needs no boilerplate: `search`, `spec`, `describe`, `invoke`, `output`,
-`parallel`, `emitResult` and one async function per catalogued tool are already
-globals inside the VM. The `import` above is optional — a file plan uses it for
-editor and type-checking support, and both forms resolve to the same module.
-`omnicli_tools.d.ts` carries that surface as TypeScript declarations, so the
-model can read a contract instead of guessing one.
+- **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
+- **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
+- **Containment & limits:** `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
 
-Every per-tool function takes **one options object** — `zoom({ url, format })`,
-not `zoom(url, format)` — validated against that tool's extracted JSON Schema
-(`inputSchema`) before dispatch, so an unknown, missing or mistyped argument
-throws `TypeError` at the call site instead of at call forty.
-
-| Property | Behaviour |
-|---|---|
-| **Policy** | every call shells out to `omnicli invoke`, so the enable gate, projection and 8 KB cap still apply |
-| **Surface** | one async function per tool generated from its `inputSchema`, plus `spec()` to filter the catalog in-plan |
-| **Discovery** | `search()`, `spec()` and `describe()` are callable *inside* the plan — definitions never enter the window |
-| **Isolation (`write`)** | bubblewrap: writes land only in the workspace and an ephemeral `/tmp`; `/` is read-only |
-| **Isolation (`strict`)** | no network, home masked, and every tool call crosses one UNIX socket to the parent; the plan holds no credentials and cannot open a socket |
-| **Isolation (memory)** | `--mem-limit MiB` is opt-in: unset is no cap at all. Setting it caps Node's JS heap with `--max-old-space-size=<MiB>` *and* sets `RLIMIT_AS` to `max(MiB, 2048)` MiB, because V8 reserves ~1.5 GiB of address space for its CodeRange and a lower rlimit aborts Node before the plan starts |
-| **Allowlist** | a strict plan can reach `search`, `list`, `tools`, `describe`, `invoke`, `policy`, `spec` — `exec` is refused with rc 126 and recorded in `bridge_denied` |
-| **Concurrency** | `parallel(calls, limit = 8)` fans out async thunks `() => ...`; every binding is natively async, so there are no `a*` twins to remember |
-| **Call budget** | `--max-calls` (default 100, `0` = unlimited) reserves each slot *before* dispatch; over budget throws at the call site naming the count and the calls just made |
-| **Result** | `emitResult(value)` (alias `emit_result`) sends one value back on its own channel: `exec --json` reports it under `result`, while `stdout` stays the plan's printed text |
-| **Trace** | each call appends a `kind=call` row (with `t`) and then a `kind=done` row (with `ms`, `rc`) to `.omnicli_trace.jsonl`; `exec --json` reports `tool_calls`, `bridge_calls`, seconds and bytes |
-| **Escape hatch** | `--sandbox none` (`--no-sandbox`) runs unsandboxed; `--workspace DIR` chooses the writable root |
-
-Token arithmetic: a 9-step job becomes **one** model turn. The plan's own
-reads and writes never cross the boundary.
-
-See [references/code-mode-sdk.md](references/code-mode-sdk.md) for the full SDK API reference, and inspect runnable scripts in [examples/](examples/). The run that added budgets, fan-out and the memory cap is recorded in [references/plan-code-mode-limits.md](references/plan-code-mode-limits.md).
+Full SDK API and authoring guidelines:
+- [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
+- [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `scripts/verify_agent_skills.py`)
 
 ---
 
-## 🌐 First-party harness adapters
+## 🌐 Harnesses & Telemetry
 
-`omnicli` ships first-party adapter specifications and verification gates for every
-workstation harness in the `harnesses/` directory:
-
-| Harness | Guide | Primary Face | Key Primitives |
-|---|---|---|---|
-| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | Native tools + Code Mode | `omnicli_*` tools, `omnicli exec` plans, `html_preview` visuals, reactive wakeups |
-| **Antigravity CLI (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | Hooks + JS Bindings | `PreToolUse` gate, `PreInvocation` routing, `omnicli exec plan.mjs`, subagents |
-| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | Native tools + Code Mode | `omnicli_*` plugin tools, skills path, local daemons (:8080-:8085) |
-| **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI | Fast sub-10ms terminal tool calls, strict 8KB token budget cap |
-| **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Direct CLI + Sandbox | Bubblewrap sandboxing (`--sandbox strict`), hot-reloading, WAL safety |
-
-### Native tools in OpenCode and T3 Code
-
-Both harnesses reach the catalogue as native tools, not as a shell hop. The
-plugin registers `omnicli_search`, `omnicli_describe`, `omnicli_invoke`, and
-`omnicli_exec` with `codemode: true` (so Code Mode sees `tools.omnicli.*`),
-injects the routing rule, and denies skill-directory discovery until a
-catalogue call has run.
+| Harness | Guide | Face / Integration |
+|---|---|---|
+| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | OpenCode plugin (`omnicli_*` tools + `tools.omnicli.*`) + Code Mode |
+| **Antigravity (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | [`hooks/agy_omnicli_hook.py`](hooks/agy_omnicli_hook.py) (`PreInvocation` + `PreToolUse`) + JS bindings |
+| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | [`plugin/omnicli-route.js`](plugin/omnicli-route.js) + `skills` path |
+| **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI with strict 8 KB caps |
+| **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Sandboxed plans (`--sandbox strict`) + WAL-safe catalog |
 
 ```bash
-ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \
-  ~/.config/opencode/plugins/omnicli-route.js
-opencode reload
-omnicli harness verify t3-code   # includes native_tool_plugin
+omnicli harness list|detect|verify     # inspect active harnesses & run verification matrix
+omnicli harness info|config <id>       # read adapter guide or ready-to-paste setup snippet
+omnicli usage --since 24h --json       # per-harness telemetry from ~/.local/share/omnicli/trace.jsonl
 ```
-
-Source: [`plugin/omnicli-route.js`](plugin/omnicli-route.js). Bypass metrics:
-`python3 scripts/route_stats.py` over `~/.local/share/omnicli/route.jsonl`.
-
-### Deterministic hooks in Antigravity (`agy`)
-
-Antigravity uses native lifecycle hooks in `~/.gemini/config/hooks.json` under
-`omnicli-route` to enforce Kem's Law (*"a skill is instructions; a hook is code
-that ALWAYS runs"*):
-- `PreInvocation`: Injects `[omnicli route]` into prompt context.
-- `PreToolUse`: Intercepts `view_file` and shell commands reading `my-agent-skills`
-  and denies them until `omnicli search` has been called.
-
-```bash
-omnicli harness verify agy   # includes agy_route_hook
-```
-
-Source: [`hooks/agy_omnicli_hook.py`](hooks/agy_omnicli_hook.py).
-
-### Harness operations
-
-```bash
-omnicli harness list       # overview of harnesses, detection status, and config paths
-omnicli harness detect     # inspect active environment variables and process trees
-omnicli harness info <id>  # display guide, protocol details, and config snippet
-omnicli harness config <id># emit raw ready-to-paste configuration snippet
-omnicli harness verify     # run automated verification across all 5 harnesses
-```
-
-### Usage telemetry — `omnicli usage`
-
-Every catalogue call is recorded once, with `harness` and `session`, to
-`~/.local/share/omnicli/trace.jsonl` (override with `OMNICLI_USER_TRACE`).
-Direct CLI calls are logged by the CLI; Code Mode calls are logged by the
-bindings and merged by the parent after the sandbox exits, so nothing is double
-counted. Harness detection uses `OMNICLI_HARNESS`, then markers (`T3CODE_CLI_PATH`,
-`OPENCODE_SESSION_ID`, `AGY_*`, `PI_*`, `BOXXY_*`), then `cli`.
-
-```bash
-omnicli usage                # last 7d: calls per harness, verbs, top tools/queries
-omnicli usage --since 24h    # 30m | 24h | 7d | 2w | an ISO date
-omnicli usage --json         # the same numbers for a script
-```
-
-`search → action` is the number that matters: of the sessions that searched, how
-many went on to `describe`/`invoke` (and the median gap). A low rate means the
-catalogue is finding the wrong thing, not that nobody is using omnicli.
 
 ---
 
-## 🧠 Native local inference
-
-Available both as subcommands and as tools in the catalog:
+## 🧠 Native local inference & Catalog maintenance
 
 | Command | Tool id | Model |
 |---|---|---|
 | `omnicli llm "<prompt>"` | `local/llm` | Qwen3.6-35B Genesis, dual-GPU (:8080) |
 | `omnicli ocr <file>` | `local/ocr` | LightOnOCR-3-0.8B (:8085) |
-| `omnicli decide "<state>" "<q>"` | `local/decide` | the decision model on :8083, protocol auto-detected (pplx-decider-flash v1.2 or vllm-d3-mini) |
+| `omnicli decide "<state>" "<q>"` | `local/decide` | Decision model on :8083 (auto-detects protocol) |
 | `omnicli asr transcribe <audio>` | `local/asr` | Nemotron-3.5 ASR (:8081) |
 
 ```bash
 omnicli status            # ports, catalog freshness, retrieval tier
-omnicli index --rebuild   # rebuild the catalog
-omnicli eval              # golden routing evaluation
+omnicli index --rebuild   # rebuild catalog.db + re-extract contracts
+omnicli eval              # golden routing evaluation (61 cases)
 ```
-
----
-
-## 🧭 Why this exists
-
-Thirty-plus skills, each with its own `SKILL.md`, used to be a prompt shelf.
-The Databricks skill-shadowing study measured the cost: correct skill
-selection fell from 88% to 52.6% as the library grew, with **two thirds of
-the failures caused by picking wrong or picking nothing** — not by token
-count. The router had to evaluate dozens of frontmatter descriptions on turn 0.
-
-Retrieval beats installation. The catalog moves selection off the model's
-shoulders and onto a BM25 index, and the golden evaluation in `tests/` is the
-falsifiable claim that it works (re-measured 2026-11-14, 59-skill catalog, `:8087` offline):
-
-```
-BM25 catalog    top1  56/61 (91.8%)   top3  61/61 (100.0%)
-legacy scorer   top1  41/61 (67.2%)   top3  49/61 ( 80.3%)
-```
-
-Adding newer skills (`video-miner`, `deck`, `playwright`, `gh-action-subagent`,
-virtual `local`) shifted five golden top-1 ties (`top3` remains 61/61): two are
-stopword misses (`"sure"`, `"now"`/`"right"` matching unrelated skills at
-`coord=1.0`), one is the 1-chunk `local` virtual skill beating `local-llm` via
-`CHUNK_PENALTY_ALPHA`, and two are direct lexical overlap with newer skills
-(`video-miner` vs `zoom-recorder`, `gh-action-subagent` vs `openrouter-free`).
-
-The alias set is audited against the eval set (`tests/overfit_check.py`) so a
-router handed the answer key cannot be mistaken for a router that works. It
-currently reports **0** echoes across 389 aliases; three verbatim-echo aliases
-were removed earlier.
-
-**That 91.8% is a tuned-set number and should be quoted as one.** 32 of the 61
-queries share a curated alias string, so the set measures whether the
-vocabulary was written down, not whether a stranger's phrasing lands. On the
-39-case paraphrase set (`tests/paraphrase_eval.json`), BM25 alone scores
-21/39 (53.8%) top-1 and 24/39 (61.5%) top-3 (`legacy`: 19/39). `omnicli eval
---fusion auto|always|never` and `--rerank auto|always|never` re-run the set
-under either semantic mode when `:8087` is online.
-
-### Token cost (measured 2026-11-14)
-
-`tests/measure_tokens.py` counts what actually lands in the model's context,
-using the local Qwen3.5 tokenizer against the 58 non-archived skills:
-
-| | prompt shelf | omnicli | |
-|---|---|---|---|
-| selection phase | 10,827 tok | 1,274 tok | **88.2% smaller** |
-| to invoke one tool | 13,209 tok | 4,265 tok | **67.7% smaller** |
-
-The second row's saving comes from the 8 KB response cap, not from the
-discovery itself. The selection-phase number is the one that matters, because
-it is paid on every turn whether or not a tool gets used.
-
----
-
-## 🔌 Compatibility
-
-`uber`, `local-hub` and `skills-hub` are **not** installed any more; they were
-deprecated aliases and have been removed from `PATH`. `omnicli` is the name.
-The legacy `search` / `tools` / `inspect` / `run` verbs still work; `search`
-uses the BM25 catalog instead of the old substring scorer.
-
----
-
-## 🏛️ Architectural References & Provenance
-
-1. **Uber's MCP Gateway**: [Designing an MCP Gateway](https://www.uber.com/au/en/blog/designing-mcp-gateway/)  
-   *Architecture*: AutoCrawler catalog ingestion → SQLite FTS registry → 4 core meta-tools (`discover`, `describe`, `invoke`, `status`) → bounded responses with byte caps and JSON projections. Eliminates catalog bloat and context poisoning across large fleets of tools.
-2. **Cloudflare's Code Mode**: [Code Mode: execute code to invoke tools instead of LLM function calling](https://blog.cloudflare.com/code-mode/)  
-   *Architecture*: Replaces multi-step JSON function calling roundtrips with sandboxed code execution (`omnicli exec`) against typed SDK bindings (`omnicli_tools.mjs` + `omnicli_tools.d.ts`). Intermediates stay in memory; only synthesized results enter context.
-3. **MCP, evaluated and removed.** A stdio JSON-RPC server was built, tested (28
-   conformance checks) and retired: routing intermediate data across round-trips
-   burns prompt tokens and causes quadratic context decay, while JavaScript
-   variables cost nothing. The code is preserved at `archived/omnicli-mcp/` for
-   reference, not wired to any verb.
-

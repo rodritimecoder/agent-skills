@@ -24,11 +24,13 @@ def _concentration(probs: List[float]) -> float:
     return min(1.0, max(0.0, 1 - ent / math.log(k)))
 
 class JevEngine:
-    def __init__(self, host: Optional[str] = None, port: int = 8083, timeout: float = 5.0):
+    def __init__(self, host: Optional[str] = None, port: Optional[int] = None, timeout: float = 5.0):
         env_host = os.environ.get("JEV_HOST")
-        env_port = int(os.environ.get("JEV_PORT", os.environ.get("DECISION_PORT", str(port))))
+        env_port = int(os.environ.get("JEV_PORT", os.environ.get("DECISION_PORT", "8083")))
         self.host = host or env_host or "127.0.0.1"
-        self.port = port if port != 8083 else env_port
+        # None means "not given": only then does the environment pick the port.
+        # An explicit port must stay put even when DECISION_PORT says otherwise.
+        self.port = env_port if port is None else port
         self.timeout = timeout
         self.scheme = "https" if (".ts.net" in self.host or os.environ.get("JEV_SCHEME") == "https") else "http"
         self.ssl_ctx = ssl.create_default_context()

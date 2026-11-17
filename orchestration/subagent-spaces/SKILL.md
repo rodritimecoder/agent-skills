@@ -1,7 +1,13 @@
 ---
 name: subagent-spaces
 
-description: "Isolated CPU-pinned containerized sandbox environments for autonomous subagents using rootless Podman. Partitions 16 CPU threads into dedicated worker slots, mounts disposable workspaces, isolates untrusted builds and scripts, and connects directly to local inference endpoints. Use when a build, a test suite, or an untrusted script must run locally without touching the host, or when parallel workers need pinned CPU and memory — for a throwaway cloud VM instead, use gh-action-subagent."
+description: >
+  Use when a build, a test suite or an untrusted script must run locally without
+  touching the host, or when parallel workers need pinned CPU and memory.
+  Isolated CPU-pinned containerised sandboxes for autonomous subagents using
+  rootless Podman: 16 CPU threads partitioned into dedicated worker slots,
+  disposable workspaces, isolation for untrusted builds and scripts, and direct
+  connection to local inference endpoints. Not for cloud-hosted runs.
 
 compatibility: "Requires the Podman container runtime, configured for rootless operation."
 allowed-tools: "Bash(subagent-spaces:*) Bash(podman:*) Bash(python3:*) Read Write"

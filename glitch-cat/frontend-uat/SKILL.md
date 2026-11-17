@@ -2,15 +2,13 @@
 name: frontend-uat
 
 description: >
-  Sub-second, model-backed frontend UAT loop (Glitch Cat Club / Kem Glitch). Mined from
-  the vault's *Fast Frontend UAT with JEV* capture on 2026-10-16; the source reel is
-  unidentified.
-  Hands the page to the decision model as an indexed array of clickable targets, clicks
-  deterministically over CDP, then reads the screen back to confirm the assertion — no
-  open-ended text is ever generated, so a journey costs seconds and fractions of a cent
-  instead of minutes and dollars. Use when running browser acceptance tests, driving a
-  checkout or login flow, clicking a target by intent rather than by selector, or verifying
-  a screen state after an action.
+  Sub-second, model-backed frontend UAT loop. Mined from the vault's *Fast Frontend UAT with JEV*
+  capture on 2026-10-16; the source reel is unidentified. Hands the page to the decision model as
+  an indexed array of clickable targets, clicks deterministically over CDP, then reads the screen
+  back to confirm the assertion — no open-ended text is ever generated, so a journey costs seconds
+  and fractions of a cent instead of minutes and dollars. Use when running browser acceptance
+  tests, driving a checkout or login flow, clicking a target by intent rather than by selector, or
+  verifying a screen state after an action.
 
 compatibility: "Requires the playwright skill's Playwright Rust-backed CLI (playwright-rs, alias fast-cdp) with a Chromium CDP endpoint on :9222 and the h2o-lightning-4b JEV decision server on :8083. Python 3.10+."
 allowed-tools: "Bash(frontend-uat:*) Bash(fast-cdp:*) Bash(python3:*) Read Write"
@@ -84,8 +82,8 @@ step (`step_01_candidates.json` … `step_04_verification.json`) for post-mortem
 Both end in the same deterministic click; they differ in **who judges**.
 
 - **One call, one judge** → `playwright-rs uat "<url>" --goal "…"`. It extracts the
-  candidates through Padamson's Playwright Rust API and asks its own decision model
-  (`jpt` or `imajev`) which one to click.
+  candidates through Padamson's Playwright Rust API and asks its own bundled
+  decision model which one to click.
 - **Your judge, plus a report** → this skill. JEV (`:8083`) makes the choice, the click
   is passed back as `--ref`, and you get expectations, a screenshot and a verdict.
 

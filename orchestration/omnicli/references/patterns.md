@@ -70,8 +70,7 @@ only look at one run.
 
 ## Two backends, one shape
 
-`--model jpt` (JPT-4B, 4B, llama.cpp, ~150 ms, 32k ctx, starts on demand) and `--model jev`
-(Jev-Style-2B, ~60 ms, 25.6k ctx, no server but reloads per call). Identical JSON output, so the choice
-never changes calling code. Public benchmarks: JPT-4B scores 0.879 on JevBench v1.4 public and 43.04
-on Decision Index 0.2.1 — both ahead of every other 4B entrant listed, and behind only the closed Jev
-API overall.
+`--model vllm` (vllm-d3-mini on :8083, native `/v1/systemone`, one forward pass) and `--model imajev`
+(Imajev-4B on :8089, letter readout, the auxiliary decision slot). Identical JSON output, so the choice
+never changes calling code. `--model pplx` drives the pplx-decider v1.2 protocol on :8083 when that
+candidate occupies the slot, and `--model jev` runs Jev-Style-2B's GGUF locally with no server at all.

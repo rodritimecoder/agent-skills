@@ -16,17 +16,30 @@ check_tailscale() {
 }
 
 usage() {
-  echo "Usage: $0 {peers|check-port|serve-mesh|mesh-status|serve-on|funnel-on|reset-tunnels|send-file|doctor}"
+  echo "Usage: $0 {peers|check-port|sync|status|reset-tunnels|send-file|doctor}"
   echo "  peers                  # List online tailnet peers"
   echo "  doctor                 # Diagnostic check of tailscale status and active tunnels"
   echo "  check-port <host> <p>  # Probe reachable port on peer"
-  echo "  serve-mesh             # Expose every inference and CDP slot over Tailscale HTTPS"
-  echo "  mesh-status            # View active Tailscale serve configurations"
-  echo "  serve-on <port>        # Expose single port privately on tailnet"
-  echo "  funnel-on <port>       # Expose single port publicly via funnel"
+  echo "  sync                   # Reconcile the tailnet surface to ports.json"
+  echo "  status                 # Show the declared surface and live serve state"
   echo "  reset-tunnels          # Tear down all serve and funnel tunnels"
   echo "  send-file <file> <tgt> # Transfer file to peer via tailscale file cp"
 }
+
+# --------------------------------------------------------------------------- #
+# The declared tailnet surface, rendered from ports.json by
+# `ports.py render --write`. What may leave this machine is decided by the
+# manifest, not by this script: `sync` applies exactly this block and turns
+# off every other serve frontend it finds.
+# --------------------------------------------------------------------------- #
+# ports:begin
+TS_ROOT=3773
+TS_PATHS=("/chat:7778")
+SERVED=(
+  "3010:kasmvnc — KasmVNC (podman)"
+  "9222:cdp — Chromium DevTools"
+)
+# ports:end
 
 case "$CMD" in
   peers)
@@ -86,22 +99,6 @@ except Exception as e:
 " "$HOST" "$PORT"
     ;;
 
-  serve-on)
-    check_tailscale
-    PORT="${1:?Local port required}"
-    echo "🔒 Exposing localhost:$PORT over private Tailscale HTTPS..."
-    tailscale serve --bg "$PORT"
-    tailscale serve status
-    ;;
-
-  funnel-on)
-    check_tailscale
-    PORT="${1:?Local port required}"
-    echo "🌐 Opening public Tailscale Funnel on port 443 -> localhost:$PORT..."
-    tailscale funnel --bg --https=443 "http://127.0.0.1:${PORT}"
-    tailscale funnel status
-    ;;
-
   reset-tunnels)
     check_tailscale
     echo "🧹 Resetting all active Tailscale serve and funnel tunnels..."
@@ -110,64 +107,89 @@ except Exception as e:
     echo "✅ All Tailscale serve and funnel configurations cleared."
     ;;
 
-  serve-mesh)
+  sync)
     check_tailscale
     DNS_NAME=$(tailscale status --json | python3 -c 'import json, sys; print(json.load(sys.stdin).get("Self", {}).get("DNSName", "").rstrip("."))')
-    echo "⚡ Exposing Workstation AI Inference Matrix over Private Tailscale HTTPS (${DNS_NAME})..."
-    
-# ports:begin
-SERVICES=(
-  "8080:llm — Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP"
-  "8081:audio — nemotron-asr"
-  "8083:decision — h2o-lightning-4b"
-  "8082:decision-engine — StartLux-Decision-v1.1-4B-Instant"
-  "8089:decision-fallback — Imajev-4B"
-  "8084:ocr-crispembed — CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec)"
-  "8085:ocr-lighton — LightOnOCR-3-0.8B"
-  "8086:reranker — jina-reranker-v2-base-multilingual"
-  "8087:embed — bge-small-en-v1.5"
-  "8088:grounding — WeVisOne-VL-4B"
-  "8090:ocr-jev — MiniCPM-OCR-Jev"
-  "8091:llm-rp — LFM3-1.7B-Uncensored-AD"
-  "8000:llama-swap — llama-swap"
-  "3010:kasmvnc — KasmVNC (podman)"
-  "9222:cdp — Chromium DevTools"
-  "9224:cdp-desktop — Chromium DevTools (headed agent profile)"
-  "9223:cdp-internal — labwc forwarder"
-  "8761:clip-box — h2o-lightning shim"
-  "8621:clip-box-backend — llama-server (private backend)"
-)
-# ports:end
+    echo "🔁 Reconciling the tailnet surface to ports.json (${DNS_NAME})..."
 
-    for item in "${SERVICES[@]}"; do
-      PORT="${item%%:*}"
-      NAME="${item##*:}"
-      # Never advertise a port with nothing behind it: the tailscale listener
-      # outlives the service, so a dead port looks healthy from the tailnet.
-      if ! ss -ltn 2>/dev/null | grep -q ":$PORT "; then
-        echo "  ○ Skipping $NAME on :$PORT (nothing listening locally)"
-        continue
-      fi
-      echo "  • Serving $NAME on :$PORT..."
-      tailscale serve --bg --https "$PORT" "http://127.0.0.1:$PORT" >/dev/null 2>&1 || true
+    DECLARED=()
+    if [ -n "${TS_ROOT:-}" ]; then
+      tailscale serve --bg --https=443 "http://127.0.0.1:${TS_ROOT}" >/dev/null
+      echo "  • /       -> :${TS_ROOT}"
+      DECLARED+=("443:/")
+    fi
+    for item in ${TS_PATHS[@]+"${TS_PATHS[@]}"}; do
+      P="${item%%:*}"
+      PORT="${item##*:}"
+      tailscale serve --bg --https=443 --set-path="$P" "http://127.0.0.1:${PORT}" >/dev/null
+      echo "  • ${P} -> :${PORT}"
+      DECLARED+=("443:${P}")
     done
+
+    for item in ${SERVED[@]+"${SERVED[@]}"}; do
+      PORT="${item%%:*}"
+      NAME="${item#*:}"
+      DECLARED+=("${PORT}:/")
+      tailscale serve --bg --https="$PORT" "http://127.0.0.1:${PORT}" >/dev/null
+      echo "  • :${PORT} -> ${NAME}"
+    done
+
+    # Reconcile, don't pile on: every handler the manifest does not name is
+    # turned off. A hand-run `tailscale serve` survives only until this runs.
+    EXTRA=$(tailscale serve status --json | python3 -c '
+import json, sys
+cfg = json.load(sys.stdin)
+want = set(sys.argv[1:])
+for key, web in (cfg.get("Web") or {}).items():
+    front = str(key).rsplit(":", 1)[-1]
+    for path in (web.get("Handlers") or {}):
+        token = f"{front}:{path}"
+        if token not in want:
+            print(token)
+declared_fronts = {t.split(":", 1)[0] for t in want}
+for key in (cfg.get("TCP") or {}):
+    front = str(key).rsplit(":", 1)[-1]
+    if front not in declared_fronts:
+        print(f"{front}:")
+' "${DECLARED[@]}")
+    while IFS=: read -r FRONT PATH_PART; do
+      [ -z "$FRONT" ] && continue
+      if [ -n "$PATH_PART" ]; then
+        echo "  ✕ :${FRONT}${PATH_PART} (not in ports.json)"
+        tailscale serve --https="$FRONT" --set-path="$PATH_PART" off >/dev/null 2>&1 || true
+      else
+        echo "  ✕ :${FRONT} (not in ports.json)"
+        tailscale serve --https="$FRONT" off >/dev/null 2>&1 \
+          || tailscale serve --tcp="$FRONT" off >/dev/null 2>&1 \
+          || true
+      fi
+    done <<< "$EXTRA"
 
     echo ""
-    echo "✅ Workstation Inference Mesh Online across Tailnet:"
-    printf "  %-38s %s\n" "SERVICE" "TAILSCALE HTTPS URL"
-    echo "  ────────────────────────────────────────────────────────────────────────────────"
-    for item in "${SERVICES[@]}"; do
-      PORT="${item%%:*}"
-      NAME="${item##*:}"
-      printf "  %-38s https://%s:%s\n" "$NAME" "$DNS_NAME" "$PORT"
-    done
+    echo "✅ Tailnet surface in sync:"
+    tailscale serve status
     ;;
 
-  mesh-status)
+  status)
     check_tailscale
     DNS_NAME=$(tailscale status --json | python3 -c 'import json, sys; print(json.load(sys.stdin).get("Self", {}).get("DNSName", "").rstrip("."))')
-    echo "📊 Workstation Tailscale Mesh Status (${DNS_NAME}):"
-    tailscale serve status
+    echo "📊 Declared tailnet surface (${DNS_NAME}):"
+    if [ -n "${TS_ROOT:-}" ]; then
+      printf "  %-8s %s\n" "/" "https://${DNS_NAME}/ -> :${TS_ROOT}"
+    fi
+    for item in ${TS_PATHS[@]+"${TS_PATHS[@]}"}; do
+      P="${item%%:*}"
+      PORT="${item##*:}"
+      printf "  %-8s %s\n" "$P" "https://${DNS_NAME}${P} -> :${PORT}"
+    done
+    for item in ${SERVED[@]+"${SERVED[@]}"}; do
+      PORT="${item%%:*}"
+      NAME="${item#*:}"
+      printf "  %-8s %s\n" ":${PORT}" "https://${DNS_NAME}:${PORT} -> :${PORT} (${NAME})"
+    done
+    echo ""
+    echo "  Live serve state:"
+    tailscale serve status 2>/dev/null || echo "    none"
     ;;
 
   doctor)

@@ -49,7 +49,7 @@ def load_config() -> Dict[str, Any]:
     return {
         "default_endpoint": "http://127.0.0.1:8080",
         "model_name": "qwen3.6-35b-genesis",
-        "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+        "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
         "defaults": {"temperature": 0.7, "top_p": 0.8, "max_tokens": 4096}
     }
 
@@ -91,7 +91,7 @@ def get_llm_candidates() -> List[Dict[str, Any]]:
             pass
 
     cfg = load_config()
-    default_launcher = cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy_nothink.sh")
+    default_launcher = cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh")
     return [
         {
             "model": cfg.get("model_name", "qwen3.6-35b-genesis"),
@@ -290,7 +290,7 @@ def list_models(status_filter: str = "all", json_mode: bool = False) -> List[Dic
 
 def start_server(launcher_script: Optional[str] = None, json_mode: bool = False) -> Dict[str, Any]:
     cfg = load_config()
-    launcher = launcher_script or cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy_nothink.sh")
+    launcher = launcher_script or cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh")
     online = is_genesis_online()
 
     if online:
@@ -413,7 +413,7 @@ def main():
                 emit(res, args)
         else:
             sys.stderr.write("⚠️ [local-llm] LLM is not running on :8080.\n")
-            sys.stderr.write("   Start server: bash /run/media/rodri/AI/sh/luffy_nothink.sh\n")
+            sys.stderr.write("   Start server: bash /run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh\n")
             sys.stderr.write("   Or run `scripts/llm_client.py start` to launch it in background.\n")
             sys.stderr.write("   Or pass `--fallback` to use OpenRouter Free / Gemini.\n")
             if getattr(args, "json", False):

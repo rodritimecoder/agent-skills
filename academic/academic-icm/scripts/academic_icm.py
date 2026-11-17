@@ -855,18 +855,18 @@ def find_media_and_transcript_for_note(vault_root: Path, json_path: Path, note_d
 
     return transcript_path, media_target, passcode, q_map
 
-def get_embedding_gemma2(text: str, endpoint: str = "http://127.0.0.1:8082/embedding") -> Optional[List[float]]:
+def get_embedding_gemma2(text: str, endpoint: str = "http://127.0.0.1:8087/v1/embeddings") -> Optional[List[float]]:
     try:
         req = urllib.request.Request(
             endpoint,
-            data=json.dumps({"content": text}).encode("utf-8"),
+            data=json.dumps({"input": text}).encode("utf-8"),
             headers={"Content-Type": "application/json"}
         )
         with urllib.request.urlopen(req, timeout=3.0) as resp:
             if resp.status != 200:
                 return None
             data = json.loads(resp.read().decode("utf-8"))
-            raw = data[0]["embedding"]
+            raw = data["data"][0]["embedding"]
             if isinstance(raw[0], list):
                 raw = raw[0]
             norm = math.sqrt(sum(x * x for x in raw))

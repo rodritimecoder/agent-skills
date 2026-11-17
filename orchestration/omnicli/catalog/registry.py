@@ -46,12 +46,15 @@ CANDIDATE_SKILL_DIRS = [
 SIDELINED_DIRS = {"glitch-cat", "archived", "docs", "launchers", ".git", "node_modules"}
 
 SKIP_DIRS = {".venv", "__pycache__", "node_modules", ".git", ".mypy_cache", ".pytest_cache"}
-SKIP_FILE_RE = re.compile(r"(^test_.*|.*_test)\.py$", re.IGNORECASE)
+SKIP_FILE_RE = re.compile(r"(^test_.*|.*_test|.*\.test)\.(py|js|mjs)$", re.IGNORECASE)
 
 # Vendored bundles (a skill that embeds another skill's modules) are library
 # code, not a CLI surface. Indexing them would flood the tool registry with
 # internal helpers.
 SKIP_DIR_NAMES = {"modules", "tests"}
+# JS files in asset/template/example/plugin/doc folders are browser scripts,
+# fixtures, or harness plugins rather than standalone skill CLI tools.
+NON_TOOL_JS_DIRS = {"assets", "templates", "examples", "plugin", "references", "harnesses"}
 
 # Local inference endpoints exposed as first-class tools.
 ENDPOINTS = {
@@ -362,6 +365,58 @@ def _docstring_summary(path: Path) -> str:
     return ""
 
 
+def _tool_summary(path: Path) -> str:
+    """The header docstring of a tool, whatever its language."""
+    if path.suffix == ".py":
+        return _docstring_summary(path)
+    if path.suffix in (".js", ".mjs"):
+        return _js_docstring_summary(path)
+    return ""
+
+
+_JS_BLOCK_COMMENT_RE = re.compile(r"\A\s*/\*+(.*?)\*+/", re.DOTALL)
+
+
+def _read_source(path: Path, limit: int = 400_000) -> str:
+    """The script's source, or "" when unreadable or implausibly large."""
+    try:
+        src = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return "" if len(src) > limit else src
+
+
+def _js_docstring_summary(path: Path) -> str:
+    """First meaningful summary line of a JS/ESM header comment.
+
+    The summary is the one thing that makes a discovered JS tool findable in
+    search, and the equivalent of a Python docstring. A leading ``/** ... */``
+    block wins; a run of ``//`` lines is the fallback.
+    """
+    src = _read_source(path)
+    if src.startswith("#!"):
+        src = src.split("\n", 1)[1] if "\n" in src else ""
+    body = ""
+    block = _JS_BLOCK_COMMENT_RE.match(src)
+    if block:
+        body = block.group(1)
+    else:
+        lines: list[str] = []
+        for line in src.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("//"):
+                lines.append(stripped.lstrip("/").strip())
+                continue
+            if stripped:
+                break
+        body = "\n".join(lines)
+    for line in body.splitlines():
+        clean = re.sub(r"^\s*\*+\s?", "", line).strip()
+        if clean and not clean.startswith(("-", "=", "@")):
+            return clean
+    return ""
+
+
 _SUBCMD_BLOCK_RE = re.compile(
     r"positional arguments:\n(?P<body>(?:[ \t]+[^\n]*\n)+)", re.MULTILINE
 )
@@ -398,7 +453,7 @@ def _usage_subcommands(usage: str) -> list[str]:
 # Bumped whenever the *parser* changes, not the scripts. The contract cache
 # is keyed on the script's mtime, so a parser fix would otherwise keep
 # serving the contracts the old parser produced.
-CONTRACT_PARSER_VERSION = 8
+CONTRACT_PARSER_VERSION = 9
 
 
 def parse_help_contract(help_text: str) -> dict[str, Any]:
@@ -506,12 +561,14 @@ def _mentions_help(path: Path) -> bool:
     flag goes ahead and does its real job. ``decide.sh --help`` would query a
     model. So the source is inspected first, and only scripts that mention
     "help" are executed during indexing.
+
+    JavaScript gets the strictest rule of all. ``parseArgs`` is only help-safe
+    when it is the ``node:util`` one — a script with its own ``parseArgs(argv)``
+    helper may not parse flags at all, and running it would perform its real
+    work (``design-pack/scripts/check_runner.mjs`` launches Chromium).
     """
-    try:
-        src = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return False
-    if len(src) > 400_000:
+    src = _read_source(path)
+    if not src:
         return False
     low = src.lower()
     if path.suffix == ".py":
@@ -523,8 +580,20 @@ def _mentions_help(path: Path) -> bool:
         # A thin wrapper delegates to a sibling module's main(). It has no
         # mention of help, but the CLI it forwards to handles the flag.
         return len(src) < 4096 and "__main__" in src
+    if path.suffix in (".js", ".mjs"):
+        return ("--help" in low or "--omni-schema" in low
+                or ("node:util" in low and "parseargs" in low))
     # A shell script has no such machinery, so demand an explicit handler.
     return ("--help" in low or "usage()" in low or "help)" in low)
+
+
+def _mentions_schema(path: Path) -> bool:
+    """True when the script's own source advertises ``--omni-schema``.
+
+    The flag is a convention, not a guarantee: probing a script that does not
+    implement it would run the script's real job with an unknown argument.
+    """
+    return "--omni-schema" in _read_source(path)
 
 
 # A path to a Python file, quoted or not. Quotes are excluded from the
@@ -571,30 +640,23 @@ def extract_contract(path: Path, timeout: float = 12.0,
                      args: list[str] | None = None) -> dict[str, Any]:
     """Run ``--help`` on a script and parse the resulting contract.
 
-    ``args`` runs the script with extra positional arguments before
-    ``--help`` — that is how a *subcommand's* own contract is obtained.
-    A subcommand is a different parser with a different flag set, and
-    inheriting the parent's flags gives an agent a contract that omits the
-    flags the subcommand actually takes.
-
-    Two safety rules, both learned the hard way:
-
-    * Only scripts that mention "help" are executed. A script that ignores
-      the flag would otherwise perform its real task during indexing.
-    * Output without a "usage:" line is rejected. A shell script that ran a
-      model instead of printing usage would otherwise have its model output
-      stored as if it were a contract.
-
-    A readable contract carries ``inputSchema`` as well: the exact JSON Schema
-    of the parser for a Python script, and a schema rebuilt from the parsed
-    help for anything else.
+    ``args`` selects a subcommand's own parser. Two safety rules: only scripts
+    that mention "help" are executed (one that ignores the flag would do its
+    real job during indexing), and output without a "usage:" line is rejected
+    (a shell script that ran a model instead of printing usage must not have
+    that output stored as a contract). The contract also carries
+    ``inputSchema``: the parser's exact schema for Python, the ``parseArgs``
+    probe's for Node, and a schema rebuilt from the help for anything else.
     """
     empty: dict[str, Any] = {
         "usage": "", "flags": [], "positionals": [], "subcommands": [], "help": "",
     }
+    is_js = path.suffix in (".js", ".mjs")
     if not _mentions_help(path):
-        if path.suffix == ".py":
-            empty["summary"] = _docstring_summary(path)
+        if path.suffix in (".py", ".js", ".mjs"):
+            # A module that cannot be probed is still a tool; its header
+            # comment is the only description it has.
+            empty["summary"] = _tool_summary(path)
             return empty
         # A shell wrapper that forwards to exactly one Python script: take
         # the contract of that script rather than running the wrapper.
@@ -609,6 +671,8 @@ def extract_contract(path: Path, timeout: float = 12.0,
 
     interp = python or sys.executable
     schema: dict[str, Any] | None = None
+    omni_schema: dict[str, Any] | None = None
+    node_schema = False
     out = ""
     if path.suffix == ".py":
         # One run yields both halves of the contract: the help text the
@@ -617,6 +681,12 @@ def extract_contract(path: Path, timeout: float = 12.0,
         # indexing sixty-odd CLIs for no extra information.
         schema, out = schema_extract.extract_argparse_schema(
             path, args=list(args or []), python=interp, timeout=timeout)
+    elif is_js:
+        # The same one-run trick for `parseArgs`: the probe records the
+        # declared options and leaves the help output on stdout.
+        schema, out = schema_extract.extract_node_schema(
+            path, args=list(args or []), timeout=timeout)
+        node_schema = schema is not None
     else:
         try:
             cmd = [str(path)] + list(args or []) + ["--help"]
@@ -635,20 +705,44 @@ def extract_contract(path: Path, timeout: float = 12.0,
         except OSError:
             out = ""
 
+    # `--omni-schema` is opt-in on both sides: the script must advertise it in
+    # source or in its own help. Probing anything else would run its real job
+    # with an argument it never agreed to parse.
+    if _mentions_schema(path) or "--omni-schema" in out:
+        if path.suffix == ".py":
+            cmd_prefix = [interp, str(path)]
+        elif is_js:
+            cmd_prefix = [shutil.which("node") or "node", str(path)]
+        else:
+            cmd_prefix = [str(path)]
+        omni_schema = schema_extract.extract_omni_schema(
+            cmd_prefix, args=list(args or []), timeout=timeout)
+        if omni_schema:
+            schema = omni_schema
+
     if "usage:" not in out.lower():
+        if omni_schema:
+            # A runtime that can describe itself exactly does not need
+            # readable help; the schema is the contract.
+            return schema_extract.contract_from_input_schema(
+                omni_schema, usage=f"{path.name} [options]",
+                help_text=out.strip(), summary=_tool_summary(path))
         # Not a usage message. Keep the docstring as a summary but do not
         # pretend the output is a contract.
-        summary = _docstring_summary(path) if path.suffix == ".py" else ""
         return {"usage": "", "flags": [], "positionals": [], "subcommands": [],
-                "help": "", "summary": summary}
+                "help": "", "summary": _tool_summary(path)}
 
     contract = parse_help_contract(out)
+    # A `parseArgs` schema knows types the printed help does not; the help
+    # knows positionals and metavar intent the schema cannot declare.
+    if node_schema and not omni_schema and schema is not None:
+        schema = schema_extract.enrich_node_schema(schema, contract)
     # The schema is the half of the contract the help text loses. A non
     # argparse script still has a usage line worth a schema, so the parsed
     # contract supplies one rather than leaving the tool untyped.
     contract["inputSchema"] = schema or schema_extract.contract_to_input_schema(contract)
-    if path.suffix == ".py" and not contract.get("summary"):
-        contract["summary"] = _docstring_summary(path)
+    if not contract.get("summary"):
+        contract["summary"] = _tool_summary(path)
     return contract
 
 
@@ -659,30 +753,58 @@ def extract_contract(path: Path, timeout: float = 12.0,
 def _iter_scripts(skill_dir: Path):
     """Yield every candidate script in a skill tree, recursively.
 
-    Recursive on purpose: ``ocr/ocr.py`` lives at the skill root, not under
-    ``scripts/``. A flat ``scripts/`` scan would miss it entirely.
+    ``ocr/ocr.py`` lives at the skill root, so the walk is recursive. JS is
+    discovered narrowly: browser assets, fixtures, plugins and vendored
+    examples are skipped, while Python and shell discovery is unchanged.
     """
     for root, dirs, files in os.walk(skill_dir):
         dirs[:] = [d for d in dirs
                    if d not in SKIP_DIRS and d not in SKIP_DIR_NAMES
                    and not d.startswith(".")]
+        try:
+            rel_parts = Path(root).relative_to(skill_dir).parts
+        except ValueError:
+            rel_parts = ()
         for fname in sorted(files):
             if SKIP_FILE_RE.match(fname):
                 continue
+            if fname.endswith(".min.js"):
+                continue
             if fname.endswith((".py", ".sh")):
+                yield Path(root) / fname
+                continue
+            if fname.endswith((".js", ".mjs")):
+                if any(part in NON_TOOL_JS_DIRS for part in rel_parts):
+                    continue
                 yield Path(root) / fname
 
 
 def _is_cli_entry(path: Path) -> bool:
     """True when a script is a command-line surface rather than a library module.
 
-    A skill directory also contains importable modules — the catalog's own
-    builder, a vendored library, a helper. Those are not things an agent can
-    meaningfully invoke, and registering them as tools floods the registry.
-
-    Two signals, either is enough: a ``__main__`` guard, or the executable
-    bit.
+    A skill also ships importable modules and helpers, which are not things an
+    agent can invoke. Two signals, either enough: a ``__main__`` guard, or the
+    executable bit. JavaScript additionally needs an entry point — the
+    executable bit, or a Node/Bun/Deno shebang inside ``scripts/`` or ``bin/``.
     """
+    if path.suffix in (".js", ".mjs"):
+        if path.name.endswith(".min.js"):
+            return False
+        try:
+            if os.access(path, os.X_OK):
+                return True
+        except OSError:
+            pass
+        if path.parent.name not in ("scripts", "bin"):
+            return False
+        try:
+            with path.open("r", encoding="utf-8", errors="replace") as handle:
+                first = handle.readline()
+        except OSError:
+            return False
+        first = first.lower()
+        return first.startswith("#!") and any(
+            token in first for token in ("node", "bun", "deno"))
     try:
         if os.access(path, os.X_OK) and path.suffix == ".sh":
             return True
@@ -724,14 +846,22 @@ def discover_tools(skill: dict[str, Any]) -> list[dict[str, Any]]:
         except ValueError:
             continue
         tool_id = f"{skill['name']}/{rel.with_suffix('').as_posix()}"
-        summary = _docstring_summary(script) if script.suffix == ".py" else ""
+        if script.suffix == ".py":
+            summary = _docstring_summary(script)
+            argv = [sys.executable, str(script)]
+        elif script.suffix in (".js", ".mjs"):
+            summary = _js_docstring_summary(script)
+            argv = [shutil.which("node") or "node", str(script)]
+        else:
+            summary = ""
+            argv = [str(script)]
         tools.append({
             "id": tool_id,
             "skill": skill["name"],
             "kind": "script",
             "summary": summary,
             "path": str(script),
-            "argv": [sys.executable, str(script)] if script.suffix == ".py" else [str(script)],
+            "argv": argv,
             "contract": {},
             "parent": None,
         })

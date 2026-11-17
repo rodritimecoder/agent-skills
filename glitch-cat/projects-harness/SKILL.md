@@ -2,11 +2,11 @@
 name: projects-harness
 
 description: >
-  Autonomous multi-agent CLI coordination harness reverse-engineered from Anthropic's Claude Projects
-  beta (Glitch Cat Club / Kem Glitch; Reel DejvUBotWJD). Features deterministic 3-way message routing,
-  dual-provenance envelope hooks (AI coordinator brief vs owner verbatim instructions), single-line-per-fact
-  atomic memory updates with in-place history superseding, a 200-line memory load cap, static rule vs
-  memory clash detection, and a concurrency-throttled task queue (max 2).
+  Autonomous multi-agent CLI coordination harness reverse-engineered from Anthropic's Claude
+  Projects beta. Features deterministic 3-way message routing, dual-provenance envelope hooks (AI
+  coordinator brief vs owner verbatim instructions), single-line-per-fact atomic memory updates
+  with in-place history superseding, a 200-line memory load cap, static rule vs memory clash
+  detection, and a concurrency-throttled task queue (max 2).
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(python3:*) Read Write"

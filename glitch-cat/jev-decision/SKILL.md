@@ -2,16 +2,22 @@
 name: jev-decision
 
 description: >
-  Calibrated, non-generative decision engine (Glitch Cat Club / Kem Glitch; Reel DdjOqRYNZZi).
-  Turns a judgement into one of four typed answers — bool (binary), choice (constrained enum),
-  score (scalar 0.0-1.0) or composite (gate + action + quality) — with a probability from the
-  h2o-lightning-4b local decision model on :8083, no generated tokens. Use when something must be judged,
-  triaged, routed, gated, scored, or classified; for context de-duplication and superseding
-  claims; or for any yes/no question about a screenshot. Fast and near-free, so it suits
-  high-volume loops.
+  Calibrated, non-generative decision engine — JEV. Turns a judgement into one of four typed
+  answers — bool (binary), choice (constrained enum), score (scalar 0.0-1.0) or composite (gate +
+  action + quality) — with a probability from the h2o-lightning-4b local decision model on:8083,
+  no generated tokens. Use when something must be judged, triaged, routed, gated, scored, or
+  classified; for context de-duplication and superseding claims; or for any yes/no question about
+  a screenshot. Use it too when the question is about the jev model itself — "always use the h2o
+  4b jev model", "which decision model should a skill use", "is this still the jev path" — because
+  pinning the occupant is this skill's JEV_REQUIRE_H2O contract, not a server-management task.
+  Also the "where is X" front door: `box` locates a referring phrase in an image — a bounding
+  box, pixel coordinates, a confidence and a gating `present` probability — so use it for
+  "where is the total on this receipt", to crop a region before OCR, or to check something is
+  actually in frame.
+  Fast and near-free, so it suits high-volume loops.
 
-compatibility: "Requires a decision server on :8083 answering /v1/systemone (noul | choice | score). h2o-lightning-4b is the default occupant, behind the h2o-serve shim; any rotated candidate on the slot is used, and the served model is named in every result. JEV_REQUIRE_H2O=1 restores the hard h2o-only pin."
-allowed-tools: "Bash(jev-decision:*) Bash(python3:*) Read Write"
+compatibility: "Requires a decision server on :8083 answering /v1/systemone (noul | choice | score). h2o-lightning-4b is the default occupant, behind the h2o-serve shim; any rotated candidate on the slot is used, and the served model is named in every result. JEV_REQUIRE_H2O=1 restores the hard h2o-only pin. `box` additionally needs the `decision-model` client (`hardware/decision-model/scripts/decision_model.py`) and a box-capable occupant (h2o-lightning-4b or Valen-Decision-1.5)."
+allowed-tools: "Bash(jev-decision:*) Bash(decision-model:*) Bash(python3:*) Read Write"
 ---
 
 > **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8083`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If it is down, `jev` starts it via `llama-rig up decision`.
@@ -28,7 +34,7 @@ answer.
 
 ---
 
-## 🏛️ The Four Primitives
+## 🏛️ The Four Decision Primitives, Plus `box`
 
 | Primitive | Answer shape | Reach for it when |
 | :--- | :--- | :--- |
@@ -36,6 +42,7 @@ answer.
 | **`choice`** | `{selection, confidence, probabilities{...}}` | Routing, classifying, picking one of N |
 | **`score`** | `{score, probabilities{...}}` | Grading, urgency, quality, risk on `[0,1]` |
 | **`composite`** | `{gate, action, quality_score}` | One triage card carrying all three |
+| **`box`** | `{accepted, reason, box, pixels, confidence, present, found}` | Visual grounding: *where* is this thing in the image |
 
 `--image PATH` works on every primitive: the vision projector is loaded, so a
 question about a screenshot costs the same as a question about text.
@@ -66,7 +73,51 @@ $JEV composite --context "40 new passing tests, clean diff." \
 # Vision: any primitive accepts a screenshot
 $JEV bool --context "Order page screenshot." --question "Is the confirmation banner visible?" \
           --image /tmp/order.png
+
+# Where is it: gated bounding box for a referring phrase
+$JEV box --image /tmp/order.png --target "the Complete purchase button"
+# ACCEPT  box=(0.610, 0.880) -> (0.940, 0.930)  confidence=0.655  present=0.883
 ```
+
+### Where is it: `box`
+
+`box` is the **visual grounding** primitive: it answers *where* a phrase is in an
+image, not *whether* something is true. It delegates to `decision-model box` —
+the geometry client, the two gates and the crop all live there — so this stays a
+single entry point rather than a second implementation.
+
+```bash
+$JEV box --image scene.png --target "the red square"                 # accept / reject line
+$JEV box --image scene.png --target "the blue bicycle" --json        # absent -> exit 2
+$JEV box --image receipt.png --target "the total amount" --crop /tmp/total.png
+```
+
+| field | meaning |
+| :--- | :--- |
+| `box` | `left`, `top`, `right`, `bottom` as fractions of the image, from the top-left |
+| `confidence` | P(IoU ≥ 0.5) — read on the image **with the box drawn on it** |
+| `present` | P(the target is visible at all) — read on the untouched image |
+| `found` | whether any box was produced; a miss returns the whole image with confidence 0 |
+
+**Gate on `present`, not on `found`.** Asked for a blue bicycle in a scene that
+has none, the box readout still returns a confident-looking rectangle with
+`found: true`; `present` is what says no.
+
+`--min-present` (default 0.5) and `--min-confidence` (default 0.30) set the
+gates. `--crop PATH` saves the accepted region (needs Pillow). `box` accepts
+`--port`/`--host` like the other primitives, and `CLIP_BOX_BIN`-style callers
+(`t3-locate`) forward transport through `DECISION_PORT`/`DECISION_HOST`.
+
+**`box` is a per-backend shim feature.** The slot rotates; `decision-model caps`
+lists `box` only for a box-capable occupant (h2o-lightning-4b, Valen-Decision-1.5).
+On any other occupant the client refuses and names the served model instead of
+posting a question that endpoint cannot answer. Point `CLIP_BOX_PORT` at a
+standalone h2o shim (`:8761`) when the decision slot is occupied by something else.
+
+**Exit code `2` is the gate, not an error.** `0` accepted · `2` rejected by a gate
+(absent, low present/confidence) · `1` request error · `3` `decision-model` client
+missing. `t3-locate` branches on those codes, so they are preserved verbatim.
+The client can be overridden with `JEV_DECISION_MODEL=/path/to/decision_model.py`.
 
 ### Two habits that save the caller tokens
 
@@ -92,7 +143,8 @@ $JEV batch /tmp/questions.json --out /tmp/answers.json
 which keeps stdout to one line. `--context-file` and `batch` keep bulk facts and bulk
 answers off the caller's token stream.
 
-**Exit codes:** `0` answered · `2` usage error · `3` `--require-server` and no server.
+**Exit codes:** `0` answered · `2` usage error or `box` gate rejection · `3`
+`--require-server` and no server (or a missing `decision-model` client for `box`).
 
 ---
 

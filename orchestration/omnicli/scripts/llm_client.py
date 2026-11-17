@@ -45,13 +45,13 @@ def load_config() -> Dict[str, Any]:
     return {
         "default_endpoint": "http://127.0.0.1:8080",
         "model_name": "qwen3.6-35b-genesis",
-        "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+        "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
         "defaults": {"temperature": 0.7, "top_p": 0.8, "max_tokens": 4096}
     }
 
 def is_genesis_online(endpoint: str = "http://127.0.0.1:8080") -> bool:
     # First verify real llama-server process
-    res = subprocess.run("pgrep -f 'llama-server.*Qwen3.6-35B'", shell=True, capture_output=True)
+    res = subprocess.run("pgrep -f '[l]lama-server.*([Q]wen|[H]ermes|[G]emma|[S]wift|[T]hinking)'", shell=True, capture_output=True)
     if res.returncode != 0:
         return False
 
@@ -147,7 +147,7 @@ def doctor_check() -> Dict[str, Any]:
     launcher = cfg.get("launcher_script", "")
 
     online = is_genesis_online(endpoint)
-    proc_running = subprocess.run("pgrep -f 'luffy_nothink|Qwen3.6-35B'", shell=True, capture_output=True).returncode == 0
+    proc_running = subprocess.run("pgrep -f '[l]lama-server.*([Q]wen|[H]ermes|[G]emma|[S]wift|[T]hinking)'", shell=True, capture_output=True).returncode == 0
 
     print("\n" + "=" * 55)
     print(" 🏥 LLM-CLI DOCTOR — Qwen3.6-35B Genesis Status")
@@ -168,7 +168,7 @@ def doctor_check() -> Dict[str, Any]:
 
 def start_server():
     cfg = load_config()
-    launcher = cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy_nothink.sh")
+    launcher = cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh")
     if is_genesis_online():
         print("[llm-cli] Genesis 35B is already running and healthy on :8080.")
         return
@@ -218,7 +218,7 @@ def main():
                 print(res)
         else:
             print("⚠️ [llm-cli] Genesis 35B is not running on :8080.", file=sys.stderr)
-            print("   Start server: bash /run/media/rodri/AI/sh/luffy_nothink.sh", file=sys.stderr)
+            print("   Start server: bash /run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh", file=sys.stderr)
             print("   Or pass `--fallback` to use OpenRouter Free / Gemini.", file=sys.stderr)
             sys.exit(1)
     elif args.cmd == "doctor":

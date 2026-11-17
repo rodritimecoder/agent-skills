@@ -3,12 +3,13 @@ name: academic-pipeline-v2
 status: draft
 version: 0.1-draft
 description: >
-  Academic Notes Pipeline (v2). Draft, implemented: text-first university
-  ingestion (Canvas + Zoom) → parallel classifier sifting (jev-decision,
-  eval-router, free-swarm) → OKF v0.2 curriculum structuring → three focused HTML
-  outputs (constellation graph.html, anki.html, and cornell.html) with micro-gates
-  at every stage and a step_NN.json ledger. Successor to monolithic
-  academic-icm; v1 stays live until one real course passes all five gates.
+  Use when building or debugging the text-first university notes pipeline end to end: ingest
+  Canvas + Zoom (canvas-cli, zoom-recorder, markitdown-cli), sift with parallel classifiers
+  (jev-decision, eval-router, free-swarm), structure into OKF v0.2 / ICM folders, then render three
+  HTML targets — graph.html constellation, anki.html review hub, cornell.html print-ready sheet —
+  with a micro-gate and a step_NN.json ledger at each of the 5 stages. Runner
+  `python3 scripts/run_pipeline.py`; gates in scripts/gates.py. Draft status: v1 academic-icm stays
+  live until one real course clears all five gates. Not for a single-note fix.
 compatibility: "Requires canvas-cli, zoom-recorder, markitdown-cli, local inference (:8080, :8083) and embeddings (:8087) for the semantic cache."
 allowed-tools: "Bash(canvas-cli:*) Bash(zoom-recorder:*) Bash(markitdown-cli:*) Bash(jev:*) Bash(okf:*) Bash(state-compactor:*) Bash(cgate:*) Bash(openrouter-free:*) Bash(eval-router:*) Bash(python3:*) Bash(opencode:*) Read Write"
 ---
@@ -18,7 +19,7 @@ allowed-tools: "Bash(canvas-cli:*) Bash(zoom-recorder:*) Bash(markitdown-cli:*) 
 > **Status: DRAFT - implemented, not yet proven on a real course.** The runner
 > (`scripts/run_pipeline.py`), the gates (`scripts/gates.py`) and the
 > `05_verify/step_NN.json` ledger exist; `python3 -m unittest discover -s tests`
-> runs 107 tests green. On the real-course fixture gates 1-4 pass and gate 5 fails
+> runs 108 tests green. On the real-course fixture gates 1-4 pass and gate 5 fails
 > because Canvas yields no lecture text to judge: the blocker is the stage-1
 > source, not the code.
 >
@@ -101,7 +102,10 @@ layout used by both this file and `references/architecture.md`:
 
 ### Stage 1: Smart Ingestion (`01_ingest`)
 * **Spine:** Feeds the constellation view directly. Only downloads what the graph needs.
-* **Tools:** `canvas-cli`, `zoom-recorder`, `markitdown-cli`.
+* **Orchestrated sources:** Canvas and Zoom only — `canvas-cli`, `zoom-recorder`, `markitdown-cli`.
+* **Not orchestrated:** EdStem (`academic/edstem-cli`) is a separate skill. No stage calls it
+  and no gate checks it; if you run it, place its markdown under `01_ingest/markdown/` yourself
+  or Stage 2 will never sift it.
 * **Two Streams Per Week:**
   1. *Topic notes* (lecture slides, pages, PDFs).
   2. *Tutorial solutions* (worked problems).

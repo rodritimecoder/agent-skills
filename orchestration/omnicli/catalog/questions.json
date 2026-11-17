@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Generated routing questions, one snapshot per catalog. Each entry carries a verbatim quote from its skill description; the build gate re-checks it, so an edited description that no longer contains the quote drops the question instead of indexing a stale claim.",
+  "note": "Generated routing questions, one snapshot per catalog. Each entry carries a verbatim quote from its skill description; the build gate re-checks it, so an edited description that no longer contains the quote drops the question instead of indexing a stale claim. Pruned 8 questions for retired skills (kem-ocr, playwright-rs-usage) on 2026-11-17.",
   "generator": "opencode-go/deepseek-v4.1-flash (6 parallel batches)",
   "proposed": 275,
   "accepted": 228,
@@ -125,24 +125,6 @@
       {
         "question": "I have a local dev server I want reachable from outside",
         "quote": "expose a local GPU box or dev server"
-      }
-    ],
-    "clip-box": [
-      {
-        "question": "Where is the total amount on this receipt photo?",
-        "quote": "where is X in this screenshot/receipt/photo"
-      },
-      {
-        "question": "It keeps giving me a box even when the object isn't there",
-        "quote": "and a `present` probability that gates the answer"
-      },
-      {
-        "question": "Do I really need a cloud vision API just to get coordinates?",
-        "quote": "no cloud, no OCR"
-      },
-      {
-        "question": "I have a screenshot and only want the table area cut out",
-        "quote": "to crop a region before OCR"
       }
     ],
     "companion": [
@@ -491,20 +473,6 @@
         "quote": "upfront complexity classification (Fast vs Full route)"
       }
     ],
-    "kem-ocr": [
-      {
-        "question": "check whether my transcription actually matches the page image",
-        "quote": "render the transcription back into an image, and score it"
-      },
-      {
-        "question": "the ocr looked fine but the numbers in the table were wrong",
-        "quote": "P(faithful) in one forward pass"
-      },
-      {
-        "question": "plain ocr gives no confidence, I need a score I can trust",
-        "quote": "a corrupted-candidate holdout that the gate must reject"
-      }
-    ],
     "kem-thought": [
       {
         "question": "what principles should I follow when steering an agent through a task",
@@ -539,28 +507,6 @@
       {
         "question": "I captured the network traffic from this desktop app",
         "quote": "inspecting a network capture"
-      }
-    ],
-    "leasebox": [
-      {
-        "question": "is there something that stops two agents overwriting the same file",
-        "quote": "must not overwrite each other"
-      },
-      {
-        "question": "how do I let three people edit one shared file without clashing",
-        "quote": "to coordinate concurrent writes"
-      },
-      {
-        "question": "our agents keep clobbering each other's edits, how do I fix that",
-        "quote": "several people or agents edit the same files"
-      },
-      {
-        "question": "can I keep shared files synced without paying for anything",
-        "quote": "hibernating WebSockets, and free-tier guardrails"
-      },
-      {
-        "question": "I have files my agents wrote, how do I get them committed to git",
-        "quote": "to sync worker writes to git"
       }
     ],
     "local": [
@@ -685,20 +631,20 @@
         "quote": "read text out of an image, screenshot or scanned page"
       },
       {
-        "question": "turn this scanned pdf into markdown with the tables intact",
-        "quote": "layout-aware Markdown/JSON with tables, formulas and reading order"
+        "question": "turn this scanned pdf into markdown",
+        "quote": "transcribe documents, PDFs, slides, screenshots and scans into Markdown"
       },
       {
-        "question": "the text I pulled from a form came out in the wrong order",
-        "quote": "parses full documents, PDFs and scans into layout-aware Markdown"
+        "question": "which typed blocks and boxes does it report for this page",
+        "quote": "grounding that returns typed blocks, 0-1000 boxes, figure crops and chart tables"
       },
       {
-        "question": "can I read one slide quickly instead of parsing the whole document",
-        "quote": "transcribes slides and screenshots fast"
+        "question": "can I read just one slide instead of the whole deck",
+        "quote": "OCR a PDF or slide deck"
       },
       {
-        "question": "where exactly on screen is that button, give me its coordinates",
-        "quote": "returns 2D spatial coordinates and text tokens"
+        "question": "where exactly is that button, give me its coordinates",
+        "quote": "returns typed blocks, 0-1000 boxes, figure crops and chart tables"
       }
     ],
     "okf-architect": [
@@ -789,28 +735,6 @@
       {
         "question": "can I reuse the chrome I already have open instead of launching a new browser",
         "quote": "through official Playwright: CDP attach"
-      }
-    ],
-    "playwright-rs-usage": [
-      {
-        "question": "is there a guide for writing browser automation in rust",
-        "quote": "Procedural reference for using playwright-rs in Rust browser-automation code"
-      },
-      {
-        "question": "how do I get the browser binaries installed for my rust test project",
-        "quote": "adding the crate and installing its browsers"
-      },
-      {
-        "question": "my rust browser test fails intermittently and I need to look at the trace",
-        "quote": "capture / inspect traces for failure diagnosis"
-      },
-      {
-        "question": "should I chain the settings or pass them as arguments when building a page",
-        "quote": "builder pattern for options"
-      },
-      {
-        "question": "I already have a rust project and want to automate a page in it",
-        "quote": "Loaded automatically when the current repo has playwright-rs in its Cargo.toml"
       }
     ],
     "projects-harness": [

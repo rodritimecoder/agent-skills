@@ -8,7 +8,7 @@
     "http://127.0.0.1:8000/v1/chat/completions",
     "http://127.0.0.1:4000/v1/chat/completions"
   ],
-  "launcher_script": "/run/media/rodri/AI/sh/luffy_nothink.sh",
+  "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
   "defaults": {
     "temperature": 0.7,
     "top_p": 0.8,

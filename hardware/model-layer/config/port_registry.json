@@ -30,16 +30,8 @@
       "cmd": "bash $HOME/src/my-agent-skills/launchers/h2o.sh",
       "role": "The decision engine slot - bool / choice / score primitives"
     },
-    "8082": {
-      "alias": "local-decide-engine",
-      "vram_mb": 0,
-      "pinned": false,
-      "name": "StartLux-Decision-v1.1-4B-Instant",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/startlux-decision.sh",
-      "role": "Experimental StartLux backend; not the h2o-lightning-4b JEV endpoint"
-    },
     "8089": {
-      "alias": "local-decide-fallback",
+      "alias": "local-decide-aux",
       "vram_mb": 0,
       "pinned": false,
       "name": "Imajev-4B",
@@ -47,15 +39,15 @@
       "role": "Secondary decision engine \u2014 Imajev-4B chat path, or letter/readout with READOUT=1"
     },
     "8084": {
-      "alias": "local-ocr-crispembed",
+      "alias": "local-ocr-boxes",
       "vram_mb": 6300,
       "pinned": false,
       "name": "CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec)",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/crispembed-ocr.sh",
-      "role": "Documents & scene text \u2014 OXR-1.0 layout-aware Markdown, PP-OCRv6 bounding boxes"
+      "role": "2D text coordinates and bounding boxes via CrispEmbed PP-OCRv6"
     },
     "8085": {
-      "alias": "local-ocr-lighton",
+      "alias": "local-ocr",
       "vram_mb": 1500,
       "pinned": false,
       "name": "LightOnOCR-3-0.8B",
@@ -63,7 +55,7 @@
       "role": "Documents, PDFs and slides \u2014 fast prefill, high-throughput markdown"
     },
     "8086": {
-      "alias": "local-rerank-jina",
+      "alias": "local-rerank",
       "vram_mb": 800,
       "pinned": false,
       "name": "jina-reranker-v2-base-multilingual",
@@ -78,16 +70,8 @@
       "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-small.sh",
       "role": "Vector embeddings for RAG and semantic caching"
     },
-    "8088": {
-      "alias": "local-grounding-wevisone",
-      "vram_mb": 3300,
-      "pinned": false,
-      "name": "WeVisOne-VL-4B",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/wevisone-vl.sh",
-      "role": "Word-level OCR boxes, open-vocab detection, referring localization, pointing, counting"
-    },
     "8090": {
-      "alias": "local-ocr-jev",
+      "alias": "local-ocr-verify",
       "vram_mb": 5300,
       "pinned": false,
       "name": "MiniCPM-OCR-Jev",
@@ -95,7 +79,7 @@
       "role": "OCR consistency gate \u2014 scores a candidate transcription against the source image in one forward pass"
     },
     "8091": {
-      "alias": "local-rp-lfm3",
+      "alias": "local-llm-aux",
       "vram_mb": 2200,
       "pinned": false,
       "name": "LFM3-1.7B-Uncensored-AD",

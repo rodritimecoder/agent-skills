@@ -2,12 +2,13 @@
 name: notes-index
 
 description: >
-  Local ranked search over a Markdown notes folder — one SQLite FTS5 index, fingerprint-based refresh, Haiku-class
-  summaries, and an AGENTS.md rule so the agent searches the index instead of grepping (Glitch Cat Club / Kem Glitch;
-  Reel DezGALzNCuf, artifact MdwChkFxkCKwwnToGVJXGX). Cuts memory-search token spend by up to half on a large notes
-  vault. Also a `cite` gate that proves an answer's citations before it ships: paths resolve, `:lines` exist, and
-  every quoted span is verbatim in the cited file or transcript. Use when answering questions about past work,
-  decisions or notes, when a folder of Markdown keeps growing, or when a claim needs to be traced back to its source.
+  Local ranked search over a Markdown notes folder — one SQLite FTS5 index, fingerprint-based
+  refresh, Haiku-class summaries, and an AGENTS.md rule so the agent searches the index instead of
+  grepping. Cuts memory-search token spend by up to half on a large notes vault. Also a `cite`
+  gate that proves an answer's citations before it ships: paths resolve, `:lines` exist, and every
+  quoted span is verbatim in the cited file or transcript. Use when answering questions about past
+  work, decisions or notes, when a folder of Markdown keeps growing, or when a claim needs to be
+  traced back to its source.
 
 compatibility: "Python 3.10+ with sqlite3 FTS5. Summaries use a hosted model over plain HTTPS; a local OpenAI-compatible endpoint is an optional fallback."
 allowed-tools: "Bash(python3:*) Bash(notes-index:*) Read Write Edit"

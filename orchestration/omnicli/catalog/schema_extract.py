@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -24,6 +25,8 @@ from typing import Any
 
 _SCALAR_TYPES = {int: "integer", float: "number", bool: "boolean", str: "string"}
 _HELP_FLAGS = {"--help", "--version"}
+# `parseArgs` option names, which carry no leading dashes.
+_HELP_FLAGS_NAMES = {"help", "version"}
 _UNSAFE = object()
 
 
@@ -270,8 +273,221 @@ def extract_argparse_schema(
     return (schema, out) if isinstance(schema, dict) else (None, out)
 
 
+# The Node probe. Loaded with ``node --import <probe.mjs>`` so it runs before
+# the script's own module graph. ``parseArgs`` is patched on the shared
+# ``node:util`` export object and the ESM named exports are re-synced, so both
+# ``import { parseArgs } from "node:util"`` and
+# ``require("node:util").parseArgs`` hit the hook.
+_NODE_PROBE = r'''
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const fs = require("node:fs");
+const util = require("node:util");
+const out = process.env.OMNICLI_SCHEMA_OUT || "";
+const original = util.parseArgs;
+let written = false;
+
+util.parseArgs = function patchedParseArgs(config, ...rest) {
+  if (!written && out && config && typeof config === "object") {
+    const options = {};
+    const raw = config.options;
+    if (raw && typeof raw === "object") {
+      for (const [name, spec] of Object.entries(raw)) {
+        const entry = {};
+        if (spec && typeof spec === "object") {
+          if (spec.type) entry.type = spec.type;
+          if (spec.short) entry.short = spec.short;
+          if (spec.multiple) entry.multiple = true;
+          if (Object.prototype.hasOwnProperty.call(spec, "default")) {
+            entry.default = spec.default;
+          }
+          if (spec.description) entry.description = spec.description;
+        }
+        options[name] = entry;
+      }
+    }
+    try {
+      fs.writeFileSync(out, JSON.stringify({
+        options,
+        allowPositionals: Boolean(config.allowPositionals),
+      }));
+      written = true;
+    } catch {
+      // A probe that cannot write is a probe that reports nothing.
+    }
+  }
+  return original.call(this, config, ...rest);
+};
+
+try {
+  const mod = require("node:module");
+  if (typeof mod.syncBuiltinESMExports === "function") {
+    mod.syncBuiltinESMExports();
+  }
+} catch {
+  // Older runtimes have no ESM sync; the CJS hook still applies.
+}
+'''
+
+
 def _kind_type(kind: str) -> str:
     return {"int": "integer", "float": "number", "bool": "boolean"}.get(kind, "string")
+
+
+def _copy_json(value: Any) -> Any:
+    """A defensive copy: schemas are stored, diffed and returned to callers."""
+    try:
+        return json.loads(json.dumps(value))
+    except (TypeError, ValueError):
+        return dict(value) if isinstance(value, dict) else value
+
+
+def normalize_input_schema(raw: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate and normalise a runtime-emitted JSON Schema.
+
+    ``--omni-schema`` is a convention, not a library, so whatever comes back
+    over stdout is attacker-adjacent input from an arbitrary script. Only the
+    shape a caller can rely on is kept, and anything else is rejected rather
+    than stored as if it were a contract.
+    """
+    if not isinstance(raw, dict):
+        return None
+    if not isinstance(raw.get("properties"), dict):
+        return None
+    schema = dict(raw)
+    schema["type"] = "object"
+    schema["properties"] = _copy_json(raw["properties"])
+    schema["required"] = list(raw.get("required") or [])
+    schema["additionalProperties"] = bool(raw.get("additionalProperties", False))
+    schema["x-command"] = bool(raw.get("x-command", False))
+    schema["x-commands"] = list(raw.get("x-commands") or [])
+    return schema
+
+
+def extract_omni_schema(
+    cmd_prefix: list[str],
+    args: list[str] | None = None,
+    timeout: float = 12.0,
+) -> dict[str, Any] | None:
+    """Ask a script for its own schema via the ``--omni-schema`` convention.
+
+    Language-agnostic on purpose: the script decides what it can describe, and
+    this side only validates the JSON it prints. Runs in a scratch directory
+    with stdin closed, because a script that ignores the flag would otherwise
+    perform its real job inside the caller's checkout.
+    """
+    cmd = [*cmd_prefix, *(args or []), "--omni-schema"]
+    with tempfile.TemporaryDirectory(prefix="omnicli-omni-schema-") as scratch:
+        try:
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL, cwd=scratch, errors="replace")
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+    if proc.returncode != 0:
+        return None
+    try:
+        raw = json.loads(proc.stdout.strip())
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return normalize_input_schema(raw)
+
+
+def node_config_to_input_schema(config: dict[str, Any]) -> dict[str, Any]:
+    """Convert a ``node:util`` ``parseArgs`` config into MCP JSON Schema.
+
+    ``parseArgs`` already knows each option's declared type, repeatability and
+    default; ``--help`` throws that away. This is the typed half. Positionals
+    are not declared by ``parseArgs``, so they arrive later via
+    :func:`enrich_node_schema`.
+    """
+    raw_options = config.get("options") if isinstance(config, dict) else None
+    if not isinstance(raw_options, dict):
+        raw_options = {}
+    properties: dict[str, Any] = {}
+    taken: set[str] = set()
+
+    for opt_name, spec in raw_options.items():
+        if str(opt_name) in _HELP_FLAGS_NAMES:
+            continue
+        if not isinstance(spec, dict):
+            spec = {}
+        name = _property_name(opt_name, taken)
+        taken.add(name)
+        is_boolean = spec.get("type") == "boolean"
+        if spec.get("multiple"):
+            prop: dict[str, Any] = {
+                "type": "array",
+                "items": {"type": "boolean" if is_boolean else "string"},
+            }
+        elif is_boolean:
+            prop = {"type": "boolean"}
+        else:
+            prop = {"type": "string"}
+        prop["x-flag"] = f"--{opt_name}"
+        if "default" in spec:
+            default = _json_safe(spec.get("default"))
+            if default is not _UNSAFE:
+                prop["default"] = default
+        description = spec.get("description")
+        if isinstance(description, str) and description:
+            prop["description"] = description
+        properties[name] = prop
+
+    return {"type": "object", "properties": properties, "required": [],
+            "additionalProperties": False, "x-command": False, "x-commands": []}
+
+
+def extract_node_schema(
+    script_path: Path,
+    args: list[str] | None = None,
+    node: str | None = None,
+    timeout: float = 12.0,
+) -> tuple[dict[str, Any] | None, str]:
+    """Run ``--help`` under a ``parseArgs`` probe; return schema and output.
+
+    The probe records the first ``parseArgs`` config the script declares, which
+    is the one that describes its flags, then lets the script print its own
+    help. Both halves therefore come from a single run, as with the argparse
+    probe.
+    """
+    node_exe = node or shutil.which("node") or "node"
+    out = ""
+    with tempfile.TemporaryDirectory(prefix="omnicli-node-schema-") as scratch:
+        scratch_dir = Path(scratch)
+        preload_path = scratch_dir / "probe.mjs"
+        schema_path = scratch_dir / "schema.json"
+        try:
+            preload_path.write_text(_NODE_PROBE, encoding="utf-8")
+        except OSError:
+            return None, ""
+        try:
+            resolved = Path(script_path).resolve()
+        except OSError:
+            resolved = Path(script_path)
+        cmd = [node_exe, "--import", str(preload_path), str(resolved),
+               *(args or []), "--help"]
+        env = dict(os.environ, OMNICLI_SCHEMA_OUT=str(schema_path))
+        try:
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL, cwd=scratch, env=env,
+                errors="replace")
+            out = (proc.stdout or "") + (proc.stderr or "")
+        except subprocess.TimeoutExpired:
+            return None, ""
+        except OSError:
+            return None, ""
+        raw: Any = None
+        try:
+            if schema_path.is_file():
+                raw = json.loads(schema_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raw = None
+    if not isinstance(raw, dict):
+        return None, out
+    return node_config_to_input_schema(raw), out
 
 
 def contract_to_input_schema(contract: dict[str, Any]) -> dict[str, Any]:
@@ -316,6 +532,101 @@ def contract_to_input_schema(contract: dict[str, Any]) -> dict[str, Any]:
     return {"type": "object", "properties": properties, "required": required,
             "additionalProperties": False, "x-command": has_commands,
             "x-commands": list(commands) if has_commands else []}
+
+
+def enrich_node_schema(node_schema: dict[str, Any],
+                       contract: dict[str, Any]) -> dict[str, Any]:
+    """Add positionals, subcommands and metavar intent to a probe's schema.
+
+    ``parseArgs`` describes flags only; the printed help carries the rest. A
+    declared string is refined (never replaced) where the help implies an
+    integer, number or enum, and the inputs are left untouched.
+    """
+    schema = json.loads(json.dumps(node_schema))
+    try:
+        source = json.loads(json.dumps(contract))
+    except (TypeError, ValueError):
+        source = contract
+    fallback = contract_to_input_schema(source)
+
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+        schema["properties"] = properties
+    fallback_props = fallback.get("properties")
+    if not isinstance(fallback_props, dict):
+        fallback_props = {}
+
+    for name, prop in fallback_props.items():
+        if not isinstance(prop, dict):
+            continue
+        if prop.get("x-positional") is True and name not in properties:
+            properties[name] = json.loads(json.dumps(prop))
+
+    by_flag = {
+        prop["x-flag"]: prop
+        for prop in properties.values()
+        if isinstance(prop, dict) and prop.get("x-flag")
+    }
+    for prop in fallback_props.values():
+        if not isinstance(prop, dict):
+            continue
+        target = by_flag.get(prop.get("x-flag"))
+        if target is None or target.get("type") != "string":
+            continue
+        enum = prop.get("enum")
+        if isinstance(enum, list) and enum:
+            target["enum"] = list(enum)
+            continue
+        if prop.get("type") in ("integer", "number"):
+            target["type"] = prop["type"]
+
+    if fallback.get("x-command") is True:
+        schema["x-command"] = True
+        schema["x-commands"] = list(fallback.get("x-commands") or [])
+
+    required = [name for name in (schema.get("required") or [])
+                if name in properties]
+    for name in fallback.get("required") or []:
+        if name in properties and name not in required:
+            required.append(name)
+    schema["required"] = required
+    return schema
+
+
+def contract_from_input_schema(schema: dict[str, Any], *, usage: str = "",
+                               help_text: str = "",
+                               summary: str = "") -> dict[str, Any]:
+    """A help-level contract derived from a schema alone.
+
+    A runtime that answers ``--omni-schema`` may print no readable help at all.
+    The catalog still needs flags, positionals and subcommands, so they are
+    read back out of the schema the runtime declared.
+    """
+    flags: list[str] = []
+    positionals: list[str] = []
+    for name, prop in (schema.get("properties") or {}).items():
+        if not isinstance(prop, dict):
+            continue
+        flag = prop.get("x-flag")
+        if isinstance(flag, str) and flag:
+            if flag not in flags:
+                flags.append(flag)
+        elif prop.get("x-positional") is True:
+            positionals.append(name)
+    commands = list(schema.get("x-commands") or []) if schema.get("x-command") else []
+    contract: dict[str, Any] = {
+        "usage": usage,
+        "flags": flags,
+        "positionals": positionals,
+        "subcommands": [{"name": name, "aliases": [], "summary": ""}
+                        for name in commands],
+        "help": help_text,
+        "inputSchema": schema,
+    }
+    if summary:
+        contract["summary"] = summary
+    return contract
 
 
 def merge_parent_schema(child_schema: dict[str, Any],

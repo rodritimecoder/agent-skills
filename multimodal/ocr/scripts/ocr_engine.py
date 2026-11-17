@@ -9,15 +9,14 @@ import subprocess
 import tempfile
 import time
 import urllib.request
-import urllib.error
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 def _drive_root() -> Path:
     """The AI volume root: $AI_ROOT, else the nearest ancestor holding models/.
 
-    Launchers, weights and the CrispEmbed build all live under it, so resolving
-    from here beats pinning the one mount point this was written for.
+    Launchers and model weights live under it, so resolving from here beats
+    pinning the one mount point this was written for.
     """
     env = os.environ.get("AI_ROOT")
     if env:
@@ -46,17 +45,6 @@ def lighton_start_command(ctl: Optional[str] = None) -> Optional[list]:
         return [str(LIGHTON_LAUNCHER)]
     return None
 
-CRISP_DIR = AI_DIR / "CrispEmbed"
-CRISP_LAUNCHER = AI_DIR / "sh" / "crispembed-ocr.sh"
-CRISP_VULKAN_DIRECT = CRISP_DIR / "build-vulkan" / "test-ppocrv6-direct"
-CRISP_CPU_DIRECT = CRISP_DIR / "build-cpu" / "test-ppocrv6-direct"
-CRISP_MODELS_DIR = AI_DIR / "models" / "cstr"
-CRISP_DET = CRISP_MODELS_DIR / "PP-OCRv6-small-det-GGUF" / "PP-OCRv6_small_det-f16.gguf"
-CRISP_REC = CRISP_MODELS_DIR / "PP-OCRv6_small_rec-GGUF" / "PP-OCRv6_small_rec-q8-head.gguf"
-
-OXR_MODEL = CRISP_MODELS_DIR / "OXR-1.0-GGUF" / "oxr-1.0-f16.gguf"
-OXR_LAYOUT = CRISP_MODELS_DIR / "OXR-1.0-DFINE-layout-GGUF" / "oxr-1.0-dfine-layout-f32.gguf"
-
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
 
 
@@ -72,14 +60,12 @@ class OCREngine:
     def __init__(
         self,
         lighton_port: int = 8085,
-        crisp_port: int = 8084,
         host: Optional[str] = None,
         timeout: float = 60.0
     ):
         env_host = os.environ.get("OCR_HOST")
         self.host = host or env_host or "127.0.0.1"
         self.lighton_port = lighton_port
-        self.crisp_port = crisp_port
         self.timeout = timeout
         
         self.is_remote = self.host not in ("127.0.0.1", "localhost")
@@ -91,21 +77,10 @@ class OCREngine:
 
         self.lighton_endpoint = f"{self.scheme}://{self.host}:{self.lighton_port}/v1/chat/completions"
         self.lighton_health = f"{self.scheme}://{self.host}:{self.lighton_port}/health"
-        self.crisp_endpoint = f"{self.scheme}://{self.host}:{self.crisp_port}/ocr/pipeline"
-        self.crisp_health = f"{self.scheme}://{self.host}:{self.crisp_port}/health"
 
     def is_lighton_online(self) -> bool:
         try:
             req = urllib.request.Request(self.lighton_health)
-            ctx = self.ssl_ctx if self.scheme == "https" else None
-            with urllib.request.urlopen(req, timeout=0.8, context=ctx) as resp:
-                return resp.status == 200
-        except Exception:
-            return False
-
-    def is_crisp_online(self) -> bool:
-        try:
-            req = urllib.request.Request(self.crisp_health)
             ctx = self.ssl_ctx if self.scheme == "https" else None
             with urllib.request.urlopen(req, timeout=0.8, context=ctx) as resp:
                 return resp.status == 200
@@ -161,121 +136,6 @@ class OCREngine:
         latency_ms = round((time.time() - t0) * 1000, 1)
         return cleaned, latency_ms
 
-    def ocr_spatial(self, image_path: Path) -> Dict[str, Any]:
-        p = Path(image_path).resolve()
-        if not p.is_file():
-            raise FileNotFoundError(f"Image not found: {image_path}")
-
-        if self.is_crisp_online():
-            payload = {"image": str(p)}
-            try:
-                req = urllib.request.Request(
-                    self.crisp_endpoint,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={"Content-Type": "application/json"}
-                )
-                ctx = self.ssl_ctx if self.scheme == "https" else None
-                with urllib.request.urlopen(req, timeout=self.timeout, context=ctx) as resp:
-                    raw = json.loads(resp.read().decode("utf-8"))
-                    results = []
-                    for item in raw.get("results", []):
-                        results.append({
-                            "text": item.get("text", "").strip(),
-                            "bbox": item.get("bbox", []),
-                            "confidence": round(float(item.get("confidence", 0.0)), 4)
-                        })
-                    return {
-                        "task": "spatial_ocr",
-                        "engine": "crispembed",
-                        "image": str(p),
-                        "n_regions": len(results),
-                        "mean_confidence": round(float(raw.get("mean_confidence", 0.0)), 4),
-                        "results": results,
-                        "markdown": raw.get("markdown", "").strip(),
-                        "latency_ms": round(float(raw.get("ms", 0.0)), 1),
-                        "source": "crispembed_server"
-                    }
-            except Exception:
-                pass
-
-        direct_bin = CRISP_VULKAN_DIRECT if CRISP_VULKAN_DIRECT.is_file() else CRISP_CPU_DIRECT
-        if not direct_bin.is_file():
-            raise FileNotFoundError(f"CrispEmbed direct binary not found at {direct_bin}")
-
-        t0 = time.time()
-        cmd = [str(direct_bin), str(CRISP_DET), str(CRISP_REC), str(p)]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        latency_ms = round((time.time() - t0) * 1000, 1)
-
-        pattern = re.compile(
-            r"region=\d+\s+score=([0-9.]+)\s+quad=\(([0-9.]+),([0-9.]+)\)\(([0-9.]+),([0-9.]+)\)\(([0-9.]+),([0-9.]+)\)\(([0-9.]+),([0-9.]+)\).*?text=(.*)"
-        )
-        results = []
-        confidences = []
-        for line in res.stdout.splitlines():
-            m = pattern.search(line.strip())
-            if m:
-                score = round(float(m.group(1)), 4)
-                x1, y1 = float(m.group(2)), float(m.group(3))
-                x2, y2 = float(m.group(4)), float(m.group(5))
-                x3, y3 = float(m.group(6)), float(m.group(7))
-                x4, y4 = float(m.group(8)), float(m.group(9))
-                text = m.group(10).strip()
-                bbox = [round(min(x1, x2, x3, x4), 2), round(min(y1, y2, y3, y4), 2),
-                        round(max(x1, x2, x3, x4), 2), round(max(y1, y2, y3, y4), 2)]
-                results.append({"text": text, "bbox": bbox, "confidence": score})
-                confidences.append(score)
-
-        mean_conf = round(sum(confidences) / len(confidences), 4) if confidences else 0.0
-        return {
-            "task": "spatial_ocr",
-            "engine": "crispembed",
-            "image": str(p),
-            "n_regions": len(results),
-            "mean_confidence": mean_conf,
-            "results": results,
-            "markdown": "\n".join(r["text"] for r in results if r["text"]),
-            "latency_ms": latency_ms,
-            "source": "crispembed_direct"
-        }
-
-    def is_oxr_online(self) -> bool:
-        if not self.is_crisp_online():
-            return False
-        probe = urllib.request.Request(
-            f"{self.scheme}://{self.host}:{self.crisp_port}/oxr/document",
-            data=json.dumps({"images": []}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-        ctx = self.ssl_ctx if self.scheme == "https" else None
-        try:
-            urllib.request.urlopen(probe, timeout=1.5, context=ctx)
-            return True
-        except urllib.error.HTTPError as exc:
-            return exc.code == 400
-        except Exception:
-            return False
-
-    def ensure_oxr(self, timeout: float = 180.0) -> bool:
-        if self.is_oxr_online():
-            return True
-        if not CRISP_LAUNCHER.is_file():
-            return False
-        env = dict(os.environ, ENGINE="oxr")
-        subprocess.Popen(
-            [str(CRISP_LAUNCHER)],
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            if self.is_oxr_online():
-                return True
-            time.sleep(1.0)
-        return False
-
     def _page_images(
         self, p: Path, pages: Optional[str], scratch: Path
     ) -> Tuple[List[Path], int]:
@@ -309,229 +169,6 @@ class OCREngine:
         if not out:
             raise ValueError(f"No pages selected from {p.name}")
         return out, len(out)
-
-    def _oxr_recognize(self, p: Path, max_new_tokens: int) -> Tuple[str, float]:
-        binary = CRISP_DIR / "build-vulkan" / "crispembed"
-        if not binary.is_file():
-            binary = CRISP_DIR / "build-cpu" / "crispembed"
-        if not binary.is_file() or not OXR_MODEL.is_file():
-            raise FileNotFoundError(
-                f"OXR binary/model missing: {binary} / {OXR_MODEL}"
-            )
-        base_env = dict(
-            os.environ,
-            CRISPEMBED_OXR="1",
-            CRISPEMBED_ACCEPT_OXR_LICENSE="1",
-        )
-        cmd = [
-            str(binary), "-m", str(OXR_MODEL), "--ocr", str(p),
-            "--ocr-max-tokens", str(max_new_tokens), "-t", str(os.cpu_count() or 4),
-        ]
-        started = time.time()
-        gpu_env = dict(base_env, CRISPEMBED_OXR_GPU="1", CRISPEMBED_OXR_GPU_FLASH="1")
-        res = subprocess.run(cmd, capture_output=True, text=True, env=gpu_env, timeout=900)
-        if res.returncode != 0:
-            cpu_env = dict(base_env, CRISPEMBED_OXR_FORCE_CPU="1")
-            res = subprocess.run(cmd, capture_output=True, text=True, env=cpu_env, timeout=1800)
-        if res.returncode != 0:
-            raise RuntimeError(f"OXR recognition failed: {res.stderr.strip()[-400:]}")
-        return res.stdout.strip(), round((time.time() - started) * 1000, 1)
-
-    def ocr_document_oxr(
-        self,
-        file_path: Path,
-        pages: Optional[str] = None,
-        max_new_tokens: int = 4096,
-        assets_dir: Optional[Path] = None,
-    ) -> Dict[str, Any]:
-        p = Path(file_path).resolve()
-        if not p.is_file():
-            raise FileNotFoundError(f"File not found: {file_path}")
-        if self.is_remote:
-            raise RuntimeError(
-                "OXR document parsing reads image paths server-side; it only works on the "
-                "machine hosting the parser. Use --engine lighton for a remote host."
-            )
-        if not self.ensure_oxr():
-            text, ms = self._oxr_recognize(p, max_new_tokens)
-            return {
-                "task": "document_ocr",
-                "engine": "oxr-1.0",
-                "file": str(p),
-                "pages_count": 1,
-                "pages": [{"page": 1, "text": text}],
-                "text": text,
-                "markdown": text,
-                "latency_ms": ms,
-                "source": "oxr_cli",
-            }
-
-        scratch = Path(tempfile.mkdtemp(prefix="ocr-oxr-"))
-        try:
-            images, count = self._page_images(p, pages, scratch)
-            options: Dict[str, Any] = {"max_new_tokens": max_new_tokens, "write_images": False}
-            crop_root = None
-            if assets_dir is not None:
-                crop_root = scratch / "assets"
-                options["write_images"] = True
-                options["image_output_dir"] = str(crop_root)
-                options["file_name"] = re.sub(r"[^A-Za-z0-9._-]+", "_", p.stem) + p.suffix
-            payload = {
-                "images": [str(img) for img in images],
-                "format": "upstream",
-                "options": options,
-            }
-            req = urllib.request.Request(
-                f"{self.scheme}://{self.host}:{self.crisp_port}/oxr/document",
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-            )
-            ctx = self.ssl_ctx if self.scheme == "https" else None
-            started = time.time()
-            try:
-                with urllib.request.urlopen(req, timeout=900, context=ctx) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-            except urllib.error.HTTPError as exc:
-                raise RuntimeError(
-                    f"OXR document route failed ({exc.code}): "
-                    f"{exc.read().decode('utf-8', 'replace')[:400]}"
-                )
-            latency_ms = round((time.time() - started) * 1000, 1)
-
-            outputs = data.get("outputs") or {}
-            structure = outputs.get("json") or {}
-            markdown = (outputs.get("markdown") or "").strip()
-            meta = (data.get("metadata") or {}).get("crispembed") or {}
-
-            dropped: Dict[int, set] = {}
-            for page_idx, page in enumerate(structure.get("pages", [])):
-                dropped[page_idx] = self._nested_blocks(page.get("blocks", []))
-
-            assets: List[Dict[str, Any]] = []
-            if assets_dir is not None and crop_root is not None:
-                assets_dir.mkdir(parents=True, exist_ok=True)
-                multi = count > 1
-                for page_idx, page in enumerate(structure.get("pages", [])):
-                    fig_no = 0
-                    for block_idx, block in enumerate(page.get("blocks", [])):
-                        if block.get("type") != "Picture" or block_idx in dropped[page_idx]:
-                            continue
-                        match = re.search(r"!\[\]\(([^)]+)\)", str(block.get("content", "")))
-                        if not match:
-                            continue
-                        src = Path(match.group(1))
-                        if not src.is_file():
-                            continue
-                        fig_no += 1
-                        name = f"p{page_idx + 1}_fig{fig_no}.png" if multi else f"fig{fig_no}.png"
-                        dest = assets_dir / name
-                        shutil.copyfile(src, dest)
-                        assets.append({
-                            "page": page_idx + 1,
-                            "file": name,
-                            "path": str(dest.resolve()),
-                            "bbox": block.get("bbox"),
-                        })
-                        new = f"![]({dest.resolve()})"
-                        markdown = markdown.replace(match.group(0), new)
-                        block["content"] = new
-
-            else:
-                for page_idx, page in enumerate(structure.get("pages", [])):
-                    for block_idx, block in enumerate(page.get("blocks", [])):
-                        if block.get("type") != "Picture" or block_idx in dropped.get(page_idx, set()):
-                            continue
-                        match = re.search(r"!\[\]\(([^)]+)\)", str(block.get("content", "")))
-                        if not match:
-                            continue
-                        note = "*[figure omitted — pass --assets DIR to extract]*"
-                        markdown = markdown.replace(match.group(0), note)
-                        block["content"] = note
-
-            for page_idx, indexes in dropped.items():
-                for block_idx in indexes:
-                    block = structure["pages"][page_idx]["blocks"][block_idx]
-                    content = str(block.get("content", "")).strip()
-                    if not content:
-                        continue
-                    if block.get("type") == "Picture":
-                        markdown = markdown.replace(content, "")
-                    else:
-                        markdown = markdown.replace(content, "")
-            markdown = re.sub(r"\n{3,}", "\n\n", markdown).strip()
-
-            page_texts = [
-                {
-                    "page": int(page.get("page_num", idx)) + 1,
-                    "text": "\n\n".join(
-                        str(block.get("content", ""))
-                        for block_idx, block in enumerate(page.get("blocks", []))
-                        if block.get("content") and block_idx not in dropped.get(idx, set())
-                    ),
-                }
-                for idx, page in enumerate(structure.get("pages", []))
-            ]
-            if not markdown and count == 1 and p.suffix.lower() in IMAGE_EXTENSIONS:
-                text, ms = self._oxr_recognize(p, max_new_tokens)
-                return {
-                    "task": "document_ocr",
-                    "engine": "oxr-1.0",
-                    "file": str(p),
-                    "pages_count": 1,
-                    "pages": [{"page": 1, "text": text}],
-                    "text": text,
-                    "markdown": text,
-                    "latency_ms": ms,
-                    "source": "oxr_cli",
-                }
-            return {
-                "task": "document_ocr",
-                "engine": "oxr-1.0",
-                "file": str(p),
-                "pages_count": count,
-                "pages": page_texts,
-                "text": markdown,
-                "markdown": markdown,
-                "structure": structure,
-                "assets": assets,
-                "layout_source": meta.get("layout_source"),
-                "latency_ms": latency_ms,
-                "source": "oxr_native_document",
-            }
-        finally:
-            shutil.rmtree(scratch, ignore_errors=True)
-
-    @staticmethod
-    def _bbox_area(box) -> float:
-        return max(0.0, float(box[2]) - float(box[0])) * max(0.0, float(box[3]) - float(box[1]))
-
-    @classmethod
-    def _inside(cls, inner, outer, ratio: float = 0.95) -> bool:
-        iw = max(0.0, min(float(inner[2]), float(outer[2])) - max(float(inner[0]), float(outer[0])))
-        ih = max(0.0, min(float(inner[3]), float(outer[3])) - max(float(inner[1]), float(outer[1])))
-        area = cls._bbox_area(inner)
-        return area > 0 and (iw * ih) / area >= ratio
-
-    @classmethod
-    def _nested_blocks(cls, blocks: List[Dict[str, Any]]) -> set:
-        """Layout cleanups the native route leaves to the caller: text already
-        captured by a table/figure, and a figure box that is just a frame
-        around a tighter crop of the same drawing."""
-        drop: set = set()
-        for i, outer in enumerate(blocks):
-            if outer.get("type") not in ("Table", "Picture"):
-                continue
-            for j, inner in enumerate(blocks):
-                if i == j or j in drop:
-                    continue
-                if not cls._inside(inner.get("bbox", [0, 0, 0, 0]), outer.get("bbox", [0, 0, 0, 0])):
-                    continue
-                if inner.get("type") == "Text":
-                    drop.add(j)
-                elif inner.get("type") == "Picture" and outer.get("type") == "Picture":
-                    if cls._bbox_area(inner["bbox"]) >= 0.4 * cls._bbox_area(outer["bbox"]):
-                        drop.add(i)
-        return drop
 
     GROUNDED_RE = re.compile(r"!\[([A-Za-z_+]+)\]\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)")
 

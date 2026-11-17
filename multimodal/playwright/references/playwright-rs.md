@@ -1,11 +1,3 @@
----
-name: playwright-rs-usage
-description: Procedural reference for using playwright-rs in Rust browser-automation code — object model (Browser/Context/Page/Locator), the `locator!()` macro, builder pattern for options, auto-wait semantics, adding the crate and installing its browsers, and how to capture / inspect traces for failure diagnosis. Use when writing tests or scripts with playwright-rs as a dependency. Loaded automatically when the current repo has playwright-rs in its Cargo.toml.
-license: Apache-2.0
-metadata:
-  version: "0.15.5"
----
-
 # Using playwright-rs
 
 Rust bindings for [Microsoft Playwright](https://playwright.dev). This

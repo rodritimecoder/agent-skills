@@ -2,9 +2,10 @@
 name: glitch-orchestra
 
 description: >
-  Claude Code mods and terminal conductor architecture for multi-session agent supervision (Glitch Cat Club / Kem Glitch;
-  Reel Dd_vZqINEtW), with an experimental alignment-first role workflow from Reel DeKBMCQNRXU. The conductor aligns intent,
-  references and specialist panes before dispatching tasks to dedicated child sessions, tracks progress, and triggers completion chimes.
+  Claude Code mods and terminal conductor architecture for multi-session agent supervision, with
+  an experimental alignment-first role workflow from. The conductor aligns intent, references and
+  specialist panes before dispatching tasks to dedicated child sessions, tracks progress, and
+  triggers completion chimes.
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(python3:*) Read Write"
@@ -33,7 +34,7 @@ Before dispatching work, the conductor gets the team in tune:
 4. **Assign specialist panes**: The experimental sequence names `frontend` for the world, `sol` for motion, and `astra` for light. Use meeting and status cues to surface overlap before parallel work proceeds.
 5. **Compare and test qualitatively**: Keep the prompt the same for a before/after comparison, then judge fit against the agreed audience, intent, and references rather than inventing a numeric score.
 
-The alignment reel shows conductor-led specialist panes; it does not establish direct peer-to-peer messaging. It is an experimental workflow reference, not evidence of JEV decision-model testing.
+The alignment reel shows conductor-led specialist panes; it does not establish direct peer-to-peer messaging. It is an experimental workflow reference, not evidence of JEV decision-model testing. Quotes, timestamps and the shown-versus-modeled split are recorded in [`SOURCES.md`](./SOURCES.md), including why `DeKBMCQNRXU` no longer belongs to `frontend-uat`.
 
 ---
 

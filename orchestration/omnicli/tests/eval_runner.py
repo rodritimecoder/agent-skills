@@ -34,15 +34,19 @@ from catalog import builder, legacy, search  # noqa: E402
 SETS = {
     "golden": HERE / "golden_eval.json",
     "paraphrase": HERE / "paraphrase_eval.json",
+    "fresh": HERE / "fresh_eval.json",
 }
 
 
 def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
-        fusion: str = "never", eval_set: str = "golden") -> dict:
+        fusion: str = "never", eval_set: str = "golden", split: str = "all") -> dict:
     path = SETS.get(eval_set)
     if path is None:
         raise SystemExit(f"unknown eval set {eval_set!r}; choose from {sorted(SETS)}")
     cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    if split != "all":
+        from desc_audit import split_of
+        cases = [c for c in cases if split_of(c["query"]) == split]
     con = builder.connect()
     builder.ensure_built(con, progress=False)
 
@@ -150,7 +154,8 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
     b1, b3 = summary["bm25"]["top1_raw"], summary["bm25"]["top3_raw"]
     l1, l3 = summary["legacy"]["top1_raw"], summary["legacy"]["top3_raw"]
     print("=" * 66)
-    print(f"  {eval_set.upper()} ROUTING EVAL   ({total} cases)   rerank={rerank} fusion={fusion}")
+    print(f"  {eval_set.upper()} ROUTING EVAL   ({total} cases)   rerank={rerank} fusion={fusion}"
+          + (f" split={split}" if split != "all" else ""))
     print("=" * 66)
     print(f"  BM25 catalog    top1 {b1:>3}/{total} ({100.0*b1/total:5.1f}%)   top3 {b3:>3}/{total} ({100.0*b3/total:5.1f}%)")
     print(f"  legacy scorer   top1 {l1:>3}/{total} ({100.0*l1/total:5.1f}%)   top3 {l3:>3}/{total} ({100.0*l3/total:5.1f}%)")
@@ -180,6 +185,7 @@ if __name__ == "__main__":
     mode = "never"
     fusion = "never"
     eval_set = "golden"
+    split = "all"
     for arg in sys.argv[1:]:
         if arg.startswith("--rerank="):
             mode = arg.split("=", 1)[1]
@@ -187,5 +193,7 @@ if __name__ == "__main__":
             fusion = arg.split("=", 1)[1]
         elif arg.startswith("--set="):
             eval_set = arg.split("=", 1)[1]
+        elif arg.startswith("--split="):
+            split = arg.split("=", 1)[1]
     run(verbose="--verbose" in sys.argv, as_json="--json" in sys.argv,
-        rerank=mode, fusion=fusion, eval_set=eval_set)
+        rerank=mode, fusion=fusion, eval_set=eval_set, split=split)

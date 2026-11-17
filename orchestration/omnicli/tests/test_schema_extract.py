@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -57,6 +58,137 @@ case "$1" in
   --help) usage; exit 0 ;;
 esac
 usage
+'''
+
+# A real ESM `node:util` parser. `--format` and `--name` are declared as
+# strings on purpose: the help text is what refines them.
+ESM_TOOL = r'''#!/usr/bin/env node
+/**
+ * Reference ESM CLI used by the unit tests.
+ */
+import { parseArgs } from "node:util";
+
+const { values } = parseArgs({
+  allowPositionals: true,
+  options: {
+    help: { type: "boolean", short: "h", description: "show usage" },
+    json: { type: "boolean", short: "j", description: "machine output" },
+    limit: { type: "string", default: "10", description: "row count" },
+    tag: { type: "string", multiple: true, description: "repeatable tag" },
+    verbose: { type: "boolean", multiple: true },
+    format: { type: "string" },
+    name: { type: "string" },
+  },
+});
+
+if (values.help) {
+  console.log("usage: tool.mjs [--json] [--limit N] [--tag TAG] [--format {md,txt}] query");
+  console.log("");
+  console.log("options:");
+  console.log("  --json                machine output");
+  console.log("  --limit N             row count");
+  console.log("  --tag TAG             repeatable tag");
+  console.log("  --verbose             noisy");
+  console.log("  --format {md,txt}     output format");
+  console.log("  --name TEXT           display name");
+  console.log("");
+  console.log("positional arguments:");
+  console.log("  query                 search terms");
+  process.exit(0);
+}
+'''
+
+# The CommonJS half of the same hook: `require("node:util")` must see the patch
+# too, which is what `syncBuiltinESMExports` alone does not guarantee.
+CJS_TOOL = r'''#!/usr/bin/env node
+/**
+ * Reference CommonJS CLI used by the unit tests.
+ */
+const { parseArgs } = require("node:util");
+
+const { values } = parseArgs({
+  options: {
+    help: { type: "boolean", short: "h" },
+    "dry-run": { type: "boolean", description: "plan only" },
+    output: { type: "string", default: "out.json" },
+  },
+});
+
+if (values.help) {
+  console.log("usage: cjs.js [--dry-run] [--output FILE]");
+  process.exit(0);
+}
+'''
+
+# A runtime with no readable help and a hand-written schema: the `--omni-schema`
+# branch has to build the whole contract from the schema.
+OMNI_MJS_TOOL = r'''#!/usr/bin/env node
+/**
+ * Emits a hand-written omni schema.
+ */
+const schema = {
+  type: "object",
+  properties: {
+    json: { type: "boolean", "x-flag": "--json" },
+    limit: { type: "integer", "x-flag": "--limit", default: 5 },
+  },
+  required: [],
+  additionalProperties: false,
+  "x-command": false,
+  "x-commands": [],
+};
+
+if (process.argv.includes("--omni-schema")) {
+  console.log(JSON.stringify(schema));
+  process.exit(0);
+}
+if (process.argv.includes("--help")) {
+  console.log("usage: omni.mjs [--json] [--limit N]");
+  process.exit(0);
+}
+'''
+
+OMNI_SHELL_TOOL = '''#!/bin/sh
+case "$1" in
+  --omni-schema)
+    printf '%s\\n' '{"type":"object","properties":{"resume":{"type":"boolean","x-flag":"--resume"},"target":{"type":"string","x-positional":true}},"required":["target"],"x-command":false,"x-commands":[]}'
+    exit 0
+    ;;
+  --help)
+    echo "omni.sh: emit records"
+    exit 0
+    ;;
+esac
+echo "omni.sh: emit records"
+'''
+
+# Reachable only through a `--omni-sc*` glob, so the literal flag is absent
+# from the source: a probe here would be a bug, and the marker proves it ran.
+SAFE_SHELL_TOOL = '''#!/bin/sh
+if [ "$1" = "--help" ]; then
+  echo "usage: safe.sh [--limit N]"
+  exit 0
+fi
+case "$1" in
+  --omni-sc*) touch "$OMNICLI_TEST_MARKER" ;;
+esac
+echo "usage: safe.sh [--limit N]"
+'''
+
+SAFE_MJS_TOOL = r'''#!/usr/bin/env node
+/**
+ * A CLI whose schema flag is never advertised.
+ */
+import fs from "node:fs";
+
+if (process.argv.includes("--help")) {
+  console.log("usage: safe.mjs [--limit N]");
+  process.exit(0);
+}
+if (process.argv.some((arg) => arg.startsWith("--omni-s"))) {
+  fs.writeFileSync(process.env.OMNICLI_TEST_MARKER, "ran");
+  process.exit(0);
+}
 '''
 
 FALLBACK_HELP = (
@@ -234,7 +366,157 @@ class TestRuntimeExtraction(unittest.TestCase):
         self.assertIs(schema["properties"]["target"]["x-positional"], True)
 
     def test_parser_version_is_bumped(self):
-        self.assertEqual(registry.CONTRACT_PARSER_VERSION, 8)
+        self.assertEqual(registry.CONTRACT_PARSER_VERSION, 9)
+
+
+class TestNodeSchema(unittest.TestCase):
+    """`node:util` `parseArgs` declarations, probed from a live process."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_esm_parse_args_declarations_are_typed(self):
+        script = write_script(self.dir, "tool.mjs", ESM_TOOL)
+        schema, out = schema_extract.extract_node_schema(script)
+        self.assertIsNotNone(schema, f"no schema; help was: {out[:400]}")
+        props = schema["properties"]
+
+        self.assertEqual(props["json"]["type"], "boolean")
+        self.assertEqual(props["json"]["x-flag"], "--json")
+        self.assertEqual(props["tag"]["type"], "array")
+        self.assertEqual(props["tag"]["items"], {"type": "string"})
+        self.assertEqual(props["verbose"]["type"], "array")
+        self.assertEqual(props["verbose"]["items"], {"type": "boolean"})
+        self.assertEqual(props["limit"]["type"], "string")
+        self.assertEqual(props["limit"]["default"], "10")
+        self.assertNotIn("help", props, "--help is not a parameter")
+        self.assertIs(schema["x-command"], False)
+
+    def test_esm_help_enriches_positionals_and_enums(self):
+        script = write_script(self.dir, "tool.mjs", ESM_TOOL)
+        contract = registry.extract_contract(script)
+        props = contract["inputSchema"]["properties"]
+
+        self.assertEqual(props["limit"]["type"], "integer",
+                         "`--limit N` should refine the declared string")
+        self.assertEqual(props["limit"]["default"], "10",
+                         "a declared default must survive the refinement")
+        self.assertEqual(props["format"]["enum"], ["md", "txt"])
+        self.assertEqual(props["name"]["type"], "string")
+        self.assertEqual(props["query"]["x-positional"], True)
+        self.assertEqual(props["query"]["x-positional-index"], 0)
+        self.assertIn("query", contract["inputSchema"]["required"])
+        self.assertEqual(contract["summary"],
+                         "Reference ESM CLI used by the unit tests.")
+
+    def test_cjs_require_parse_args_is_hooked_too(self):
+        script = write_script(self.dir, "tool.js", CJS_TOOL)
+        contract = registry.extract_contract(script)
+        props = contract["inputSchema"]["properties"]
+
+        self.assertEqual(props["dry_run"]["type"], "boolean")
+        self.assertEqual(props["dry_run"]["x-flag"], "--dry-run")
+        self.assertEqual(props["output"]["type"], "string")
+        self.assertEqual(props["output"]["default"], "out.json")
+        self.assertNotIn("help", props)
+        self.assertEqual(contract["summary"],
+                         "Reference CommonJS CLI used by the unit tests.")
+
+    def test_a_non_executable_module_without_help_is_not_run(self):
+        marker = self.dir / "ran"
+        script = self.dir / "helper.mjs"
+        script.write_text(
+            "import fs from 'node:fs';\n"
+            "function parseArgs(argv) { return argv; }\n"
+            f"fs.writeFileSync({str(marker)!r}, 'ran');\n"
+            "parseArgs(process.argv);\n")
+        contract = registry.extract_contract(script)
+        self.assertFalse(marker.exists(), "an unprobeable module was executed")
+        self.assertEqual(contract["usage"], "")
+        self.assertNotIn("inputSchema", contract)
+        self.assertEqual(contract["summary"], "")
+
+
+class TestOmniSchema(unittest.TestCase):
+    """The `--omni-schema` convention, for runtimes without a known parser."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_shell_script_contract_can_come_from_the_schema_alone(self):
+        script = write_script(self.dir, "omni.sh", OMNI_SHELL_TOOL)
+        contract = registry.extract_contract(script)
+        schema = contract["inputSchema"]
+
+        self.assertNotIn("usage:", contract["help"].lower(),
+                         "this fixture deliberately has no usage line")
+        self.assertEqual(contract["usage"], "omni.sh [options]")
+        self.assertEqual(contract["flags"], ["--resume"])
+        self.assertEqual(contract["positionals"], ["target"])
+        self.assertEqual(schema["properties"]["resume"]["type"], "boolean")
+        self.assertIs(schema["properties"]["target"]["x-positional"], True)
+        self.assertEqual(schema["required"], ["target"])
+
+    def test_mjs_schema_wins_over_the_help_fallback(self):
+        script = write_script(self.dir, "omni.mjs", OMNI_MJS_TOOL)
+        contract = registry.extract_contract(script)
+        props = contract["inputSchema"]["properties"]
+
+        self.assertIn("usage:", contract["usage"].lower())
+        self.assertEqual(props["limit"]["type"], "integer")
+        self.assertEqual(props["limit"]["default"], 5)
+        self.assertEqual(props["json"]["type"], "boolean")
+        self.assertEqual(contract["summary"],
+                         "Emits a hand-written omni schema.")
+
+    def test_schema_is_not_probed_when_nothing_advertises_it(self):
+        marker = self.dir / "marker"
+        os.environ["OMNICLI_TEST_MARKER"] = str(marker)
+        try:
+            shell = write_script(self.dir, "safe.sh", SAFE_SHELL_TOOL)
+            mjs = write_script(self.dir, "safe.mjs", SAFE_MJS_TOOL)
+            shell_contract = registry.extract_contract(shell)
+            mjs_contract = registry.extract_contract(mjs)
+        finally:
+            os.environ.pop("OMNICLI_TEST_MARKER", None)
+
+        self.assertFalse(marker.exists(), "--omni-schema was executed uninvited")
+        self.assertIn("usage:", shell_contract["usage"].lower())
+        self.assertIn("--limit", shell_contract["flags"])
+        self.assertIn("usage:", mjs_contract["usage"].lower())
+        self.assertIn("limit", mjs_contract["inputSchema"]["properties"],
+                      "the help fallback should still supply a schema")
+
+
+class TestNormalizeInputSchema(unittest.TestCase):
+    def test_non_schema_shapes_are_rejected(self):
+        self.assertIsNone(schema_extract.normalize_input_schema({}))
+        self.assertIsNone(schema_extract.normalize_input_schema({"properties": []}))
+        self.assertIsNone(schema_extract.normalize_input_schema({"type": "object"}))
+        self.assertIsNone(schema_extract.normalize_input_schema(["nope"]))
+
+    def test_contract_keys_are_filled_in(self):
+        schema = schema_extract.normalize_input_schema(
+            {"properties": {"json": {"type": "boolean"}}})
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(schema["required"], [])
+        self.assertIs(schema["additionalProperties"], False)
+        self.assertIs(schema["x-command"], False)
+        self.assertEqual(schema["x-commands"], [])
+
+    def test_a_copy_is_returned(self):
+        raw = {"properties": {"json": {"type": "boolean"}}}
+        schema = schema_extract.normalize_input_schema(raw)
+        schema["properties"]["json"]["type"] = "string"
+        self.assertEqual(raw["properties"]["json"]["type"], "boolean")
 
 
 class TestContractFallback(unittest.TestCase):

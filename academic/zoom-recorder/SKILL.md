@@ -2,11 +2,12 @@
 name: zoom-recorder
 
 description: >
-  Download transcripts, slide keyframes, and metadata from Zoom cloud
-  recordings without API admin credentials. Handles passcode-protected
-  links, and unwraps Mimecast and SafeLinks wrappers. Use when asked to pull a
-  lecture recording or transcript, extract slides from a class recording, or
-  read what was said in a Zoom session.
+  Download and transcribe Zoom cloud recordings without API admin credentials: pull the
+  transcript, the slide keyframes and the metadata from a recording link. Handles
+  passcode-protected links, and unwraps Mimecast and SafeLinks wrappers. Use when the user
+  asks to transcribe a Zoom lecture or meeting, download a Zoom recording, get the transcript
+  or VTT out of one, or extract the slides from a class recording. This is the skill
+  for a Zoom *link*; files already on disk are video-miner.
 
 compatibility: "Requires network access to Zoom cloud recordings, and ffmpeg for keyframe extraction."
 allowed-tools: "Bash(zoom-recorder:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"

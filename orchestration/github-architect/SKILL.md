@@ -2,12 +2,11 @@
 name: github-architect
 
 description: >
-  Synchronize, audit, and bootstrap GitHub repositories across a fleet of
-  machines. Disciplined git-sync protocol (Look, Guard, Commit, Gate, Pull,
-  Push, Report), secret and blob shielding, and zero-drive workstation
-  onboarding. Use when committing or pushing work, syncing repositories
-  between machines, making a repo private, shielding secrets before a push, or
-  bootstrapping a fresh workstation from GitHub.
+  Use when committing or pushing work, syncing repositories between machines,
+  making a repo private, shielding secrets before a push, or bootstrapping a
+  fresh workstation from GitHub. Disciplined git-sync protocol (Look, Guard,
+  Commit, Gate, Pull, Push, Report), secret and blob shielding, and zero-drive
+  workstation onboarding, driven by the `github-architect` and `git-sync` CLIs.
 
 compatibility: "Requires git and an authenticated GitHub CLI."
 allowed-tools: "Bash(git:*) Bash(gh:*) Bash(github-architect:*) Read Write"
