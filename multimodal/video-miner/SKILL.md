@@ -284,6 +284,31 @@ paragraph after a 5 s gap. The transcript in `transcript.md` is the spoken text
 once, not three times. `--prefer-asr` still forces `audiocpp` when the caption
 track mangles the technical terms.
 
+### Vault publish done-check (mandatory)
+
+`creator-vault` is **its own git repo** with a `creator-vault.git` origin.
+`sync-skills publish` does not touch it. A reel is not vaulted until the entry is
+committed and pushed:
+
+```bash
+V=/run/media/rodri/AI/creator-vault
+vault-mine reindex                     # refresh INDEX.md
+git -C "$V" status --short             # inspect; scope out unrelated untracked work
+git-sync guarded-commit --repo "$V" \
+  --include kem_glitch/<new-entry>/ \
+  --include INDEX.md \
+  --include kem_glitch/REELS_LEDGER.md \
+  -m "docs(vault): mine <reel-id> — <topic>"
+git -C "$V" push origin main
+git -C "$V" status -sb                 # clean, except unrelated untracked dirs
+```
+
+`source.mp4` is gitignored: the video stays local, notes/transcripts/frames
+publish. The generated `notes.md` is a **template stub** (`"Core Thesis | '...'"`)
+— write the synthesis before committing. If reindex picked up an unrelated
+untracked reel in `INDEX.md`, remove that line before staging, or use `--include`
+to stage only your own entry.
+
 ## Tests
 
 ```bash
