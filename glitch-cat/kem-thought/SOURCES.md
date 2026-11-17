@@ -45,6 +45,7 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `cite-what-you-claim` | LLM Wikis vs Plain Claude Code | `DfFSZDvN6oV` | 01:59 | `2026-10-30_karpathy_llm_wikis` |
 | `mutate-the-test` | Do You Even Mutate Tests Bro? | `DfSJyHpNyBe` | 01:55 | `2026-11-03_mutation_testing_for_ai_code` |
 | `fix-the-measuring-not-the-results` | Hill-Climbing Loops: How to Set Them Up Properly | `DfUt_qCNo9c` | 02:23 | `2026-11-04_hill_climbing_loops_lets_begin` |
+| `fail-back-to-align` | How I develop with AI (APIV) | `Dfhog8VtWDx` | 01:47 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
 | `2026-10-29_build_your_own_verification_skill` | A generator skill that builds a project's own verification skill, tool-approval card, breaks one feature on purpose before hand-over (reel `DfCsHxbtV3J`) | `give-it-hands-and-eyes`, `mutate-the-test` |
 | `2026-11-01_model_swap_after_first_edit` | Mid-session model swap re-benchmarked on SWE-bench Pro: the saving is starting cheap, not swapping (reel `DfKd11FNwNW`) | `start-low-step-up` |
 | `2026-08-17_do_you_need_a_graph_short_answer_prob_not` | The retrieval cost ladder: folders and keyword, index file, RAG, graph (reel `DcI_-FStEqz`) | `foundations-over-shiny-objects` |
@@ -58,8 +59,16 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | :--- | :--- | :---: | :--- |
 | `decide-what-good-looks-like-first` | "I wouldn't reach for BMAD for everything, certainly not small changes, but for a bigger build or when a whole team has to agree... AI tends to turn unstated assumptions into code, and BMAD makes the important decisions explicit, leaving a written record at each step, like the brief, PRD and architecture" | 02:12 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
 | `hold-out-the-tests` | "Every task carries its own validation command, and the plan sets checks at five levels from linting, unit test integration, a manual walk-through and any extra tours" | 00:41 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
-| `hold-out-the-tests` | "Anything that's off goes back to align. I never patch it. It's a loop" | 01:47 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+| `fail-back-to-align` | "Anything that's off goes back to the align. I never patch it. It's a loop" | 01:47 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
 | `check-the-judge-too` | "I open a fresh window and I run my execution skill with the plan argument. Its orchestrator writes no code... writes a strict brief for each sub-agent and checks everything they return against the actual files" | 01:07 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` |
+
+### `Dfr4vU4tkTO` tier list — ordering, not new mechanisms
+
+| Principle | Quote | Time | Vault entry |
+| :--- | :--- | :---: | :--- |
+| `foundations-over-shiny-objects` | "They sound technical and clever, so you may feel like you're missing something, but for most people, they add zero value" | 01:15 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` |
+| `mutate-the-test` | "That includes proving its own test, which is mutation testing" | 02:30 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` |
+| `fail-back-to-align` | "That leaves S-tier, and it's really one thing, which is your development workflow. It starts with alignment so the model understands your intent before it builds anything" | 01:51 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` |
 
 ## Talks mined
 
@@ -97,6 +106,7 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `2026-11-03_mutation_testing_for_ai_code` | Mutation testing for AI code, breaking code on purpose, sycophantic test detection | `mutate-the-test`, `hold-out-the-tests`, `always-run-the-control` |
 | `2026-11-04_hill_climbing_loops_lets_begin` | Hill-climbing loops, Anthropic 4 scoring methods, steadiness test, Pareto tension | `fix-the-measuring-not-the-results`, `check-the-judge-too`, `give-it-hands-and-eyes` |
 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` | APIV methodology: align, plan, implement, verify in a loop from intent | `decide-what-good-looks-like-first`, `hold-out-the-tests`, `check-the-judge-too` |
+| `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` | 117 reels ranked on output gain; S-tier is the development workflow starting with alignment | `foundations-over-shiny-objects`, `fail-back-to-align` |
 
 ## Known gaps
 

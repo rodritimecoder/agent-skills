@@ -1,7 +1,7 @@
 ---
 name: kem-thought
 description: >
-  Kem's 32 steering principles and the /kem-mode contract. Load when the operator says "use kem
+  Kem's 33 steering principles and the /kem-mode contract. Load when the operator says "use kem
   mode", "what would kem do", or names a principle; or when a task turns on a gate, a control run,
   deterministic step ownership, or a claim that needs measurement before it ships.
 ---
@@ -11,7 +11,7 @@ description: >
 Kem's Law: **a skill is instructions the model may follow; a hook is code that ALWAYS runs.**
 His Second Law: **code decides wherever it can; a model should only judge when it's absolutely necessary.**
 
-This suite is the thinking layer: 32 steering principles extracted from Kem Glitch's own
+This suite is the thinking layer: 33 steering principles extracted from Kem Glitch's own
 transcripts (all quotes and sources in `SOURCES.md`), plus the voice guide in
 `references/voice.md`. It is the Kem counterpart to Lauren Tan's `pstack` principles — same
 shape, different spine: Lauren steers by subtraction and taste, Kem steers by determinism
@@ -54,7 +54,8 @@ Names are the slugs in `principles/`. Load by slug, e.g. `principles/the-poison-
 
 **Harness & gates** — `fix-the-harness-first` · `tag-every-step` ·
 `a-gate-is-code-that-can-fail` · `never-let-a-model-overrule-code` ·
-`rules-in-code-not-context` · `write-the-route-in-code` · `start-low-step-up`
+`rules-in-code-not-context` · `write-the-route-in-code` · `start-low-step-up` ·
+`fail-back-to-align`
 
 **Parallelism & state** — `isolate-before-you-parallelise` · `fresh-context-judges` ·
 `check-the-judge-too` · `narrow-lens-owned-files` ·
@@ -78,13 +79,14 @@ Names are the slugs in `principles/`. Load by slug, e.g. `principles/the-poison-
 | Agent framework or model API treated as special | `these-are-just-software`, `code-decides` | `move-jobs-to-code`, `fix-the-harness-first` |
 | Choosing tools, models, libraries, or dependencies | `foundations-over-shiny-objects` | `model-the-domain`, `start-low-step-up` |
 | Bug that keeps coming back | `the-poison-sits-upstream`, `never-let-a-model-overrule-code` | `measure-then-claim` |
+| Multi-phase build / APIV methodology | `fail-back-to-align`, `decide-what-good-looks-like-first` | `apiv-loop`, `hold-out-the-tests`; on failure re-align, never patch |
 | Parallel / multi-agent work | `isolate-before-you-parallelise`, `start-with-a-workflow` | `narrow-lens-owned-files`, `contain-the-swarm` |
 | Review or judge of someone else's work | `fresh-context-judges`, `check-the-judge-too` | `hold-out-the-tests` |
 | A test or gate that has never failed | `mutate-the-test`, `a-gate-is-code-that-can-fail` | `always-run-the-control`, `hold-out-the-tests` |
 | Memory / retrieval / RAG | `model-the-domain`, `context-poisoning` | `context-is-a-budget`, `never-let-a-summary-be-the-handoff` |
 | Answering from notes or documents | `cite-what-you-claim` | `hold-out-the-tests`, `fresh-context-judges` |
 | Performance or cost | `move-jobs-to-code`, `always-run-the-control` | `measure-then-claim`, `dont-spawn-an-agent-for-a-tiny-job`, `start-low-step-up` |
-| Iterative optimization / hill-climbing | `fix-the-measuring-not-the-results`, `decide-what-good-looks-like-first` | `give-it-hands-and-eyes`, `check-the-judge-too` |
+| Iterative optimization / hill-climbing | `fix-the-measuring-not-the-results`, `decide-what-good-looks-like-first` | `give-it-hands-and-eyes`, `check-the-judge-too`; drive the loop with `apiv-loop`, score before you iterate |
 | Long-running session losing state | `never-let-a-summary-be-the-handoff`, `rules-in-code-not-context` | `label-provenance` |
 | "It's done" with no evidence | `give-it-hands-and-eyes`, `measure-then-claim` | `always-run-the-control`, `decide-what-good-looks-like-first` |
 
