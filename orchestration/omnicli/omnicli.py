@@ -24,11 +24,13 @@ import datetime
 import json
 import os
 import re
+import shlex
 import shutil
 import statistics
 import subprocess
 import sys
 import time
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -1488,6 +1490,91 @@ def cmd_exec(script: str | None = None, code: str | None = None,
 
 
 # --------------------------------------------------------------------------
+# detached exec jobs — long plans run in the background, checked with poll
+# --------------------------------------------------------------------------
+
+def _jobs_root() -> Path:
+    return Path.home() / ".local" / "share" / "omnicli" / "jobs"
+
+
+def _new_job_id() -> str:
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"{stamp}-{uuid.uuid4().hex[:6]}"
+
+
+def cmd_exec_detached(cmd: list[str], as_json: bool = False) -> str:
+    """Re-launch an exec command as a detached job and return its id."""
+    job_id = _new_job_id()
+    job_dir = _jobs_root() / job_id
+    job_dir.mkdir(mode=0o700, parents=True)
+    command = " ".join(shlex.quote(part) for part in cmd)
+    meta = {"id": job_id, "started": time.time()}
+    (job_dir / "job.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    out = shlex.quote(str(job_dir / "output"))
+    done = shlex.quote(str(job_dir / "exit"))
+    wrapper = f"{command} > {out} 2>&1; printf '%s' $? > {done}"
+    subprocess.Popen(
+        ["sh", "-c", wrapper],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    if as_json:
+        print(json.dumps({"id": job_id, "status": "running", "job_dir": str(job_dir)}, indent=2))
+    else:
+        print(f"🚀 job {job_id} — poll with `omnicli poll {job_id}`")
+    return job_id
+
+
+def cmd_poll(job_id: str, as_json: bool = False, max_bytes: int = DEFAULT_MAX_BYTES):
+    """Report a detached job's status and its bounded output."""
+    job_dir = _jobs_root() / job_id
+    meta_path = job_dir / "job.json"
+    if not meta_path.is_file():
+        sys.exit(f"❌ Error: no such job {job_id!r}.")
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {"id": job_id}
+
+    exit_code = None
+    exit_path = job_dir / "exit"
+    if exit_path.is_file():
+        try:
+            raw = exit_path.read_text(encoding="utf-8", errors="ignore").strip()
+        except OSError:
+            raw = ""
+        if raw:
+            try:
+                exit_code = int(raw)
+            except ValueError:
+                exit_code = -1
+    status = "done" if exit_code is not None else "running"
+
+    out_path = job_dir / "output"
+    text = ""
+    if out_path.is_file():
+        with open(out_path, "rb") as fh:
+            text = fh.read(max_bytes + 8192).decode("utf-8", errors="ignore")
+    text = _clip(text, max_bytes, f"Full log at {out_path}.")
+
+    if as_json:
+        payload = {"id": job_id, "status": status, "exit_code": exit_code,
+                   "started": meta.get("started"), "output": text}
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+
+    icon = "✅" if status == "done" else "⏳"
+    head = f"{icon} job {job_id} — {status}"
+    if status == "done":
+        head += f" (exit {exit_code})"
+    print(head)
+    if text:
+        print(text, end="" if text.endswith("\n") else "\n")
+
+
+# --------------------------------------------------------------------------
 # compat
 # --------------------------------------------------------------------------
 
@@ -1752,6 +1839,14 @@ def main():
                         "RLIMIT_AS floor of 2048 MiB on the plan process; "
                         "unset = no cap, needs a sandbox")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--detach", action="store_true",
+                   help="Run as a detached background job; returns a job id")
+
+    p = sub.add_parser("poll", help="Check a detached exec job")
+    p.add_argument("job_id", help="Job id printed by `omnicli exec --detach`")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--max-bytes", type=int, metavar="N", default=DEFAULT_MAX_BYTES,
+                   help=f"Hard cap on returned bytes (default {DEFAULT_MAX_BYTES})")
 
     p = sub.add_parser("status", aliases=["health"],
                        help="Health of every local service, the catalog, and the retrieval tier")
@@ -1830,11 +1925,19 @@ def main():
                  only_enabled=args.enabled, as_json=args.json, limit=args.limit,
                  max_bytes=args.omni_max_bytes)
     elif args.action in ("exec", "plan"):
+        if args.detach:
+            child = [sys.executable, str(SCRIPT_PATH), "exec"] + [
+                a for a in sys.argv[2:] if a != "--detach"
+            ]
+            cmd_exec_detached(child, as_json=args.json)
+            return
         mode = "none" if args.no_sandbox else args.sandbox
         cmd_exec(script=args.script, code=args.code, workspace=args.workspace,
                  out_path=args.out, sandbox=mode, timeout=args.timeout,
                  as_json=args.json, max_calls=args.max_calls,
                  mem_limit=args.mem_limit, lang=args.lang)
+    elif args.action == "poll":
+        cmd_poll(args.job_id, as_json=args.json, max_bytes=args.max_bytes)
     elif args.action in ("status", "health"):
         cmd_status(as_json=args.json)
     elif args.action == "usage":
