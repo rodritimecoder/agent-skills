@@ -1,6 +1,6 @@
 ---
 name: omnicli
-description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8082)."
+description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering sub-tools across the 580+ tool catalog by intent (`omnicli search`), and (4) local inference (`omnicli llm|ocr|decide|asr`). Port facts live in CONTEXT.md."
 allowed-tools: "Bash(omnicli:*) Read"
 ---
 
@@ -10,24 +10,11 @@ One gateway, two surfaces, one catalog. Discover a tool by *intent*, pull the
 contract for that one tool, and invoke it with a bounded response — nothing
 else enters the context window.
 
-```
-                  ┌── CLI (shell harnesses) ──────────────────────┐
-   agent ────────▶│  omnicli search | describe | invoke | status │
-                  ├── Code Mode (one plan, one turn) ────────────┤
-                  │  omnicli exec plan.mjs --sandbox strict      │
-                  └──────────────────────────────────────────────┘
-                                        │
-                        ┌───────────────▼───────────────┐
-                        │  catalog.db  (control plane)   │
-                        │  FTS5 BM25 + weighted aliases  │
-                        │  + bge-small skill vectors     │
-                        └───────────────┬───────────────┘
-                                        │
-                        ┌───────────────▼───────────────┐
-                        │  580+ tools  (data plane)      │
-                        │  scripts · CLIs · endpoints    │
-                        └───────────────────────────────┘
-```
+One control plane (`catalog.db`: FTS5 BM25, weighted aliases, dense vectors)
+over 580+ tools, reached through one of two faces: bounded CLI calls
+(`search` / `describe` / `invoke`) or a single JavaScript plan (`exec`) that
+keeps intermediate payloads out of the context window. Ranking internals:
+[references/retrieval-architecture.md](references/retrieval-architecture.md).
 
 ---
 
@@ -43,8 +30,8 @@ omnicli search "调研一下这个话题在网上的讨论"
 
 BM25 over every skill's full body + curated aliases (weight 12) matches exact
 tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
-`bge-small-en-v1.5` leg over descriptions (`K=60`) and damps multi-chunk bodies
-(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when `:8084` is offline.
+embedding leg over descriptions (`K=60`) and damps multi-chunk bodies
+(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when the embedding endpoint is offline.
 See [references/retrieval-architecture.md](references/retrieval-architecture.md)
 for benchmarks and ranking internals.
 
@@ -103,14 +90,12 @@ omnicli exec plan.mjs --sandbox strict                                # write (d
 ```
 
 ```js
-import { search, spec, zoom, invoke, parallel, emitResult } from "omnicli_tools";
-
-const [notes, hits] = await parallel([
-  () => zoom({ url: "https://zoom.us/rec/share/x", format: "md" }),
+import { search, invoke, parallel, emitResult } from "omnicli_tools";
+const [hits, asr] = await parallel([
   () => search("audio transcription", 3),
+  () => invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"]),
 ]);
-const asr = await invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"]);
-emitResult({ notes: notes.output.slice(0, 200), hits: hits.length, asr: asr.exit_code });
+emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump raw
 ```
 
 - **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
@@ -125,13 +110,7 @@ Full SDK API and authoring guidelines:
 
 ## 🌐 Harnesses & Telemetry
 
-| Harness | Guide | Face / Integration |
-|---|---|---|
-| **T3 Code** | [`harnesses/t3-code.md`](harnesses/t3-code.md) | OpenCode plugin (`omnicli_*` tools + `tools.omnicli.*`) + Code Mode |
-| **Antigravity (`agy`)** | [`harnesses/agy.md`](harnesses/agy.md) | [`hooks/agy_omnicli_hook.py`](hooks/agy_omnicli_hook.py) (`PreInvocation` + `PreToolUse`) + JS bindings |
-| **OpenCode** | [`harnesses/opencode.md`](harnesses/opencode.md) | [`plugin/omnicli-route.js`](plugin/omnicli-route.js) + `skills` path |
-| **Pi Agent** | [`harnesses/pi.md`](harnesses/pi.md) | Direct CLI with strict 8 KB caps |
-| **Boxxy Claw** | [`harnesses/boxxy.md`](harnesses/boxxy.md) | Sandboxed plans (`--sandbox strict`) + WAL-safe catalog |
+Adapters for **T3 Code**, **Antigravity**, **OpenCode**, **Pi** and **Boxxy Claw** live in [harnesses/index.md](harnesses/index.md); each maps the same bounded-invoke contract onto its host primitives.
 
 ```bash
 omnicli harness list|detect|verify     # inspect active harnesses & run verification matrix
@@ -143,12 +122,7 @@ omnicli usage --since 24h --json       # per-harness telemetry from ~/.local/sha
 
 ## 🧠 Native local inference & Catalog maintenance
 
-| Command | Tool id | Model |
-|---|---|---|
-| `omnicli llm "<prompt>"` | `local/llm` | Qwen3.6-35B Genesis, dual-GPU (:8080) |
-| `omnicli ocr <file>` | `local/ocr` | LightOnOCR-3-0.8B (:8082) |
-| `omnicli decide "<state>" "<q>"` | `local/decide` | Decision model on :8083 (auto-detects protocol) |
-| `omnicli asr transcribe <audio>` | `local/asr` | Nemotron-3.5 ASR (:8081) |
+`omnicli llm` · `ocr` · `decide` · `asr` map to `local/llm`, `local/ocr`, `local/decide`, `local/asr`. Ports, models and slot rules are in `CONTEXT.md` — not duplicated here.
 
 ```bash
 omnicli status            # ports, catalog freshness, retrieval tier
