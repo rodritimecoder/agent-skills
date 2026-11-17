@@ -13,10 +13,9 @@ ROUTER_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROUTER_DIR / "scripts"))
 import router  # type: ignore
 
-# 8100, deliberately outside the model slot range (8080-8088 in ports.json):
-# this is a development router, not an inference slot. It sat on 8088, which
-# is the DeskForge-Qwen3.5-4B GUI-grounding slot, so the two could not run
-# together.
+# 8100, deliberately outside the model slot range (8080-8091 in ports.json):
+# this is a development router, not an inference slot. It once sat on 8088, # ports:ignore
+# the retired DeskForge GUI-grounding slot, so the two could not run together.
 PORT = 8100
 
 class EvalRouterHandler(BaseHTTPRequestHandler):

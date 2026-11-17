@@ -390,7 +390,7 @@ class TestFusionMode(unittest.TestCase):
         self.assertFalse(res["dense"]["ran"])
 
     def test_missing_endpoint_degrades_instead_of_failing(self):
-        """A dead :8087 must cost ranking quality, never the result set."""
+        """A dead :8084 must cost ranking quality, never the result set."""
         from catalog import vectors
 
         con = builder.connect()

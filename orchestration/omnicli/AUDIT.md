@@ -143,12 +143,12 @@ everything and exposed all of it.
 The MCP face probed `127.0.0.1` and a literal `100.83.178.106`, treating any
 accepted socket as "online". On a port where `tailscale serve` owns the
 listener, that reports a dead backend as healthy. It also omitted :8084,
-:8086 and :9222, and included the retired :8090.
+:8086 and :9222, and included the retired :8090. <!-- ports:ignore -->
 
 **Fix.** `catalog/health.py` is the single probe for both faces: HTTP on
 loopback is authoritative, TCP alone is `DEGRADED`, the tailnet address is
 discovered rather than hardcoded, and the port list matches the machine
-(`:8086` reranker added, `:8090` retired).
+(`:8086` reranker added, `:8090` retired). <!-- ports:ignore -->
 
 ### 7. The MCP loop was serial
 

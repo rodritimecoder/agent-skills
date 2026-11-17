@@ -12,8 +12,8 @@
 
 Decision routing only ever targets the decision slots: the primary on :8083
 (vllm/d3/pplx, native /v1/systemone) and the auxiliary on :8089 (onejev/imajev).
-:8085 and :8090 belong to the OCR slots, so nothing here launches or posts to
-them; `jev` runs a GGUF locally and needs no port at all.
+:8082 belongs to the OCR slot, so nothing here launches or posts to it; `jev`
+runs a GGUF locally and needs no port at all.
 
 Output:
     {"model": "imajev", "type": "choice", "answer": "billing",
@@ -58,8 +58,8 @@ _LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- Jev-Style-2B backend ---------------------------------------------------
 # No server: `--model jev` runs the GGUF locally in JEV_DIR's venv (ask_jev).
-# It used to squat on :8085, which is now the LightOnOCR slot - a decision
-# server has no business binding an OCR port.
+# It used to squat on :8085, which is now the OCR slot - a decision server has # ports:ignore
+# no business binding an OCR port.
 
 
 def _concentration(probs):

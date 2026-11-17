@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Route guard for decide.py: decision traffic only reaches :8083 or :8089.
 
-:8085 (LightOnOCR) and :8090 (MiniCPM-OCR-Jev) are OCR slots. A decision client
+:8082 (LightOnOCR) is the OCR slot; MiniCPM-OCR-Jev is retired. A decision client
 that launches a server there, or POSTs /v1/systemone to it, hijacks a port the OCR
 skills own. These tests pin the ports the module actually posts to.
 """
