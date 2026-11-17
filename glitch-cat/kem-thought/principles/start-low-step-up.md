@@ -14,6 +14,6 @@
 - Re-test the numbers on your own work with every new model and price; the payoff depends on the price ratio.
 - Log every result (prompt attributes, model, effort, latency, cost, pass/fail) and feed that log into a classifier to train a project-specific task router.
 
-**Kem:** *"A simple strategy you can apply is to always begin a task on the cheapest model, run its test to see if it passes and tell your system to only step up the model and effort when it fails. People suggest that even after paying for the runs that fail, it still works out cheaper. So I measured it across all six tasks, and generally that does hold out."* — Which Effort? Which Model? Routing via Automated Tests [00:48]
+**Kem:** *"A simple strategy you can apply is to always begin a task on the cheapest model, run its test to see if it passes and tell your system to only step up the model and effort when it fails. People suggest that even after paying for the runs that fail, it still works out cheaper. So I measured it across all six tasks, and generally that does hold out."* — Which Effort? Which Model? Routing via Automated Tests [00:39]
 
 *"So the big saving isn't the swap. It's starting cheap and only stepping up when the test fails."* — Swap After the First Edit [02:23]

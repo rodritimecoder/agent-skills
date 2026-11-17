@@ -3,11 +3,16 @@
 Every principle in `principles/` is a distillation of something Kem actually said. This file
 maps each one back to the reel, the timestamp, and the mined transcript it came from.
 
-Method: the 36 vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
+Method: all 42 dated vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
 mined (transcript + notes + visuals), and the recurring doctrine was extracted per talk,
 then merged across talks by frequency and by whether the point was load-bearing in his
 argument. A principle survived if it appeared as a rule he states, not as an example he
 passes through. Where the paraphrase and the quote disagree, the quote wins.
+
+**Transcript fidelity note:** reel ASR is rough (stutters, misheard words, dropped articles).
+Quotes may repair obvious transcription faults for readability, but the claim, the numbers and
+the timestamp must still match the transcript. A quote that changes meaning rather than fixing
+a transcription fault is a defect.
 
 ## Principle → source
 
@@ -40,7 +45,7 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `measure-then-claim` | Self-Calibrating Eval Router | `DdWLJa2tjq6` | 01:40 | `2026-10-17_self_calibrating_eval_router_and_shadow_verifier` |
 | `label-provenance` | Claude Projects Beta Architecture | `DejvUBotWJD` | 01:06 | `2026-10-17_claude_projects_beta_architecture` |
 | `foundations-over-shiny-objects` | Memory in AI Context & Retrieval | `DcI_-FStEqz` | 04:04 | `2026-10-16_memory_in_ai_context_and_retrieval_architecture` |
-| `start-low-step-up` | Which Effort? Which Model? Routing via Tests | `De4PXaltWfP` | 00:48 | `2026-10-25_which_effort_which_model_routing` |
+| `start-low-step-up` | Which Effort? Which Model? Routing via Tests | `De4PXaltWfP` | 00:39 | `2026-10-25_which_effort_which_model_routing` |
 | `give-it-hands-and-eyes` | Verification: Hands and Eyes | `DfAIPrAtteM` | 00:49 | `2026-10-28_verification_hands_and_eyes` |
 | `cite-what-you-claim` | LLM Wikis vs Plain Claude Code | `DfFSZDvN6oV` | 01:59 | `2026-10-30_karpathy_llm_wikis` |
 | `mutate-the-test` | Do You Even Mutate Tests Bro? | `DfSJyHpNyBe` | 01:55 | `2026-11-03_mutation_testing_for_ai_code` |
@@ -70,9 +75,21 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `mutate-the-test` | "That includes proving its own test, which is mutation testing" | 02:30 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` |
 | `fail-back-to-align` | "That leaves S-tier, and it's really one thing, which is your development workflow. It starts with alignment so the model understands your intent before it builds anything" | 01:51 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` |
 
+### 2026-11 batch — provenance additions, no new principles
+
+Both reels are marked as feeding `kem-thought` in the vault, but their doctrine maps onto rules
+already listed below. They add quotes, not principles.
+
+| Principle | Quote | Time | Vault entry |
+| :--- | :--- | :---: | :--- |
+| `fix-the-measuring-not-the-results` | "Models judge much better from comparison, in particular visual comparison, than they do from words, right?" | 00:30 | `2026-11-14_an_edit_from_the_live_design_lab_we_had_this_week_in_glitch_` |
+| `give-it-hands-and-eyes` | "So it presses every button, it types in every field, it tries everything on the keyboard" | 02:06 | `2026-11-14_an_edit_from_the_live_design_lab_we_had_this_week_in_glitch_` |
+| `fix-the-measuring-not-the-results` | "It only kind of climbs the hill you put it on." | 01:37 | `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` |
+| `foundations-over-shiny-objects` | "So unless you're deep in autonomy with tokens to burn, you'll get the same or better quality by being clear in your alignment." | 02:29 | `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` |
+
 ## Talks mined
 
-36 vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
+42 dated vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
 
 | Vault entry | Topic | Feeds |
 | :--- | :--- | :--- |
@@ -107,6 +124,8 @@ passes through. Where the paraphrase and the quote disagree, the quote wins.
 | `2026-11-04_hill_climbing_loops_lets_begin` | Hill-climbing loops, Anthropic 4 scoring methods, steadiness test, Pareto tension | `fix-the-measuring-not-the-results`, `check-the-judge-too`, `give-it-hands-and-eyes` |
 | `2026-11-09_how_i_develop_with_ai_and_when_i_look_for_something_more_rob` | APIV methodology: align, plan, implement, verify in a loop from intent | `decide-what-good-looks-like-first`, `hold-out-the-tests`, `check-the-judge-too` |
 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` | 117 reels ranked on output gain; S-tier is the development workflow starting with alignment | `foundations-over-shiny-objects`, `fail-back-to-align` |
+| `2026-11-14_an_edit_from_the_live_design_lab_we_had_this_week_in_glitch_` | Comparison beats words; a behaviour checker presses every button and checks latency | `fix-the-measuring-not-the-results`, `give-it-hands-and-eyes` |
+| `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` | Model councils measured: seven runs and nearly twice as long vs one model, one pass with good context; climbs only the hill you put it on | `foundations-over-shiny-objects`, `fix-the-measuring-not-the-results` |
 
 ## Known gaps
 
