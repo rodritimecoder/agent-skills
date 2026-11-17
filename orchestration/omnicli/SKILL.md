@@ -98,7 +98,8 @@ const [hits, asr] = await parallel([
 emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump raw
 ```
 
-- **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
+- **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, `getState`, `emitState`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
+- **Session state:** `getState()` / `emitState(value)` read and replace one JSON object persisted across `omnicli exec --session ID` runs (default: the trace session identity).
 - **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
 - **Containment & limits:** **`strict` is the default** — use `--sandbox write` to opt out (needed for network plans). `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
 

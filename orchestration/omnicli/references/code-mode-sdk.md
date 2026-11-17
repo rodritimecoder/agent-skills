@@ -35,6 +35,8 @@ the 500 KB module.
 | `output` | `output(toolId, argsOrArgv?, opts?)` → `Promise<string>` | The same call, returning only `envelope.output`. |
 | `parallel` | `parallel(calls, limit = 8)` → `Promise<unknown[]>` | Fan out async thunks, keeping results in input order. |
 | `emitResult` | `emitResult(value)` | Hand one value back on its own channel (`emit_result` is an alias). |
+| `getState` | `getState()` → `Record<string, unknown>` | Read the session's JSON object (`{}` when unset). |
+| `emitState` | `emitState(value)` | Replace that object; it persists across runs sharing `--session ID`. |
 
 `spec()` takes either a grep string or one filter object:
 
@@ -47,6 +49,12 @@ spec({ grep: "decide|jev", kind: "cli" });     // several filters at once
 A `SpecRow` is `{ id, fn, skill, kind, summary, sig, args, required, params,
 positionalSpecs, commands, command }` — everything needed to call a tool without
 invoking `describe` on it first.
+
+Session state is a plain JSON object, not variable persistence: `getState()` reads
+the value saved for `--session ID` (default: the trace session identity) and
+`emitState(value)` replaces it. It lives at
+`~/.local/share/omnicli/sessions/<safe-id>.json` (8 KB bound on load) and holds
+only plan data.
 
 ### 2. Typed Surface Functions
 

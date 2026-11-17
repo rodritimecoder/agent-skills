@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -60,6 +61,39 @@ def _merge_exec_trace(trace: Path, start: int) -> None:
             fh.writelines(ln.rstrip("\n") + "\n" for ln in fresh)
     except OSError:
         pass
+
+
+def _session_state_path(session: str | None) -> Path:
+    """One state file per session, confined to the omnicli data directory."""
+    ident = re.sub(r"[^A-Za-z0-9_-]", "_", str(session or ""))[:128] or "default"
+    return Path.home() / ".local" / "share" / "omnicli" / "sessions" / f"{ident}.json"
+
+
+def _load_state(path: Path) -> dict:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return {}
+    bounded, truncated, _ = invoke_mod.cap(text, invoke_mod.DEFAULT_MAX_BYTES)
+    if truncated:
+        return {}
+    try:
+        value = json.loads(bounded)
+    except (ValueError, TypeError, RecursionError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _save_state(path: Path, value: dict) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd, staged = tempfile.mkstemp(prefix=f".{path.stem}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(value, fh, ensure_ascii=False)
+        os.replace(staged, path)
+    except BaseException:
+        Path(staged).unlink(missing_ok=True)
+        raise
 
 
 def _deprecation_check(script: str | None, lang: str | None) -> None:
@@ -155,7 +189,8 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
 def run(script: str | None = None, code: str | None = None,
         workspace: str | None = None, out_path: str | None = None,
         sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
-        max_calls: int = 100, mem_limit: int | None = None, lang: str | None = None):
+        max_calls: int = 100, mem_limit: int | None = None, lang: str | None = None,
+        session: str | None = None):
     _deprecation_check(script, lang)
     if sandbox not in ("write", "strict", "none"):
         sys.exit(f"❌ Error: unknown sandbox mode {sandbox!r}")
@@ -199,11 +234,19 @@ def run(script: str | None = None, code: str | None = None,
     result_file = work / ".omnicli_result.json"
     result_file.unlink(missing_ok=True)
 
+    sid = session or bindings_mod.trace_identity()[1]
+    state_path = _session_state_path(sid)
+    state_file = work / ".omnicli_state.json"
+    state_file.unlink(missing_ok=True)
+    state_file.write_text(
+        json.dumps(_load_state(state_path), ensure_ascii=False), encoding="utf-8")
+
     env = os.environ.copy()
     env.update({
         "OMNICLI_BIN": shutil.which("omnicli") or str(Path(sys.argv[0]).resolve()),
         "OMNICLI_TRACE": str(trace),
         "OMNICLI_RESULT": str(result_file),
+        "OMNICLI_STATE": str(state_file),
         "OMNICLI_MAX_CALLS": str(max_calls),
         "OMNICLI_TRUST_INDEX": "1",
     })
@@ -228,18 +271,28 @@ def run(script: str | None = None, code: str | None = None,
     started = time.time()
     if os.environ.get("OMNICLI_EXEC_DEBUG"):
         print(" ".join(cmd), file=sys.stderr)
+    saved_state = None
     try:
         proc = subprocess.run(cmd, cwd=str(work), env=env, capture_output=True,
                               text=True, timeout=timeout)
+        try:
+            candidate = json.loads(state_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            candidate = None
+        if isinstance(candidate, dict):
+            saved_state = candidate
     except subprocess.TimeoutExpired:
         sys.exit(f"❌ Error: plan exceeded {timeout:g}s")
     finally:
         if is_inline and script_path.is_file():
             script_path.unlink(missing_ok=True)
+        state_file.unlink(missing_ok=True)
         if serving is not None:
             serving.__exit__()
         if runtime is not None:
             shutil.rmtree(runtime, ignore_errors=True)
+    if saved_state is not None:
+        _save_state(state_path, saved_state)
     elapsed = time.time() - started
 
     stderr_text = proc.stderr

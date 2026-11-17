@@ -1479,14 +1479,14 @@ def cmd_exec(script: str | None = None, code: str | None = None,
              workspace: str | None = None, out_path: str | None = None,
              sandbox: str = "strict", timeout: float = 300.0, as_json: bool = False,
              max_calls: int = 100, mem_limit: int | None = None,
-             lang: str | None = None):
+             lang: str | None = None, session: str | None = None):
     """Run one JavaScript plan inside `node:vm`, sandboxed by default."""
     if exec_runner_mod is None:
         sys.exit("❌ Error: omnicli catalog package not importable.")
     exec_runner_mod.run(script=script, code=code, workspace=workspace,
                         out_path=out_path, sandbox=sandbox, timeout=timeout,
                         as_json=as_json, max_calls=max_calls, mem_limit=mem_limit,
-                        lang=lang)
+                        lang=lang, session=session)
 
 
 # --------------------------------------------------------------------------
@@ -1838,6 +1838,8 @@ def main():
                    help="JS heap cap in MiB (node --max-old-space-size) plus an "
                         "RLIMIT_AS floor of 2048 MiB on the plan process; "
                         "unset = no cap, needs a sandbox")
+    p.add_argument("--session", default=None, metavar="ID",
+                   help="Session id for getState()/emitState() (default: trace session identity)")
     p.add_argument("--json", action="store_true")
     p.add_argument("--detach", action="store_true",
                    help="Run as a detached background job; returns a job id")
@@ -1935,7 +1937,7 @@ def main():
         cmd_exec(script=args.script, code=args.code, workspace=args.workspace,
                  out_path=args.out, sandbox=mode, timeout=args.timeout,
                  as_json=args.json, max_calls=args.max_calls,
-                 mem_limit=args.mem_limit, lang=args.lang)
+                 mem_limit=args.mem_limit, lang=args.lang, session=args.session)
     elif args.action == "poll":
         cmd_poll(args.job_id, as_json=args.json, max_bytes=args.max_bytes)
     elif args.action in ("status", "health"):
