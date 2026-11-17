@@ -96,7 +96,7 @@ the incremental contract: only skills whose source text changed re-embed.
      build asserts the gate rejects it
 4. **Collapse cross-skill collisions** — cosine > 0.97 between questions of two
    skills is an alias/disambiguation signal; log it, do not keep both silently.
-5. **Embed** in one batch (:8087), documents only, no query prefix.
+5. **Embed** in one batch (:8084), documents only, no query prefix.
 
 ### Query side
 

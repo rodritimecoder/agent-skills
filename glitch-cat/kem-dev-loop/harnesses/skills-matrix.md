@@ -130,7 +130,7 @@ This matrix details how every skill in the **Glitch Cat Suite** hooks into each 
 
 ### `kem-ocr`
 *MiniCPM-OCR-1.0 parsing + MiniCPM-OCR-Jev consistency scoring with corrupted holdouts.*
-- **All harnesses:** Parses images/PDFs on local GPUs (`:8084/:8090`) and asserts transcription fidelity in one forward pass.
+- **All harnesses:** Parses images/PDFs on local GPUs (`:8082`) and asserts transcription fidelity in one forward pass.
 
 ---
 

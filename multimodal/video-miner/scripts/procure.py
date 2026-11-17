@@ -4,7 +4,7 @@
 Three failures this module removes.
 
 1. A stopped OCR slot reported as "the server is down". `llama-rig up ocr`
-   answers on :8085 in well under a second, so the pipeline starts the slot
+   answers on :8082 in well under a second, so the pipeline starts the slot
    itself and says so. A registered slot is left running: that warm server is
    what makes the next run fast. Only an unregistered backend (MiniCPM on
    :18499) is spawned as a throwaway child, and the caller owns its lifetime.

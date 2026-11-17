@@ -1,6 +1,6 @@
 ---
 name: omnicli
-description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8085)."
+description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering specific sub-tools and CLI scripts across the 520+ tool catalog by intent (`omnicli search`), and (4) local inference endpoints (Genesis 35B :8080, ASR :8081, decision gating :8083, LightOnOCR :8082)."
 allowed-tools: "Bash(omnicli:*) Read"
 ---
 
@@ -44,7 +44,7 @@ omnicli search "调研一下这个话题在网上的讨论"
 BM25 over every skill's full body + curated aliases (weight 12) matches exact
 tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
 `bge-small-en-v1.5` leg over descriptions (`K=60`) and damps multi-chunk bodies
-(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when `:8087` is offline.
+(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when `:8084` is offline.
 See [references/retrieval-architecture.md](references/retrieval-architecture.md)
 for benchmarks and ranking internals.
 
@@ -146,7 +146,7 @@ omnicli usage --since 24h --json       # per-harness telemetry from ~/.local/sha
 | Command | Tool id | Model |
 |---|---|---|
 | `omnicli llm "<prompt>"` | `local/llm` | Qwen3.6-35B Genesis, dual-GPU (:8080) |
-| `omnicli ocr <file>` | `local/ocr` | LightOnOCR-3-0.8B (:8085) |
+| `omnicli ocr <file>` | `local/ocr` | LightOnOCR-3-0.8B (:8082) |
 | `omnicli decide "<state>" "<q>"` | `local/decide` | Decision model on :8083 (auto-detects protocol) |
 | `omnicli asr transcribe <audio>` | `local/asr` | Nemotron-3.5 ASR (:8081) |
 

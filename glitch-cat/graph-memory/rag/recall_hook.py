@@ -5,7 +5,7 @@ legs as search.py and hands the top hits back as additionalContext.
 
 It never blocks a prompt. No index, no prompt, no hits, or any failure at all,
 and it prints nothing and exits 0. It also never starts a model: loading weights
-inside UserPromptSubmit would block the prompt, so a cold :8087 costs the dense
+inside UserPromptSubmit would block the prompt, so a cold :8084 costs the dense
 leg for that one prompt (keyword-only), not a stall.
 """
 

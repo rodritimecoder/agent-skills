@@ -2,7 +2,7 @@
 
     BM25 (lexical)  ─┐
                      ├─ RRF → top-K
-    dense (descriptions) ─┘        [optional leg, absent when :8087 is down]
+    dense (descriptions) ─┘        [optional leg, absent when :8084 is down]
 
 Two legs fused by reciprocal rank, because they fail on different queries.
 Measured on this catalog, 61 tuned + 30 held-out intents, top-1:

@@ -69,7 +69,7 @@ OpenCode routes sub-tasks directly to local inference ports without consuming ex
 | **Code & Text Generation** | `omnicli llm "<prompt>"` | `:8080` | Qwen3.6-35B Genesis (dual-GPU) |
 | **Calibrated Decision / Gating** | `omnicli decide "<context>" "<q>"` | `:8083` | Jev / h2o-lightning-4b |
 | **Speech-to-Text (ASR)** | `omnicli asr transcribe <audio>` | `:8081` | audio.cpp / Nemotron-3.5 |
-| **Visual Document OCR** | `omnicli ocr <image_or_pdf>` | `:8085` | LightOnOCR-3-0.8B |
+| **Visual Document OCR** | `omnicli ocr <image_or_pdf>` | `:8082` | LightOnOCR-3-0.8B |
 | **Scene Text & UI Bounding** | `omnicli invoke ocr/crispembed` | `:8084` | CrispEmbed spatial model |
 
 ---

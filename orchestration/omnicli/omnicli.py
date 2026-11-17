@@ -1597,7 +1597,7 @@ def main():
     p = sub.add_parser("llm", help="Query the local dual-GPU Genesis 35B on :8080")
     p.add_argument("args", nargs=argparse.REMAINDER)
 
-    p = sub.add_parser("ocr", help="Local document/slide/image OCR on :8085")
+    p = sub.add_parser("ocr", help="Local document/slide/image OCR on :8082")
     p.add_argument("args", nargs=argparse.REMAINDER)
 
     p = sub.add_parser("decide", help="Calibrated decisions (bool/choice/score) on :8083")

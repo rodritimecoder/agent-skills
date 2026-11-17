@@ -115,6 +115,6 @@ server can be moved to another port by editing one file.
 - **`--fallback` is per call.** It does not start the local server, and the
   reply comes from a remote model — say so if the caller needs provenance.
 - **OOM.** The server wants ~22 GB across both cards. If something else holds
-  VRAM on `:8083`–`:8085`, start this first or free the other ports.
+  VRAM on another slot, start this first or free the other ports.
 - **Thinking is disabled** in the launcher's chat template. Prompts expecting
   a visible chain of thought will get a direct answer instead.

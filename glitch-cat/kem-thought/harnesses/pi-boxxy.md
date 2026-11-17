@@ -16,7 +16,7 @@ Pi Agent and Boxxy Claw are terminal-based, local agent harnesses running direct
    - Nemotron Audio: `http://127.0.0.1:8081`
    - Jev Decision: `http://127.0.0.1:8083`
    - OXR / CrispEmbed: `http://127.0.0.1:8084`
-   - LightOnOCR: `http://127.0.0.1:8085`
+   - LightOnOCR: `http://127.0.0.1:8082`
 
 ---
 

@@ -13,7 +13,7 @@ OpenCode is an open-source, terminal-native AI agent environment. In this workst
 2. **Local Model Affinity:** OpenCode can route sub-tasks directly to local daemon ports without spending API tokens:
    - `:8080` — Genesis Qwen 35B coder (`local-llm`)
    - `:8083` — Jev calibrated decision engine (`jev-decision`)
-   - `:8085` / `:8084` — Document & slide OCR (`ocr`)
+   - `:8082` — Document & slide OCR (`ocr`)
 3. **Compound Bash Batching:** OpenCode supports running multiple commands in structured batch sequences. Scripts should be written to fail-fast (`set -e` or `&&`).
 4. **Direct File System Worktrees:** Unlike hosted environments, OpenCode operates directly on local git worktrees. Multi-agent parallelism uses standard git worktrees managed via `worktree-harness`.
 5. **Disk Ledgers (`step_NN.json`):** Intermediate outputs should be written directly to workspace files and validated with deterministic Python assertions.

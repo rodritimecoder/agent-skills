@@ -60,12 +60,12 @@ def parse_names(raw: Optional[str]) -> Optional[List[str]]:
     return names or None
 
 
-def is_ocr_server_online(port: int = 8085, timeout: float = 0.5) -> bool:
+def is_ocr_server_online(port: int = 8082, timeout: float = 0.5) -> bool:
     """Fast non-blocking probe to check if LightOnOCR HTTP server is live."""
     return procure.http_up(f"http://127.0.0.1:{port}/health", timeout=timeout)
 
 
-def ocr_frame_http(image_path: Path, port: int = 8085) -> str:
+def ocr_frame_http(image_path: Path, port: int = 8082) -> str:
     """OCR via local LightOnOCR server (<1s per frame once the model is warm)."""
     try:
         import base64
@@ -714,7 +714,7 @@ def fast_mine_video(
             # `auto` used to mean "OCR only if somebody else had already started
             # the slot", which read downstream as "the server is down". Start it.
             should_ocr, ocr_how, _ocr_child = procure.ensure_service(
-                "http://127.0.0.1:8085/v1/chat/completions",
+                "http://127.0.0.1:8082/v1/chat/completions",
                 slot=os.environ.get("VAULT_OCR_SLOT", "ocr"),
                 wait_s=float(os.environ.get("VAULT_OCR_WAIT", "90")),
             )
@@ -724,7 +724,7 @@ def fast_mine_video(
                 if run_ocr == "always":
                     sys.exit("❌ --ocr always was requested but the OCR server could not start "
                              "(llama-rig up ocr).")
-                print("⚠️  LightOnOCR is unavailable on :8085 — visuals are indexed without text.")
+                print("⚠️  LightOnOCR is unavailable on :8082 — visuals are indexed without text.")
                 print("   Start it with: llama-rig up ocr")
                 allow_cli = os.environ.get("VAULT_OCR_CLI_FALLBACK") == "1"
 
@@ -873,7 +873,7 @@ def import_workspace(workspace_dir: Path, creator: str, title: str, vault_dir: P
     ocr_ready = False
     if run_ocr:
         ocr_ready, _, _child = procure.ensure_service(
-            "http://127.0.0.1:8085/v1/chat/completions",
+            "http://127.0.0.1:8082/v1/chat/completions",
             slot=os.environ.get("VAULT_OCR_SLOT", "ocr"),
             wait_s=float(os.environ.get("VAULT_OCR_WAIT", "90")),
         )
@@ -972,7 +972,7 @@ def main() -> int:
     p_add.add_argument("--creator", help="Creator name / handle")
     p_add.add_argument("--title", help="Video title or slug")
     p_add.add_argument("--vault-dir", default=str(DEFAULT_VAULT_DIR), help="Path to vault root")
-    p_add.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8085 if down), never, or always (fail if it cannot start)")
+    p_add.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8082 if down), never, or always (fail if it cannot start)")
     p_add.add_argument("--model", "-m", default="crisperwhisper", help="ASR model slug (crisperwhisper [default], nemotron)")
     p_add.add_argument("--prefer-asr", action="store_true",
                        help="transcribe locally even when a subtitle track exists "
@@ -1008,7 +1008,7 @@ def main() -> int:
     p_kem = sub.add_parser("kem", help="Mine a Kem Glitch reel directly into the vault (automatic metadata, dHash dedup, ledger, FTS)")
     p_kem.add_argument("url", help="Instagram or YouTube URL of the reel")
     p_kem.add_argument("--vault-dir", default=str(DEFAULT_VAULT_DIR), help="Path to vault root")
-    p_kem.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8085 if down), never, or always (fail if it cannot start)")
+    p_kem.add_argument("--ocr", choices=["auto", "never", "always"], default="auto", help="OCR mode: auto (start :8082 if down), never, or always (fail if it cannot start)")
     p_kem.add_argument("--model", "-m", default="crisperwhisper", help="ASR model slug (crisperwhisper [default], nemotron)")
     p_kem.add_argument("--prefer-asr", action="store_true",
                        help="transcribe locally even when a subtitle track exists")

@@ -46,7 +46,7 @@ class TestSemanticCache(unittest.TestCase):
         res = self.cache.get(q2, threshold=0.75)
         if self.cache.embedder.last_source != "endpoint":
             self.skipTest(
-                "paraphrase recall is a property of the embedding model on :8087; "
+                "paraphrase recall is a property of the embedding model on :8084; "
                 f"the engine fell back to {self.cache.embedder.last_source} "
                 f"and scored {res.get('best_similarity', 0):.3f} against a 0.75 threshold"
             )

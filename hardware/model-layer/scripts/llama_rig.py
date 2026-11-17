@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 llama_rig.py — Smart GPU VRAM, Port Switcher & llama-swap Controller
-Manages llama-swap (port 8000) and direct ports 8080-8090.
+Manages llama-swap (port 8000) and direct ports 8080-8091.
 """
 
 import argparse
@@ -440,12 +440,12 @@ def cmd_status():
         "llama_swap_8000": swap_info,
         "pinned_king_port": pinned_port,
         "port_range": [low, high],
-        "ports_8080_8090": {},
+        "ports_8080_8091": {},
     }
     for p_str, slot in sorted(slots.items()):
         state = active.get(p_str)
         declared = slot["candidates"][0] if slot["candidates"] else None
-        report["ports_8080_8090"][p_str] = {
+        report["ports_8080_8091"][p_str] = {
             "alias": slot["alias"],
             "name": declared["model"] if declared else slot["alias"],
             "pinned": slot["pinned"],
@@ -455,8 +455,8 @@ def cmd_status():
             "pid": state.get("pid") if state else None,
         }
     for p_str, state in active.items():
-        if p_str not in report["ports_8080_8090"]:
-            report["ports_8080_8090"][p_str] = {
+        if p_str not in report["ports_8080_8091"]:
+            report["ports_8080_8091"][p_str] = {
                 "alias": f"untracked-port-{p_str}",
                 "name": f"Unknown service on :{p_str}",
                 "pinned": False,
@@ -648,7 +648,7 @@ if __name__ == "__main__":
     p_swap_status = sub.add_parser("llama-swap-status")
     p_swap_status.add_argument("--port", type=int, default=8000)
 
-    p_kill = sub.add_parser("kill", help="Stop a service by port, slot id, or alias (e.g. 8085, ocr, asr)")
+    p_kill = sub.add_parser("kill", help="Stop a service by port, slot id, or alias (e.g. 8082, ocr, asr)")
     p_kill.add_argument("target", nargs="?", help="Port, slot id, or alias")
     p_kill.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
@@ -656,7 +656,7 @@ if __name__ == "__main__":
     p_down.add_argument("target", nargs="?", help="Port, slot id, or alias")
     p_down.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")
 
-    p_swap = sub.add_parser("swap", help="Start/swap a service by port, slot id, alias, or candidate (e.g. 8085, ocr)")
+    p_swap = sub.add_parser("swap", help="Start/swap a service by port, slot id, alias, or candidate (e.g. 8082, ocr)")
     p_swap.add_argument("target", nargs="?", help="Port, slot id, alias, or candidate model")
     p_swap.add_argument("candidate", nargs="?", help="Candidate within that slot (e.g. up embed embeddinggemma-2)")
     p_swap.add_argument("--port", dest="opt_port", type=int, metavar="PORT", help="Optional port flag")

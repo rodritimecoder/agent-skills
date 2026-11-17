@@ -208,7 +208,7 @@ class TestProcure(unittest.TestCase):
 
     def test_ensure_service_already_up(self):
         with patch.object(procure, "http_up", return_value=True):
-            ok, how, child = procure.ensure_service("http://127.0.0.1:8085/v1/chat/completions",
+            ok, how, child = procure.ensure_service("http://127.0.0.1:8082/v1/chat/completions",
                                                     slot="ocr", log=lambda *_: None)
         self.assertTrue(ok)
         self.assertEqual(how, "already-up")
@@ -224,7 +224,7 @@ class TestProcure(unittest.TestCase):
         with patch.object(procure, "http_up", side_effect=[False, True]), \
              patch.object(procure.shutil, "which", return_value="/home/rodri/.local/bin/llama-rig"), \
              patch.object(procure.subprocess, "run", side_effect=fake_run):
-            ok, how, child = procure.ensure_service("http://127.0.0.1:8085/v1/chat/completions",
+            ok, how, child = procure.ensure_service("http://127.0.0.1:8082/v1/chat/completions",
                                                     slot="ocr", log=lambda *_: None)
         self.assertTrue(ok)
         self.assertEqual(how, "llama-rig")
@@ -235,7 +235,7 @@ class TestProcure(unittest.TestCase):
         lines = []
         with patch.object(procure, "http_up", return_value=False), \
              patch.object(procure.shutil, "which", return_value=None):
-            ok, how, child = procure.ensure_service("http://127.0.0.1:8085/v1/chat/completions",
+            ok, how, child = procure.ensure_service("http://127.0.0.1:8082/v1/chat/completions",
                                                     slot="ocr", log=lines.append)
         self.assertFalse(ok)
         self.assertEqual(how, "unavailable")
@@ -252,7 +252,7 @@ class TestProcure(unittest.TestCase):
              patch.object(procure.subprocess, "run", side_effect=fake_run), \
              patch.object(procure, "wait_until_up", side_effect=lambda *a, **k: waited.append(a) or False):
             started = time.monotonic()
-            ok, how, _ = procure.ensure_service("http://127.0.0.1:8085/v1/chat/completions",
+            ok, how, _ = procure.ensure_service("http://127.0.0.1:8082/v1/chat/completions",
                                                 slot="bogus", log=lambda *_: None)
         self.assertFalse(ok)
         self.assertEqual(how, "unavailable")

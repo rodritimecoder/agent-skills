@@ -76,7 +76,7 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
         "id": "opencode",
         "name": "OpenCode",
         "aliases": ["opencode", "oc"],
-        "summary": "Terminal-native open-source harness connecting to local model daemons (:8080-:8085) with compound bash batching.",
+        "summary": "Terminal-native open-source harness connecting to local model daemons (:8080-:8091) with compound bash batching.",
         "doc_file": "opencode.md",
         "protocols": ["cli", "surface-skills", "code-mode", "worktree-harness"],
         "config_paths": ["~/.config/opencode/opencode.json", "~/.local/share/opencode"],

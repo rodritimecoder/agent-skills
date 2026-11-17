@@ -63,7 +63,7 @@ ENDPOINTS = {
         "argv": ["{python}", "{skill}/scripts/llm_client.py"],
     },
     "local/ocr": {
-        "summary": "Local document/slide/image OCR via LightOnOCR-3-0.8B (:8085).",
+        "summary": "Local document/slide/image OCR via LightOnOCR-3-0.8B (:8082).",
         "argv": ["{python}", "{skill}/scripts/ocr.py"],
     },
     "local/decide": {
@@ -87,9 +87,9 @@ VIRTUAL_SKILLS = {
         "md_path": None,
         "description": (
             "Local LLM and inference endpoints on this workstation: Genesis 35B "
-            "coder for writing code (:8080), LightOnOCR document vision (:8085), "
+            "coder for writing code (:8080), LightOnOCR document vision (:8082), "
             "calibrated decisions (:8083), Nemotron speech-to-text "
-            "(:8081), and the optional embedding server (:8087) used to re-rank "
+            "(:8081), and the optional embedding server (:8084) used to re-rank "
             "catalog search. Use for running a model locally, offline, or on device."
         ),
         "status": "active",

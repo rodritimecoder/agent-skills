@@ -630,7 +630,7 @@ def render_markdown(regions, keep_ignored=False, embed_images=False):
 
 VLM_GUIDANCE = """\
 error: --vlm is required (port 8080 is the primary LLM, not an OCR model).
-  standing OCR VLM   : --vlm http://127.0.0.1:8085   (LightOnOCR-3-0.8B)
+  standing OCR VLM   : --vlm http://127.0.0.1:8082   (LightOnOCR-3-0.8B)
   MiniCPM-OCR        : start llama-server ad-hoc, then pass its port
   CrispEmbed (:8084) : NOT OpenAI-compatible; use the `ocr` skill instead
 """
@@ -931,7 +931,7 @@ def main():
     def add_common(sp):
         sp.add_argument("--vlm", type=str, default=DEFAULT_VLM,
                         help="OpenAI-compatible vision endpoint (required; "
-                             "e.g. http://127.0.0.1:8085 for LightOnOCR)")
+                             "e.g. http://127.0.0.1:8082 for LightOnOCR)")
         sp.add_argument("--model", type=str, default=DEFAULT_MODEL_NAME,
                         help=f"served model id (default {DEFAULT_MODEL_NAME})")
         sp.add_argument("--layout-model", type=str, default=None,

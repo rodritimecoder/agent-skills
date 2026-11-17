@@ -1,6 +1,6 @@
 ---
 name: model-layer
-description: "The model layer of this machine: every local model server — llm (:8080), audio (:8081), decision (:8083/:8089), ocr (:8084/:8085), rerank + embed (:8086/:8087), grounding (:8088), ocr-jev (:8090) — with its launcher script, weights files, health check, quirks and the skills that consume it, plus the llama-swap rig (:8000) via llama-rig. MUST READ before starting, stopping, swapping or debugging any local model server, or before writing code that calls one. Also the place for capacity questions — whether a candidate or a context size (262k, 16GB card) fits the VRAM budget, what is resident, or what to evict. The roster is generated from ports.json; a model swap edits the manifest and re-renders — never this file."
+description: "The model layer of this machine: every local model server — llm (:8080), audio (:8081), ocr (:8082), decision (:8083/:8089), embed (:8084), llm-aux (:8091) — with its launcher script, weights files, health check, quirks and the skills that consume it, plus the llama-swap rig (:8000) via llama-rig. MUST READ before starting, stopping, swapping or debugging any local model server, or before writing code that calls one. Also the place for capacity questions — whether a candidate or a context size (262k, 16GB card) fits the VRAM budget, what is resident, or what to evict. The roster is generated from ports.json; a model swap edits the manifest and re-renders — never this file."
 metadata:
   bins: llama-rig
 allowed-tools: "Bash(llama-rig:*) Bash(python3:*) Bash(ports.py:*) Read"

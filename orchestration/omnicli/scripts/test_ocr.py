@@ -137,17 +137,20 @@ class TestDotEnv(unittest.TestCase):
         self.assertNotIn("--port 9123", r.stdout)
 
     def test_export_quotes_comments_blank_lines(self):
-        self._with_env(
-            "# a comment\n"
-            "\n"
-            "export NAVIDC_OCR_PORT=9321\n"
-            "NAVIDC_OCR_MODEL_DIR='/run/media/rodri/AI/models/nandraj/NaviDC-OCR-GGUF'\n"
-        )
-        r = run("--server-cmd")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("--port 9321", r.stdout)
-        self.assertIn("nandraj", r.stdout)
-        self.assertNotIn("#", r.stdout.splitlines()[0])
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "weights.gguf").write_text("x")
+            Path(tmp, "mmproj-q8.gguf").write_text("x")
+            self._with_env(
+                "# a comment\n"
+                "\n"
+                "export NAVIDC_OCR_PORT=9321\n"
+                f"NAVIDC_OCR_MODEL_DIR='{tmp}'\n"
+            )
+            r = run("--server-cmd")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("--port 9321", r.stdout)
+            self.assertIn(tmp, r.stdout)
+            self.assertNotIn("#", r.stdout.splitlines()[0])
 
     def test_doctor_reports_env_file(self):
         self._with_env("NAVIDC_OCR_PORT=9123\n")

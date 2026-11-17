@@ -520,7 +520,7 @@
       },
       {
         "question": "I have a scanned page and want the text read on device",
-        "quote": "LightOnOCR document vision (:8085)"
+        "quote": "LightOnOCR document vision (:8082)"
       }
     ],
     "local-llm": [

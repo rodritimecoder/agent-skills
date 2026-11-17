@@ -95,4 +95,4 @@ By default, spaces use `--network host`, enabling sandboxed subagents to seamles
 * `http://127.0.0.1:8080` — Primary LLM (Qwen 35B)
 * `http://127.0.0.1:8081` — Nemotron 3.5 ASR (`audiocpp-asr`)
 * `http://127.0.0.1:8083` — h2o-lightning-4b Decision (`jev`), vision via `mmproj`
-* `http://127.0.0.1:8085` — LightOnOCR-3-0.8B (`ocr-cli`)
+* `http://127.0.0.1:8082` — LightOnOCR-3-0.8B (`ocr-cli`)
