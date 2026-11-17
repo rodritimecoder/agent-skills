@@ -1475,7 +1475,7 @@ def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
 
 def cmd_exec(script: str | None = None, code: str | None = None,
              workspace: str | None = None, out_path: str | None = None,
-             sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
+             sandbox: str = "strict", timeout: float = 300.0, as_json: bool = False,
              max_calls: int = 100, mem_limit: int | None = None,
              lang: str | None = None):
     """Run one JavaScript plan inside `node:vm`, sandboxed by default."""
@@ -1739,7 +1739,7 @@ def main():
                    help="Plan language; JavaScript (js) only, Python plans are retired")
     p.add_argument("--workspace", default=None, help="Writable directory (default: the script's folder or cwd)")
     p.add_argument("--out", default=None, help="Also write the plan's stdout to this file")
-    p.add_argument("--sandbox", choices=["write", "strict", "none"], default="write",
+    p.add_argument("--sandbox", choices=["write", "strict", "none"], default="strict",
                    help="write: writable workspace, open network. "
                         "strict: no network, home masked, every tool call crosses the bridge. "
                         "none: unsandboxed.")

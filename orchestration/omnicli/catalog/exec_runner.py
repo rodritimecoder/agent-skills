@@ -20,6 +20,7 @@ from pathlib import Path
 from catalog import bindings as bindings_mod
 from catalog import bridge as bridge_mod
 from catalog import builder
+from catalog import invoke as invoke_mod
 
 JS_LANGS = {"js", "javascript", "mjs", "node"}
 PY_LANGS = {"py", "python"}
@@ -276,6 +277,9 @@ def run(script: str | None = None, code: str | None = None,
         target.write_text(proc.stdout, encoding="utf-8")
 
     bridge_calls = getattr(bridge_server, "calls", 0)
+    # Bound what re-enters the model; --out preserves full stdout when requested.
+    stdout_budget = 7000 if as_json else 7800
+    shown_stdout, stdout_truncated, stdout_bytes = invoke_mod.cap(proc.stdout, stdout_budget)
     report = {
         "plan": "<stdin>" if script == "-" else ("<inline>" if code is not None else str(script_path)),
         "sandboxed": sandboxed,
@@ -288,13 +292,15 @@ def run(script: str | None = None, code: str | None = None,
         "bridge_denied": getattr(bridge_server, "denied", []),
         "tools": built.get("tools"),
         "result": result,
-        "stdout": proc.stdout,
+        "stdout": shown_stdout,
+        "stdout_truncated": stdout_truncated,
+        "stdout_bytes": stdout_bytes,
         "stderr": stderr_text[-2000:],
     }
     if as_json:
         print(json.dumps(report, indent=2))
     else:
-        sys.stdout.write(proc.stdout)
+        sys.stdout.write(shown_stdout)
         bridge_note = f" · bridge={bridge_calls} call(s)" if bridge_calls else ""
         print(f"⚡ [exec] {calls} tool call(s) in one turn · {elapsed:.2f}s "
               f"· sandbox={sandbox}{bridge_note}", file=sys.stderr)

@@ -86,7 +86,7 @@ through context. (Python plans are retired; `.py` / `--lang py` exits 2.)
 omnicli spec --grep zoom --stubs
 omnicli bindings                                                      # writes omnicli_tools.mjs + .d.ts
 omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
-omnicli exec plan.mjs --sandbox strict                                # write (default) | strict | none
+omnicli exec plan.mjs                                                 # strict (default); --sandbox write opts out
 ```
 
 ```js
@@ -100,7 +100,7 @@ emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump r
 
 - **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
 - **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
-- **Containment & limits:** `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
+- **Containment & limits:** **`strict` is the default** — use `--sandbox write` to opt out (needed for network plans). `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
 
 Full SDK API and authoring guidelines:
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))

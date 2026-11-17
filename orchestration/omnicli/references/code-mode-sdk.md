@@ -104,8 +104,8 @@ one of three containment tiers:
 
 | Mode | Filesystem | Network | Tool Dispatch | Use Case |
 |---|---|---|---|---|
-| `write` (default) | `/` is read-only; only current workspace and `/tmp` writable. | Unrestricted. | Direct subprocess execution. | Standard multi-step data pipelines and local tool orchestration. |
-| `strict` | Home directory masked (`~/.ssh`, `~/.env` unreadable); only workspace writable. | **Disabled** (no outbound sockets). | Every tool call crosses a UNIX domain socket bridge to the parent process. | Running untrusted code, external scripts, or high-security evaluation suites. |
+| `write` | `/` is read-only; only current workspace and `/tmp` writable. | Unrestricted. | Direct subprocess execution. | Standard multi-step data pipelines and local tool orchestration. |
+| `strict` (default) | Home directory masked (`~/.ssh`, `~/.env` unreadable); only workspace writable. | **Disabled** (no outbound sockets). | Every tool call crosses a UNIX domain socket bridge to the parent process. | Running untrusted code, external scripts, or high-security evaluation suites. |
 | `none` | Unconfined host filesystem. | Unrestricted. | Direct subprocess execution. | Tasks requiring broad machine access (system admin, global package installs). |
 
 Node lives under `$HOME` on this workstation (nvm), which `strict` masks, so the
