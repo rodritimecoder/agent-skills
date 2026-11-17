@@ -38,15 +38,7 @@
       "cmd": "bash $HOME/src/my-agent-skills/launchers/imajev-decider.sh",
       "role": "Secondary decision engine \u2014 Imajev-4B chat path, or letter/readout with READOUT=1"
     },
-    "8084": {
-      "alias": "local-ocr-boxes",
-      "vram_mb": 6300,
-      "pinned": false,
-      "name": "CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec)",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/crispembed-ocr.sh",
-      "role": "2D text coordinates and bounding boxes via CrispEmbed PP-OCRv6"
-    },
-    "8085": {
+    "8082": {
       "alias": "local-ocr",
       "vram_mb": 1500,
       "pinned": false,
@@ -54,29 +46,13 @@
       "cmd": "bash $HOME/src/my-agent-skills/launchers/lighton-ocr.sh",
       "role": "Documents, PDFs and slides \u2014 fast prefill, high-throughput markdown"
     },
-    "8086": {
-      "alias": "local-rerank",
-      "vram_mb": 800,
-      "pinned": false,
-      "name": "jina-reranker-v2-base-multilingual",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/jina-reranker.sh",
-      "role": "Cross-encoder reranking for RAG"
-    },
-    "8087": {
+    "8084": {
       "alias": "local-embed-bge",
       "vram_mb": 400,
       "pinned": false,
       "name": "bge-small-en-v1.5",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-small.sh",
       "role": "Vector embeddings for RAG and semantic caching"
-    },
-    "8090": {
-      "alias": "local-ocr-verify",
-      "vram_mb": 5300,
-      "pinned": false,
-      "name": "MiniCPM-OCR-Jev",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/minicpm-ocr-jev.sh",
-      "role": "OCR consistency gate \u2014 scores a candidate transcription against the source image in one forward pass"
     },
     "8091": {
       "alias": "local-llm-aux",

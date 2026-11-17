@@ -87,11 +87,8 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `audio` | `:8081` | `local-audio-audiocpp` | `run-audiocpp.sh` | nemotron-asr | — | audiocpp, video-miner |
 | `decision` | `:8083` | `local-decide` | `h2o.sh` | h2o-lightning-4b (Q4_K_M + mmproj F16) | — | jev-decision, decision-model, frontend-uat, eval-router |
 | `decision-aux` | `:8089` | `local-decide-aux` | `imajev-decider.sh` | Imajev-4B (Q4_K_M + mmproj f16) | `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf`<br>`models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf` | jev-decision |
-| `ocr-boxes` | `:8084` | `local-ocr-boxes` | `crispembed-ocr.sh` | CrispEmbed (PP-OCRv6 small: DB++ det + CTC rec) | `models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf`<br>`models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf`<br>`models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf`<br>`models/cstr/parseq-GGUF/parseq-q8_0.gguf` | ocr |
-| `ocr` | `:8085` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
-| `rerank` | `:8086` | `local-rerank` | `jina-reranker.sh` | jina-reranker-v2-base-multilingual (Q8_0) | `models/gpustack/jina-reranker-v2-base-multilingual-GGUF/jina-reranker-v2-base-multilingual-Q8_0.gguf` | graph-memory |
-| `embed` | `:8087` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
-| `ocr-verify` | `:8090` | `local-ocr-verify` | `minicpm-ocr-jev.sh` | MiniCPM-OCR-Jev (Q6_K + mmproj f16) | `models/openbmb/MiniCPM-OCR-Jev-gguf/MiniCPM-OCR-Jev-Q6_K.gguf`<br>`models/openbmb/MiniCPM-OCR-Jev-gguf/mmproj-model-f16.gguf` | — |
+| `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
+| `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
 
 ### `:8080` llm — `local-coder-genesis`
@@ -139,60 +136,28 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Weights:** `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf` · `models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf`
 - **Quirks:** Supersedes the OneJev1.5-4B occupancy of this port. Not the primary decision API — :8083 remains the one clients should call; this slot exists for A/B work and for a second opinion while :8083 is held by another candidate. Qwen3.5-4B with a merged LoRA decision adapter, restored to the :8089 fallback slot it occupied during the ImageJevBench A/B against pplx on :8083. vision projector attached
 
-### `:8084` ocr-boxes — `local-ocr-boxes`
-
-- **Role:** 2D text coordinates and bounding boxes via CrispEmbed PP-OCRv6
-- **Service:** crispembed-server
-- **Start:** `crispembed-ocr.sh` (volume `sh/`; in-repo copy `launchers/crispembed-ocr.sh`)
-- **Health:** `curl -s http://127.0.0.1:8084/health`
-- **API:** `/ocr/pipeline, /oxr/document`
-- **Owner:** `video-miner` · **Used by:** ocr
-- **Weights:** `models/cstr/PP-OCRv6-small-det-GGUF/PP-OCRv6_small_det-f16.gguf` · `models/cstr/PP-OCRv6_small_rec-GGUF/PP-OCRv6_small_rec-q8-head.gguf` · `models/cstr/dbnet-ic15-GGUF/dbnet-ic15-f16.gguf` · `models/cstr/parseq-GGUF/parseq-q8_0.gguf`
-- **Quirks:** Default engine ppocrv6.
-
-### `:8085` ocr — `local-ocr`
+### `:8082` ocr — `local-ocr`
 
 - **Role:** Documents, PDFs and slides — fast prefill, high-throughput markdown
 - **Service:** llama-server (Vulkan)
 - **Start:** `lighton-ocr.sh` (volume `sh/`; in-repo copy `launchers/lighton-ocr.sh`)
-- **Health:** `curl -s http://127.0.0.1:8085/health`
+- **Health:** `curl -s http://127.0.0.1:8082/health`
 - **API:** `/v1/chat/completions`
 - **Owner:** `ocr` · **Used by:** ocr, video-miner, doc-layout, canvas-cli
 - **Weights:** `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf` · `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf`
 - **Quirks:** thinking variant — OCR output arrives in reasoning_content.
 
-### `:8086` rerank — `local-rerank`
-
-- **Role:** Cross-encoder reranking for RAG
-- **Service:** llama-server (Vulkan)
-- **Start:** `jina-reranker.sh` (volume `sh/`; in-repo copy `launchers/jina-reranker.sh`)
-- **Health:** `curl -s http://127.0.0.1:8086/health`
-- **API:** `/v1/rerank`
-- **Owner:** `graph-memory` · **Used by:** graph-memory
-- **Weights:** `models/gpustack/jina-reranker-v2-base-multilingual-GGUF/jina-reranker-v2-base-multilingual-Q8_0.gguf`
-
-### `:8087` embed — `local-embed-bge`
+### `:8084` embed — `local-embed-bge`
 
 - **Role:** Vector embeddings for RAG and semantic caching
 - **Service:** llama-server (Vulkan)
 - **Start:** `bge-small.sh` (volume `sh/`; in-repo copy `launchers/bge-small.sh`)
-- **Health:** `curl -s http://127.0.0.1:8087/health`
+- **Health:** `curl -s http://127.0.0.1:8084/health`
 - **API:** `/v1/embeddings`
 - **Owner:** `graph-memory` · **Used by:** graph-memory, semantic-cache
 - **Weights:** `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf`
 - **Quirks:** THE ONE SLOT WHERE DIMENSION MATTERS. Indexes must record which candidate built them; see rag.db meta table. DEFAULT.
 - **Candidates:** `bge-small-en-v1.5` (f16, current) · `embeddinggemma-2` (Q8_0 + mmproj Q8_0, alternate)
-
-### `:8090` ocr-verify — `local-ocr-verify`
-
-- **Role:** OCR consistency gate — scores a candidate transcription against the source image in one forward pass
-- **Service:** llama-server (Vulkan)
-- **Start:** `minicpm-ocr-jev.sh` (volume `sh/`; in-repo copy `launchers/minicpm-ocr-jev.sh`)
-- **Health:** `curl -s http://127.0.0.1:8090/health`
-- **API:** `/v1/systemone (fixed question: state = OCR text, images = [original, rendered]; choice or noul)`
-- **Owner:** `ocr` · **Used by:** —
-- **Weights:** `models/openbmb/MiniCPM-OCR-Jev-gguf/MiniCPM-OCR-Jev-Q6_K.gguf` · `models/openbmb/MiniCPM-OCR-Jev-gguf/mmproj-model-f16.gguf`
-- **Quirks:** Reuses :8090, freed when JPT-4B was archived. Not a general decision engine: the question is baked into the model, so this slot cannot answer the jev-decision query types - :8083 remains the decision API. No skill drives this slot yet - call it directly or add it to a consumer. 2B Qwen3.5-VL trunk with a 2-class value head read at the pooled last token; no LM head, text generation is rejected. vision projector attached
 
 ### `:8091` llm-aux — `local-llm-aux`
 

@@ -33,7 +33,7 @@ import time
 from typing import Any
 
 EMBEDDING_URL = os.environ.get(
-    "OMNICLI_EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings"
+    "OMNICLI_EMBEDDING_URL", "http://127.0.0.1:8084/v1/embeddings"
 )
 EMBEDDING_MODEL = os.environ.get("OMNICLI_EMBEDDING_MODEL", "bge-small-en-v1.5")
 

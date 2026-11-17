@@ -905,12 +905,11 @@ Synthesized by `github-architect` from local GPU inference configs, launchers, a
 |---|---|---|---|
 | `:8080` | **Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP** | `sh/luffy-hermes-mtp-vulkan.sh` | Complex reasoning, coding, uncensored generation |
 | `:8081` | **Nemotron 3.5 ASR + Kokoro TTS** | `audio.cpp` server | Real-time speech-to-text (40 langs) + fast speech synthesis |
+| `:8082` | **LightOnOCR-3-0.8B** | `launchers/lighton-ocr.sh` | **Flagship Video, Slide & Scanned-PDF OCR** |
 | `:8083` | **h2o-lightning-4b Decision Model (vision)** | `sh/h2o.sh` | Native `/v1/systemone` bool/choice/score + image gating |
-| `:8084` | **CrispEmbed Scene Text OCR** | `launchers/crispembed-ocr.sh` | Real-world scene-text OCR (DBNet + PARSeq) |
-| `:8085` | **LightOnOCR-3-0.8B** | `launchers/lighton-ocr.sh` | **Flagship Video, Slide & Scanned-PDF OCR** |
-| `:8086` | **Jina-Reranker-v2 Base** | `launchers/jina-reranker.sh` | Cross-encoder RAG reranking |
-| `:8087` | **bge-small-en-v1.5 (384d)** | `launchers/bge-small.sh` | Text embeddings for RAG + semantic cache |
-| `:8088` | **DeskForge-Qwen3.5-4B** | `launchers/deskforge-qwen.sh` | Visual GUI grounding & computer use |
+| `:8084` | **bge-small-en-v1.5 (384d)** | `launchers/bge-small.sh` | Text embeddings for RAG + semantic cache |
+| `:8089` | **Imajev-4B** | `launchers/imajev-decider.sh` | Secondary decision engine (A/B against :8083) |
+| `:8091` | **LFM3-1.7B-Uncensored-AD** | `launchers/lfm3-1.7b-uncensored.sh` | Short-form and creative generation |
 
 ---
 

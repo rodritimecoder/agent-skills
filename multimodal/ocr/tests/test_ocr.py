@@ -27,7 +27,7 @@ class TestUnifiedOCRDeterministic(unittest.TestCase):
         self.assertEqual(res.returncode, 0, f"Doctor failed: {res.stderr}")
         data = json.loads(res.stdout)
         self.assertEqual(data["engine"], "LightOnOCR-3-0.8B")
-        self.assertEqual(data["port"], 8085)
+        self.assertEqual(data["port"], 8082)
         self.assertTrue(data["models_ready"])
         print("  ✓ doctor health check · verified")
 

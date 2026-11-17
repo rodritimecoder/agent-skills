@@ -59,7 +59,7 @@ import ssl
 class OCREngine:
     def __init__(
         self,
-        lighton_port: int = 8085,
+        lighton_port: int = 8082,
         host: Optional[str] = None,
         timeout: float = 60.0
     ):

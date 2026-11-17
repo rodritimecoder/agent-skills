@@ -4,7 +4,7 @@ Reads ../corpus-before by default, plus any distilled entries in distilled/.
 Subfolders are included, so the digest's daily/ folder is indexed like any note.
 Writes rag.db next to this script. Run again any time; the index is disposable.
 
-The embedding slot (:8087) hosts exactly two candidate models -- bge-small
+The embedding slot (:8084) hosts exactly two candidate models -- bge-small
 (384d) and EmbeddingGemma-2 (768d) -- and their vectors are not comparable.
 So the index records which model and dimension built it, in the `meta` table,
 and search.py refuses to compare a query vector of the wrong width. Probe the
@@ -25,7 +25,7 @@ HERE = Path(__file__).resolve().parent
 DB = HERE / "rag.db"
 CHUNK_BUDGET = 1600  # characters, roughly 400 tokens
 SKIP_DIRS = {".git", "node_modules", "__pycache__"}
-EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings")
+EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8084/v1/embeddings")
 
 
 class EmbeddingError(RuntimeError):

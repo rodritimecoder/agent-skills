@@ -76,7 +76,7 @@ LIGHTON_MODEL = Path(os.environ.get("LIGHTON_MODEL", DRIVE / "models/prithivMLmo
 LIGHTON_MMPROJ = Path(os.environ.get("LIGHTON_MMPROJ", DRIVE / "models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf"))
 LLAMA_SERVER_BIN = Path(os.environ.get("LLAMA_SERVER_BIN", DRIVE / "llama.cpp/build/bin/llama-server"))
 LLAMA_MTMD_CLI = Path(os.environ.get("LLAMA_MTMD_CLI", DRIVE / "llama.cpp/build/bin/llama-mtmd-cli"))
-LIGHTON_PORT = int(os.environ.get("LIGHTON_PORT", "8085"))
+LIGHTON_PORT = int(os.environ.get("LIGHTON_PORT", "8082"))
 LIGHTON_URL = os.environ.get("LIGHTON_URL", f"http://127.0.0.1:{LIGHTON_PORT}/v1/chat/completions")
 
 MINICPM_MODEL = Path(os.environ.get("MINICPM_OCR_MODEL", DRIVE / "models/openbmb/MiniCPM-OCR-1.0-gguf/MiniCPM-OCR-1_0-Q8_0.gguf"))

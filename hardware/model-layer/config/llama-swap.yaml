@@ -2,8 +2,8 @@
 # Upstream canonical: ~/src/my-agent-skills/hardware/model-layer/config/llama-swap.yaml
 #
 # Scope: chat-completions-shaped models only — a router fits a uniform contract
-# with many candidates, not a "type". :8081 (/v1/audio/*), :8084 (/ocr/pipeline),
-# :8086 (/v1/rerank), :8087 (/v1/embeddings), :8090 (/v1/systemone) and :8091
+# with many candidates, not a "type". :8081 (/v1/audio/*), :8082 (OCR
+# /v1/chat/completions), :8084 (/v1/embeddings), :8089 (/v1/systemone) and :8091
 # stay direct slots. `llm` (:8080, 15 candidates, one API) is the only slot that
 # satisfies both halves today, so it is the only one fronted here.
 # `llama-swap -validate` is a syntax gate; `ports.py check` is the truth gate.

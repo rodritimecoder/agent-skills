@@ -196,7 +196,7 @@ class TestGraphMemorySearch(unittest.TestCase):
 
 
 class TestEnsureEmbedding(unittest.TestCase):
-    """A cold :8087 must start the candidate that built the index, not "the default"."""
+    """A cold :8084 must start the candidate that built the index, not "the default"."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 DB = HERE / "rag.db"
 CHUNK_BUDGET = 1600  # characters, roughly 400 tokens
 SKIP_DIRS = {".git", "node_modules", "__pycache__"}
-EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings")
+EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8084/v1/embeddings")
 
 
 def get_embeddings(texts, endpoint=EMBEDDING_URL, batch_size=8):

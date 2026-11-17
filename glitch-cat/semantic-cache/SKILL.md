@@ -10,7 +10,7 @@ description: >
   across near-identical requests. It caches answers to questions; it does not index or search
   a notes folder — use notes-index for that.
 
-compatibility: "Requires the local embedding endpoint on :8087 for the semantic leg."
+compatibility: "Requires the local embedding endpoint on :8084 for the semantic leg."
 allowed-tools: "Bash(python3:*) Read Write"
 ---
 

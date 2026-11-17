@@ -24,12 +24,11 @@ SERVICES = [
     {"port": 8000, "name": "llama-swap Controller", "role": "Model hot-swapper", "probe": "/v1/models"},
     {"port": 8080, "name": "Genesis 35B Primary LLM", "role": "Dual-GPU flagship coder", "probe": "/health"},
     {"port": 8081, "name": "audio.cpp ASR & TTS", "role": "Streaming speech-to-text / TTS", "probe": "/health"},
+    {"port": 8082, "name": "LightOnOCR Flagship OCR", "role": "Document and slide OCR", "probe": "/health"},
     {"port": 8083, "name": "Decision Gating", "role": "Premier calibrated decisions (protocol auto-detected)", "probe": "/health"},
-    {"port": 8084, "name": "CrispEmbed Scene-Text OCR", "role": "Ultra-fast text detection", "probe": "/health"},
-    {"port": 8085, "name": "LightOnOCR Flagship OCR", "role": "Document and slide OCR", "probe": "/health"},
-    {"port": 8086, "name": "Jina Reranker", "role": "Cross-encoder reranking for RAG", "probe": "/health"},
-    {"port": 8087, "name": "Embedding Server (BGE / EmbeddingGemma)", "role": "Optional re-ranker for catalog search", "probe": "/health"},
+    {"port": 8084, "name": "Embedding Server (BGE / EmbeddingGemma)", "role": "Dense vectors for RAG and catalog search", "probe": "/health"},
     {"port": 8089, "name": "Decision Fallback (Imajev-4B)", "role": "Second opinion / A-B against :8083", "probe": "/health"},
+    {"port": 8091, "name": "Auxiliary LLM (LFM3)", "role": "Short-form and creative generation", "probe": "/health"},
     {"port": 9222, "name": "Chromium CDP DevTools", "role": "Direct WebSocket/CDP browser control", "probe": "/json/version"},
 ]
 

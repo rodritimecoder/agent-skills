@@ -2,7 +2,7 @@
 name: ocr
 
 description: >
-  LightOnOCR-3-0.8B OCR hub on :8085: transcribe documents, PDFs, slides,
+  LightOnOCR-3-0.8B OCR hub on :8082: transcribe documents, PDFs, slides,
   screenshots and scans into Markdown, with optional grounding that returns typed
   blocks, 0-1000 boxes, figure crops and chart tables. Use to read text out of an
   image, screenshot or scanned page, to OCR a PDF or slide deck, or to pull
@@ -10,15 +10,15 @@ description: >
   described object rather than read its text, use `jev box`; to coordinate a PDF
   conversion pipeline, use doc-layout.
 
-compatibility: "Requires an AMD Radeon RX 9060 XT GPU with Vulkan and the LightOnOCR-3-0.8B server on :8085."
+compatibility: "Requires an AMD Radeon RX 9060 XT GPU with Vulkan and the LightOnOCR-3-0.8B server on :8082."
 allowed-tools: "Bash(ocr:*) Bash(python3:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before starting or debugging the model. If `:8085` is down, `ensure_lighton` starts it via `llama-rig up ocr`.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8082`) — launcher, weights files, health and quirks. Read it before starting or debugging the model. If `:8082` is down, `ensure_lighton` starts it via `llama-rig up ocr`.
 
 # `ocr` — LightOnOCR Document Hub
 
-Everything goes through one engine: **LightOnOCR-3-0.8B** on **`:8085`**. It is a
+Everything goes through one engine: **LightOnOCR-3-0.8B** on **`:8082`**. It is a
 0.8B vision-language model that transcribes a page in about two seconds, and in
 grounding mode also reports where each block sits and what it is.
 
@@ -65,8 +65,8 @@ ocr server stop
 
 | Capability | Engine | Port | Format | Specialty |
 |---|---|---|---|---|
-| **Document / PDF / Scan** | **LightOnOCR-3-0.8B** | `:8085` | Flat Markdown | high-throughput transcription |
-| **Document + figures** | **LightOnOCR-3 grounding** | `:8085` | Typed blocks + box crops + descriptions | best text on Fraktur/multilingual |
+| **Document / PDF / Scan** | **LightOnOCR-3-0.8B** | `:8082` | Flat Markdown | high-throughput transcription |
+| **Document + figures** | **LightOnOCR-3 grounding** | `:8082` | Typed blocks + box crops + descriptions | best text on Fraktur/multilingual |
 
 ### LightOn runtime facts
 
@@ -95,4 +95,4 @@ blocks also carry a description or an HTML data table.
 OXR-1.0 and CrispEmbed were removed on 2026-11-08. The OXR weights are deleted and
 `ENGINE=oxr sh/crispembed-ocr.sh` now exits 1; the `/oxr/document` route and the
 `spatial`/`--boxes` scene-text mode are gone with them. There is no fallback
-engine: if `:8085` is down, start it.
+engine: if `:8082` is down, start it.

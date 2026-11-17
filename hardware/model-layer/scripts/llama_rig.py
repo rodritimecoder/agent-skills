@@ -124,7 +124,7 @@ def load_slots():
                     "vram_mb": meta.get("vram_mb"),
                     "status": "current",
                 }],
-                "range": registry.get("port_range", [8080, 8090]),
+                "range": registry.get("port_range", [8080, 8091]),
             }
     return slots, registry
 
@@ -137,7 +137,7 @@ def port_bounds(registry: dict, slots: dict) -> tuple:
     try:
         return int(rng[0]), int(rng[1])
     except (TypeError, ValueError, IndexError):
-        return 8080, 8090
+        return 8080, 8091
 
 
 def _find_slot(slots: dict, needle: str):
@@ -273,7 +273,7 @@ def _binds_loopback(line, port):
     return False
 
 
-def get_listening_ports(start_port=8080, end_port=8090):
+def get_listening_ports(start_port=8080, end_port=8091):
     """Return dict of {port_str: {'pid': int, 'process': str}} for active TCP listeners."""
     active = {}
     target_ports = set(range(start_port, end_port + 1))
@@ -344,18 +344,11 @@ SLOT_SYNONYMS = {
     "h2o": "8083",
     "decision-aux": "8089",
     "imajev": "8089",
-    "ocr-crispembed": "8084",
-    "crispembed": "8084",
-    "ocr": "8085",
-    "ocr-lighton": "8085",
-    "lighton": "8085",
-    "reranker": "8086",
-    "rerank": "8086",
-    "jina": "8086",
-    "embed": "8087",
-    "bge": "8087",
-    "ocr-jev": "8090",
-    "minicpm": "8090",
+    "ocr": "8082",
+    "ocr-lighton": "8082",
+    "lighton": "8082",
+    "embed": "8084",
+    "bge": "8084",
     "llm-rp": "8091",
     "rp": "8091",
     "lfm3": "8091",

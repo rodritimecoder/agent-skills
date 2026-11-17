@@ -11,11 +11,11 @@ description: >
   as separate assets, when tables/formulas need type-aware handling, or when
   multi-column layout breaks whole-page OCR.
 
-compatibility: "Requires the PP-DocLayoutV3 ONNX model (Bei0001 export) and an OpenAI-compatible vision endpoint passed with --vlm (e.g. LightOnOCR on :8085, or an ad-hoc MiniCPM-OCR llama-server). No torch, no PaddlePaddle."
+compatibility: "Requires the PP-DocLayoutV3 ONNX model (Bei0001 export) and an OpenAI-compatible vision endpoint passed with --vlm (e.g. LightOnOCR on :8082, or an ad-hoc MiniCPM-OCR llama-server). No torch, no PaddlePaddle."
 allowed-tools: "Bash(doc-layout:*) Bash(python3:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8085`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `llama-rig up ocr`.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8082`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. Down? `llama-rig up ocr`.
 
 # `doc-layout` — PP-DocLayoutV3 → crops → VLM → Markdown
 
@@ -45,7 +45,7 @@ detection gives each region an identity and an order, so:
 
 ```bash
 # Health: model present, VLM reachable
-doc-layout doctor --vlm http://127.0.0.1:8085
+doc-layout doctor --vlm http://127.0.0.1:8082
 
 # Detect regions only (JSON: boxes, quads, order, labels)  [no VLM needed]
 doc-layout layout page.png --json regions.json
@@ -54,18 +54,18 @@ doc-layout layout page.png --json regions.json
 doc-layout crops page.png -o crops/
 
 # Full parse to Markdown
-doc-layout parse page.png -o page.md --vlm http://127.0.0.1:8085
+doc-layout parse page.png -o page.md --vlm http://127.0.0.1:8082
 
 # Multi-page PDF (pages rendered at --dpi, default 200)
-doc-layout parse paper.pdf -o paper.md --vlm http://127.0.0.1:8085 --pages 1-5
+doc-layout parse paper.pdf -o paper.md --vlm http://127.0.0.1:8082 --pages 1-5
 
 # Multi-page PDF with layout/OCR overlap (layout page N+1 while OCRing page N)
-doc-layout parse paper.pdf -o paper.md --vlm http://127.0.0.1:8085 --overlap
+doc-layout parse paper.pdf -o paper.md --vlm http://127.0.0.1:8082 --overlap
 
 # One-model engine: whole page in a single call (LightOnOCR-3-0.8B)
-doc-layout parse page.png --engine lighton -o page.md --vlm http://127.0.0.1:8085
+doc-layout parse page.png --engine lighton -o page.md --vlm http://127.0.0.1:8082
 doc-layout parse page.png --engine lighton --grounding --embed-images \
-    -o page.md --vlm http://127.0.0.1:8085
+    -o page.md --vlm http://127.0.0.1:8082
 
 # See it rendered: images in place, LaTeX typeset, no CDN needed
 doc-layout render paper.md -o paper.html
@@ -161,7 +161,7 @@ therefore required rather than defaulted:
 
 | port | service | works here? |
 |---|---|---|
-| `:8085` | LightOnOCR-3-0.8B (`llama-server`) | yes — OpenAI-compatible |
+| `:8082` | LightOnOCR-3-0.8B (`llama-server`) | yes — OpenAI-compatible |
 | ad-hoc | MiniCPM-OCR + DSpark (`llama-server`) | yes — pass its port |
 | `:8084` | CrispEmbed (PP-OCRv6) | no — not OpenAI-compatible; use the `ocr` skill |
 | `:8080` | primary LLM | no — text-only |

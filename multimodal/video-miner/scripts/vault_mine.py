@@ -425,6 +425,28 @@ def update_notes_index(vault_dir: Path) -> None:
             pass
 
 
+SUBTITLE_FLAGS = [
+    "--write-subs",
+    "--write-auto-subs",
+    "--sub-lang", "en.*,en",
+    "--sub-format", "vtt/srt",
+]
+
+
+def subtitles_only_failure(stderr: str) -> bool:
+    """True when yt-dlp died fetching subtitles, not media.
+
+    YouTube rate-limits the caption endpoint long before it throttles the
+    video streams, and yt-dlp exits non-zero for a failed caption fetch even
+    when the media itself is available. Falling back to local ASR is the
+    documented path anyway, so a caption 429 must not abort the mine.
+    """
+    text = stderr.lower()
+    if "subtitle" not in text and "caption" not in text:
+        return False
+    return "429" in text or "too many requests" in text
+
+
 def fast_mine_video(
     url_or_path: str,
     creator: Optional[str] = None,
@@ -469,15 +491,20 @@ def fast_mine_video(
                 "--no-progress",
                 *procure.download_args(url_or_path),
                 "--write-info-json",
-                "--write-subs",
-                "--write-auto-subs",
-                "--sub-lang", "en.*,en",
-                "--sub-format", "vtt/srt",
+                *SUBTITLE_FLAGS,
                 "-o", str(tmp_scratch / "source.%(ext)s"),
                 url_or_path
             ]
             dl_started = time.perf_counter()
             res = subprocess.run(dl_cmd, capture_output=True, text=True)
+            if res.returncode != 0 and subtitles_only_failure(res.stderr):
+                print("⚠️  Caption track unavailable (rate-limited); retrying media-only "
+                      "with local ASR...")
+                no_subs = list(dl_cmd)
+                for flag in SUBTITLE_FLAGS:
+                    if flag in no_subs:
+                        no_subs.remove(flag)
+                res = subprocess.run(no_subs, capture_output=True, text=True)
             if res.returncode != 0:
                 sys.exit(f"❌ Failed to download video: {res.stderr.strip()[:300]}")
 

@@ -855,7 +855,7 @@ def find_media_and_transcript_for_note(vault_root: Path, json_path: Path, note_d
 
     return transcript_path, media_target, passcode, q_map
 
-def get_embedding_gemma2(text: str, endpoint: str = "http://127.0.0.1:8087/v1/embeddings") -> Optional[List[float]]:
+def get_embedding_gemma2(text: str, endpoint: str = "http://127.0.0.1:8084/v1/embeddings") -> Optional[List[float]]:
     try:
         req = urllib.request.Request(
             endpoint,

@@ -10,7 +10,7 @@ description: >
   with a micro-gate and a step_NN.json ledger at each of the 5 stages. Runner
   `python3 scripts/run_pipeline.py`; gates in scripts/gates.py. Draft status: v1 academic-icm stays
   live until one real course clears all five gates. Not for a single-note fix.
-compatibility: "Requires canvas-cli, zoom-recorder, markitdown-cli, local inference (:8080, :8083) and embeddings (:8087) for the semantic cache."
+compatibility: "Requires canvas-cli, zoom-recorder, markitdown-cli, local inference (:8080, :8083) and embeddings (:8084) for the semantic cache."
 allowed-tools: "Bash(canvas-cli:*) Bash(zoom-recorder:*) Bash(markitdown-cli:*) Bash(jev:*) Bash(okf:*) Bash(state-compactor:*) Bash(cgate:*) Bash(openrouter-free:*) Bash(eval-router:*) Bash(python3:*) Bash(opencode:*) Read Write"
 ---
 

@@ -9,7 +9,7 @@ description: >
   verify (5 gates), smart-check, status, audit, compile, serve --port 8765, stamp-video.
   Not for one-file jobs — it assumes a whole course.
 
-compatibility: "Requires the canvas-cli, zoom-recorder and cornell-notes skills, an embedding server on :8087 (`/v1/embeddings`, graph index/search), and network access for the material it ingests."
+compatibility: "Requires the canvas-cli, zoom-recorder and cornell-notes skills, an embedding server on :8084 (`/v1/embeddings`, graph index/search), and network access for the material it ingests."
 allowed-tools: "Bash(academic-icm:*) Bash(canvas-cli:*) Bash(python3:*) Read"
 ---
 

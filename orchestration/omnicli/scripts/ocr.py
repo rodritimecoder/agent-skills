@@ -90,33 +90,15 @@ import requests  # noqa: E402
 ENGINES = {
     "lighton": {
         "name": "LightOnOCR-3-0.8B",
-        "port": 8085,
+        "port": 8082,
         "default_model_dir": "/run/media/rodri/AI/models/prithivMLmods/LightOnOCR-3-0.8B-GGUF",
         "description": "Ultra-fast document and video slide OCR (thinking variant). Best for video-miner.",
-    },
-    "navidc": {
-        "name": "NaviDC-OCR",
-        "port": 8082,
-        "default_model_dir": "/run/media/rodri/AI/models/konradjr007/NaviDC-OCR-GGUF",
-        "description": "Dense document and scanned PDF OCR.",
-    },
-    "crispembed": {
-        "name": "CrispEmbed Scene Text",
-        "port": 8084,
-        "default_model_dir": "/run/media/rodri/AI/models/cstr",
-        "description": "Scene-text OCR (DBNet + PARSeq).",
-    },
-    "smoldocling": {
-        "name": "SmolDocling-256M",
-        "port": 8084,
-        "default_model_dir": "/run/media/rodri/AI/models/cstr/smoldocling-GGUF",
-        "description": "Structured DocTags layout, tables, formulas, and document understanding.",
     }
 }
 
 DEFAULT_ENGINE = os.environ.get("OCR_ENGINE", "lighton")
 port_str = os.environ.get("OCR_PORT") or os.environ.get("NAVIDC_OCR_PORT")
-PORT = int(port_str) if port_str else ENGINES.get(DEFAULT_ENGINE, {}).get("port", 8085)
+PORT = int(port_str) if port_str else ENGINES.get(DEFAULT_ENGINE, {}).get("port", 8082)
 ACTIVE_PORT = PORT
 
 host_str = os.environ.get("OCR_HOST") or os.environ.get("NAVIDC_OCR_HOST")

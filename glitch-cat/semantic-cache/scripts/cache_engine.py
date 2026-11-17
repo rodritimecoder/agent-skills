@@ -22,7 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 class LocalEmbedder:
     """Embed against the embedding slot, with a labelled offline fallback.
 
-    The slot at :8087 hosts exactly two candidates -- bge-small-en-v1.5 (384d)
+    The slot at :8084 hosts exactly two candidates -- bge-small-en-v1.5 (384d)
     and EmbeddingGemma-2 (768d) -- and the offline fallback is a third, 128d
     hash space. Vectors from different spaces are not comparable, so every
     embedded row records which space it came from and `get` skips the rest
@@ -32,7 +32,7 @@ class LocalEmbedder:
     given a judge.
     """
 
-    def __init__(self, endpoint: str = "http://127.0.0.1:8087/v1/embeddings", timeout: float = 0.5):
+    def __init__(self, endpoint: str = "http://127.0.0.1:8084/v1/embeddings", timeout: float = 0.5):
         self.endpoint = endpoint
         self.timeout = timeout
         self.last_source = "unknown"

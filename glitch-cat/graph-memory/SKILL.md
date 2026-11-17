@@ -6,11 +6,11 @@ description: >
   entity deduplication via UUID5 & aliases, and hybrid BM25 + bge-small-en-v1.5 (384d) RRF search
   with exact-quote distillation.
 
-compatibility: "Requires the local embedding endpoint on :8087 for the hybrid BM25 and vector leg. The slot also hosts EmbeddingGemma-2 (768d); an index built with one is not comparable with the other, so rag.db records which model built it."
+compatibility: "Requires the local embedding endpoint on :8084 for the hybrid BM25 and vector leg. The slot also hosts EmbeddingGemma-2 (768d); an index built with one is not comparable with the other, so rag.db records which model built it."
 allowed-tools: "Bash(graph-memory:*) Bash(python3:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8086 + :8087`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If `:8087` is down, `search` starts the index's own candidate (`llama-rig up embed <model>`; `--no-autostart` skips) — the prompt hook never starts a model.
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8084`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If `:8084` is down, `search` starts the index's own candidate (`llama-rig up embed <model>`; `--no-autostart` skips) — the prompt hook never starts a model.
 
 # `graph-memory` — Unified Knowledge Graph & Hybrid RAG (Glitch Cat Club Architecture)
 

@@ -21,7 +21,7 @@ DB = Path(os.environ.get("RAG_DB_PATH", str(HERE / "rag.db")))
 K = 60  # rank fusion smoothing constant
 TOP = 3
 CONTEXT_LINES = 6
-EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8087/v1/embeddings")
+EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://127.0.0.1:8084/v1/embeddings")
 VRAM_RIG_CTL = shutil.which("llama-rig") or shutil.which("vram-rig-ctl")
 # Opt out with --no-autostart or GRAPH_MEMORY_AUTOSTART=0. The prompt hook never
 # starts a model at all: loading weights inside UserPromptSubmit blocks the prompt.

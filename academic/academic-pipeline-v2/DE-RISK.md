@@ -63,14 +63,14 @@ from typing import Any, Dict, List, Optional, Tuple
 class LocalEmbedder:
     """Embed against the embedding slot, with a labelled offline fallback.
 
-    The slot at :8087 hosts exactly two candidates -- bge-small-en-v1.5 (384d)
+    The slot at :8084 hosts exactly two candidates -- bge-small-en-v1.5 (384d)
     and EmbeddingGemma-2 (768d) -- and the offline fallback is a third, 128d
     hash space. Vectors from different spaces are not comparable, so every
     embedded row records which space it came from and `get` skips the rest
     instead of silently scoring them 0.0.
     """
 
-    def __init__(self, endpoint: str = "http://127.0.0.1:8087/v1/embeddings", timeout: float = 0.5):
+    def __init__(self, endpoint: str = "http://127.0.0.1:8084/v1/embeddings", timeout: float = 0.5):
         self.endpoint = endpoint
         self.timeout = timeout
         self.last_source = "unknown"
@@ -96,7 +96,7 @@ PORT   SLOT             CARD         DEFAULT                    ROLE
 8084   ocr-crispembed   single (1)   CrispEmbed (PP-OCRv6 smal  Scene text — 2D bounding boxes and structured markdown
 8085   ocr-lighton      single (1)   LightOnOCR-3-0.8B            Documents, PDFs and slides — fast prefill, high-throughput markdown
 8086   reranker         single (1)   jina-reranker-v2-base-mul  Cross-encoder reranking for RAG
-8087   embed            one-of-many (2) bge-small-en-v1.5          Vector embeddings for RAG and semantic caching
+8084   embed            one-of-many (2) bge-small-en-v1.5          Vector embeddings for RAG and semantic caching
 8088   grounding        single (1)   WeVisOne-VL-4B             Word-level OCR boxes, open-vocab detection, referring localization, pointing, counting
 4000   litellm          infra        LiteLLM gateway            OpenAI-compatible failover gateway; routes to llama-swap
 8000   llama-swap       infra        llama-swap                 Model multiplexer behind LiteLLM; swaps models in/out of VRAM
@@ -122,7 +122,7 @@ PORT   SLOT             CARD         DEFAULT                    ROLE
   the GPUs/live services and an API key respectively.
 - **`cache_engine.py` can be opened and read** (it is a library, not a CLI). A
   no-GPU runner cannot verify the semantic cache behavior, because its
-  `LocalEmbedder` targets `:8087/v1/embeddings` and only the labelled offline
+  `LocalEmbedder` targets `:8084/v1/embeddings` and only the labelled offline
   fallback path would run without that embedding slot.
 - **`ports.py list` describes the GPU box**, including the Qwen3.6-35B-A3B local
   model on port 8080 and the decision slot on port 8083, but a CI runner with no

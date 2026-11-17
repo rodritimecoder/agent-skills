@@ -50,10 +50,10 @@ def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON format")
     parent_parser.add_argument("--host", default=None, help="OCR server host (default: $OCR_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
-    parent_parser.add_argument("--lighton-port", type=int, metavar="PORT", default=8085, help="LightOnOCR port (default: 8085)")
+    parent_parser.add_argument("--lighton-port", type=int, metavar="PORT", default=8082, help="LightOnOCR port (default: 8082)")
 
     parser = argparse.ArgumentParser(
-        description="ocr — LightOnOCR-3-0.8B document, PDF and slide OCR on :8085",
+        description="ocr — LightOnOCR-3-0.8B document, PDF and slide OCR on :8082",
         parents=[parent_parser]
     )
     sub = parser.add_subparsers(dest="command")
@@ -147,7 +147,7 @@ def main():
             if args.json:
                 print(json.dumps(st, indent=2))
             else:
-                print(f"LightOnOCR (:8085): {st['lighton'].upper()}")
+                print(f"LightOnOCR (:8082): {st['lighton'].upper()}")
 
         elif args.action in ("start", "restart"):
             if args.action == "restart":
@@ -158,7 +158,7 @@ def main():
             if args.json:
                 print(json.dumps({"action": args.action, "target": "lighton", "results": {"lighton": "started" if ok else "failed"}}, indent=2))
             else:
-                print(f"LightOnOCR (:8085): {'STARTED' if ok else 'FAILED'}")
+                print(f"LightOnOCR (:8082): {'STARTED' if ok else 'FAILED'}")
 
         elif args.action == "stop":
             ports = [args.lighton_port]
