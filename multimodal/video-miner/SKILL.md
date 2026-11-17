@@ -295,13 +295,19 @@ V=/run/media/rodri/AI/creator-vault
 vault-mine reindex                     # refresh INDEX.md
 git -C "$V" status --short             # inspect; scope out unrelated untracked work
 git-sync guarded-commit --repo "$V" \
-  --include kem_glitch/<new-entry>/ \
+  --include kem_glitch/<new-entry> \
   --include INDEX.md \
   --include kem_glitch/REELS_LEDGER.md \
   -m "docs(vault): mine <reel-id> — <topic>"
+git -C "$V" show --stat HEAD | grep <new-entry>   # PROVE the entry is in the commit
 git -C "$V" push origin main
 git -C "$V" status -sb                 # clean, except unrelated untracked dirs
 ```
+
+**Use the directory prefix without a trailing slash.** `--include <entry>/` can
+silently stage only `INDEX.md`, publishing a pointer to content that is not in
+the commit. The `git show --stat HEAD | grep <new-entry>` line is the gate: if it
+prints nothing, re-commit with the bare prefix before pushing.
 
 `source.mp4` is gitignored: the video stays local, notes/transcripts/frames
 publish. The generated `notes.md` is a **template stub** (`"Core Thesis | '...'"`)
