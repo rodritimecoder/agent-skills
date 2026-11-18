@@ -16,6 +16,8 @@ over 580+ tools, reached through one of two faces: bounded CLI calls
 keeps intermediate payloads out of the context window. Ranking internals:
 [references/retrieval-architecture.md](references/retrieval-architecture.md).
 
+File routing and machine-local facts: [CONTEXT.md](CONTEXT.md). Port/model facts stay in the root [CONTEXT.md](../../CONTEXT.md) — never duplicated here.
+
 ---
 
 ## ⚡ The discovery loop
