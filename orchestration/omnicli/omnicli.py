@@ -637,12 +637,93 @@ def _search_contract(con, res, as_json: bool, section: str, doc: str):
     _print_tool_contract(payload, about)
 
 
+_EMBED_AUTOSTART_TIMEOUT = 120.0   # bounded wait for `llama-rig up 8084`
+_EMBED_REBUILD_TIMEOUT = 300.0     # bounded wait for one `omnicli index --rebuild`
+
+
+def _ensure_embed_slot(con):
+    """Bring :8084 (bge-small) up so a search never silently drops to BM25.
+
+    Mirrors vault-mine's OCR auto-start: a registered slot is started through
+    `llama-rig up` and left warm — `llama-rig down 8084` is the manual way to
+    reclaim the VRAM. Every failure degrades to the existing BM25 path; a
+    search must never crash because a model server could not start.
+    """
+    if os.environ.get("OMNICLI_NO_AUTOSTART") == "1":
+        return con
+    if search is None or search.embedding_available():
+        return con
+
+    manual = "llama-rig up local-embed-bge  (alias of :8084)"
+    rig = shutil.which("llama-rig")
+    if not rig:
+        print(f"⚠️  [omnicli] dense leg offline and llama-rig not on PATH — "
+              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
+        return con
+
+    cmd = [rig, "up", "8084"]
+    shown = "llama-rig up 8084"
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True,
+                             timeout=_EMBED_AUTOSTART_TIMEOUT)
+        detail = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
+        if res.returncode != 0:
+            print(f"⚠️  [omnicli] `{shown}` failed: {detail} — "
+                  f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
+            return con
+    except subprocess.TimeoutExpired:
+        print(f"⚠️  [omnicli] `{shown}` timed out after {_EMBED_AUTOSTART_TIMEOUT:.0f}s — "
+              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
+        return con
+    except OSError as exc:
+        print(f"⚠️  [omnicli] `{shown}` could not run ({exc}) — "
+              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
+        return con
+
+    print(f"   [omnicli] auto-started dense leg: `{shown}` "
+          f"(left warm; `llama-rig down 8084` frees VRAM)", file=sys.stderr)
+    search._PROBE = {"at": 0.0, "ok": False}  # discard the down probe
+    if not search.embedding_available():
+        print(f"⚠️  [omnicli] :8084 still down after `{shown}` — "
+              f"start it with `{manual}`; staying on BM25", file=sys.stderr)
+        return con
+
+    # An index built while dense was offline has zero stored vectors. Run one
+    # rebuild (never a loop); cmd_index does not re-enter search.
+    if vectors is not None and vectors.status(con).get("vectors", 0) == 0:
+        con.close()  # release any read lock so the rebuild can write
+        rebuilt = False
+        try:
+            rr = subprocess.run(
+                [sys.executable, str(SCRIPT_PATH), "index", "--rebuild"],
+                capture_output=True, text=True, timeout=_EMBED_REBUILD_TIMEOUT,
+            )
+            if rr.returncode == 0:
+                rebuilt = True
+            else:
+                detail = ((rr.stderr or rr.stdout or "").strip().splitlines() or [""])[-1]
+                print(f"⚠️  [omnicli] `omnicli index --rebuild` failed: {detail} — "
+                      f"rerun it manually; BM25 where vectors are missing",
+                      file=sys.stderr)
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            print(f"⚠️  [omnicli] `omnicli index --rebuild` failed ({exc}) — "
+                  f"rerun it manually; BM25 where vectors are missing", file=sys.stderr)
+        finally:
+            con = builder.connect()
+        if rebuilt:
+            print("   [omnicli] built missing vectors: `omnicli index --rebuild` (once)",
+                  file=sys.stderr)
+    return con
+
+
 def cmd_search(query: str, as_json: bool = False, limit: int = 6,
                explain: bool = False, no_rerank: bool = False, rerank: str = "auto",
                chunks: bool = False, fusion: str = "auto",
                depth: str = "brief", section: str = "", doc: str = ""):
     con = _require_catalog()
     mode = "never" if no_rerank else rerank
+    if mode != "never":
+        con = _ensure_embed_slot(con)
     res = search.search(con, query, limit=limit, rerank_enabled=mode,
                         fusion=fusion, explain=explain)
 

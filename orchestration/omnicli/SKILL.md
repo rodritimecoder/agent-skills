@@ -36,7 +36,15 @@ omnicli search "调研一下这个话题在网上的讨论"
 BM25 over every skill's full body + curated aliases (weight 12) matches exact
 tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
 embedding leg over descriptions (`K=60`) and damps multi-chunk bodies
-(`OMNICLI_CHUNK_ALPHA=0.2`). Falls back cleanly to BM25 when the embedding endpoint is offline.
+(`OMNICLI_CHUNK_ALPHA=0.2`). The dense leg is `:8084` (bge-small-en-v1.5,
+~400 MB VRAM). Unless `--rerank never` / `--no-rerank` is set, `omnicli search`
+probes `:8084` and, if it is down, runs `llama-rig up 8084` once with a bounded
+timeout, clears the cached probe and re-probes; if the index was built with
+dense offline (zero vectors), it runs exactly one `omnicli index --rebuild`.
+The slot is left warm — `llama-rig down 8084` frees the VRAM manually. Set
+`OMNICLI_NO_AUTOSTART=1` to opt out; a failed start degrades to BM25 with a
+stderr line naming the manual fix (`llama-rig up local-embed-bge`). The slot
+roster, launcher and alias `local-embed-bge` are owned by the `model-layer` skill.
 See [references/retrieval-architecture.md](references/retrieval-architecture.md)
 for benchmarks and ranking internals.
 
