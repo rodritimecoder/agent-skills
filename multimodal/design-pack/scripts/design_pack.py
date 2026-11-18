@@ -70,7 +70,7 @@ def declared(tokens: dict[str, str]) -> dict[str, set[str]]:
                     out["fonts"].add(fam)
         elif name.startswith("--fs-"):
             out["sizes"].add(value.replace(" ", ""))
-        elif name.startswith("--r-") or name.startswith("--b-"):
+        elif name.startswith("--r-"):
             out["radii"].add(value.replace(" ", ""))
         for colour in HEX.findall(value) + FUNC_COLOUR.findall(value):
             out["colours"].add(norm_hex(colour) if colour.startswith("#") else colour.lower())
@@ -128,10 +128,14 @@ def check(path: Path, tokens: dict[str, str]) -> tuple[list[str], list[str]]:
 
         for m in EASING.finditer(line):
             value = m.group(1).lower()
-            if "steps(" in value or "linear" in value or value.strip() in SAFE_KEYWORDS:
+            clean = re.sub(r"\s*!important\s*$", "", value.strip())
+            if "steps(" in clean or "linear" in clean or clean in SAFE_KEYWORDS:
                 continue
-            if re.search(r"ease|cubic-bezier|spring|bounce", value):
-                warn.append(f"{path.name}:{n}  eased motion — this look steps: {value.strip()}")
+            if re.match(r"^(?:none|0m?s)(?:\s+(?:none|0m?s))*$", clean):
+                continue
+            if re.match(r"^(?:all|[a-z-]+)\s+0m?s(?:\s+0m?s)?$", clean):
+                continue
+            warn.append(f"{path.name}:{n}  eased motion — this look steps: {value.strip()}")
 
     return fail, warn
 
@@ -222,8 +226,10 @@ def cmd_tokens(args) -> int:
 
 def cmd_sprite(args) -> int:
     js = (LOOKS / args.look / "sprites.js").read_text()
+    maps_block = re.search(r"(?:const|let|var)\s+MAPS\s*=\s*\{(.*?)\n[ \t]*\};", js, re.S)
+    maps_src = maps_block.group(1) if maps_block else js
     maps = {name: re.findall(r'"([.#A-Za-z]+)"', body)
-            for name, body in re.findall(r"(\w+):\s*\[(.*?)\]", js, re.S)}
+            for name, body in re.findall(r"(\w+):\s*\[(.*?)\]", maps_src, re.S)}
     aliases = dict(re.findall(r"(\w+):\s*\{\s*map:\s*\"(\w+)\"", js))
     wanted = maps if args.name in ("all", "*") else None
     if wanted is None:

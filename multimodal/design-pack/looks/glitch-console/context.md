@@ -60,9 +60,9 @@ No raw `<button>`, `<input>`, or `<select>` controls inside terminal windows. In
 --pink:    #dd6b95;     /* copy & alert */
 --mint:    #6fcbbf;     /* tests & passed checkmark */
 --yellow:  #f2c94c;     /* NEEDS YOU, numbered options, attention */
---violet:  #7848f6;     /* progress cell / optional astra */
+--violet:  #7848f6;     /* optional astra / timing chart */
 --red:     #ee3d19;     /* alarm */
 --ground:  #7dabf3;     /* periwinkle halftone poster ground */
---ground-dot: #5468b8;
+--ground-dot: #709ee3;
 --font-mono: "FantasqueSansM Nerd Font Mono", "Fantasque Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 ```

@@ -4,7 +4,7 @@
    method is in README.md ("Motion"); do not adjust a hold or a row by feel.
 
    The rule the reel obeys: THE BOT NEVER EASES. Its top edge jumps between two
-   resting rows inside a single frame (33 ms) and sits there for 100-726 ms.
+   resting rows inside a single frame (33 ms) and sits there for 66-660 ms.
    What looks smooth in the video is the terminal transcript scrolling, not the
    sprite. So: snap the pose, scroll the text.
 
@@ -109,7 +109,7 @@
   };
 
   /* Measured hold lengths, in ms, snapped to the 30 fps frame grid (33 ms). */
-  const HOLDS = [100, 132, 165, 198, 231, 330, 363, 396, 462, 495, 660, 726];
+  const HOLDS = [66, 99, 132, 165, 198, 231, 264, 297, 330, 363, 396, 495, 660];
 
   function idleProgram(seed) {
     const bopCount = (seed % 2) + 1;

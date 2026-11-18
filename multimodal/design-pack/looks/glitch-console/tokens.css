@@ -31,7 +31,7 @@
   --pink:     #dd6b95;  /* copy & alert */
   --mint:     #6fcbbf;  /* tests & passed checkmark */
   --yellow:   #f2c94c;  /* NEEDS YOU, numbered options, attention */
-  --violet:   #7848f6;  /* progress cell / optional astra */
+  --violet:   #7848f6;  /* optional astra & timing chart accent */
   --red:      #ee3d19;  /* alarm */
   --sol-face: #fbdab2;  /* optional sol face */
 
@@ -40,7 +40,7 @@
   --dot-yellow: #f6d354;
   --dot-mint:   #6fcbbf;
   --ground:     #7dabf3; /* periwinkle poster halftone toggle */
-  --ground-dot: #5468b8; /* halftone dot */
+  --ground-dot: #709ee3; /* halftone dot */
 
   /* ── type: strict monospace everywhere ──────────────────────────── */
   --font-mono: "FantasqueSansM Nerd Font Mono", "Fantasque Sans Mono",
@@ -84,11 +84,10 @@
 
   /* ── motion: stepped at 30 fps, never eased ─────────────────────── */
   --snap: 33ms;
-  --hold-min: 100ms;
+  --hold-min: 66ms;
   --hold-typical: 363ms;
-  --hold-max: 726ms;
+  --hold-max: 660ms;
   --step-action: 84ms;
-  --step-flash: 90ms;
   --spawn-total: 759ms;
   --scroll: 1200ms;
 
@@ -348,7 +347,7 @@ body.is-ground,
 
 .bar { display: flex; gap: 2px; height: 12px; }
 .bar__cell { background: var(--ink-600); flex: 1; min-width: 8px; }
-.bar__cell--on   { background: var(--violet); }
+.bar__cell--on   { background: var(--mint); }
 .bar__cell--dim  { background: var(--dim); }
 .bar__cell--warn { background: var(--yellow); }
 .progress-row .bar { height: 12px; width: auto; }

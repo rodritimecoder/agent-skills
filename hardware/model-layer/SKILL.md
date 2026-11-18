@@ -112,7 +112,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
 | `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
-| `raon` | `:8085` | `local-raon-nano` | `raon-nano-heretic.sh` | Raon-1 Nano Heretic (Q4_K_M) | `models/xiq/Raon-1-nano-heretic-GGUF/Raon-1-nano-heretic-Q4_K_M.gguf` | — |
+| `raon` | `:8085` | `local-raon-nano` | `raon-nano-heretic.sh` | Raon-1 Nano Abliterated (Q4_K_M) | `models/xiq/alternatives/abliterated-q4km.gguf` | — |
 
 ### `:8080` llm — `local-coder-genesis`
 
@@ -201,6 +201,6 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Health:** `curl -s http://127.0.0.1:8085/health`
 - **API:** `/v1/chat/completions`
 - **Owner:** `local-llm` · **Used by:** —
-- **Weights:** `models/xiq/Raon-1-nano-heretic-GGUF/Raon-1-nano-heretic-Q4_K_M.gguf`
+- **Weights:** `models/xiq/alternatives/abliterated-q4km.gguf`
 - **Quirks:** Own port beside the 8080-8084 cluster. No skill drives this slot yet; call it directly. Custom `raon1nano` architecture (3.1B total / 1.5B effective, 24 hybrid RDA+MLA layers) — upstream llama.cpp rejects this GGUF.
 <!-- ports:end -->

@@ -66,7 +66,7 @@
       "alias": "local-raon-nano",
       "vram_mb": 2600,
       "pinned": false,
-      "name": "Raon-1 Nano Heretic",
+      "name": "Raon-1 Nano Abliterated",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/raon-nano-heretic.sh",
       "role": "Korean/English thinking chatbot \u2014 Raon-1 Nano Heretic"
     }

@@ -74,6 +74,76 @@ class TestDesignPackGates(unittest.TestCase):
             f"Expected all defect checks to trigger, got {checks_hit}",
         )
 
+    def test_verify_rejects_border_width_as_radius(self):
+        with tempfile.TemporaryDirectory() as d:
+            page = Path(d) / "bad_radius.html"
+            page.write_text(
+                "<!doctype html><html><head><style>"
+                ".box { border-radius: 3px; }"
+                "</style></head><body></body></html>\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [sys.executable, str(DESIGN_PACK), "verify", str(page), "--json"],
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        data = json.loads(proc.stdout)
+        self.assertFalse(data["pass"])
+        self.assertTrue(
+            any("corner radius outside the look: 3px" in msg for msg in data["files"][0]["fail"]),
+            data,
+        )
+
+    def test_verify_rejects_implicit_ease_and_allows_stepped(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "implicit_ease.html"
+            bad.write_text(
+                "<!doctype html><html><head><style>"
+                ".fade { transition: opacity 200ms; }"
+                "</style></head><body></body></html>\n",
+                encoding="utf-8",
+            )
+            good = Path(d) / "stepped.html"
+            good.write_text(
+                "<!doctype html><html><head><style>"
+                ".snap { transition: none; animation: blink 1s steps(2, start) infinite; }"
+                "</style></head><body></body></html>\n",
+                encoding="utf-8",
+            )
+            bad_proc = subprocess.run(
+                [sys.executable, str(DESIGN_PACK), "verify", str(bad), "--json"],
+                capture_output=True,
+                text=True,
+            )
+            good_proc = subprocess.run(
+                [sys.executable, str(DESIGN_PACK), "verify", str(good), "--json"],
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(bad_proc.returncode, 1, bad_proc.stdout + bad_proc.stderr)
+        bad_data = json.loads(bad_proc.stdout)
+        self.assertFalse(bad_data["pass"])
+        self.assertTrue(
+            any("eased motion" in msg for msg in bad_data["files"][0]["fail"]),
+            bad_data,
+        )
+        self.assertEqual(good_proc.returncode, 0, good_proc.stdout + good_proc.stderr)
+        good_data = json.loads(good_proc.stdout)
+        self.assertTrue(good_data["pass"])
+
+    def test_sprite_all_only_lists_maps_without_ragged_rows(self):
+        proc = subprocess.run(
+            [sys.executable, str(DESIGN_PACK), "sprite", "all"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("conductor", proc.stdout)
+        self.assertNotIn("walk", proc.stdout)
+        self.assertNotIn("ragged", proc.stdout)
+
 
 class TestRunnerAbsence(unittest.TestCase):
     """A host without the browser runner skips the runtime gate, never fails it."""
