@@ -118,7 +118,8 @@ emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump r
 - **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
 - **Containment & limits:** **`strict` is the default** — use `--sandbox write` to opt out (needed for network plans). `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
 
-Full SDK API and authoring guidelines:
+Architecture, full SDK API and authoring guidelines:
+- [references/skill-stack-architecture.md](references/skill-stack-architecture.md) (how agentskills.io, ICM's `AGENTS.md`/`CONTEXT.md`, and omnicli compose into one progressive-disclosure ladder)
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
 - [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `tests/verify_agent_skills.py`)
 
