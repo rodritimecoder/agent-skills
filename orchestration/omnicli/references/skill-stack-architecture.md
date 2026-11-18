@@ -19,7 +19,7 @@ This document is the architecture-level counterpart to [agent-skills-checklist.m
 | Resources | `references/`, `assets/` | L3 `_shared/`, `references/` — *what rules apply?* | `invoke`, `--omni-buffer`, Code Mode variables | on demand |
 | State | output files | L4 `output/`, `check.md` — *what am I working with?* | `emitState` session JSON, `check.md` | varies |
 
-The upper tiers of each column are a **catalog**: small, stable, and holding no content payload. The lower tiers are **shelves**: the actual material. Every layer reads down until it has enough, then stops. A step's full context stays under ~8,000 tokens — ICM's rule, which omnicli turns into an 8 KB response cap.
+The upper tiers of each column are a **catalog**: small, stable, and holding no content payload. The lower tiers are **shelves**: the actual material. Every layer reads down until it has enough, then stops. ICM's ~8,000-token step budget and omnicli's 8 KB bounded reply are the same *discipline* — load/prevent only what the step needs — but they are an **analogy, not an equivalence**: one is a token budget on context, the other a byte cap on a single reply, enforced by different mechanisms.
 
 Consequences that hold across all three encodings:
 
@@ -90,6 +90,52 @@ ICM's structural primitives — Sequence (numbered folders, one stage's output f
 
 One plan, one turn. The retired stdio MCP server exists in `archived/omnicli-mcp/` precisely because JSON-RPC round-trips burn prompt tokens while JS variables cost nothing.
 
+### Batch multiple intents with parallel()
+
+When you already know the batch, don't spend one CLI call per intent. `parallel()`
+fans independent async thunks out inside the same one-plan/one-turn shape and
+returns results **in input order**, even though the calls finish out of order.
+The default concurrency limit is **8** (`parallel(calls, limit = 8)`); the call
+budget is `--max-calls`, which defaults to **100**; and `strict` is the default
+sandbox (network disabled, `$HOME` masked, tool calls bridged over a UNIX
+socket). One failure rejects the batch as `parallel[<index>]: <message>`, so
+keep intents distinguishable.
+
+```js
+import { search, parallel, emitResult } from "omnicli_tools";
+
+const INTENTS = [
+  "transcribe a zoom lecture",
+  "ocr a slide",
+  "route a calibrated decision",
+];
+
+const hits = await parallel(INTENTS.map((intent) => () => search(intent, 2)));
+for (const [i, rows] of hits.entries()) {
+  const top = rows[0] ?? {};
+  console.log(`${INTENTS[i]} -> ${top.skill ?? "none"} (${top.score ?? 0})`);
+}
+emitResult({
+  intents: INTENTS.length,
+  hits: hits.map((rows, i) => ({ intent: INTENTS[i], top: rows[0]?.skill ?? null })),
+});
+```
+
+`search(intent, 2)` returns ranked `SearchResult[]` rows with `.skill` and
+`.score`. Check `omnicli spec --stubs` for the typed surface rather than guessing
+result shapes. That matters when you chain into `describe`: a skill-level
+describe returns `{ skill, kind, path, frontmatter, body_tokens, outline, tools }`,
+and its outline items use `.heading` (not `.title`) — there is no `.sections` key.
+Project those fields only; a projection built on `d.sections` / `s.title` would
+silently emit `undefined`.
+
+**Which face?** Use the CLI `omnicli search "<intent>"` for **one** exploratory
+intent where you want to *see the ranking* and read the evidence before
+deciding. Use an `omnicli exec` plan for a **known batch**, or when search is a
+chain into `describe`/`invoke` whose results you filter and project in JS. Same
+router, two faces: the CLI shows you the ranking; the plan keeps intermediates
+out of your prompt.
+
 ---
 
 ## 5. Capability retrieval is not content retrieval
@@ -103,6 +149,17 @@ This is the boundary most likely to be misread. `omnicli search` retrieves **cap
 | "what superseded claim X?" | `graph-memory recall --hops 2` | k-hop entity traversal |
 
 Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. `omnicli search` is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.
+
+> **Caveat — not every Kem figure is equally grounded.** The `0.97×` / `2.05×`
+> ICM-vs-NVK token multipliers and the `70% → 92.5%` citation-hook figures are
+> flagged **UNVERIFIED** in the vault note
+> (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`, "Unverified"
+> section) because they are not spoken in the reel and rest on the reel's OCR
+> timeline. By contrast, the `2×–3.35×` cost range and the "only NVK improved"
+> conclusion **are** grounded in the transcript — NVK "got more right ... but it
+> cost about twice as much", while the other two "did no better" and one "spent
+> more than three times as many tokens". Cite the transcript-backed half; flag
+> the OCR-backed half.
 
 Both are catalogs, but over different things. Keep them distinct.
 
@@ -131,7 +188,7 @@ Verification, after any skill change:
 omnicli index --rebuild
 omnicli spec --skill <skill-name> --stubs
 python3 tests/verify_agent_skills.py --skill <skill-name> --strict
-python3 scripts/verify_code_mode.py --skill <skill-name>
+python3 tests/verify_code_mode.py --skill <skill-name>
 python3 tests/skillcheck.py all
 for cli in <affected entrypoints>; do python3 "$cli" --help >/dev/null || echo "BROKEN: $cli"; done
 ```
@@ -145,5 +202,7 @@ Then `sync-skills propagate` to refresh `surface/`, `~/.local/bin`, harnesses an
 - [agent-skills-checklist.md](agent-skills-checklist.md) — frontmatter rules, script contract, verification gates
 - [retrieval-architecture.md](retrieval-architecture.md) — BM25/dense fusion, benchmarks, provenance
 - [code-mode-sdk.md](code-mode-sdk.md) — the generated SDK, sandbox modes, `parallel`, state
+- [discovery_and_invoke.mjs](../examples/discovery_and_invoke.mjs) — search + spec in one plan
+- [in_memory_filter.mjs](../examples/in_memory_filter.mjs) — project in JS, emit one result
 - [harnesses/index.md](../harnesses/index.md) — how the same contract maps onto each host harness
 - `icm-architect` skill — `references/core.md` for the five-layer hierarchy and contract format
