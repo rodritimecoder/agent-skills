@@ -81,8 +81,8 @@ openrouter-free chat \
   --project content
 ```
 
-### 4. Calibrated Decision Routing (`decide`)
-Typed, non-generative decisions via the JEV models (`baseten/mammoth-1:free` 27B, `baseten/elephant-1:free` 9B) and Mercury Decide, with optional field projection. Routing is optimised: the fast 9B handles simple/binary decisions, the 27B handles richer multi-option decisions. Full multi-question payloads are supported via `--questions-json`:
+### 4. Typed Decisions (`decide`)
+Typed, non-generative decisions via the JEV models (`baseten/mammoth-1:free` 27B, `baseten/elephant-1:free` 9B) and Mercury Decide, with optional field projection. Model choice is internal: the fast 9B handles simple/binary decisions, the 27B handles richer multi-option decisions. Full multi-question payloads are supported via `--questions-json`:
 ```bash
 # Full response
 openrouter-free decide \

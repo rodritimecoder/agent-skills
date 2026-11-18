@@ -50,10 +50,10 @@
       "scrape",
       "social media posts",
       "reddit twitter youtube bilibili xiaohongshu",
-      "调研",
-      "搜索",
-      "查一下",
-      "网上"
+      "\u8c03\u7814",
+      "\u641c\u7d22",
+      "\u67e5\u4e00\u4e0b",
+      "\u7f51\u4e0a"
     ],
     "tags": [
       "research",
@@ -582,7 +582,8 @@
       "model routing decision",
       "pick a cheap model for this prompt",
       "delegate prompt to model",
-      "route this task to a model"
+      "route this task to a model",
+      "choose the model to handle a request"
     ],
     "tags": [
       "routing",
