@@ -64,11 +64,11 @@
     },
     "8085": {
       "alias": "local-raon-nano",
-      "vram_mb": 2600,
+      "vram_mb": 3400,
       "pinned": false,
-      "name": "Raon-1 Nano Abliterated",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/raon-nano-heretic.sh",
-      "role": "Korean/English thinking chatbot \u2014 Raon-1 Nano Heretic"
+      "name": "Raon-1 nano (official)",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/raon-nano-official-mtp.sh",
+      "role": "Korean/English thinking chatbot \u2014 Raon-1 nano (official Q8_0_MTP)"
     }
   }
 }

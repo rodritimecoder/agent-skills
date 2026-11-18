@@ -112,7 +112,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
 | `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
-| `raon` | `:8085` | `local-raon-nano` | `raon-nano-heretic.sh` | Raon-1 Nano Abliterated (Q4_K_M) | `models/xiq/alternatives/abliterated-q4km.gguf` | — |
+| `raon` | `:8085` | `local-raon-nano` | `raon-nano-official-mtp.sh` | Raon-1 nano (official) (Q8_0_MTP) | `models/KRAFTON/Raon-1-nano-gguf/raon-1-nano-Q8_0_MTP.gguf` | — |
 
 ### `:8080` llm — `local-coder-genesis`
 
@@ -124,7 +124,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Owner:** `local-llm` · **Used by:** local-llm, omnicli
 - **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf` · `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf`
 - **Quirks:** 131072 context, nextn head, --spec-type draft-mtp (n-max 4), dual-GPU 50/50 on the upstream Vulkan build.
-- **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate) · `llama-router (multi-model multiplexer)` (n/a — presets live in hardware/model-layer/config/llama-router.ini, candidate)
+- **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Clover-35B-A3B-Preview` (Q4_K_M, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate) · `llama-router (multi-model multiplexer)` (n/a — presets live in hardware/model-layer/config/llama-router.ini, candidate)
 
 ### `:8081` audio — `local-audio-audiocpp`
 
@@ -195,12 +195,12 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 
 ### `:8085` raon — `local-raon-nano`
 
-- **Role:** Korean/English thinking chatbot — Raon-1 Nano Heretic
+- **Role:** Korean/English thinking chatbot — Raon-1 nano (official Q8_0_MTP)
 - **Service:** llama-server (KRAFTON raon-1-nano fork, Vulkan)
-- **Start:** `raon-nano-heretic.sh` (volume `sh/`; in-repo copy `launchers/raon-nano-heretic.sh`)
+- **Start:** `raon-nano-official-mtp.sh` (volume `sh/`; in-repo copy `launchers/raon-nano-official-mtp.sh`)
 - **Health:** `curl -s http://127.0.0.1:8085/health`
 - **API:** `/v1/chat/completions`
 - **Owner:** `local-llm` · **Used by:** —
-- **Weights:** `models/xiq/alternatives/abliterated-q4km.gguf`
-- **Quirks:** Own port beside the 8080-8084 cluster. No skill drives this slot yet; call it directly. Custom `raon1nano` architecture (3.1B total / 1.5B effective, 24 hybrid RDA+MLA layers) — upstream llama.cpp rejects this GGUF.
+- **Weights:** `models/KRAFTON/Raon-1-nano-gguf/raon-1-nano-Q8_0_MTP.gguf`
+- **Quirks:** Own port beside the 8080-8084 cluster. No skill drives this slot yet; call it directly. KRAFTON/Raon-1-nano-gguf Q8_0_MTP on KRAFTON fork (Vulkan).
 <!-- ports:end -->
