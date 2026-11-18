@@ -112,6 +112,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
 | `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
+| `raon` | `:8085` | `local-raon-nano` | `raon-nano-heretic.sh` | Raon-1 Nano Heretic (Q4_K_M) | `models/xiq/Raon-1-nano-heretic-GGUF/Raon-1-nano-heretic-Q4_K_M.gguf` | — |
 
 ### `:8080` llm — `local-coder-genesis`
 
@@ -191,4 +192,15 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Owner:** `local-llm` · **Used by:** —
 - **Weights:** `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf`
 - **Quirks:** No skill drives this slot; call it directly. The launcher honours PORT=, but any other port needs a manifest slot first or ports.py check fails. LiquidAI LFM3 1.7B, uncensored AD tune, RP workload.
+
+### `:8085` raon — `local-raon-nano`
+
+- **Role:** Korean/English thinking chatbot — Raon-1 Nano Heretic
+- **Service:** llama-server (KRAFTON raon-1-nano fork, Vulkan)
+- **Start:** `raon-nano-heretic.sh` (volume `sh/`; in-repo copy `launchers/raon-nano-heretic.sh`)
+- **Health:** `curl -s http://127.0.0.1:8085/health`
+- **API:** `/v1/chat/completions`
+- **Owner:** `local-llm` · **Used by:** —
+- **Weights:** `models/xiq/Raon-1-nano-heretic-GGUF/Raon-1-nano-heretic-Q4_K_M.gguf`
+- **Quirks:** Own port beside the 8080-8084 cluster. No skill drives this slot yet; call it directly. Custom `raon1nano` architecture (3.1B total / 1.5B effective, 24 hybrid RDA+MLA layers) — upstream llama.cpp rejects this GGUF.
 <!-- ports:end -->

@@ -61,6 +61,14 @@
       "name": "LFM3-1.7B-Uncensored-AD",
       "cmd": "bash $HOME/src/my-agent-skills/launchers/lfm3-1.7b-uncensored.sh",
       "role": "Secondary generative LLM \u2014 uncensored roleplay and short-form creative, runs beside the primary :8080 slot instead of swapping it out"
+    },
+    "8085": {
+      "alias": "local-raon-nano",
+      "vram_mb": 2600,
+      "pinned": false,
+      "name": "Raon-1 Nano Heretic",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/raon-nano-heretic.sh",
+      "role": "Korean/English thinking chatbot \u2014 Raon-1 Nano Heretic"
     }
   }
 }
