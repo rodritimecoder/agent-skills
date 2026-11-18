@@ -144,10 +144,17 @@ Valen swaps the envelope, not the primitives: `state.messages` with inline data 
 
 ---
 
-## 📜 Historical Reference: pplx-decider-flash v1.2
+## 📜 Historical reference — pplx-decider (retired)
 
-The previous decision model in this slot was Perplexity's `pplx-decider-flash-v1.2` (4.8B).
+**h2o-lightning-4b is the main/primary decider in this slot.** Perplexity's
+`pplx-decider-flash-v1.2` (4.8B) is a **retired** historical candidate (already
+marked `retired` in `ports.json`) — its evidence belongs here for reference,
+not as a competing skill or a live tool. For the full A/B evidence see
+[`docs/vision-jev-ab-imajev-vs-pplx.md`](../../docs/vision-jev-ab-imajev-vs-pplx.md).
 
-- **Architecture:** Qwen3.5-4B backbone with a `[255, 2560]` BF16 readout head distilled from 27B teachers.
-- **Why It Was Retired:** It required non-causal attention (`qwen35.attention.causal=false`) and an 8192-token ubatch (`-ub 8192 -b 8192`) that consumed ~8.2 GB VRAM and spilled ~7.9 GB into GTT system RAM alongside Qwen 35B.
-- **Legacy Client:** Preserved at [`modules/pplx_decider.py`](modules/pplx_decider.py) for testing joint protocol v3.
+- **Architecture:** Qwen3.5-4B backbone with a Qwen3-VL vision tower and a `[255, 2560]` BF16 readout head distilled from 27B teachers; joint protocol v3 decision head.
+- **Local A/B findings vs Imajev-4B:** pplx had better local calibration (ECE 0.040 vs 0.150 category; 0.084 vs 0.179 spatial-swap) and a faster p50 (0.70/0.77 s vs 1.13/1.19 s). It **cannot do the bbox track** (empty chat completions, 0 % parse). Both models share a blind spot on hard spatial negatives — 0.500 accuracy while confidently wrong. Neither 4B head localises; both detect.
+- **Why it was retired:** alongside the 35B model it required non-causal attention (`qwen35.attention.causal=false`) and an 8192-token ubatch (`-ub 8192 -b 8192`), consuming ~8.2 GB VRAM and spilling ~7.9 GB into GTT system RAM.
+- **Why nothing is deleted:** `measure_tokens.py` still uses the pplx tokenizer, and the 3.6 GB weights are retained for reproduction of the A/B numbers.
+- **Published scores:** pplx has **no published image-board/vision score**. The "Decision Index 0.3: 60.06" figure is the **text** JevBench (text-only), not a vision score.
+- **Legacy client:** Preserved at [`modules/pplx_decider.py`](modules/pplx_decider.py) for testing joint protocol v3.

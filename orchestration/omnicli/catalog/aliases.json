@@ -24,25 +24,6 @@
       "servers"
     ]
   },
-  "local-hub": {
-    "aliases": [
-      "llm",
-      "local model",
-      "servers on this machine",
-      "health check endpoints",
-      "port status",
-      "tool registry",
-      "find a tool",
-      "search skills",
-      "run a skill",
-      "gateway"
-    ],
-    "tags": [
-      "gateway",
-      "inference",
-      "discovery"
-    ]
-  },
   "academic-icm": {
     "aliases": [
       "course hub",
@@ -313,18 +294,7 @@
       "multiple choice",
       "argmax over labels",
       "how likely",
-      "calibrated",
-      "front end visual test",
-      "bounding box",
-      "locate object in image",
-      "where is it in image",
-      "object detection box",
-      "crop image region",
-      "click coordinates on screenshot",
-      "is it in the photo",
-      "visual grounding box",
-      "image region coordinates",
-      "find element on screen"
+      "calibrated"
     ],
     "tags": [
       "classification",
@@ -432,7 +402,6 @@
   "openrouter-free": {
     "aliases": [
       "free model",
-      "delegate to cloud",
       "compound bash batch",
       "text embeddings api",
       "speech synthesis api",
@@ -610,7 +579,10 @@
       "route this prompt to the right model",
       "decide which model should answer",
       "choose the model for this prompt",
-      "model routing decision"
+      "model routing decision",
+      "pick a cheap model for this prompt",
+      "delegate prompt to model",
+      "route this task to a model"
     ],
     "tags": [
       "routing",
@@ -795,7 +767,7 @@
   "local-llm": {
     "aliases": [
       "local llm",
-      "local model",
+      "local coding model",
       "genesis",
       "35b",
       "write a python script",
@@ -820,7 +792,7 @@
       "cornell html sheet",
       "pipeline micro gates",
       "run pipeline",
-      "step ledger"
+      "course pipeline stage tracking"
     ],
     "tags": []
   },
@@ -938,29 +910,6 @@
     ],
     "tags": []
   },
-  "companion": {
-    "aliases": [
-      "talk to the model",
-      "voice chat page",
-      "pixel avatar",
-      "hold to talk",
-      "speech interface",
-      "voice interface homelab"
-    ],
-    "tags": []
-  },
-  "deck": {
-    "aliases": [
-      "homelab dashboard",
-      "what is running",
-      "vram usage",
-      "gpu status page",
-      "model loaded",
-      "tailscale devices online",
-      "status page"
-    ],
-    "tags": []
-  },
   "free-swarm": {
     "aliases": [
       "several models answer",
@@ -969,6 +918,84 @@
       "majority vote",
       "cheap parallel review",
       "fan out question"
+    ],
+    "tags": []
+  },
+  "apiv-loop": {
+    "aliases": [
+      "align plan implement verify",
+      "intent driven build loop",
+      "five level validation",
+      "grill the brief first",
+      "verify like a user"
+    ],
+    "tags": []
+  },
+  "decision-model": {
+    "aliases": [
+      "decision model on 8083",
+      "which decision candidate is loaded",
+      "typed judgement client",
+      "gliclass speed question",
+      "bounding box from the decision slot"
+    ],
+    "tags": []
+  },
+  "gemini-studio": {
+    "aliases": [
+      "google ai studio free tier",
+      "gemini flash lite subagent",
+      "gemini embeddings batch",
+      "antigravity managed agent",
+      "gemini failover path"
+    ],
+    "tags": []
+  },
+  "kem-dev-loop": {
+    "aliases": [
+      "six phase build lifecycle",
+      "full route development",
+      "holdout before dispatch",
+      "plan approval gate",
+      "grounded evidence gate"
+    ],
+    "tags": []
+  },
+  "kem-thought": {
+    "aliases": [
+      "kem steering principles",
+      "kem mode contract",
+      "load a named principle",
+      "control run before shipping",
+      "deterministic step ownership"
+    ],
+    "tags": []
+  },
+  "memory": {
+    "aliases": [
+      "four layer agent memory",
+      "dream notes into a wiki",
+      "standing memory header",
+      "cross reference transcripts",
+      "recall from an earlier session"
+    ],
+    "tags": []
+  },
+  "notes-index": {
+    "aliases": [
+      "search my notes",
+      "find in my notes",
+      "search the vault"
+    ],
+    "tags": []
+  },
+  "reply-meter": {
+    "aliases": [
+      "score an agent reply",
+      "words and sentences count",
+      "faults per 100 words",
+      "stop hook reply scorer",
+      "banned modals in prose"
     ],
     "tags": []
   }

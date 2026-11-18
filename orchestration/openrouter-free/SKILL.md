@@ -4,11 +4,12 @@ name: openrouter-free
 description: >
   Use when a task needs hosted inference without spending paid quota — free-tier
   coding loops, batching several shell commands into one cloud request,
-  embeddings, speech synthesis, bulk decisions — or when the local GPU is busy.
-  Delegates autonomous coding subagent loops, compound bash batching, text
-  embeddings, calibrated decision routing and TTS to verified free OpenRouter
-  endpoints (NVIDIA Nemotron Ultra/Lightning, Inception Mercury Decide, Fish
-  Audio, LFM Embed) with Homelab priority and Gemini failover. Needs
+  embeddings, speech synthesis and bulk typed yes/no/score decisions — or when the
+  local GPU is busy. Delegates autonomous coding subagent loops, compound bash
+  batching, text embeddings and TTS to verified free OpenRouter endpoints (NVIDIA
+  Nemotron Ultra/Lightning, Inception Mercury Decide, Fish Audio, LFM Embed) with
+  Homelab priority and Gemini failover. Typed yes/no/score decisions only — NOT
+  request routing or model selection (use eval-router for that). Needs
   OPENROUTER_API_KEY; not a paid-quota substitute.
 
 compatibility: "Requires network access to openrouter.ai and an API key (OPENROUTER_API_KEY). The optional Gemini tier needs GEMINI_API_KEY."

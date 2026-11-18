@@ -102,3 +102,16 @@ If any of these fail, the backend is not done. Nothing else is the task.
 - A launcher in `AI/sh/` and its propagated copy.
 - A client that answers all four primitives against the new occupant.
 - This file updated when a trap is discovered, so the next run starts here.
+
+## Historical reference — pplx-decider (retired)
+
+**h2o-lightning-4b is the main/primary decider on this slot.** `pplx-decider-flash-v1.2`
+(4.8B) is a **retired** historical candidate (already `retired` in `ports.json`) —
+its evidence is kept here, not treated as a competing skill or live tool. Full A/B
+evidence: [`docs/vision-jev-ab-imajev-vs-pplx.md`](../../docs/vision-jev-ab-imajev-vs-pplx.md).
+
+- **Local A/B findings vs Imajev-4B:** better calibration (ECE 0.040 vs 0.150 category; 0.084 vs 0.179 spatial-swap) and faster p50 (0.70/0.77 s vs 1.13/1.19 s); it **cannot do the bbox track** (0 % parse, empty completions). Both heads share a blind spot on hard spatial negatives — 0.500, confidently wrong. Neither localises; both only detect.
+- **Retirement cause:** alongside the 35B model it needed non-causal attention (`qwen35.attention.causal=false`) and `-ub 8192` / `-b 8192`, using ~8.2 GB VRAM plus ~7.9 GB GTT system RAM.
+- **Why nothing is deleted:** `measure_tokens.py` still uses the pplx tokenizer and the 3.6 GB weights are retained so the A/B numbers can be reproduced.
+- **Published scores:** pplx has no published **image/vision-board** score; "Decision Index 0.3: 60.06" is **text** JevBench (text-only), not a vision score.
+- **Legacy client:** `modules/pplx_decider.py` is preserved for joint protocol v3 testing.
