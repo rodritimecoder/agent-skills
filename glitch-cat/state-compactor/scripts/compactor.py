@@ -335,6 +335,7 @@ def inspect_state(target_dir: Optional[str] = None, as_json: bool = False):
 
 def main():
     p = argparse.ArgumentParser(description="Kem Glitch Zero-Degradation State Compactor")
+    p.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
     sub = p.add_subparsers(dest="cmd")
 
     init_p = sub.add_parser("init", help="Initialize a new agent state ledger")
@@ -351,30 +352,44 @@ def main():
     rec_p.add_argument("--invariant", help="Lock critical invariant")
     rec_p.add_argument("--forbidden", help="Record dead-end or negative constraint")
     rec_p.add_argument("--dir", help="Target directory")
+    rec_p.add_argument("--dry-run", action="store_true", help="Print the planned record and exit without side effects")
 
     wrap_p = sub.add_parser("wrap", help="Execute command and auto-record results to state ledger")
     wrap_p.add_argument("--fact", help="Fact to record if command succeeds")
     wrap_p.add_argument("--done", help="Task to mark done if command succeeds")
     wrap_p.add_argument("--task", help="Task to queue if command succeeds")
     wrap_p.add_argument("--dir", help="Target directory")
+    wrap_p.add_argument("--dry-run", action="store_true", help="Print the planned command/record and exit without side effects")
     wrap_p.add_argument("command", nargs=argparse.REMAINDER, help="Command to execute")
 
     chk_p = sub.add_parser("check", help="Check if context has crossed compaction threshold")
     chk_p.add_argument("--transcript", help="Optional transcript log file path")
     chk_p.add_argument("--dir", help="Target directory")
-    chk_p.add_argument("--json", action="store_true",
+    chk_p.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
                        help="Emit machine-readable JSON on stdout")
 
     comp_p = sub.add_parser("compact", help="Generate zero-loss handover prompt from state ledger")
     comp_p.add_argument("--out", help="Write handover prompt to file")
     comp_p.add_argument("--dir", help="Target directory")
+    comp_p.add_argument("--dry-run", action="store_true", help="Print the planned compaction and exit without side effects")
 
     ins_p = sub.add_parser("inspect", help="Display current state ledger")
     ins_p.add_argument("--dir", help="Target directory")
-    ins_p.add_argument("--json", action="store_true",
+    ins_p.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
                        help="Emit machine-readable JSON on stdout")
 
     args = p.parse_args()
+    if getattr(args, "dry_run", False):
+        plan = {"action": args.cmd, "dry_run": True}
+        for key in ("fact", "decision", "task", "done", "milestone", "invariant",
+                    "forbidden", "dir", "out", "goal", "limit"):
+            if getattr(args, key, None) is not None:
+                plan[key] = getattr(args, key)
+        if args.cmd == "wrap":
+            plan["command"] = args.command
+        print(json.dumps(plan, indent=2) if args.json else
+              f"[dry-run] {args.cmd}: {json.dumps(plan, sort_keys=True)}")
+        return
     if args.cmd == "init":
         init_state(args.goal, target_dir=args.dir, token_limit=args.limit)
     elif args.cmd == "record":

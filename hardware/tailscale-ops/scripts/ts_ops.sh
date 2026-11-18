@@ -6,6 +6,29 @@ set -euo pipefail
 CMD="${1:-peers}"
 shift || true
 
+# Optional contract flags: --dry-run prints the planned action and exits before
+# any tailnet mutation; --json emits that plan as JSON.
+DRY_RUN=0
+AS_JSON=0
+_POSITIONAL=()
+for _arg in "$@"; do
+  case "$_arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --json) AS_JSON=1 ;;
+    *) _POSITIONAL+=("$_arg") ;;
+  esac
+done
+set -- "${_POSITIONAL[@]+"${_POSITIONAL[@]}"}"
+
+emit_plan() {
+  local label="$1" commands="$2"
+  if [ "$AS_JSON" = 1 ]; then
+    python3 -c 'import json,sys; print(json.dumps({"action":sys.argv[1],"dry_run":True,"commands":sys.argv[2].split("|")},indent=2))' "$label" "$commands"
+  else
+    echo "[dry-run] would execute: $commands"
+  fi
+}
+
 # Helper: Check if tailscale CLI is available
 check_tailscale() {
   if ! command -v tailscale >/dev/null 2>&1; then
@@ -100,6 +123,10 @@ except Exception as e:
     ;;
 
   reset-tunnels)
+    if [ "$DRY_RUN" = 1 ]; then
+      emit_plan "reset-tunnels" "tailscale serve reset|tailscale funnel reset"
+      exit 0
+    fi
     check_tailscale
     echo "🧹 Resetting all active Tailscale serve and funnel tunnels..."
     tailscale serve reset 2>/dev/null || true
@@ -108,6 +135,17 @@ except Exception as e:
     ;;
 
   sync)
+    if [ "$DRY_RUN" = 1 ]; then
+      _PLAN="tailscale serve reset|tailscale funnel reset"
+      if [ -n "${TS_ROOT:-}" ]; then
+        _PLAN="${_PLAN}|tailscale serve --bg --https=443 http://127.0.0.1:${TS_ROOT}"
+      fi
+      for _item in ${TS_PATHS[@]+"${TS_PATHS[@]}"}; do
+        _PLAN="${_PLAN}|tailscale serve --bg --https=443 --set-path=${_item%%:*} http://127.0.0.1:${_item##*:}"
+      done
+      emit_plan "sync" "$_PLAN"
+      exit 0
+    fi
     check_tailscale
     DNS_NAME=$(tailscale status --json | python3 -c 'import json, sys; print(json.load(sys.stdin).get("Self", {}).get("DNSName", "").rstrip("."))')
     echo "🔁 Reconciling the tailnet surface to ports.json (${DNS_NAME})..."

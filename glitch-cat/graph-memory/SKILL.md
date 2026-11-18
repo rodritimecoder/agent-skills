@@ -2,9 +2,11 @@
 name: graph-memory
 
 description: >
-  Unified Knowledge Graph & Hybrid RAG Engine: deterministic SQLite k-hop graph traversal (<2ms),
-  entity deduplication via UUID5 & aliases, and hybrid BM25 + bge-small-en-v1.5 (384d) RRF search
-  with exact-quote distillation.
+  Use when an agent needs persistent memory across sessions — build a deterministic SQLite knowledge
+  graph with k-hop traversal and deduplicated entities, or run hybrid BM25 + vector RAG search with
+  exact-quote distillation. Unified Knowledge Graph & Hybrid RAG Engine: deterministic SQLite k-hop
+  graph traversal (<2ms), entity deduplication via UUID5 & aliases, and hybrid BM25 + bge-small-en-v1.5
+  (384d) RRF search with exact-quote distillation.
 
 compatibility: "Requires the local embedding endpoint on :8084 for the hybrid BM25 and vector leg. The slot also hosts EmbeddingGemma-2 (768d); an index built with one is not comparable with the other, so rag.db records which model built it."
 allowed-tools: "Bash(graph-memory:*) Bash(python3:*) Read Write"
@@ -53,7 +55,7 @@ As ranted by Kem, *"The poison sits upstream. Underneath every graph, there's ba
 
 ## 🛠️ CLI Quickstart
 
-The entrypoint is `graph-memory` (or `python3 /run/media/rodri/AI/skills/glitch-cat/graph-memory/graph_memory.py`).
+The entrypoint is `graph-memory` (or `python3 graph_memory.py`).
 
 ### 1. Knowledge Graph Traversal (Leg 1)
 ```bash

@@ -44,7 +44,7 @@ options:
 ## Command 3
 
 ```bash
-head -30 glitch-cat/semantic-cache/scripts/cache_engine.py
+head -30 glitch-cat/semantic-cache/modules/cache_engine.py
 ```
 
 ```

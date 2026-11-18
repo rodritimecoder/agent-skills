@@ -297,7 +297,16 @@ def main() -> int:
     p.add_argument("--brain-dir", action="append", help="explicit Antigravity brain directory (repeatable)")
     p.add_argument("--force", action="store_true", help="re-ingest all sessions from start")
     p.add_argument("-v", "--verbose", action="store_true", help="verbose output")
+    p.add_argument("--dry-run", action="store_true",
+                   help="print the planned ingest and exit without writing")
     args = p.parse_args()
+
+    if args.dry_run:
+        plan = {"command": "agy_ingest", "dry_run": True,
+                "root": args.root, "brain_dirs": args.brain_dir,
+                "force": args.force}
+        print(json.dumps(plan, indent=2))
+        return 0
 
     root = root_path(args.root)
     brain_dirs = find_brain_dirs(args.brain_dir)

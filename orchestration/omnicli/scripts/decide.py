@@ -211,7 +211,7 @@ def ask_pplx(state, question, opts, typ, port=PPLX_PORT, timeout=180, images=Non
     """
     module = _pplx_client()
     if module is None:
-        raise SystemExit("pplx-decider skill not found (expected scripts/pplx_decider.py)")
+        raise SystemExit("pplx-decider skill not found (expected modules/pplx_decider.py)")
     client = module.PplxDecider(port=port, timeout=timeout)
     spec = _systemone_question(question, opts, typ)
     try:

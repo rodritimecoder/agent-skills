@@ -45,7 +45,7 @@ them there and the budget arithmetic follows.
    `/workers/platform/pricing/`, `/r2/pricing/`, `/d1/platform/pricing/`,
    `/workers-ai/platform/pricing/`, `/containers/platform/pricing/`.
 2. Diff against the tables above.
-3. Update `LIMITS`, run `python3 scripts/test_cf_architect.py`, update the
+3. Update `LIMITS`, run `python3 tests/test_cf_architect.py`, update the
    verification date here.
 
 ## Sources

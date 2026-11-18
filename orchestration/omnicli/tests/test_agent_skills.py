@@ -1,4 +1,4 @@
-"""Unit tests for scripts/verify_agent_skills.py.
+"""Unit tests for tests/verify_agent_skills.py.
 
 Every fixture lives in a temporary directory, so the suite never depends on
 the skills installed on this workstation — except for the last test, which is

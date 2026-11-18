@@ -26,6 +26,7 @@ import urllib.request
 import zlib
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
 import cdp_lite
 
 from verify_common import (
@@ -824,7 +825,11 @@ def build_parser() -> argparse.ArgumentParser:
     states = sub.add_parser("states", parents=[common], help="walk every Storybook state on its own")
     states.add_argument("--storybook", required=True)
     states.add_argument("--filter", default="")
-    states.add_argument("--limit", type=int, default=30, metavar="LIMIT")
+    states.add_argument("--limit", type=int, default=20, metavar="LIMIT")
+    states.add_argument("--fields", default=None,
+                        help="Comma-separated story fields to keep in JSON output")
+    states.add_argument("--project", default=None,
+                        help="Only include states whose id contains this project name")
     states.add_argument("--screenshot-dir", type=Path, default=None)
 
     errors = sub.add_parser("errors", parents=[common], help="what real users are hitting right now")
@@ -862,6 +867,8 @@ def build_parser() -> argparse.ArgumentParser:
     control_p.add_argument("--replace", required=True)
     control_p.add_argument("--pass", dest="pass_file", type=Path, default=Path(".verify/pass.json"))
     control_p.add_argument("--out-dir", type=Path, default=None)
+    control_p.add_argument("--dry-run", action="store_true",
+                           help="Print the planned mutation and exit without touching any file")
 
     return parser
 
@@ -929,12 +936,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "states":
             result = storybook_states(args.storybook, prefix=args.filter, limit=args.limit,
                                       screenshot_dir=args.screenshot_dir, port=args.port)
+            stories = result["stories"]
+            if args.project:
+                stories = [s for s in stories if args.project in str(s.get("id", ""))]
+            stories = stories[:args.limit]
+            if args.fields:
+                keep = {f.strip() for f in args.fields.split(",") if f.strip()}
+                stories = [{k: v for k, v in s.items() if k in keep} for s in stories]
+            result["stories"] = stories
             if args.json:
                 print(_json_line(result))
             else:
                 print(f"{result['status'].upper()}  {result['detail']}")
-                for story in [s for s in result["stories"] if s["status"] != "pass"][:10]:
-                    print(f"  {story['id']}: {story['detail']}")
+                for story in [s for s in stories if s.get("status") != "pass"][:10]:
+                    print(f"  {story.get('id', '?')}: {story.get('detail', '')}")
             return EXIT_PASS if result["status"] in ("pass", "skip") else EXIT_FAIL
 
         if args.command == "errors":
@@ -998,6 +1013,15 @@ def main(argv: list[str] | None = None) -> int:
             return result["exit"]
 
         if args.command == "control":
+            if args.dry_run:
+                plan = {"command": "control", "dry_run": True,
+                        "repo": str(args.repo), "file": str(args.target),
+                        "find": args.find, "replace": args.replace,
+                        "pass_file": str(args.pass_file),
+                        "out_dir": str(args.out_dir) if args.out_dir else None}
+                print(_json_line(plan) if args.json else
+                      f"[dry-run] control: would mutate {args.target} ({args.find!r} -> {args.replace!r}) and re-run the gate")
+                return EXIT_PASS
             report = control(args.repo, args.target, args.find, args.replace,
                              pass_file=args.pass_file, out_dir=args.out_dir)
             if args.json:

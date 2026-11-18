@@ -582,16 +582,24 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--body")
     s.add_argument("--body-file")
     s.add_argument("--force", action="store_true")
+    s.add_argument("--dry-run", action="store_true",
+                   help="Print the planned save and exit without writing")
     s.set_defaults(func=cmd_save)
 
     s = sub.add_parser("forget", help="archive a doc (never delete)")
     s.add_argument("id")
+    s.add_argument("--dry-run", action="store_true",
+                   help="Print the planned archive and exit without writing")
     s.set_defaults(func=cmd_forget)
 
     s = sub.add_parser("init", help="scaffold the runtime root (idempotent)")
+    s.add_argument("--dry-run", action="store_true",
+                   help="Print the planned scaffold and exit without writing")
     s.set_defaults(func=cmd_init)
 
     s = sub.add_parser("reindex", help="rebuild the derived index")
+    s.add_argument("--dry-run", action="store_true",
+                   help="Print the planned reindex and exit without writing")
     s.set_defaults(func=lambda a: reindex(root_path(a.root)))
 
     s = sub.add_parser("stats", help="layer counts and header budget")
@@ -602,6 +610,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    if getattr(args, "dry_run", False):
+        import json
+        plan = {"command": args.cmd, "dry_run": True, "root": args.root}
+        for key in ("title", "type", "project", "entities", "sources", "body",
+                    "body_file", "force", "id"):
+            if hasattr(args, key):
+                plan[key] = getattr(args, key)
+        print(json.dumps(plan, indent=2) if getattr(args, "json", False) else
+              f"[dry-run] {args.cmd}: {json.dumps(plan, sort_keys=True)}")
+        return
     args.func(args)
 
 

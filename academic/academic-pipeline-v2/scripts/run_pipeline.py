@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
 from stage_contracts import (  # noqa: E402 - path set above
     STAGE_CONTRACTS,
     STAGE_NAMES,
@@ -418,6 +419,11 @@ def main(argv=None):
         help="print the stages that would run without dispatching or writing evidence",
     )
     parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable JSON instead of human stage status",
+    )
+    parser.add_argument(
         "--real",
         action="store_true",
         help="wire live dependencies (canvas-cli, zoom-recorder, markitdown-cli, jev)",
@@ -441,9 +447,26 @@ def main(argv=None):
         stage_numbers = [_stage_number(args.stage)]
 
     if args.dry_run:
-        for number in stage_numbers:
-            print(f"would run stage{number} ({STAGE_NAMES[number]}) in {workspace}")
+        if args.json:
+            print(json.dumps({"dry_run": True, "workspace": str(workspace),
+                              "stages": [f"stage{n}" for n in stage_numbers]}, indent=2))
+        else:
+            for number in stage_numbers:
+                print(f"would run stage{number} ({STAGE_NAMES[number]}) in {workspace}")
         return 0
+
+    if args.json:
+        import contextlib
+        import io
+        buf = io.StringIO()
+        code = 0
+        with contextlib.redirect_stdout(buf):
+            for number in stage_numbers:
+                if not _run_one(workspace, number, real=args.real, course_id=args.course_id):
+                    code = 1
+                    break
+        print(json.dumps({"exit": code, "output": buf.getvalue().splitlines()}, indent=2))
+        return code
 
     for number in stage_numbers:
         if not _run_one(

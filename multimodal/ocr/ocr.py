@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from ocr_engine import OCREngine, LIGHTON_MODEL_DIR
 
 

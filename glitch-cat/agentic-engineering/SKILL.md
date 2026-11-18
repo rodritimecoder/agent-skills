@@ -2,9 +2,12 @@
 name: agentic-engineering
 
 description: >
-  Autonomous production engineering pipeline implementing Kem's 7-step software factory. Operates
-  target-local Markdown Kanban boards (.kanban/), event-driven Listeners, Fresh-Context Unbiased
-  Judges, Task Splitters, and multi-model parallel sandboxes.
+  Use when work must be driven through an autonomous multi-model engineering pipeline — initializing
+  a Markdown Kanban board, claiming and triaging cards, running an unbiased judge, splitting tasks
+  into parallel lanes, or executing the full 7-step build loop. Autonomous production engineering
+  pipeline implementing Kem's 7-step software factory. Operates target-local Markdown Kanban boards
+  (.kanban/), event-driven Listeners, Fresh-Context Unbiased Judges, Task Splitters, and multi-model
+  parallel sandboxes.
 
 metadata:
   bins: agentic

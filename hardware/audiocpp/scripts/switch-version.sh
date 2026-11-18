@@ -22,6 +22,29 @@ PREV_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/audiocpp/last-switch"
 
 die() { echo "❌ $*" >&2; exit 1; }
 
+# Optional contract flags: --dry-run prints the planned switch/rollback and
+# exits before any link flip, config write, or server restart.
+DRY_RUN=0
+AS_JSON=0
+_ARGS=()
+for _a in "$@"; do
+  case "$_a" in
+    --dry-run) DRY_RUN=1 ;;
+    --json) AS_JSON=1 ;;
+    *) _ARGS+=("$_a") ;;
+  esac
+done
+set -- "${_ARGS[@]+"${_ARGS[@]}"}"
+
+emit_plan() {
+  local action="$1"; shift
+  if [ "$AS_JSON" = 1 ]; then
+    python3 -c 'import json,sys; print(json.dumps({"action":sys.argv[1],"dry_run":True,"args":sys.argv[2:]},indent=2))' "$action" "$@"
+  else
+    echo "[dry-run] $action: would switch to $* (validate, pin config, flip link, restart server)"
+  fi
+}
+
 health() { curl -fsS -m 2 "http://127.0.0.1:${PORT}/health" 2>/dev/null; }
 
 status() {
@@ -119,6 +142,11 @@ case "${1:-}" in
     set -- "$PREV"
     ;;
 esac
+
+if [ "$DRY_RUN" = 1 ]; then
+  emit_plan "switch-version" "$@"
+  exit 0
+fi
 
 CANDIDATE="$(readlink -f "$1" 2>/dev/null || true)"
 [ -n "$CANDIDATE" ] || die "no such install: $1"

@@ -14,7 +14,7 @@ allowed-tools: "Bash(audiocpp:*) Bash(python3:*) Read Write"
 
 > **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8081`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If it is down, the client starts it via `llama-rig up audio` (`--no-autostart` skips).
 >
-> **Orientation:** `README.md` routes tasks; `CONTEXT.md` holds the live state, the invariants and the failure modes; `scripts/check-docs.py` fails when the two disagree with the install.
+> **Orientation:** `README.md` routes tasks; `CONTEXT.md` holds the live state, the invariants and the failure modes; `modules/check-docs.py` fails when the two disagree with the install.
 
 # Local Audio Intelligence (`audiocpp`)
 
@@ -48,7 +48,7 @@ and optionally stamps an existing WebVTT/SRT with speaker names (`run-diarizatio
 is kept as a thin compatibility wrapper).
 
 ```bash
-AC="/run/media/rodri/AI/skills/audiocpp/scripts/audiocpp_cli.py"
+AC="scripts/audiocpp_cli.py"
 
 # 1. Who spoke when — JSON or <input>.diar/turns.json + talk-time summary
 python3 $AC diarize talk.mp4 --json
@@ -88,7 +88,7 @@ per speaker).
 ## 🛠️ CLI Quickstart
 
 ```bash
-AC="/run/media/rodri/AI/skills/audiocpp/scripts/audiocpp_cli.py"
+AC="scripts/audiocpp_cli.py"
 
 # 1. Transcribe — clean stdout, pipes straight into a file
 python3 $AC asr recording.wav > transcript.txt
@@ -172,4 +172,4 @@ the previous install if the new one fails its health check.
 - `references/benchmarks.md` — measured RTF, wall time and speed for all 12 models
 - `references/server-json.md` — the install config, recoverable, with the model and voice-preset inventory
 - `references/server.json` — the same config as a seed the switch script installs
-- `scripts/check-docs.py` — fails when this folder's claims disagree with the install
+- `modules/check-docs.py` — fails when this folder's claims disagree with the install

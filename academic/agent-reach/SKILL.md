@@ -3,12 +3,10 @@ name: agent-reach
 
 description: >
   Internet and social media research router. Use this skill whenever the user asks you to
-  find anything about a topic online — a Linux distro or desktop environment, a driver or
-  ROCm/AMD compatibility issue, an open-source project, a product, a person, or what people
-  are saying about something — across auth-walled sites, video transcripts and structured
-  feeds: Reddit, Twitter/X, LinkedIn, Boss Zhipin (招聘/求职), YouTube captions, Bilibili
-  (B站), Xiaohongshu (小红书/RED), V2EX, Xueqiu (雪球 finance/stocks), GitHub code/repos,
-  RSS feeds, and web articles via Jina Reader.
+  find anything about a topic online — a distro, a driver or ROCm/AMD issue, an open-source
+  project, a product, a person, or public sentiment — across auth-walled sites, video
+  transcripts and structured feeds: Reddit, Twitter/X, LinkedIn, YouTube, Bilibili,
+  Xiaohongshu, V2EX, Xueqiu, GitHub, RSS, and web articles via Jina Reader.
 
   Features deterministic token shielding and table projection via reach_filter.py (CLI and
   Python Code Mode API for omnicli). Zero config for 6 public channels. Run
@@ -67,14 +65,14 @@ curl -s "https://r.jina.ai/https://example.com/article"
 
 # 3. GitHub repository search with high-density table projection
 gh search repos "query" --sort stars --limit 10 --json name,stargazersCount,description,url | \
-  python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py github --table
+  python3 scripts/reach_filter.py github --table
 
 # 4. V2EX Hot topics (direct fetch, compact table, ~150 tokens)
-python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py --fetch v2ex-hot -n 10
+python3 scripts/reach_filter.py --fetch v2ex-hot -n 10
 
 # 5. Bilibili video search with table projection
 bili search "query" --type video -n 5 | \
-  python3 ~/.gemini/config/skills/agent-reach/scripts/reach_filter.py bilibili --table
+  python3 scripts/reach_filter.py bilibili --table
 ```
 
 ---
@@ -85,7 +83,7 @@ Raw JSON/YAML platform payloads (20KB–50KB) must never be dumped raw into the 
 
 ### CLI Piping
 ```bash
-FILTER=~/.gemini/config/skills/agent-reach/scripts/reach_filter.py
+FILTER=scripts/reach_filter.py
 
 # Reddit search (sub, score, comments, title projection)
 rdt search "query" --json | python3 $FILTER reddit -p sub,score,comments,title -n 10
@@ -104,7 +102,7 @@ curl -s "https://www.v2ex.com/api/topics/hot.json" | python3 $FILTER v2ex -o /tm
 Inside `omnicli exec` sandboxes, invoke `reach_filter.filter_data` directly as Python code:
 ```python
 import sys
-sys.path.insert(0, "/home/rodri/.gemini/config/skills/agent-reach/scripts")
+sys.path.insert(0, "scripts")
 import reach_filter
 
 # Filter raw data into a clean tuple: (rows_list, markdown_table_str)

@@ -18,7 +18,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from jev_engine import JevEngine
 import jev_engine
 

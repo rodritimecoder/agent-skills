@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from cache_engine import SemanticCache
 
 
@@ -19,19 +19,33 @@ def main():
     p_q = subparsers.add_parser("query", help="Lookup cached response for question")
     p_q.add_argument("question", help="Inbound user question")
     p_q.add_argument("--threshold", type=float, default=0.85, metavar="THRESHOLD", help="Cosine similarity threshold (default: 0.85)")
+    p_q.add_argument("--dry-run", action="store_true",
+                     help="Print the planned lookup and exit without touching the cache")
 
     # store
     p_s = subparsers.add_parser("store", help="Store verified question-answer pair")
     p_s.add_argument("question", help="Question text")
     p_s.add_argument("answer", help="Verified answer text")
+    p_s.add_argument("--dry-run", action="store_true",
+                     help="Print the planned store and exit without writing to the cache")
 
     # stats
     subparsers.add_parser("stats", help="View cache hit statistics")
 
     # purge
-    subparsers.add_parser("purge", help="Clear all cached questions")
+    p_p = subparsers.add_parser("purge", help="Clear all cached questions")
+    p_p.add_argument("--dry-run", action="store_true",
+                     help="Print the planned purge and exit without clearing the cache")
 
     args = parser.parse_args()
+    if getattr(args, "dry_run", False):
+        plan = {"command": args.command, "dry_run": True, "db": args.db}
+        for key in ("question", "answer", "threshold"):
+            if hasattr(args, key):
+                plan[key] = getattr(args, key)
+        print(json.dumps(plan, indent=2) if args.json else
+              f"[dry-run] {args.command}: {json.dumps(plan, sort_keys=True)}")
+        return
     cache = SemanticCache(Path(args.db))
 
     if args.command == "query":

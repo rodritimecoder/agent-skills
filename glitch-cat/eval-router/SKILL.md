@@ -63,7 +63,7 @@ allowed-tools: "Bash(eval-router:*) Bash(python3:*) Read Write"
 
 ```bash
 # Set alias or add to PATH
-alias eval-router="python3 /run/media/rodri/AI/skills/eval-router/eval_router.py"
+alias eval-router="python3 eval_router.py"
 
 # 1. Route a prompt (Dry run - inspect tier, confidence, probabilities)
 eval-router route "Fix the typo in README.md"
@@ -81,7 +81,7 @@ eval-router stats
 eval-router harvest
 
 # 6. Re-train / calibrate weights from historical evaluations
-python3 /run/media/rodri/AI/skills/eval-router/scripts/harvest.py --train
+python3 scripts/harvest.py --train
 ```
 
 ---
@@ -91,7 +91,7 @@ python3 /run/media/rodri/AI/skills/eval-router/scripts/harvest.py --train
 You can point any coding assistant (Cursor, Claude Code, Cline, OpenCode, Agy) at `eval-router`:
 
 ```bash
-python3 /run/media/rodri/AI/skills/eval-router/scripts/server.py --port 8100
+python3 scripts/server.py --port 8100
 ```
 
 Configure your tool:
@@ -140,4 +140,4 @@ eval-router route "<request>"
 - Easy requests go to local zero-cost models; hard ones escalate.
 - If the shadow verification fails, the router falls back to a frontier model automatically.
 - Never route a task that needs a tool call through the free tier without verifying the output.
-- This decides **per request**. Where a test decides whether the work passed, the escalation belongs to [`../../orchestration/gh-action-subagent/SKILL.md`](../../orchestration/gh-action-subagent/SKILL.md) instead; stacking both on one request routes on prompt shape and then never runs the test.
+- This decides **per request**. Where a test decides whether the work passed, the escalation belongs to the `gh-action-subagent` skill instead; stacking both on one request routes on prompt shape and then never runs the test.

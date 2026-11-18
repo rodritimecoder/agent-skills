@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.append(str(Path(__file__).resolve().parent.parent / "modules"))
 from pipeline_core import EvalPipeline, PropagationRiskError
 
 

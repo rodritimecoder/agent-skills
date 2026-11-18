@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.append(str(Path(__file__).resolve().parent.parent / "modules"))
 from orchestra_conductor import OrchestraConductor
 
 

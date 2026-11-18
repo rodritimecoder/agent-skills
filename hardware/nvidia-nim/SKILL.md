@@ -2,7 +2,9 @@
 name: nvidia-nim
 
 description: >
-  Direct inference and autonomous subagent execution via NVIDIA NIM / API Catalog (integrate.api.nvidia.com)
+  Use when hosted frontier inference or autonomous subagent execution is needed through NVIDIA NIM
+  / API Catalog — batched bash, calibrated decide routing, batched embeddings, and multi-key failover
+  with token reduction. Direct inference and autonomous subagent execution via NVIDIA NIM / API Catalog (integrate.api.nvidia.com)
   for hosted frontier models including GLM-5.3 (z-ai/glm-5.3-flash), Llama 3.3 70B, DeepSeek R1/V3, and Nemotron.
   Features an autonomous subagent loop with compound bash batching (run_bash_batch), calibrated decision routing (decide),
   batched embeddings (embed), multi-key pooling with automatic failover, and Kem Glitch token reduction.

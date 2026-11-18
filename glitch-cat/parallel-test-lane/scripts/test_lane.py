@@ -197,6 +197,7 @@ def plan_partition(target_dir: str, lanes_count: Optional[int] = None):
 
 def main():
     p = argparse.ArgumentParser(description="Parallel Test Lane — AI Blast Radius Containment")
+    p.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
     sub = p.add_subparsers(dest="subcommand", required=True)
 
     run_p = sub.add_parser("run", help="Run test suite in parallel worker lanes")
@@ -204,12 +205,38 @@ def main():
     run_p.add_argument("--cmd", help="Command template containing {file}, e.g. 'pytest -q {file}'")
     run_p.add_argument("--lanes", type=int, metavar="N", help="Number of parallel worker lanes (default: CPU cores)")
     run_p.add_argument("--out", help="Write JSON execution report to file")
+    run_p.add_argument("--dry-run", action="store_true",
+                       help="Print the planned run and exit without executing any test")
 
     plan_p = sub.add_parser("plan", help="Preview sequential vs parallel lane partition map")
     plan_p.add_argument("--dir", default=".", help="Directory to search for test files")
     plan_p.add_argument("--lanes", type=int, metavar="N", help="Number of parallel worker lanes")
 
     args = p.parse_args()
+    if getattr(args, "dry_run", False):
+        import json
+        plan = {"command": args.subcommand, "dry_run": True, "dir": args.dir,
+                "cmd": args.cmd, "lanes": args.lanes, "out": args.out}
+        print(json.dumps(plan, indent=2) if args.json else
+              f"[dry-run] run: would execute tests in {args.dir} (lanes={args.lanes})")
+        return
+    if args.json:
+        import io
+        import json
+        import contextlib
+        buf = io.StringIO()
+        code = 0
+        with contextlib.redirect_stdout(buf):
+            if args.subcommand == "run":
+                code = run_test_suite(args.dir, cmd_template=args.cmd,
+                                      lanes_count=args.lanes, out_report=args.out)
+            elif args.subcommand == "plan":
+                plan_partition(args.dir, lanes_count=args.lanes)
+            else:
+                p.print_help()
+        print(json.dumps({"command": args.subcommand, "exit": code,
+                          "output": buf.getvalue().splitlines()}, indent=2))
+        sys.exit(code)
     if args.subcommand == "run":
         code = run_test_suite(args.dir, cmd_template=args.cmd, lanes_count=args.lanes, out_report=args.out)
         sys.exit(code)

@@ -2,19 +2,17 @@
 name: jev-decision
 
 description: >
-  Calibrated, non-generative decision engine — JEV. Turns a judgement into one of four typed
-  answers — bool (binary), choice (constrained enum), score (scalar 0.0-1.0) or composite (gate +
-  action + quality) — with a probability from the h2o-lightning-4b local decision model on:8083,
-  no generated tokens. Use when something must be judged, triaged, routed, gated, scored, or
-  classified; for context de-duplication and superseding claims; or for any yes/no question about
-  a screenshot. Use it too when the question is about the jev model itself — "always use the h2o
-  4b jev model", "which decision model should a skill use", "is this still the jev path" — because
-  pinning the occupant is this skill's JEV_REQUIRE_H2O contract, not a server-management task.
-  Also the "where is X" front door: `box` locates a referring phrase in an image — a bounding
-  box, pixel coordinates, a confidence and a gating `present` probability — so use it for
-  "where is the total on this receipt", to crop a region before OCR, or to check something is
-  actually in frame.
-  Fast and near-free, so it suits high-volume loops.
+  Use when something must be judged, triaged, routed, gated, scored, or classified, or for a yes/no
+  question about a screenshot. Calibrated, non-generative decision engine — JEV. Turns a judgement
+  into one of four typed answers — bool (binary), choice (constrained enum), score (scalar 0.0-1.0)
+  or composite (gate + action + quality) — with a probability from the h2o-lightning-4b local
+  decision model on:8083, no generated tokens. Also use it for "where is X" in an image: `box`
+  returns a bounding box, pixel coordinates, a confidence and a gating `present` probability — for
+  "where is the total on this receipt", to crop before OCR, or to check something is in frame. Use
+  it too when the question is about the jev model itself — "always use the h2o 4b jev model",
+  "which decision model should a skill use" — because pinning the occupant is this skill's
+  JEV_REQUIRE_H2O contract, not a server-management task. Fast and near-free, so it suits high-volume
+  loops.
 
 compatibility: "Requires a decision server on :8083 answering /v1/systemone (noul | choice | score). h2o-lightning-4b is the default occupant, behind the h2o-serve shim; any rotated candidate on the slot is used, and the served model is named in every result. JEV_REQUIRE_H2O=1 restores the hard h2o-only pin. `box` additionally needs the `decision-model` client (`hardware/decision-model/scripts/decision_model.py`) and a box-capable occupant (h2o-lightning-4b or Valen-Decision-1.5)."
 allowed-tools: "Bash(jev-decision:*) Bash(decision-model:*) Bash(python3:*) Read Write"

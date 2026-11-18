@@ -2,10 +2,12 @@
 name: eval-pipeline
 
 description: >
-  Step-level propagation risk mitigation and intermediate artifact ledger. Tags every step
-  explicitly as [D] (Deterministic Code), [P] (Probabilistic Model), or [H] (Human), forcing disk
-  serialization of intermediate states (step_01.json) and halting compound downstream failures via
-  automated assertion gates.
+  Use when a multi-step job needs propagation-risk containment — tag each step [D] (Deterministic
+  Code), [P] (Probabilistic Model) or [H] (Human), serialize intermediate state to disk, and gate
+  handoffs so a downstream step cannot consume an unverified result. Step-level propagation risk
+  mitigation and intermediate artifact ledger. Tags every step explicitly as [D] (Deterministic
+  Code), [P] (Probabilistic Model), or [H] (Human), forcing disk serialization of intermediate
+  states (step_01.json) and halting compound downstream failures via automated assertion gates.
 
 compatibility: "Requires Python 3.10+. No network access needed."
 allowed-tools: "Bash(python3:*) Read Write"
@@ -46,7 +48,7 @@ An unchecked drift in Step 1 poisons all downstream steps (**Propagation Risk**)
 ## 🛠️ CLI Quickstart
 
 ```bash
-PIPE="python3 /run/media/rodri/AI/skills/eval-pipeline/eval_pipeline.py"
+PIPE="python3 eval_pipeline.py"
 
 # 1. Audit recorded step artifacts in ledger (exits non-zero on any failed step)
 $PIPE audit --ledger-dir .eval_ledger

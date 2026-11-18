@@ -168,14 +168,28 @@ def budget(args: argparse.Namespace) -> int:
             LIMITS["workers_ai_neurons_per_day"] / LIMITS["whisper_neurons_per_audio_hour"],
         ),
     ]
-    failed = 0
+    failed = sum(1 for _, _, used, limit in checks if used > limit)
+    limit_n = getattr(args, "limit", 20)
+    fields = getattr(args, "fields", None)
+    keep = {f.strip() for f in fields.split(",") if f.strip()} if fields else None
+    if getattr(args, "json", False):
+        rows = [
+            {"dimension": label, "unit": unit, "used": used, "limit": limit,
+             "headroom": limit - used, "verdict": "pass" if used <= limit else "FAIL"}
+            for label, unit, used, limit in checks
+        ]
+        if keep:
+            rows = [{k: v for k, v in r.items() if k in keep} for r in rows]
+        print(json.dumps({"project": getattr(args, "project", None),
+                          "failed": failed, "checks": rows[:limit_n]}, indent=2))
+        return 0 if failed == 0 else 1
+    shown = [c for c in checks if not keep or c[0] in keep][:limit_n]
     print(
         f"{'dimension':<18}{'used':>10}  {'unit':<9}"
         f"{'limit':>12} {'headroom':>11}  verdict"
     )
-    for label, unit, used, limit in checks:
+    for label, unit, used, limit in shown:
         passed = used <= limit
-        failed += 0 if passed else 1
         headroom = limit - used
         verdict = "pass" if passed else "FAIL"
         print(
@@ -244,6 +258,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="cf-architect",
         description="Cloudflare capability probe, free-tier budget math, and CLI remedies.",
     )
+    parser.add_argument("--json", action="store_true", dest="global_json",
+                        help="machine-readable output for every command")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_probe = sub.add_parser("probe", help="read-only service matrix for this account")
@@ -259,6 +275,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_budget.add_argument("--do-writes-per-day", type=float, default=0.0)
     p_budget.add_argument("--requests-per-day", type=float, default=0.0)
     p_budget.add_argument("--audio-hours-per-day", type=float, default=0.0)
+    p_budget.add_argument("--fields", default=None,
+                          help="Comma-separated dimension labels to display")
+    p_budget.add_argument("--project", default=None,
+                          help="Optional project label included in JSON output")
+    p_budget.add_argument("--limit", type=int, default=20, metavar="N",
+                          help="Max rows to display (default: 20)")
+    p_budget.add_argument("--dry-run", action="store_true",
+                          help="Print the planned budget analysis and exit")
 
     p_fix = sub.add_parser("scripts-fix", help="correct npm allow-scripts remedy")
     p_fix.add_argument("--package", default="workerd")
@@ -268,6 +292,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    # A single top-level --json covers commands without their own flag.
+    args.json = getattr(args, "json", False) or args.global_json
     if args.command == "probe":
         report = probe()
         if args.json:
@@ -278,6 +304,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "doctor":
         return doctor()
     if args.command == "budget":
+        if args.dry_run:
+            print(json.dumps({"command": "budget", "dry_run": True,
+                              "inputs": {k: getattr(args, k) for k in
+                                         ("r2_gb", "r2_class_a", "r2_class_b",
+                                          "do_sqlite_gb", "do_writes_per_day",
+                                          "requests_per_day", "audio_hours_per_day")}},
+                             indent=2) if args.json else
+                  f"[dry-run] budget: would compute free-tier headroom for the given inputs")
+            return 0
         return budget(args)
     if args.command == "scripts-fix":
         return scripts_fix(args.package, args.context)

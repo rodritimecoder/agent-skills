@@ -30,7 +30,7 @@ from pathlib import Path
 try:
     from anki_cards import document_title, extract_cards
 except ModuleNotFoundError:  # loaded via importlib from a different cwd
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
     from anki_cards import document_title, extract_cards
 
 STAGE = 4

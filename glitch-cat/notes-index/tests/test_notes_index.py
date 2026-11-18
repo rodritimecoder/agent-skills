@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest import mock
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.append(str(Path(__file__).resolve().parent.parent / "modules"))
 import notes_index_core  # noqa: E402
 from notes_index_core import NotesIndex, api_key_pool, apply_rule, mask_secrets, plan, rule_block  # noqa: E402
 

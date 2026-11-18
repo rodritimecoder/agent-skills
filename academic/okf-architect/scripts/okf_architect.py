@@ -120,12 +120,28 @@ def _emit_json_report(bundle_root: Path, concepts_count: int, errors: int, warni
     }))
 
 
-def validate_bundle(bundle_root: Path, json_output: bool = False) -> bool:
+def validate_bundle(bundle_root: Path, json_output: bool = False,
+                    limit: int = 20, fields=None, project=None) -> bool:
     """Validate an OKF v0.2 bundle directory."""
     out = sys.stderr if json_output else sys.stdout
 
     def emit(*args: Any, **kwargs: Any) -> None:
         print(*args, file=out, **kwargs)
+
+    _issues = [0]
+    _fields = {f.strip().lower() for f in fields.split(",") if f.strip()} if fields else None
+
+    def issue(*args: Any, **kwargs: Any) -> None:
+        if limit and _issues[0] >= limit:
+            return
+        text = str(args[0]) if args else ""
+        if _fields is not None:
+            if "❌" in text and "error" not in _fields:
+                return
+            if "⚠" in text and "warning" not in _fields:
+                return
+        _issues[0] += 1
+        emit(*args, **kwargs)
 
     emit(f"\n🔍 [OKF Audit] Validating bundle: {bundle_root.resolve()}")
     if not bundle_root.is_dir():
@@ -135,6 +151,8 @@ def validate_bundle(bundle_root: Path, json_output: bool = False) -> bool:
         return False
 
     all_files = list(bundle_root.rglob("*.md"))
+    if project:
+        all_files = [f for f in all_files if project in str(f)]
     if not all_files:
         emit(f"⚠️  No markdown documents found in {bundle_root}")
         if json_output:
@@ -163,13 +181,13 @@ def validate_bundle(bundle_root: Path, json_output: bool = False) -> bool:
         meta, _ = parse_frontmatter(md_file)
 
         if not meta or "type" not in meta:
-            emit(f"  ❌ Error: Concept '{rel_path}' is missing required frontmatter 'type:' (§4.1)")
+            issue(f"  ❌ Error: Concept '{rel_path}' is missing required frontmatter 'type:' (§4.1)")
             errors += 1
             continue
 
         ctype = meta.get("type", "Unknown")
         if ctype == "Attested Computation" and "runtime" not in meta:
-            emit(f"  ❌ Error: Attested Computation '{rel_path}' missing required 'runtime:' (§10.2)")
+            issue(f"  ❌ Error: Attested Computation '{rel_path}' missing required 'runtime:' (§10.2)")
             errors += 1
 
         if "title" not in meta:
@@ -191,7 +209,7 @@ def validate_bundle(bundle_root: Path, json_output: bool = False) -> bool:
     for crs, t_map in course_titles.items():
         for t, flist in t_map.items():
             if len(flist) > 1:
-                emit(f"  ⚠️  Warning [{crs}]: Duplicate concept title '{t}' shared across: {', '.join(flist)}")
+                issue(f"  ⚠️  Warning [{crs}]: Duplicate concept title '{t}' shared across: {', '.join(flist)}")
                 warnings += 1
                 title_dups += 1
 
@@ -1727,6 +1745,12 @@ def main() -> None:
     p_audit = subparsers.add_parser("validate", aliases=["audit"], help="Validate an OKF bundle against spec v0.2")
     p_audit.add_argument("path", type=str, nargs="?", default=".", help="Path to OKF bundle root")
     p_audit.add_argument("--json", action="store_true", help="Emit validation report as JSON on stdout")
+    p_audit.add_argument("--fields", default=None,
+                         help="Comma-separated issue fields to keep (currently: error,warning)")
+    p_audit.add_argument("--project", default=None,
+                         help="Only inspect documents whose path contains this project name")
+    p_audit.add_argument("--limit", type=int, default=20, metavar="N",
+                         help="Max issue lines to print (default: 20)")
 
     p_scaffold = subparsers.add_parser("scaffold", help="Scaffold a new OKF bundle structure")
     p_scaffold.add_argument("path", type=str, nargs="?", default=".", help="Target directory")
@@ -1755,7 +1779,9 @@ def main() -> None:
     target_path = Path(args.path).resolve()
 
     if args.command in ("validate", "audit"):
-        success = validate_bundle(target_path, json_output=args.json)
+        success = validate_bundle(target_path, json_output=args.json,
+                                  limit=args.limit, fields=args.fields,
+                                  project=args.project)
         sys.exit(0 if success else 1)
     elif args.command == "scaffold":
         scaffold_bundle(target_path, title=args.title, domain=args.domain)

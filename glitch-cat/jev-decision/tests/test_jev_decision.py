@@ -18,7 +18,7 @@ from pathlib import Path
 SKILL_DIR = Path(__file__).resolve().parent.parent
 CLI = SKILL_DIR / "jev_decision.py"
 
-sys.path.append(str(SKILL_DIR / "scripts"))
+sys.path.append(str(SKILL_DIR / "modules"))
 from jev_engine import JevEngine  # noqa: E402
 
 

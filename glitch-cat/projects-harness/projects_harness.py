@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from harness_core import ProjectsHarness, RuleClashError, EnvelopeHook, RouteChecker, ClashChecker
 
 
@@ -36,6 +36,8 @@ def main():
     p_mem_up = mem_subs.add_parser("update", help="Update a fact in-place with history superseding")
     p_mem_up.add_argument("key", help="Fact key")
     p_mem_up.add_argument("value", help="Fact value")
+    p_mem_up.add_argument("--dry-run", action="store_true",
+                          help="Print the planned memory write and exit without writing")
     p_mem_read = mem_subs.add_parser("read", help="Read active memory facts")
     p_mem_dump = mem_subs.add_parser("dump", help="Dump raw memory lines")
     p_mem_dump.add_argument("--cap", type=int, default=200, metavar="LIMIT", help="Load cap (default: 200)")
@@ -47,6 +49,8 @@ def main():
     p_log_app.add_argument("--role", default="user", help="Message role")
     p_log_app.add_argument("content", help="Message content")
     p_log_app.add_argument("--thread-id", help="Thread ID")
+    p_log_app.add_argument("--dry-run", action="store_true",
+                           help="Print the planned log append and exit without writing")
     p_log_srch = log_subs.add_parser("search", help="Search log messages on-demand")
     p_log_srch.add_argument("query", help="Search query string")
     p_log_srch.add_argument("--limit", type=int, default=10, metavar="LIMIT", help="Max results (default: 10)")
@@ -56,9 +60,13 @@ def main():
     queue_subs = p_queue.add_subparsers(dest="queue_action", required=True)
     p_q_enq = queue_subs.add_parser("enqueue", help="Enqueue task")
     p_q_enq.add_argument("task_id", help="Unique task ID")
+    p_q_enq.add_argument("--dry-run", action="store_true",
+                         help="Print the planned enqueue and exit without writing")
     p_q_comp = queue_subs.add_parser("complete", help="Complete task (forces report)")
     p_q_comp.add_argument("task_id", help="Unique task ID")
     p_q_comp.add_argument("--report", required=True, help="Report content string or JSON")
+    p_q_comp.add_argument("--dry-run", action="store_true",
+                          help="Print the planned completion and exit without writing")
     p_q_stat = queue_subs.add_parser("status", help="Show queue status")
 
     # clash
@@ -68,6 +76,15 @@ def main():
     p_clash.add_argument("--proposed-val", required=True, help="Proposed memory update value")
 
     args = parser.parse_args()
+    if getattr(args, "dry_run", False):
+        plan = {"command": args.command, "dry_run": True, "dir": args.dir}
+        for key in ("mem_action", "log_action", "queue_action", "key", "value",
+                    "role", "content", "thread_id", "task_id", "report"):
+            if hasattr(args, key):
+                plan[key] = getattr(args, key)
+        print(json.dumps(plan, indent=2) if args.json else
+              f"[dry-run] {args.command}: {json.dumps(plan, sort_keys=True)}")
+        return
     harness = ProjectsHarness(Path(args.dir))
 
     if args.command == "startup":

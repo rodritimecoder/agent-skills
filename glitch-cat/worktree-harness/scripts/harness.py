@@ -593,6 +593,7 @@ if __name__ == "__main__":
     p_int.add_argument("--test", default=None, help="Global integration test command")
     p_int.add_argument("--verify", default=None, help="Global app verification command")
     p_int.add_argument("--allow-untested", action="store_true", help="Merge workers whose gate never passed")
+    p_int.add_argument("--dry-run", action="store_true", help="Print the planned integration and exit without side effects")
 
     # 5. Status
     p_stat = sub.add_parser("status", help="View status of harness runs, worktrees, and claims")
@@ -603,6 +604,7 @@ if __name__ == "__main__":
     p_tear = sub.add_parser("teardown", help="Clean up worktrees while preserving consolidated branch and event logs")
     p_tear.add_argument("--run-id", required=True, help="Run ID")
     p_tear.add_argument("--delete-branches", action="store_true", help="Delete temporary worker branches")
+    p_tear.add_argument("--dry-run", action="store_true", help="Print the planned teardown and exit without side effects")
 
     # 7. Dispatch (Swarm Orchestrator)
     p_disp = sub.add_parser("dispatch", help="Autonomous 1-command parallel subagent compiler")
@@ -624,11 +626,20 @@ if __name__ == "__main__":
     elif args.action == "gate":
         cmd_gate(args.run_id, args.worker, args.test, args.verify)
     elif args.action == "integrate":
+        if args.dry_run:
+            print(json.dumps({"action": "integrate", "dry_run": True, "run_id": args.run_id,
+                              "test": args.test, "verify": args.verify,
+                              "allow_untested": args.allow_untested}, indent=2))
+            sys.exit(0)
         res = cmd_integrate(args.run_id, args.test, args.verify, args.allow_untested)
         print(json.dumps(res, indent=2))
     elif args.action == "status":
         cmd_status(args.run_id, as_json=args.json)
     elif args.action == "teardown":
+        if args.dry_run:
+            print(json.dumps({"action": "teardown", "dry_run": True, "run_id": args.run_id,
+                              "delete_branches": args.delete_branches}, indent=2))
+            sys.exit(0)
         cmd_teardown(args.run_id, delete_branches=args.delete_branches)
     elif args.action == "dispatch":
         res = cmd_dispatch(

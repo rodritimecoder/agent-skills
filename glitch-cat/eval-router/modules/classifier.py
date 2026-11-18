@@ -17,7 +17,7 @@ def _find_jev_scripts() -> Optional[Path]:
         ".config/opencode/skills", ".gemini/config/skills", ".pi/agent/skills",
     )]
     for root in roots:
-        for cand in (root / "jev-decision" / "scripts", root / "glitch-cat" / "jev-decision" / "scripts"):
+        for cand in (root / "jev-decision" / "modules", root / "glitch-cat" / "jev-decision" / "modules"):
             if (cand / "jev_engine.py").is_file():
                 return cand
     return None

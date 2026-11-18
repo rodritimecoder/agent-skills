@@ -1207,7 +1207,7 @@ def adjudicate_candidates(
 
     if time_delta >= 75 and cand2["confidence"] >= 0.52 and request.get("multiple_plausible", False):
         try:
-            sys.path.append("/run/media/rodri/AI/skills/jev-decision/scripts")
+            sys.path.append("/run/media/rodri/AI/skills/jev-decision/modules")
             from jev_engine import JevEngine
             jev = JevEngine(port=8083)
             if jev.is_online():
@@ -2315,6 +2315,8 @@ def main() -> int:
         prog="academic-icm",
         description="Academic ICM Pipeline Orchestrator (Interpretable Context Methodology)"
     )
+    parser.add_argument("--json", action="store_true",
+                        help="Emit machine-readable JSON where supported")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
     subparsers.add_parser("graph", help="Knowledge graph traversal & hybrid RAG via graph-memory (Stage 2)")
 
@@ -2367,7 +2369,7 @@ def main() -> int:
     p_verify.add_argument("--judge", action="store_true", default=True, help="Run unbiased 0-context local model judge (default: True)")
     p_verify.add_argument("--no-judge", dest="judge", action="store_false", help="Disable 0-context model judge")
     p_verify.add_argument("--smart", action="store_true", help="Run deep cognitive audit with AGY 3.8 Flash and h2o-lightning-4b vision")
-    p_verify.add_argument("--json", action="store_true", help="Output machine-readable JSON evaluation report")
+    p_verify.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Output machine-readable JSON evaluation report")
     p_verify.add_argument("--fix", action="store_true", help="Auto-repair fixable defects (e.g. normalize relative source paths)")
     p_verify.add_argument("--vault", default=None, help="Path to notes vault root")
 
@@ -2377,7 +2379,7 @@ def main() -> int:
     p_smart.add_argument("--week", default=None, help="Filter by week (e.g. 5, 6, 9)")
     p_smart.add_argument("--no-vision", dest="vision", action="store_false", default=True, help="Disable h2o-lightning-4b vision image inspection")
     p_smart.add_argument("--model", default="gemini-3.8-flash-low", help="AGY subagent model tier (default: gemini-3.8-flash-low)")
-    p_smart.add_argument("--json", action="store_true", help="Output machine-readable JSON report")
+    p_smart.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Output machine-readable JSON report")
     p_smart.add_argument("--vault", default=None, help="Path to notes vault root")
 
     # serve

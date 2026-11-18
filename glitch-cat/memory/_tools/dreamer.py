@@ -356,7 +356,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--root")
     p.add_argument("--only", choices=["crossref", "wiki", "gaps", "promote"])
     p.add_argument("--json", action="store_true")
+    p.add_argument("--dry-run", action="store_true",
+                   help="print the planned consolidation and exit without writing")
     a = p.parse_args(argv)
+    if a.dry_run:
+        plan = {"command": "dreamer", "dry_run": True, "root": a.root,
+                "only": a.only}
+        print(json.dumps(plan, indent=2) if a.json else
+              f"[dry-run] dreamer: would consolidate {a.only or 'all'} jobs")
+        return
     jobs = {a.only} if a.only else {"all"}
     sys.exit(run(root_path(a.root), jobs, a.json))
 

@@ -2,7 +2,7 @@
 
 The contract for this folder and the state behind its claims. `README.md` routes;
 this file says what is true right now and how to prove it. Facts here are checked
-by `scripts/check-docs.py`; if this file and the install disagree, the script fails.
+by `modules/check-docs.py`; if this file and the install disagree, the script fails.
 
 ## Inputs
 
@@ -39,7 +39,7 @@ Both hang off one symlink, so a version change is one link flip.
 ## Check
 
 ```bash
-python3 scripts/check-docs.py          # this file + README vs the live install
+python3 modules/check-docs.py          # this file + README vs the live install
 python3 -m unittest tests/test_audiocpp.py
 scripts/switch-version.sh --status     # link, version, config, :8081
 python3 scripts/audiocpp_cli.py doctor # binary, config, GPU, model files
@@ -108,5 +108,5 @@ $S --rollback
 
 The script validates the candidate, seeds a missing `server.json`, restarts `:8081`,
 health-checks it and restores the previous install on failure. After any switch, run
-`scripts/check-docs.py` and update the `Version:` line and the state block above —
+`modules/check-docs.py` and update the `Version:` line and the state block above —
 the script exists to catch you when you forget.

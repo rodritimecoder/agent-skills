@@ -2,7 +2,9 @@
 name: swarm-contract
 
 description: >
-  Dynamic agent swarm governance via the tripartite contract and hard budget ceiling. Enforces (1)
+  Use when launching a multi-agent swarm that must stay within hard limits — declare hit-list goals,
+  validate worker scorecards, and enforce an immutable token/financial ceiling that halts overruns
+  in code. Dynamic agent swarm governance via the tripartite contract and hard budget ceiling. Enforces (1)
   explicit hit-list goals, (2) strict scorecard schema validation for all workers (rejecting vague
   markdown summaries), and (3) an immutable financial/token spending ceiling that halts execution
   in code before budget overruns.

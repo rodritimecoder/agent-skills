@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
 from stage_contracts import (  # noqa: E402 - path set above
     STAGE_CONTRACTS,
     STAGE_NAMES,

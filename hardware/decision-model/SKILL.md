@@ -2,13 +2,11 @@
 name: decision-model
 description: >
   Calibrated decision and visual grounding engine for the :8083 slot. It rotates between
-  h2o-lightning-4b (4B + mmproj-lightning-f16), Valen-Decision-1.5-0.8B (Q5_K_M + vision
-  Q8_0, native bbox head), Fastino GLiDE-0.4B (ModernBERT encoder + separate 255-way
-  readout), and knowledgator GLiCLASS v4 Edge (0.4B zero-shot decision and routing model,
-  CPU + ONNX, ~600 MB RAM, 0 VRAM, ~26 ms median). Answers typed bool, choice, score and
-  bounding-box queries (normalized 4-corner coordinates with calibrated confidence;
-  presence gating where the backend has a presence head) without generating open-ended
-  prose. The client names the served model in every result.
+  h2o-lightning-4b, Valen-Decision-1.5-0.8B (vision + native bbox head), Fastino GLiDE-0.4B
+  (ModernBERT + 255-way readout), and GLiCLASS v4 Edge (CPU + ONNX, ~600 MB RAM, 0 VRAM,
+  ~26 ms median). Answers typed bool, choice, score and bounding-box queries (normalized
+  4-corner coordinates with calibrated confidence) without open-ended prose. The client
+  names the served model in every result.
 
   Use this skill when the user asks about the decision model itself — which candidate is
   loaded, how fast one runs, how much RAM or VRAM it needs, whether it runs on ONNX or CPU,
@@ -117,7 +115,7 @@ Valen is a custom `valen` architecture (block bidirectional attention, decision 
 /run/media/rodri/AI/sh/glide-decider.sh      # :8083 front, encoder on a private llama.cpp port
 /run/media/rodri/AI/sh/decide.sh glide       # rotate the shared slot to it
 ```
-GLiDE is a 0.4B ModernBERT **encoder** plus a separate 255x1024 bf16 decision readout. The GGUF carries the encoder only — no `modern-bert.decision.type`, no head tensors — so a stock `llama-server` answers `501 This model is not a decision model` on `/v1/systemone`. `scripts/glide_serve.py` closes the gap the same way `pplx_decider.py` does: it runs llama-server with `--embeddings --pooling none`, reads the hidden state of the last real token before `[SEP]`, applies the readout, softmaxes the first N option slots and serves Fastino's own `/v1/systemone` contract (`choice`, `noul`, `score`, `probabilities`, `confidence`). Prompts, option codes and truncation follow `glide/prompt.py`: 7999 tokens max, first 1024 + tail.
+GLiDE is a 0.4B ModernBERT **encoder** plus a separate 255x1024 bf16 decision readout. The GGUF carries the encoder only — no `modern-bert.decision.type`, no head tensors — so a stock `llama-server` answers `501 This model is not a decision model` on `/v1/systemone`. `modules/glide_serve.py` closes the gap the same way `pplx_decider.py` does: it runs llama-server with `--embeddings --pooling none`, reads the hidden state of the last real token before `[SEP]`, applies the readout, softmaxes the first N option slots and serves Fastino's own `/v1/systemone` contract (`choice`, `noul`, `score`, `probabilities`, `confidence`). Prompts, option codes and truncation follow `glide/prompt.py`: 7999 tokens max, first 1024 + tail.
 
 - **Weights:** `models/irdor/GLiDE-0.4B-Q8_0-GGUF/` — `glide-0.4b-q8_0.gguf` (421 MB on disk, 400 MiB, 8.5 BPW) + `readout.safetensors` (522 KB) + `decision_config.json` (255 single-token option codes). The readout is not in the GGUF; keep it next to it.
 - **Verified against the model card** on Q8_0: refund `0.789` vs `0.784`, cancel `0.086` vs `0.089`, urgent `0.593` vs `0.595`, priority `[0.031, 0.306, 0.663]` vs `[0.032, 0.311, 0.656]`, and the card's exact `usage.input_tokens = 395` — prompt layout and tokenization match the official server.
@@ -152,4 +150,4 @@ The previous decision model in this slot was Perplexity's `pplx-decider-flash-v1
 
 - **Architecture:** Qwen3.5-4B backbone with a `[255, 2560]` BF16 readout head distilled from 27B teachers.
 - **Why It Was Retired:** It required non-causal attention (`qwen35.attention.causal=false`) and an 8192-token ubatch (`-ub 8192 -b 8192`) that consumed ~8.2 GB VRAM and spilled ~7.9 GB into GTT system RAM alongside Qwen 35B.
-- **Legacy Client:** Preserved at [`scripts/pplx_decider.py`](scripts/pplx_decider.py) for testing joint protocol v3.
+- **Legacy Client:** Preserved at [`modules/pplx_decider.py`](modules/pplx_decider.py) for testing joint protocol v3.

@@ -2,9 +2,11 @@
 name: glitch-orchestra
 
 description: >
-  Claude Code mods and terminal conductor architecture for multi-session agent supervision, with
-  an experimental alignment-first role workflow from. The conductor aligns intent, references and
-  specialist panes before dispatching tasks to dedicated child sessions, tracks progress, and
+  Use when multiple agent sessions must be supervised from one terminal conductor — register and
+  align child workers, assign specialist panes, track progress, and emit completion chimes for the
+  batch. Claude Code mods and terminal conductor architecture for multi-session agent supervision,
+  with an experimental alignment-first role workflow from. The conductor aligns intent, references
+  and specialist panes before dispatching tasks to dedicated child sessions, tracks progress, and
   triggers completion chimes.
 
 compatibility: "Requires Python 3.10+. No network access needed."
@@ -41,7 +43,7 @@ The alignment reel shows conductor-led specialist panes; it does not establish d
 ## 🛠️ CLI Quickstart
 
 ```bash
-ORCHESTRA="python3 /run/media/rodri/AI/skills/glitch-orchestra/glitch_orchestra.py"
+ORCHESTRA="python3 glitch_orchestra.py"
 
 # 1. Register a child worker session
 $ORCHESTRA register --id worker_01 --task "Refactor authentication middleware" --term tty_01

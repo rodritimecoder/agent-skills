@@ -2,7 +2,9 @@
 name: projects-harness
 
 description: >
-  Autonomous multi-agent CLI coordination harness reverse-engineered from Anthropic's Claude
+  Use when multiple CLI agents must be coordinated in a shared project — route messages
+  deterministically, carry dual-provenance briefs, enforce atomic one-line-per-fact memory updates,
+  and throttle the task queue. Autonomous multi-agent CLI coordination harness reverse-engineered from Anthropic's Claude
   Projects beta. Features deterministic 3-way message routing, dual-provenance envelope hooks (AI
   coordinator brief vs owner verbatim instructions), single-line-per-fact atomic memory updates
   with in-place history superseding, a 200-line memory load cap, static rule vs memory clash

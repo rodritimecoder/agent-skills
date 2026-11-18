@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from swarm_engine import SwarmContract, SwarmBudgetExceededError, ScorecardValidationError
 
 
@@ -27,16 +27,25 @@ def main():
     p_rec.add_argument("--scorecard", required=True, help="JSON string or file path containing worker scorecard")
     p_rec.add_argument("--tokens", type=int, default=0, metavar="COUNT", help="Tokens consumed by worker")
     p_rec.add_argument("--cost", type=float, default=0.0, metavar="SCORE", help="Cost in USD consumed by worker")
+    p_rec.add_argument("--dry-run", action="store_true", help="Print the planned record and exit without side effects")
 
     # check
     p_chk = subparsers.add_parser("check", help="Pre-flight check if budget exists to spawn next worker")
     p_chk.add_argument("--est-tokens", type=int, default=10000, metavar="COUNT", help="Estimated tokens")
     p_chk.add_argument("--est-cost", type=float, default=0.05, metavar="SCORE", help="Estimated cost in USD")
+    p_chk.add_argument("--dry-run", action="store_true", help="Print the planned check and exit without side effects")
 
     # status
     subparsers.add_parser("status", help="View swarm status and budget metrics")
 
     args = parser.parse_args()
+    if getattr(args, "dry_run", False):
+        plan = {"action": args.command, "dry_run": True}
+        for key in ("scorecard", "tokens", "cost", "est_tokens", "est_cost"):
+            if hasattr(args, key):
+                plan[key] = getattr(args, key)
+        print(json.dumps(plan, indent=2) if args.json else f"[dry-run] {args.command}: {json.dumps(plan, sort_keys=True)}")
+        sys.exit(0)
     swarm = SwarmContract(Path(args.dir))
 
     if args.command == "init":

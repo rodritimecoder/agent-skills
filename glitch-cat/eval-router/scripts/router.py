@@ -22,6 +22,7 @@ HARVEST_FILE = CONFIG_DIR / "harvest.jsonl"
 WEIGHTS_FILE = CONFIG_DIR / "weights.json"
 
 sys.path.append(str(ROUTER_DIR / "scripts"))
+sys.path.insert(0, str(ROUTER_DIR / "modules"))
 import classifier  # type: ignore
 
 def _load_env_fallbacks():
@@ -179,6 +180,7 @@ def evaluate_response_quality(prompt: str, response: str) -> Tuple[bool, float, 
         return False, 0.0, "Empty or truncated response"
 
     try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "glitch-cat" / "jev-decision" / "modules"))
         from jev_engine import JevEngine  # type: ignore
         state = f"USER PROMPT:\n{prompt}\n\nMODEL RESPONSE:\n{response}"
         question = "Does this response accurately, adequately, and safely answer the user prompt without errors or blatant hallucinations?"

@@ -208,6 +208,12 @@ def main(argv=None) -> int:
     parser.add_argument("--file", required=True,
                         help="Reply to score. Use - to read stdin.")
     parser.add_argument("--json", action="store_true", help="Emit the score as JSON.")
+    parser.add_argument("--fields", default=None,
+                        help="Comma-separated fault fields to keep (line,rule,excerpt)")
+    parser.add_argument("--project", default=None,
+                        help="Only include faults whose rule contains this project/name")
+    parser.add_argument("--limit", type=int, default=20, metavar="N",
+                        help="Max faults to print (default: 20)")
     args = parser.parse_args(argv)
 
     if args.file == "-":
@@ -220,6 +226,15 @@ def main(argv=None) -> int:
         text = path.read_text(encoding="utf-8", errors="replace")
 
     result = score(text)
+    faults = result.get("faults", [])
+    if args.project:
+        faults = [f for f in faults if args.project in str(f.get("rule", ""))]
+    if args.fields:
+        keep = {f.strip() for f in args.fields.split(",") if f.strip()}
+        faults = [{k: v for k, v in f.items() if k in keep} for f in faults]
+    faults = faults[:args.limit]
+    result["faults"] = faults
+    result["returned_faults"] = len(faults)
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
@@ -230,7 +245,7 @@ def main(argv=None) -> int:
         f"faults/100w {result['faults_per_100w']}"
     )
     for fault in result["faults"]:
-        print(f"  L{fault['line']:<4} {fault['rule']:<22} {fault['excerpt']}")
+        print(f"  L{fault.get('line', '-')!s:<4} {fault.get('rule', '-'):<22} {fault.get('excerpt', '-')}")
     if not result["faults"]:
         print("  clean")
     return 0

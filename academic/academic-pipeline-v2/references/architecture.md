@@ -32,7 +32,7 @@ Each HTML is standalone, small, independently verifiable. No cross-page coupling
 
 Each stage folder has its own `CONTEXT.md`. State in `.agent_state.json` + `STATE.md` (one fact per line, supersede in place). Context gating (`cgate`) slices files instead of dumping. The runner is
 `scripts/run_pipeline.py`; every stage `CONTEXT.md` is generated from
-`scripts/stage_contracts.py`, the single contract table.
+`modules/stage_contracts.py`, the single contract table.
 
 ## 4. Stage 1 — Smart ingestion (planned around the constellation)
 

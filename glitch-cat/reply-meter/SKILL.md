@@ -2,6 +2,8 @@
 name: reply-meter
 
 description: >
+  Use when an agent's written reply must be scored objectively instead of judged by vibes — count
+  words and sentences, locate named style faults, and compute faults per 100 words for a Stop hook.
   Deterministic output scorer for agent replies, modelled on the STE field test:
   measure replies, not vibes. Returns words, sentences, longest sentence, faults
   per 100 words and a line-located list of named faults (sentence over 25 words,
@@ -85,7 +87,7 @@ score("Open the config file and set the port to 8080.")
 | `summary_boilerplate` | `In summary`, `In conclusion`, `To sum up`, `All in all` |
 
 The rules as a 20-line paste-in card, written as instructions for the writer,
-live in [`scripts/card.md`](scripts/card.md). Drop it at the top of a system
+live in [`references/card.md`](references/card.md). Drop it at the top of a system
 prompt and the reply arrives closer to clean before the meter ever runs.
 
 Exit code is `0` whether or not faults are found — the meter reports, it never

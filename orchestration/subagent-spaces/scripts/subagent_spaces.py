@@ -328,8 +328,16 @@ def cmd_run(args: argparse.Namespace) -> None:
     sys.exit(res.returncode)
 
 
-def cmd_ps(as_json: bool = False) -> None:
+def cmd_ps(as_json: bool = False, fields: Optional[str] = None,
+           project: Optional[str] = None, limit: int = 20) -> None:
     active = get_active_containers()
+    if project:
+        active = [
+            c for c in active
+            if project in str((c.get("Labels") or {}).get("workspace", ""))
+            or any(project in str(n) for n in (c.get("Names") or []))
+        ]
+    active = active[:limit]
 
     if as_json:
         spaces = []
@@ -343,6 +351,9 @@ def cmd_ps(as_json: bool = False) -> None:
                 "workspace": strip_ansi(str(labels.get("workspace", "-"))),
                 "names": [strip_ansi(n) for n in (c.get("Names") or [])],
             })
+        if fields:
+            keep = {f.strip() for f in fields.split(",") if f.strip()}
+            spaces = [{k: v for k, v in s.items() if k in keep} for s in spaces]
         print(json.dumps({"ok": True, "spaces": spaces}))
         return
 
@@ -442,8 +453,16 @@ def main():
     ps_p = subparsers.add_parser("ps", help="List active subagent space containers")
     ps_p.add_argument("--json", action="store_true",
                       help="Emit machine-readable JSON on stdout")
+    ps_p.add_argument("--fields", default=None,
+                      help="Comma-separated fields to keep in JSON output")
+    ps_p.add_argument("--project", default=None,
+                      help="Only include spaces whose workspace/name contains this project")
+    ps_p.add_argument("--limit", type=int, default=20, metavar="N",
+                      help="Max spaces to print (default: 20)")
     subparsers.add_parser("build", help="Build optimized local subagent-space image")
-    subparsers.add_parser("prune", help="Clean up all active subagent spaces")
+    prune_p = subparsers.add_parser("prune", help="Clean up all active subagent spaces")
+    prune_p.add_argument("--dry-run", action="store_true",
+                         help="Print the spaces that would be pruned without stopping them")
 
     enter_p = subparsers.add_parser("enter", help="Attach interactive shell to a running space")
     enter_p.add_argument("target", help="Slot, core, container name, or container ID")
@@ -481,7 +500,9 @@ def main():
             sys.exit(2)
     elif args.action == "ps":
         try:
-            cmd_ps(as_json=args.json)
+            cmd_ps(as_json=args.json, fields=getattr(args, "fields", None),
+                   project=getattr(args, "project", None),
+                   limit=getattr(args, "limit", 20))
         except Exception as exc:
             if not args.json:
                 raise
@@ -494,6 +515,14 @@ def main():
     elif args.action == "stop":
         cmd_stop(args.target)
     elif args.action == "prune":
+        if getattr(args, "dry_run", False):
+            active = get_active_containers()
+            ids = [c.get("Id", "")[:12] for c in active]
+            print(json.dumps({"action": "prune", "dry_run": True,
+                              "would_prune": ids}, indent=2)
+                  if getattr(args, "json", False) else
+                  f"[dry-run] prune: would stop and remove {len(ids)} space(s): {ids}")
+            return
         cmd_prune()
     elif args.action == "run":
         cmd_run(args)

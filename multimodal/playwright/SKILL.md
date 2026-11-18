@@ -1,6 +1,8 @@
 ---
 name: playwright
 description: >
+  Use when an agent must drive a real browser through official Playwright — attach over CDP, act on
+  accessible locators, generate interactive code, take screenshots, or evaluate JavaScript.
   Agent-facing browser control through official Playwright: CDP attach, locator actionability,
   AI-mode accessibility refs, interactive codegen, screenshots, and JavaScript evaluation. Use
   frontend-uat for the JEV-driven user-journey workflow. Rust developers writing against the

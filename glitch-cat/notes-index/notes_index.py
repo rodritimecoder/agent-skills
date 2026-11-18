@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 
 from notes_index_core import (  # noqa: E402
     DEFAULT_CHUNK,
@@ -58,10 +59,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--timer", action="store_true", help="Install the 6-hour refresh timer")
     p_init.add_argument("--every-hours", type=int, default=6, metavar="N")
     p_init.add_argument("--no-summaries", action="store_true", help="Index raw and note rows only")
+    p_init.add_argument("--dry-run", action="store_true",
+                        help="Print the planned init and exit without writing any file")
 
     p_update = sub.add_parser("update", parents=[common], help="Re-index new, changed and removed notes")
     p_update.add_argument("--strict", action="store_true", help="Treat summary failures as run failures")
     p_update.add_argument("--no-summaries", action="store_true", help="Skip the summarizer pass")
+    p_update.add_argument("--dry-run", action="store_true",
+                          help="Print the planned re-index and exit without writing any file")
 
     p_search = sub.add_parser("search", parents=[common], help="Rank notes against a query")
     p_search.add_argument("words", nargs="+", help="Query words")
@@ -95,6 +100,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+    if getattr(args, "dry_run", False):
+        plan = {"command": args.command, "dry_run": True, "folder": args.folder}
+        for key in ("yes", "rule_variant", "target", "timer", "every_hours",
+                    "no_summaries", "strict"):
+            if hasattr(args, key):
+                plan[key] = getattr(args, key)
+        print(json.dumps(plan, indent=2) if args.json else
+              f"[dry-run] {args.command}: {json.dumps(plan, sort_keys=True)}")
+        return 0
     folder = Path(args.folder).expanduser().resolve()
 
     if args.command == "cite":

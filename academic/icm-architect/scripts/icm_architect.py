@@ -541,9 +541,14 @@ def cmd_validate(target_dir: Path, as_json: bool = False, kem: bool = False) -> 
     return 0 if status_ok else 1
 
 
-def cmd_map(target_dir: Path, mermaid: bool = False):
+def cmd_map(target_dir: Path, mermaid: bool = False, fields=None,
+            project=None, limit=20):
     target_dir = target_dir.resolve()
     stage_dirs = sorted([d for d in target_dir.iterdir() if d.is_dir() and re.match(r"^\d{2}_", d.name)])
+    if project:
+        stage_dirs = [d for d in stage_dirs if project in d.name]
+    stage_dirs = stage_dirs[:limit]
+    keep = {f.strip().lower() for f in fields.split(",") if f.strip()} if fields else None
 
     if not stage_dirs:
         sys.exit("❌ Error: No stage folders (NN_name) found to map.")
@@ -577,8 +582,10 @@ def cmd_map(target_dir: Path, mermaid: bool = False):
                 )
 
         print(f"  [{s.name}]")
-        print(f"    ├─ In:  {inputs}")
-        print(f"    └─ Out: {outputs}")
+        if keep is None or "in" in keep:
+            print(f"    ├─ In:  {inputs}")
+        if keep is None or "out" in keep:
+            print(f"    └─ Out: {outputs}")
         if idx < len(stage_dirs):
             print("       │\n       ▼")
 
@@ -632,6 +639,12 @@ def main():
     p_map = sub.add_parser("map", help="Render stage pipeline topology")
     p_map.add_argument("path", nargs="?", default=".", help="Target workspace directory (default: current)")
     p_map.add_argument("--mermaid", action="store_true", help="Output as Mermaid flowchart")
+    p_map.add_argument("--fields", default=None,
+                       help="Comma-separated fields to show (in,out)")
+    p_map.add_argument("--project", default=None,
+                       help="Only include stage folders whose name contains this project")
+    p_map.add_argument("--limit", type=int, default=20, metavar="N",
+                       help="Max stages to render (default: 20)")
 
     p_doc = sub.add_parser("doctor", help="Run diagnostic health checks on workspace")
     p_doc.add_argument("path", nargs="?", default=".", help="Target workspace directory (default: current)")
@@ -657,7 +670,8 @@ def main():
         ret = cmd_validate(Path(args.path), as_json=args.json, kem=getattr(args, "kem", False))
         sys.exit(ret)
     elif args.action == "map":
-        cmd_map(Path(args.path), mermaid=args.mermaid)
+        cmd_map(Path(args.path), mermaid=args.mermaid,
+                fields=args.fields, project=args.project, limit=args.limit)
 
 
 if __name__ == "__main__":

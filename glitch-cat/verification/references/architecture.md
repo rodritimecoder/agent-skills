@@ -74,7 +74,7 @@ a layer fails for a reason the report cannot name.
 
 ### Observation substrate
 
-CDP events are collected on a hand-rolled WebSocket (`scripts/cdp_lite.py`), not through a
+CDP events are collected on a hand-rolled WebSocket (`modules/cdp_lite.py`), not through a
 JS shim, for one reason: **a shim only sees what happens after it is installed.** Console
 output, uncaught exceptions and network failures that occur during the load — the ones that
 matter — happen before any shim could run. Protocol events arrive from the first frame.

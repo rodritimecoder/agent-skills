@@ -110,7 +110,7 @@ omnicli index --rebuild
 omnicli spec --skill <skill-name> --stubs
 
 # 2. Agent Skills spec + description + script-readiness lint
-python3 scripts/verify_agent_skills.py --skill <skill-name> --strict
+python3 tests/verify_agent_skills.py --skill <skill-name> --strict
 
 # 3. Code Mode typing & JSON-output contract gate
 python3 scripts/verify_code_mode.py --skill <skill-name>

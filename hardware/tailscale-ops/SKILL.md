@@ -2,7 +2,9 @@
 name: tailscale-ops
 
 description: >
-  Runtime Tailscale network operations for discovering online homelab/desktop nodes,
+  Use when checking whether a remote tailnet node is online, inspecting or applying this
+  workstation's tailnet surface, or copying artifacts between devices over Tailscale. Runtime
+  Tailscale network operations for discovering online homelab/desktop nodes,
   reconciling the declared tailnet surface (root page plus explicitly served UIs),
   and transferring artifacts across devices (tailscale file cp).
 

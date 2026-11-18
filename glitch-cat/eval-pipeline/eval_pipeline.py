@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from pipeline_core import EvalPipeline, PropagationRiskError
 
 FAILED = "failed"
@@ -123,6 +123,12 @@ def main():
 
     p_aud = subparsers.add_parser("audit", parents=[common], help="Audit recorded step artifacts in ledger")
     p_aud.add_argument("--ledger-dir", default=None, help="Ledger directory path (default: --ledger)")
+    p_aud.add_argument("--fields", default=None,
+                       help="Comma-separated step fields to keep in JSON output")
+    p_aud.add_argument("--project", default=None,
+                       help="Only include steps whose name contains this project")
+    p_aud.add_argument("--limit", type=int, default=20, metavar="N",
+                       help="Max steps to display (default: 20)")
 
     subparsers.add_parser("verify-sample", parents=[common], help="Run self-diagnostic verification pipeline")
 
@@ -131,6 +137,15 @@ def main():
 
     if args.command == "audit":
         report, failed = audit_ledger(args.ledger_dir or args.ledger)
+        steps = report.get("steps", [])
+        if args.project:
+            steps = [s for s in steps if args.project in str(s.get("name", ""))]
+        steps = steps[:args.limit]
+        if args.fields:
+            keep = {f.strip() for f in args.fields.split(",") if f.strip()}
+            steps = [{k: v for k, v in s.items() if k in keep} for s in steps]
+        report["steps"] = steps
+        report["returned_steps"] = len(steps)
         if as_json:
             print(json.dumps(report, indent=2))
         else:

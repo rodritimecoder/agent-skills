@@ -10,7 +10,7 @@ Read it before touching a backend, a weight file, or a launcher.
 |---|---|
 | Client | `scripts/decision_model.py` |
 | Tests | `tests/` |
-| h2o shim | `scripts/h2o_serve.py` |
+| h2o shim | `modules/h2o_serve.py` |
 | Slot registry | `../../ports.json` (`id: decision`) |
 | Launchers (authoritative) | `/run/media/rodri/AI/sh/` |
 | Weights | `/run/media/rodri/AI/models/` |

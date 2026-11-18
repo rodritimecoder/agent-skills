@@ -79,7 +79,7 @@ ocr server stop
   health is `GET /health`.
 - The prompt is *not* a server option — llama-server applies the chat template,
   and the client sends the prompt text. That client is this skill
-  (`scripts/ocr_engine.py`), which is the llama.cpp equivalent of the HF card's
+  (`modules/ocr_engine.py`), which is the llama.cpp equivalent of the HF card's
   `if prompt:` branch: image + `grounding` when grounded, prompt + image
   otherwise. The launcher exports `OCR_LIGHTON_PROMPT=grounding` as the machine
   default and `--transcribe` overrides it per call.

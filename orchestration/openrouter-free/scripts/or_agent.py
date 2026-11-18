@@ -849,6 +849,8 @@ def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
 
 def main():
     parser = argparse.ArgumentParser(description="OpenRouter Free Multimodal & Subagent CLI (Uber Protocol)")
+    parser.add_argument("--json", action="store_true", dest="global_json",
+                        help="machine-readable output for every command")
     sub = parser.add_subparsers(dest="mode", required=True)
 
     p_agent = sub.add_parser("agent", help="Run autonomous subagent loop with compound bash batching")
@@ -904,6 +906,7 @@ def main():
     p_doc.add_argument("--live", action="store_true", help="Run live inference probe to verified free endpoints")
 
     args = parser.parse_args()
+    args.json = getattr(args, "json", False) or args.global_json
 
     try:
         if args.mode == "agent":

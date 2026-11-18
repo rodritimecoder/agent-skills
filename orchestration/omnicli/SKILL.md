@@ -105,7 +105,7 @@ emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump r
 
 Full SDK API and authoring guidelines:
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
-- [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `scripts/verify_agent_skills.py`)
+- [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `tests/verify_agent_skills.py`)
 
 ---
 

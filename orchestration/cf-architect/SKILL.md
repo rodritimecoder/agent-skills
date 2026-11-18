@@ -118,5 +118,5 @@ These look like failures and are not:
 ## Tests
 
 ```bash
-python3 scripts/test_cf_architect.py
+python3 tests/test_cf_architect.py
 ```

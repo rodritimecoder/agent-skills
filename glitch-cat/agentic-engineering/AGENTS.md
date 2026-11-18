@@ -20,7 +20,7 @@ Autonomous production pipeline implementing Kem's (Glitch Cat Club) 7-step loop.
 | Split task into parallel lanes | `agentic split <title>` |
 | Run full 7-step loop | `agentic run <card-id> --test "<cmd>" [--lint "<cmd>"] [--evidence <artifact>]` |
 | Prove the UI before evidence | `verify-app run --pass .verify/pass.json` (`verification` skill) |
-| Run test suite | `python3 scripts/test_agentic.py` |
+| Run test suite | `python3 tests/test_agentic.py` |
 
 ## Not This Workspace
 - Individual code changes: Performed in target project workspaces or worktrees.

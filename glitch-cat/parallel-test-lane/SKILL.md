@@ -2,7 +2,9 @@
 name: parallel-test-lane
 
 description: >
-  AI blast radius containment and parallel test runner. Partitions test suites into sequential-
+  Use when a regression suite is too slow to run sequentially — partition tests into isolated
+  sequential vs independent parallel worker lanes, buffer output cleanly, and aggregate pass/fail
+  reporting. AI blast radius containment and parallel test runner. Partitions test suites into sequential-
   isolated vs independent parallel worker lanes across CPU cores, slashing 40-60 minute regression
   suites down to 7-8 minutes with clean non-interleaved output buffering and aggregated pass/fail
   reporting.

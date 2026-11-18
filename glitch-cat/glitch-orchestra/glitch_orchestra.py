@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from orchestra_conductor import OrchestraConductor
 
 
@@ -58,6 +58,12 @@ def main():
 
     p_status = subparsers.add_parser("status", help="View conductor state, workers, and events")
     p_status.add_argument("--json", dest="json", action="store_true", default=argparse.SUPPRESS)
+    p_status.add_argument("--fields", default=None,
+                          help="Comma-separated event fields to keep in JSON output")
+    p_status.add_argument("--project", default=None,
+                          help="Only include events whose message contains this project")
+    p_status.add_argument("--limit", type=int, default=20, metavar="N",
+                          help="Max events to display (default: 20)")
 
     args = parser.parse_args()
     conductor = OrchestraConductor(Path(args.dir))
@@ -133,6 +139,14 @@ def main():
 
         elif args.command == "status":
             st = conductor.status()
+            events = st.get("events", [])
+            if args.project:
+                events = [e for e in events if args.project in json.dumps(e, ensure_ascii=False)]
+            events = events[:args.limit]
+            if args.fields:
+                keep = {f.strip() for f in args.fields.split(",") if f.strip()}
+                events = [{k: v for k, v in e.items() if k in keep} for e in events]
+            st["events"] = events
             if args.json:
                 print(json.dumps(st, indent=2, ensure_ascii=False))
             else:
@@ -149,8 +163,8 @@ def main():
                 print(f"  • Plan: {plan_state}; dispatch approved: {st['dispatch_approved']}")
                 print(f"  • Active Child Sessions ({st['active_count']}): {active_sessions}")
                 print(f"  • Completed ({st['completed_count']}), with evidence ({st['verified_count']}): {completed_sessions}")
-                print(f"  • Events ({len(st['events'])}):")
-                for event in st["events"]:
+                print(f"  • Events (showing {len(events)}):")
+                for event in events:
                     print(f"    {json.dumps(event, ensure_ascii=False)}")
 
     except (ValueError, FileNotFoundError) as exc:

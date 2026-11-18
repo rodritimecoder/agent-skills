@@ -35,7 +35,7 @@ Follows **Interpretable Context Methodology (ICM)**:
 ### 1. Initialize a video mining workspace
 
 ```bash
-CLI=~/.gemini/config/skills/video-miner/scripts/videomine.py
+CLI=scripts/videomine.py
 python3 $CLI init ./my_video_run "https://www.youtube.com/watch?v=..."
 # Or with a local video file:
 python3 $CLI init ./lecture_run ~/Videos/lecture.mp4
@@ -318,5 +318,5 @@ to stage only your own entry.
 ## Tests
 
 ```bash
-python3 ~/.gemini/config/skills/video-miner/scripts/test_videomine.py
+python3 tests/test_videomine.py
 ```

@@ -594,7 +594,15 @@ if __name__ == "__main__":  # pragma: no cover - manual smoke run
     parser.add_argument("workspace", nargs="?", default=".", metavar="DIR",
                         help="ICM workspace root (default: .)")
     parser.add_argument("--dry-run", action="store_true", help="run the gates without writing step_05.json")
+    parser.add_argument("--json", action="store_true", help="emit the gate report as JSON (default: human summary)")
     args = parser.parse_args()
     result = run(Path(args.workspace), dry_run=args.dry_run)
-    print(json.dumps(result, indent=2))
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"stage5 ({result.get('status', 'unknown')}): "
+              f"{len(result.get('checks', result.get('gates', [])))} gate(s)")
+        if result.get("errors"):
+            for err in result["errors"]:
+                print(f"  - {err}", file=sys.stderr)
     sys.exit(0 if result["status"] == "ok" else 2)

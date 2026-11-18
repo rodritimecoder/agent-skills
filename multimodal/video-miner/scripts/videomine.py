@@ -29,6 +29,7 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
 import videomine_core as core
 import videomine_stages as stages
 from videomine_core import (
