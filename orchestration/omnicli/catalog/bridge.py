@@ -22,6 +22,9 @@ import sys
 import threading
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+
+from . import policy
 
 ALLOWED = {"search", "list", "tools", "describe", "invoke", "policy", "spec"}
 MAX_REQUEST = 1 << 20
@@ -57,6 +60,19 @@ raise SystemExit(int(reply.get("returncode", 1)))
 '''
 
 
+def _url_host(token: str) -> tuple[str, str] | None:
+    """Return (host, netloc) for an http(s) URL token, else None."""
+    if "://" not in token:
+        return None
+    try:
+        parsed = urlparse(token)
+    except ValueError:
+        return None
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return None
+    return parsed.hostname.lower(), parsed.netloc.lower()
+
+
 class _Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         raw = self.rfile.readline(MAX_REQUEST)
@@ -89,11 +105,41 @@ class Bridge(socketserver.ThreadingUnixStreamServer):
             self.denied.append(verb or "<empty>")
             return {"stdout": "", "stderr": f"omnicli: {verb or 'that'} is not reachable from a strict plan\n",
                     "returncode": 126}
+        egress = policy.egress()
+
+        # child_env is a SUPERSET of the parent environment. The proxy overlay
+        # and the allow/deny rules live in this parent process; nothing is
+        # written into the sandbox, which only ever sees the shim and socket.
+        child_env = os.environ.copy()
+        proxy = egress.get("proxy")
+        if isinstance(proxy, str) and proxy:
+            child_env["HTTP_PROXY"] = proxy
+            child_env["HTTPS_PROXY"] = proxy
+            child_env["NO_PROXY"] = child_env.get("NO_PROXY") or "localhost,127.0.0.1"
+        for key, value in egress.get("inject", {}).items():
+            child_env[key] = value
+
+        allow = set(egress.get("allow") or [])
+        deny = set(egress.get("deny") or [])
+        if allow or deny:
+            for token in argv[1:]:
+                target = _url_host(token)
+                if target is None:
+                    continue
+                host, netloc = target
+                if (host in deny or netloc in deny or
+                        (allow and host not in allow and netloc not in allow)):
+                    self.denied.append(host)
+                    return {"stdout": "",
+                            "stderr": f"omnicli: egress to {host} denied by bridge policy\n",
+                            "returncode": 126}
+
         self.calls += 1
         try:
             proc = subprocess.run(
                 [sys.executable, str(self.cli), *argv],
                 capture_output=True, text=True, timeout=self.timeout_seconds,
+                env=child_env,
             )
         except subprocess.TimeoutExpired:
             return {"stdout": "", "stderr": "omnicli: bridge call timed out\n", "returncode": 124}

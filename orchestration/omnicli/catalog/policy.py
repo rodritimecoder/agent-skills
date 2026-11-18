@@ -32,6 +32,11 @@ POLICY_VERSION = 1
 POLICY_FILE = "policy.json"
 LOG_FILE = "policy.log.jsonl"
 
+# Egress defaults: an unconfigured install keeps the exact pre-policy behavior.
+DEFAULT_EGRESS: dict[str, Any] = {
+    "allow": [], "deny": [], "proxy": None, "inject": {},
+}
+
 
 def _dir() -> Path:
     from . import builder
@@ -59,6 +64,29 @@ def load() -> dict[str, Any]:
     tools = data.get("tools")
     data["tools"] = tools if isinstance(tools, dict) else {}
     return data
+
+
+def egress() -> dict[str, Any]:
+    """Return the egress policy with safe defaults.
+
+    A missing or malformed ``egress`` section collapses to the empty policy,
+    so adding this field never changes behavior until it is configured.
+    """
+    section = load().get("egress")
+    if not isinstance(section, dict):
+        return {key: (value.copy() if isinstance(value, (list, dict)) else value)
+                for key, value in DEFAULT_EGRESS.items()}
+    allow = section.get("allow")
+    deny = section.get("deny")
+    proxy = section.get("proxy")
+    inject = section.get("inject")
+    return {
+        "allow": [str(item) for item in allow] if isinstance(allow, list) else [],
+        "deny": [str(item) for item in deny] if isinstance(deny, list) else [],
+        "proxy": proxy if isinstance(proxy, str) and proxy else None,
+        "inject": ({str(k): str(v) for k, v in inject.items()}
+                   if isinstance(inject, dict) else {}),
+    }
 
 
 def save(data: dict[str, Any]) -> None:

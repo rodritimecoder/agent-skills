@@ -316,13 +316,24 @@ def run(script: str | None = None, code: str | None = None,
         if kind in (None, "call"):
             calls += 1
 
+    # Same byte budget bounds both emitResult and stdout; --out keeps full stdout.
+    stdout_budget = 7000 if as_json else 7800
+
     result = None
+    result_truncated = False
+    result_bytes = 0
     if result_file.is_file():
         try:
             result = json.loads(result_file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             pass
         result_file.unlink(missing_ok=True)
+    if result is not None:
+        # Cap the emitResult() channel like stdout; small results pass through unchanged.
+        shown_result, result_truncated, result_bytes = invoke_mod.cap(
+            json.dumps(result, ensure_ascii=False), stdout_budget)
+        if result_truncated:
+            result = shown_result
 
     if out_path:
         target = Path(out_path).resolve()
@@ -331,7 +342,6 @@ def run(script: str | None = None, code: str | None = None,
 
     bridge_calls = getattr(bridge_server, "calls", 0)
     # Bound what re-enters the model; --out preserves full stdout when requested.
-    stdout_budget = 7000 if as_json else 7800
     shown_stdout, stdout_truncated, stdout_bytes = invoke_mod.cap(proc.stdout, stdout_budget)
     report = {
         "plan": "<stdin>" if script == "-" else ("<inline>" if code is not None else str(script_path)),
@@ -345,6 +355,8 @@ def run(script: str | None = None, code: str | None = None,
         "bridge_denied": getattr(bridge_server, "denied", []),
         "tools": built.get("tools"),
         "result": result,
+        "result_truncated": result_truncated,
+        "result_bytes": result_bytes,
         "stdout": shown_stdout,
         "stdout_truncated": stdout_truncated,
         "stdout_bytes": stdout_bytes,
