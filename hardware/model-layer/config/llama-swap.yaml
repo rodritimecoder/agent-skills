@@ -16,7 +16,7 @@ globalTTL: 0 # 0 = do not evict solely by timer; matrix solver manages VRAM
 
 macros:
   server_vulkan_rocm: "/run/media/rodri/AI/ROCmFPX/build-vulkan-linux/bin/llama-server"
-  server_upstream_vulkan: "/run/media/rodri/AI/llama.cpp/build/bin/llama-server"
+  server_upstream_vulkan: "/run/media/rodri/AI/llama.cpp/build-vulkan/bin/llama-server"
   qwen_template: "/run/media/rodri/AI/models/froggeric/Qwen-Fixed-Chat-Templates/chat_template.jinja"
 
 models:

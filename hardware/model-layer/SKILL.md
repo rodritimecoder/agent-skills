@@ -88,6 +88,12 @@ Beyond the slots sits the swapping rig, operated by `llama-rig`
 The rig is `infra` in `ports.json` (owned by this skill); the slots above are
 the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weights on the AI volume.
 
+- **The `llama-server` binaries behind the rig** (`server_upstream_vulkan` in
+  [config/llama-swap.yaml](config/llama-swap.yaml)) are tracked by the separate
+  [llama-build](../llama-build/SKILL.md) skill — see it before updating or
+  rebuilding llama.cpp or checking whether a build is stale. This skill still
+  owns the slot roster; llama-build only reads the config path.
+
 ## Rules
 
 - The roster is generated; the manifest is the truth and the disk is the floor.
