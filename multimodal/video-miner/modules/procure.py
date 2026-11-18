@@ -3,11 +3,12 @@
 
 Three failures this module removes.
 
-1. A stopped OCR slot reported as "the server is down". `llama-rig up ocr`
-   answers on :8082 in well under a second, so the pipeline starts the slot
-   itself and says so. A registered slot is left running: that warm server is
-   what makes the next run fast. Only an unregistered backend (MiniCPM on
-   :18499) is spawned as a throwaway child, and the caller owns its lifetime.
+1. A stopped OCR slot reported as "the server is down". Registered slots are
+   brought up with one `llama-rig ensure ocr --json` call, which starts the slot
+   if needed and reports `started` / `waited_ms` / `status`. A registered slot is
+   left running: that warm server is what makes the next run fast. Only an
+   unregistered backend (MiniCPM on :18499) is spawned as a throwaway child,
+   and the caller owns its lifetime.
 
 2. A slow download. yt-dlp's default ladder takes the largest stream on offer
    (4K AV1 on YouTube), merges two DASH streams over one connection, and then
@@ -132,6 +133,76 @@ def wait_until_up(url: str, timeout_s: float, interval: float = 0.25) -> bool:
     return http_up(url)
 
 
+# `llama-rig ensure` reports readiness with one of these `status` values. An
+# unrecognised status is not treated as failure when the server actually answers.
+_ENSURE_READY = {"ready", "up", "running", "ok", "healthy", "serving"}
+
+
+def _last_json_object(text: str) -> dict | None:
+    """Parse the last JSON object in `text` (logs may precede the payload)."""
+    text = text or ""
+    try:
+        value = json.loads(text)
+        if isinstance(value, dict):
+            return value
+    except Exception:
+        pass
+    decoder = json.JSONDecoder()
+    best = None
+    for idx, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(text, idx)
+        except Exception:
+            continue
+        if isinstance(value, dict):
+            best = value
+    return best
+
+
+def _ensure_slot(slot: str, health: str, wait_s: float, log) -> tuple[bool, str, None]:
+    """Ensure a *registered* slot is up via the upstream `llama-rig ensure` primitive."""
+    rig = shutil.which("llama-rig")
+    if not rig:
+        log(f"[model] llama-rig is not on PATH; cannot ensure registered slot '{slot}'.")
+        return False, "unavailable", None
+
+    cmd = [rig, "ensure", slot, "--json", "--timeout", str(max(1, int(wait_s)))]
+    log(f"[model] Ensuring registered slot '{slot}' (`llama-rig ensure {slot}`)...")
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True,
+                             timeout=max(wait_s, 30.0) + 5.0)
+    except subprocess.TimeoutExpired:
+        log(f"[model] llama-rig ensure {slot} timed out after {wait_s:.0f}s.")
+        return False, "unavailable", None
+
+    payload = _last_json_object(res.stdout) or {}
+    started = bool(payload.get("started", False))
+    waited_ms = payload.get("waited_ms", 0)
+    status = str(payload.get("status", "") or "")
+
+    ok = status.strip().lower() in _ENSURE_READY
+    if not ok and http_up(health):
+        # An unrecognised status string is not a reason to claim the server is
+        # down when it is plainly answering.
+        ok = True
+    if ok:
+        if started:
+            log(f"[model] Registered slot '{slot}' was not ready; `llama-rig ensure {slot}` "
+                f"started it in {waited_ms} ms (status={status or 'ready'}). "
+                f"It stays warm for the next run.")
+        else:
+            log(f"[model] Registered slot '{slot}' is ready (status={status or 'ready'}); "
+                f"`llama-rig ensure {slot}` waited {waited_ms} ms.")
+        return True, "llama-rig" if started else "already-up", None
+
+    detail = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
+    log(f"[model] llama-rig ensure {slot} could not bring up {health} "
+        f"(status={status or 'unknown'}, waited {waited_ms} ms): {detail}")
+    return False, "unavailable", None
+
+
 def ensure_service(
     endpoint: str,
     *,
@@ -146,37 +217,19 @@ def ensure_service(
     `spawned` or `unavailable`, and `child` is the throwaway process the caller
     must stop when `how == "spawned"`.
 
-    A registered slot is started through `llama-rig up <slot>` and left
-    running: llama-swap owns it, `llama-rig down <slot>` frees the VRAM, and a
-    later run reuses the loaded weights instead of paying the load again.
+    A registered slot is ensured through one `llama-rig ensure <slot> --json`
+    call and left running: llama-swap owns it, `llama-rig down <slot>` frees the
+    VRAM, and a later run reuses the loaded weights instead of paying the load
+    again. An unregistered backend (`spawn_cmd`) is spawned as a throwaway child.
     """
+    if slot:
+        return _ensure_slot(slot, health_url_for(endpoint), wait_s, log)
+
+    # Unregistered backend (MiniCPM on :18499): throwaway child, caller owns its
+    # lifetime. `ensure` never applies here — keep this path unchanged.
     health = health_url_for(endpoint)
     if http_up(health):
         return True, "already-up", None
-
-    rig = shutil.which("llama-rig")
-    if slot and rig:
-        log(f"[model] {health} is down — starting slot '{slot}' (llama-rig up {slot})...")
-        started = time.monotonic()
-        failure = ""
-        try:
-            res = subprocess.run(
-                [rig, "up", slot], capture_output=True, text=True, timeout=max(wait_s, 30.0)
-            )
-            failure = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
-            if res.returncode != 0 and not http_up(health):
-                # An unknown slot or a full GPU: llama-rig already said why.
-                # Polling a slot it refused to start only burns the timeout.
-                log(f"[model] llama-rig refused '{slot}': {failure}")
-                return False, "unavailable", None
-        except subprocess.TimeoutExpired:
-            failure = f"llama-rig up {slot} timed out"
-        if wait_until_up(health, wait_s):
-            log(f"[model] {health} ready in {time.monotonic() - started:.1f}s.")
-            return True, "llama-rig", None
-        log(f"[model] {health} still down after {wait_s:.0f}s: {failure}")
-    elif slot:
-        log(f"[model] {health} is down and llama-rig is not on PATH.")
 
     if spawn_cmd:
         log(f"[model] Spawning {spawn_cmd[0]} on {health}...")

@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -632,6 +633,91 @@ def cmd_swap(target_arg, candidate_arg=None, dry_run=False, dim=None):
     print(f"Launched process on port {target_port} (still loading weights—check {log_file}).")
 
 
+def _http_healthy(port, path="/health", timeout=2):
+    """Probe HTTP health on loopback — an open TCP port is not enough.
+
+    `tailscale serve` keeps a listener bound for a dead backend, so a socket
+    probe alone lies. A real HTTP response from /health proves the model server
+    is actually answering. Any status below 500 counts (some slots answer
+    /health with a redirect or a bare 200); only connection errors and 5xx
+    mean not-ready.
+    """
+    url = f"http://127.0.0.1:{int(port)}{path}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "llama-rig"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status < 500
+    except urllib.error.HTTPError as exc:
+        return exc.code < 500
+    except Exception:
+        return False
+
+
+def cmd_ensure(target, timeout=30, json_out=False):
+    """Idempotently bring a slot to HTTP-ready, leaving it warm.
+
+    Resolves <slot|port|alias|candidate>, probes HTTP health on loopback and
+    does nothing when already ready. Otherwise runs the normal start path
+    (cmd_swap), then polls health until --timeout. Never auto-stops.
+    Returns True on ready (exit 0), False on unavailable (exit 1).
+    """
+    slots, _registry = load_slots()
+    try:
+        slot, _cand = resolve_launch(slots, target)
+    except LookupError as exc:
+        result = {
+            "slot": str(target), "port": None, "status": "unavailable",
+            "started": False, "waited_ms": 0,
+        }
+        if json_out:
+            print(json.dumps(result))
+        else:
+            print(f"❌ Error: {exc}")
+        return False
+
+    port = slot["port"]
+    started = False
+    waited_ms = 0
+
+    if _http_healthy(port):
+        status = "ready"
+    else:
+        import io
+        from contextlib import redirect_stdout
+        # Run the existing start path but keep its chatty output off our single
+        # summary line / JSON document.
+        with redirect_stdout(io.StringIO()):
+            cmd_swap(port)
+        started = True
+        start = time.monotonic()
+        deadline = start + max(0, float(timeout))
+        while True:
+            if _http_healthy(port, timeout=1):
+                status = "ready"
+                break
+            if time.monotonic() >= deadline:
+                status = "unavailable"
+                break
+            time.sleep(0.5)
+        waited_ms = int((time.monotonic() - start) * 1000)
+
+    result = {
+        "slot": slot["id"],
+        "port": port,
+        "status": status,
+        "started": started,
+        "waited_ms": waited_ms,
+    }
+    if json_out:
+        print(json.dumps(result))
+    elif status == "ready":
+        verb = "already warm" if not started else f"started in {waited_ms}ms"
+        print(f"✅ {slot['id']} (:{port}) ready — {verb}.")
+    else:
+        print(f"❌ {slot['id']} (:{port}) unavailable after {waited_ms}ms.")
+    return status == "ready"
+
+
 OMNI_SCHEMA = {
     "name": "llama-rig",
     "description": "GPU VRAM, slot/port switcher and llama-swap controller",
@@ -647,6 +733,11 @@ OMNI_SCHEMA = {
          "help": "Stop every auxiliary port except the pinned king"},
         {"name": "up", "args": ["target", "candidate"], "flags": ["--port", "--dry-run", "--dim"],
          "json": True, "mutating": True, "help": "Start/swap a slot (alias for swap)"},
+        {"name": "ensure", "args": ["target"], "flags": ["--timeout", "--json"],
+         "json": True, "mutating": True,
+         "help": "Idempotently ensure a slot is HTTP-ready: start if down, leave warm. "
+                 "--timeout N seconds (default 30). --json emits "
+                 "{slot, port, status, started, waited_ms}; exit 0 ready, 1 unavailable."},
         {"name": "swap", "args": ["target", "candidate"], "flags": ["--port", "--dry-run", "--dim"],
          "json": True, "mutating": True, "help": "Start/swap a slot by port, id, alias or candidate"},
         {"name": "down", "args": ["target"], "flags": ["--port"], "json": True, "mutating": True,
@@ -706,6 +797,13 @@ if __name__ == "__main__":
     p_up.add_argument("--dry-run", action="store_true", help="Resolve and print the launch plan, start nothing")
     p_up.add_argument("--dim", type=int, metavar="N", help="Embedding dimension to match (e.g. 384, 768)")
 
+    p_ensure = sub.add_parser("ensure", help="Ensure a slot is HTTP-ready: start if down, leave it warm")
+    p_ensure.add_argument("target", nargs="?", help="Port, slot id, alias, or candidate model")
+    p_ensure.add_argument("--timeout", type=int, default=30, metavar="N",
+                          help="Seconds to wait for HTTP health after starting (default 30)")
+    p_ensure.add_argument("--json", dest="ensure_json", action="store_true",
+                          help="Emit structured JSON (one line)")
+
     args = parser.parse_args()
     if args.omni_schema or (args.json and not args.action):
         cmd_omni_schema()
@@ -732,6 +830,12 @@ if __name__ == "__main__":
         if not target:
             sys.exit("❌ Error: Target port or slot is required (e.g. llama-rig swap ocr)")
         cmd_swap(target, args.candidate, args.dry_run, getattr(args, "dim", None))
+    elif args.action == "ensure":
+        if not args.target:
+            sys.exit("❌ Error: Target port or slot is required (e.g. llama-rig ensure ocr)")
+        ok = cmd_ensure(args.target, args.timeout,
+                        json_out=(args.json or getattr(args, "ensure_json", False)))
+        sys.exit(0 if ok else 1)
     elif args.action == "llama-swap-up":
         cmd_llama_swap_up(args.port)
     elif args.action == "llama-swap-down":

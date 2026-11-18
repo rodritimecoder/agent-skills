@@ -3,11 +3,11 @@ name: video-miner
 
 description: "Extract, transcribe, and synthesize knowledge from video files or URLs into structured markdown notes using local verbatim speech-to-text, deterministic frame gating (perceptual dedup + blank rejection), and OCR with the kem-ocr structural gate. Built on ICM with staged folders and human review checkpoints. Use to turn a lecture recording, talk, webinar or screen recording into study notes, to mine a pile of recordings for what they teach, or to get the transcript and the slides out of videos you already have on disk. For audio with no picture, use audiocpp; for a Zoom cloud link, use zoom-recorder."
 
-compatibility: "Requires ffmpeg, `yt-dlp` and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K, verbatim with word timings; `--asr-model nemotron` for faster output without timings). No ASR server needed. OCR needs LightOnOCR (:8082) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill; the scripts run `llama-rig up ocr` themselves, so a stopped slot never blocks. Speaker labels come from `audiocpp diarize`. h2o-lightning-4b on :8083 is optional, only for --gate h2o."
+compatibility: "Requires ffmpeg, `yt-dlp` and the `audiocpp` CLI (CrisperWhisper 2.0 Large Q4_K, verbatim with word timings; `--asr-model nemotron` for faster output without timings). No ASR server needed. OCR needs LightOnOCR (:8082) or MiniCPM-OCR-1.0 GGUF + the kem-ocr skill; the scripts run `llama-rig ensure ocr` themselves, so a stopped slot never blocks. Speaker labels come from `audiocpp diarize`. h2o-lightning-4b on :8083 is optional, only for --gate h2o."
 allowed-tools: "Bash(video-miner:*) Bash(ffmpeg:*) Bash(python3:*) Bash(llama-rig:*) Read Write"
 ---
 
-> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8082`) — launcher, weights files, health and quirks. Read it before swapping or debugging the model. A stopped slot is not an error: the pipeline runs `llama-rig up ocr` itself, and the slot stays warm for the next run (`llama-rig down ocr` frees the VRAM).
+> **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8082`) — launcher, weights files, health and quirks. Read it before swapping or debugging the model. A stopped slot is not an error: the pipeline delegates to `llama-rig ensure ocr` itself, and the slot stays warm for the next run (`llama-rig down ocr` frees the VRAM).
 
 # video-miner
 
@@ -127,14 +127,16 @@ becomes one entry instead of ten. The gate is imported from the sibling
 `kem-ocr` skill; if that skill is missing the OCR still runs and the structural
 field is simply absent.
 
-**The OCR slot starts itself.** Stage `05_visual_ocr` probes `:8082`; if nothing
-answers it runs `llama-rig up ocr` (measured 1.1 s from cold to serving) and
-says so in the log. The slot is then left running, because that warm server is
-what makes a repeated run cheap. If the backend genuinely cannot start, the
-stage fails with the one command that fixes it rather than writing an empty
-timeline that would mark the stage COMPLETE and let `06_synthesize` emit
-visual-less notes that look successful. Never report "the server is down" — run
-`llama-rig up ocr` or let the stage do it.
+**The OCR slot starts itself.** Stage `05_visual_ocr` delegates to the
+`model-layer` primitive `llama-rig ensure ocr --json`: one call that ensures the
+registered `:8082` slot is up (starting it if needed) and reports `started`,
+`waited_ms` and `status`, which the stage logs. The slot is then left running,
+because that warm server is what makes a repeated run cheap. If the backend
+genuinely cannot start, the stage fails with the one command that fixes it
+rather than writing an empty timeline that would mark the stage COMPLETE and let
+`06_synthesize` emit visual-less notes that look successful. Never report "the
+server is down" — run `llama-rig ensure ocr` or let the stage do it. The slot is
+owned by `model-layer` (`:8082`); read it before swapping or debugging the model.
 
 ### Frame sampling modes (`03_visual_sample`)
 
@@ -272,8 +274,8 @@ vault-mine reindex
 
 A reel is mined in one pass: download (with its info JSON and any subtitle
 track), transcript, dHash-deduped keyframes, notes. `--ocr auto` (default)
-starts `:8082` through `llama-rig` when it is down, then OCRs the four sampled
-frames; `--ocr never` skips it; `--ocr always` refuses to finish without it
+calls `llama-rig ensure ocr` for `:8082` when it is not ready, then OCRs the four
+sampled frames; `--ocr never` skips it; `--ocr always` refuses to finish without it
 instead of quietly writing notes with no diagram text. Progress streams line by
 line — a run never goes silent for its whole duration.
 

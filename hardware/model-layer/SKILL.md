@@ -64,6 +64,22 @@ Beyond the slots sits the swapping rig, operated by `llama-rig`
   registered candidate by model or launcher name (`up valen`,
   `up embed embeddinggemma-2`). `--dry-run` prints the resolved launch plan and
   starts nothing.
+- **Idempotent bring-up — `llama-rig ensure`:**
+  `llama-rig ensure <slot|port|alias> [--timeout N] [--json]` resolves the target
+  with the same `_find_slot` / `resolve_launch` helpers, then probes **HTTP health
+  on loopback** (`http://127.0.0.1:<port>/health` — not just an open TCP port,
+  because `tailscale serve` holds a listener for a dead backend). If already
+  ready it does nothing (`started: false`). If down it runs the normal `up`/`swap`
+  start path, polls health until `--timeout` (default **30 s**), then leaves the
+  slot **warm** — it never auto-stops. `--json` emits exactly one line:
+  `{"slot": "<id>", "port": "<port>", "status": "ready"|"unavailable", "started": <bool>, "waited_ms": <int>}`.
+  Exit code is **0** when `status` is `ready`, **1** when `unavailable` (an
+  unresolvable target also exits 1 and still emits the JSON shape, with
+  `port: null`). Without `--json`, output is one short human line. `ensure` is
+  registered in `llama-rig --omni-schema`.
+  **omnicli and video-miner now call `llama-rig ensure`** as their bring-up
+  primitive, so consumers stop duplicating probe/start/wait logic — point new
+  callers here instead of reimplementing it.
 - **Manifest first:** the tool reads `ports.json` (every candidate) and treats
   `port_registry.json` as a rendered cache. Starting a non-default candidate never
   rewrites the manifest: it prints the divergence and the `ports.py swap` command

@@ -637,40 +637,42 @@ def _search_contract(con, res, as_json: bool, section: str, doc: str):
     _print_tool_contract(payload, about)
 
 
-_EMBED_AUTOSTART_TIMEOUT = 120.0   # bounded wait for `llama-rig up 8084`
+_EMBED_AUTOSTART_TIMEOUT = 120.0   # hard cap on `llama-rig ensure 8084 --json`
 _EMBED_REBUILD_TIMEOUT = 300.0     # bounded wait for one `omnicli index --rebuild`
+
+# A non-zero exit OR one of these `status` values means the slot is not ready.
+_EMBED_BAD_STATUS = {"timeout", "failed", "error", "offline", "stopped",
+                     "unavailable", "not_ready", "not-ready"}
 
 
 def _ensure_embed_slot(con):
     """Bring :8084 (bge-small) up so a search never silently drops to BM25.
 
-    Mirrors vault-mine's OCR auto-start: a registered slot is started through
-    `llama-rig up` and left warm — `llama-rig down 8084` is the manual way to
-    reclaim the VRAM. Every failure degrades to the existing BM25 path; a
-    search must never crash because a model server could not start.
+    Delegates the probe/start/wait to model-layer's `llama-rig ensure 8084
+    --json` primitive; omnicli no longer polls health itself. The slot is left
+    warm — `llama-rig down 8084` is the manual way to reclaim the VRAM. Every
+    failure degrades to the existing BM25 path; a search must never crash
+    because a model server could not start.
     """
     if os.environ.get("OMNICLI_NO_AUTOSTART") == "1":
         return con
-    if search is None or search.embedding_available():
+    if search is None:
         return con
 
     manual = "llama-rig up local-embed-bge  (alias of :8084)"
+    shown = "llama-rig ensure 8084"
     rig = shutil.which("llama-rig")
     if not rig:
         print(f"⚠️  [omnicli] dense leg offline and llama-rig not on PATH — "
               f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
         return con
 
-    cmd = [rig, "up", "8084"]
-    shown = "llama-rig up 8084"
+    # One upstream call owns health-polling, start and bounded wait. The
+    # subprocess timeout is only a hard cap on the whole call.
+    cmd = [rig, "ensure", "8084", "--json"]
     try:
         res = subprocess.run(cmd, capture_output=True, text=True,
                              timeout=_EMBED_AUTOSTART_TIMEOUT)
-        detail = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
-        if res.returncode != 0:
-            print(f"⚠️  [omnicli] `{shown}` failed: {detail} — "
-                  f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
-            return con
     except subprocess.TimeoutExpired:
         print(f"⚠️  [omnicli] `{shown}` timed out after {_EMBED_AUTOSTART_TIMEOUT:.0f}s — "
               f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
@@ -680,13 +682,35 @@ def _ensure_embed_slot(con):
               f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
         return con
 
-    print(f"   [omnicli] auto-started dense leg: `{shown}` "
-          f"(left warm; `llama-rig down 8084` frees VRAM)", file=sys.stderr)
-    search._PROBE = {"at": 0.0, "ok": False}  # discard the down probe
-    if not search.embedding_available():
-        print(f"⚠️  [omnicli] :8084 still down after `{shown}` — "
-              f"start it with `{manual}`; staying on BM25", file=sys.stderr)
+    # Structured result feeds the audit line; malformed JSON keeps the fallback
+    # honest instead of assuming success.
+    info = {}
+    try:
+        parsed = json.loads(res.stdout)
+        if isinstance(parsed, dict):
+            info = parsed
+    except (ValueError, TypeError):
+        pass
+    started = info.get("started")
+    waited_ms = info.get("waited_ms")
+    status = info.get("status")
+    detail = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
+
+    bad_status = status is not None and str(status).lower() in _EMBED_BAD_STATUS
+    if res.returncode != 0 or bad_status:
+        print(f"⚠️  [omnicli] `{shown}` failed (status={status}): {detail} — "
+              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
         return con
+
+    # The cached probe predates the start; clear it so the next search sees the
+    # live endpoint instead of re-entering this path for the rest of its TTL.
+    if hasattr(search, "_PROBE"):
+        search._PROBE.update({"ok": True, "at": 0})
+
+    if started:
+        print(f"   [omnicli] auto-started dense leg: `{shown}` "
+              f"(waited_ms={waited_ms}, status={status}; "
+              f"left warm; `llama-rig down 8084` frees VRAM)", file=sys.stderr)
 
     # An index built while dense was offline has zero stored vectors. Run one
     # rebuild (never a loop); cmd_index does not re-enter search.

@@ -518,10 +518,12 @@ def run_stage_05_visual_ocr(workspace: Path) -> None:
     if not ocr_ok:
         # Leave the stage PENDING instead of writing an empty timeline: an
         # empty `[]` would mark 05_visual_ocr COMPLETE and let 06_synthesize
-        # emit notes with no visual text while looking successful.
+        # emit notes with no visual text while looking successful. Never report
+        # "the server is down" — name the one command that fixes it.
+        fix = f"`llama-rig ensure {slot}`" if slot else "`llama-rig ensure ocr`"
         raise RuntimeError(
             f"{OCR_BACKEND} is not answering on {ocr_url}. Start it with "
-            f"`llama-rig up {slot or 'ocr'}` and re-run `step`."
+            f"{fix} and re-run `step`."
         )
 
     def is_server_listening(url: str, timeout: float = 1.0) -> bool:

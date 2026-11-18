@@ -207,7 +207,10 @@ class TestProcure(unittest.TestCase):
             self.assertEqual(procure.max_res(), procure.DEFAULT_MAX_RES)
 
     def test_ensure_service_already_up(self):
-        with patch.object(procure, "http_up", return_value=True):
+        ready = subprocess.CompletedProcess(
+            [], 0, stdout='{"status":"ready","started":false,"waited_ms":0}', stderr="")
+        with patch.object(procure, "http_up", return_value=True), \
+             patch.object(procure.subprocess, "run", return_value=ready):
             ok, how, child = procure.ensure_service("http://127.0.0.1:8082/v1/chat/completions",
                                                     slot="ocr", log=lambda *_: None)
         self.assertTrue(ok)
@@ -219,7 +222,8 @@ class TestProcure(unittest.TestCase):
 
         def fake_run(cmd, **kwargs):
             calls.append(cmd)
-            return subprocess.CompletedProcess(cmd, 0, stdout="started", stderr="")
+            return subprocess.CompletedProcess(
+                cmd, 0, stdout='{"status":"ready","started":true,"waited_ms":12}', stderr="")
 
         with patch.object(procure, "http_up", side_effect=[False, True]), \
              patch.object(procure.shutil, "which", return_value="/home/rodri/.local/bin/llama-rig"), \
@@ -229,7 +233,7 @@ class TestProcure(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(how, "llama-rig")
         self.assertIsNone(child, "a llama-rig slot is left running, not owned by the caller")
-        self.assertEqual(calls[0][-2:], ["up", "ocr"])
+        self.assertEqual(calls[0][1:3], ["ensure", "ocr"])
 
     def test_ensure_service_reports_unavailable_with_remedy(self):
         lines = []
