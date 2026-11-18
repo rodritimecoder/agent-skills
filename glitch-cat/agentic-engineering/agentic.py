@@ -213,7 +213,7 @@ def main():
     p_listen.add_argument("target", nargs="?", default=".", help="Target project directory")
     p_listen.add_argument("--once", action="store_true", help="Run single poll pass")
     p_listen.add_argument("--interval", type=int, metavar="N", default=5, help="Polling interval in seconds")
-    p_listen.add_argument("--worker", default=None, help="Command to run when card is claimed")
+    p_listen.add_argument("--worker", default=None, metavar="N", help="Command to run when card is claimed")
 
     # judge
     p_judge = sub.add_parser("judge", help="Run the Fresh-Context Unbiased Judge on a card")

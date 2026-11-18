@@ -30,7 +30,7 @@ sys.path.insert(0, str(SKILL_ROOT))
 
 from catalog import argspec  # noqa: E402
 
-DEFAULT_CONFIG = HERE / "code_mode_gate.json"
+DEFAULT_CONFIG = SKILL_ROOT / "scripts" / "code_mode_gate.json"
 DEFAULT_DB = Path(
     os.environ.get("OMNICLI_DB")
     or (Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "omnicli" / "catalog.db")

@@ -117,4 +117,8 @@ python3 scripts/verify_code_mode.py --skill <skill-name>
 
 # 4. Catalog contract & SKILL.md flag-drift audit
 python3 tests/skillcheck.py all
+
+# 5. MANDATORY after any move/import/entrypoint change — the index gate is not a smoke test:
+#    every affected CLI must print help and exit 0 (including ~/.local/bin symlinks).
+for cli in <affected entrypoints>; do python3 "$cli" --help >/dev/null || echo "BROKEN: $cli"; done
 ```

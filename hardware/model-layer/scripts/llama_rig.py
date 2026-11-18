@@ -632,9 +632,45 @@ def cmd_swap(target_arg, candidate_arg=None, dry_run=False, dim=None):
     print(f"Launched process on port {target_port} (still loading weights—check {log_file}).")
 
 
+OMNI_SCHEMA = {
+    "name": "llama-rig",
+    "description": "GPU VRAM, slot/port switcher and llama-swap controller",
+    "version": 1,
+    "flags": [
+        {"name": "--json", "kind": "bool", "help": "Emit structured JSON (tool schema when no subcommand)"},
+        {"name": "--omni-schema", "kind": "bool", "help": "Print this schema and exit 0"},
+    ],
+    "commands": [
+        {"name": "status", "json": True, "mutating": False,
+         "help": "VRAM, llama-swap and port status as JSON"},
+        {"name": "evict-all", "json": True, "mutating": True,
+         "help": "Stop every auxiliary port except the pinned king"},
+        {"name": "up", "args": ["target", "candidate"], "flags": ["--port", "--dry-run", "--dim"],
+         "json": True, "mutating": True, "help": "Start/swap a slot (alias for swap)"},
+        {"name": "swap", "args": ["target", "candidate"], "flags": ["--port", "--dry-run", "--dim"],
+         "json": True, "mutating": True, "help": "Start/swap a slot by port, id, alias or candidate"},
+        {"name": "down", "args": ["target"], "flags": ["--port"], "json": True, "mutating": True,
+         "help": "Stop a service (alias for kill)"},
+        {"name": "kill", "args": ["target"], "flags": ["--port"], "json": True, "mutating": True,
+         "help": "Stop a service by port, slot id or alias"},
+        {"name": "llama-swap-up", "flags": ["--port"], "mutating": True},
+        {"name": "llama-swap-down", "flags": ["--port"], "mutating": True},
+        {"name": "llama-swap-status", "flags": ["--port"], "json": True, "mutating": False},
+    ],
+}
+
+
+def cmd_omni_schema() -> None:
+    print(json.dumps(OMNI_SCHEMA, indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPU VRAM & Port Switcher with llama-swap")
-    sub = parser.add_subparsers(dest="action", required=True)
+    parser.add_argument("--json", action="store_true",
+                        help="Emit structured JSON (tool schema when no subcommand is given)")
+    parser.add_argument("--omni-schema", action="store_true",
+                        help="Print the machine-readable tool schema and exit 0")
+    sub = parser.add_subparsers(dest="action")
 
     sub.add_parser("status")
     sub.add_parser("evict-all")
@@ -671,6 +707,12 @@ if __name__ == "__main__":
     p_up.add_argument("--dim", type=int, metavar="N", help="Embedding dimension to match (e.g. 384, 768)")
 
     args = parser.parse_args()
+    if args.omni_schema or (args.json and not args.action):
+        cmd_omni_schema()
+        sys.exit(0)
+    if not args.action:
+        parser.print_help()
+        sys.exit(0)
     if args.action == "status":
         cmd_status()
     elif args.action in ("kill", "down"):

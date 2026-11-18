@@ -471,10 +471,10 @@ def main():
     stop_p.add_argument("target", help="Slot, core, container name, or container ID")
 
     run_p = subparsers.add_parser("run", help="Run a command or spawn a subagent space")
-    run_p.add_argument("--cores", "-c", help="Exact CPU core(s) to pin (e.g. '4', '4-5', '4,6,8')")
+    run_p.add_argument("--cores", "-c", metavar="N", help="Exact CPU core(s) to pin (e.g. '4', '4-5', '4,6,8')")
     run_p.add_argument("--cpus", "-n", type=int, metavar="N", help="Number of CPU threads to auto-allocate (e.g. 1, 2, 4)")
     run_p.add_argument("--slot", choices=["1", "2", "3", "all"], help="Predefined worker slot")
-    run_p.add_argument("--memory", "-m", help="Memory quota (e.g. '1g', '512m', '4g')")
+    run_p.add_argument("--memory", "-m", metavar="MiB", help="Memory quota (e.g. '1g', '512m', '4g')")
     run_p.add_argument("--workspace", "-w", help="Workspace directory to mount into /workspace")
     run_p.add_argument("--image", "-i", help=f"Custom container image (default: {DEFAULT_IMAGE} or {FALLBACK_IMAGE})")
     run_p.add_argument("--name", help="Custom container name")

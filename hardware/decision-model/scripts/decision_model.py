@@ -33,6 +33,45 @@ BOX_MIN_CONFIDENCE = float(os.environ.get("BOX_MIN_CONFIDENCE", 0.30))
 PROTOCOL_PRIMITIVES = ("bool", "choice", "score")
 
 
+def _project(obj, fields):
+    """Project a dict/list-of-dicts to comma-separated field names.
+
+    Unknown names are reported on stderr with the available keys; they are
+    skipped rather than crashing, so a mistyped field yields a smaller result.
+    """
+    if not fields:
+        return obj
+    requested = [f.strip() for f in fields.split(",") if f.strip()]
+    if not requested:
+        return obj
+    if isinstance(obj, dict):
+        available = list(obj)
+        unknown = [f for f in requested if f not in obj]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return {k: obj[k] for k in requested if k in obj}
+    if isinstance(obj, list) and obj and all(isinstance(row, dict) for row in obj):
+        available = list(obj[0])
+        unknown = [f for f in requested if f not in available]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return [{k: row[k] for k in requested if k in row} for row in obj]
+    return obj
+
+
+def _limit_lists(obj, limit):
+    """Cap every list value (e.g. primitives) in a dict to N entries."""
+    if limit is None:
+        return obj
+    if isinstance(obj, dict):
+        return {k: (v[:limit] if isinstance(v, list) else v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return obj[:limit]
+    return obj
+
+
 def is_valen(model_id: str) -> bool:
     return "valen" in (model_id or "").lower()
 
@@ -351,7 +390,7 @@ def cmd_box(image: Path, target: str, crop_out: Optional[Path] = None, json_mode
     return 0 if accepted else 2
 
 
-def cmd_caps(json_mode: bool = False) -> int:
+def cmd_caps(json_mode: bool = False, fields=None, limit=None) -> int:
     model = served_model(DECISION_PORT)
     caps = primitives(model)
     box_port = box_endpoint_port(model)
@@ -367,18 +406,28 @@ def cmd_caps(json_mode: bool = False) -> int:
             "Point CLIP_BOX_PORT at a standalone shim (:8761)."
         ),
     }
-    if json_mode:
-        print(json.dumps(payload, indent=2))
-    else:
+    if not json_mode and not fields:
         print(f"model       {model}")
         print(f"slot        :{DECISION_PORT}  (box on :{box_port})")
         print(f"primitives  {', '.join(caps)}")
         if payload["note"]:
             print(f"note        {payload['note']}")
+        return 0
+    shown = _project(_limit_lists(payload, limit), fields)
+    if json_mode:
+        print(json.dumps(shown, indent=2))
+    else:
+        for key, value in shown.items():
+            if isinstance(value, list):
+                print(f"{key:12} {', '.join(str(v) for v in value)}")
+            elif value is None:
+                print(f"{key:12} -")
+            else:
+                print(f"{key:12} {value}")
     return 0
 
 
-def cmd_doctor(json_mode: bool = False) -> int:
+def cmd_doctor(json_mode: bool = False, fields=None, limit=None) -> int:
     model = ""
     try:
         model = served_model(DECISION_PORT)
@@ -394,21 +443,32 @@ def cmd_doctor(json_mode: bool = False) -> int:
         pass
 
     online = bool(model or box_up)
-    if json_mode:
-        print(json.dumps({
-            "decision_port": DECISION_PORT,
-            "decision_online": bool(model),
-            "model": model or None,
-            "box_port": box_port,
-            "box_online": box_up,
-            "status": "online" if online else "offline",
-        }, indent=2))
-    else:
+    payload = {
+        "decision_port": DECISION_PORT,
+        "decision_online": bool(model),
+        "model": model or None,
+        "box_port": box_port,
+        "box_online": box_up,
+        "status": "online" if online else "offline",
+    }
+    if not json_mode and not fields:
         print("🩺 Checking Decision Model endpoints...")
         print(f"  :{DECISION_PORT} (Native /v1/systemone): {'🟢 ONLINE' if model else '⚪ OFFLINE'}"
               + (f" — {model}" if model else ""))
         where = "same port" if box_port == DECISION_PORT else f":{box_port}"
         print(f"  :{box_port} (Visual Box Shim, {where})       : {'🟢 ONLINE' if box_up else '⚪ OFFLINE'}")
+        return 0 if online else 1
+    shown = _project(_limit_lists(payload, limit), fields)
+    if json_mode:
+        print(json.dumps(shown, indent=2))
+    else:
+        for key, value in shown.items():
+            if isinstance(value, list):
+                print(f"{key:16} {', '.join(str(v) for v in value)}")
+            elif value is None:
+                print(f"{key:16} -")
+            else:
+                print(f"{key:16} {value}")
     return 0 if online else 1
 
 def main() -> int:
@@ -449,9 +509,17 @@ def main() -> int:
 
     caps_p = sub.add_parser("caps", help="What the served model can answer")
     caps_p.add_argument("--json", action="store_true", help="JSON output")
+    caps_p.add_argument("--fields", metavar="NAME[,NAME...]", default=None,
+                        help="Project the status dict to these fields (comma-separated)")
+    caps_p.add_argument("--limit", type=int, default=None, metavar="N",
+                        help="Cap list values (e.g. primitives/candidates) to N entries")
 
     doc_p = sub.add_parser("doctor", help="Check server health")
     doc_p.add_argument("--json", action="store_true", help="JSON output")
+    doc_p.add_argument("--fields", metavar="NAME[,NAME...]", default=None,
+                       help="Project the status dict to these fields (comma-separated)")
+    doc_p.add_argument("--limit", type=int, default=None, metavar="N",
+                       help="Cap list values to N entries")
 
     args = p.parse_args()
     if args.cmd == "bool":
@@ -464,9 +532,9 @@ def main() -> int:
         return cmd_box(args.image, args.target, args.crop, args.json,
                        args.min_present, args.min_confidence, args.timeout)
     elif args.cmd == "caps":
-        return cmd_caps(args.json)
+        return cmd_caps(args.json, fields=args.fields, limit=args.limit)
     elif args.cmd == "doctor":
-        return cmd_doctor(json_mode=args.json)
+        return cmd_doctor(json_mode=args.json, fields=args.fields, limit=args.limit)
     return 1
 
 if __name__ == "__main__":

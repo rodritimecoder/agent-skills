@@ -309,6 +309,12 @@ async function syncWorkspace(wsId, targetDir, shouldPush = false, runOnce = fals
 
 async function main() {
   const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log("Usage: ed_ws.js [flags] ...");
+    console.log("  ed_ws.js <files|cat|pull|sync> <workspace_id> [args...]");
+    console.log("  sync flags: --push --once");
+    process.exit(0);
+  }
   const cmd = args[0];
   const wsId = args[1];
 

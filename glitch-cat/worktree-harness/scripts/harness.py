@@ -21,6 +21,46 @@ import sys
 import time
 from pathlib import Path
 
+
+def _project(obj, fields):
+    """Project a dict or list-of-dicts to comma-separated field names.
+
+    Unknown names are reported on stderr with the available keys and skipped,
+    so a mistyped field never crashes the command.
+    """
+    if not fields:
+        return obj
+    requested = [f.strip() for f in fields.split(",") if f.strip()]
+    if not requested:
+        return obj
+    if isinstance(obj, dict):
+        available = list(obj)
+        unknown = [f for f in requested if f not in obj]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return {k: obj[k] for k in requested if k in obj}
+    if isinstance(obj, list) and obj and all(isinstance(row, dict) for row in obj):
+        available = list(obj[0])
+        unknown = [f for f in requested if f not in available]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return [{k: row[k] for k in requested if k in row} for row in obj]
+    return obj
+
+
+def _limit_lists(obj, limit):
+    """Cap list values (e.g. claims, workers) in a dict to N entries."""
+    if limit is None:
+        return obj
+    if isinstance(obj, dict):
+        return {k: (v[:limit] if isinstance(v, list) else v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return obj[:limit]
+    return obj
+
+
 def get_git_root() -> Path:
     try:
         out = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], stderr=subprocess.DEVNULL, text=True).strip()
@@ -317,7 +357,7 @@ def cmd_integrate(run_id: str, test_cmd: str = None, verify_cmd: str = None, all
     return summary
 
 
-def cmd_status(run_id: str = None, as_json: bool = False):
+def cmd_status(run_id: str = None, as_json: bool = False, fields=None, limit=None):
     repo = get_git_root()
     runs_dir = repo / ".harness" / "runs"
     if not runs_dir.is_dir():
@@ -337,8 +377,10 @@ def cmd_status(run_id: str = None, as_json: bool = False):
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     claims = json.loads((harness_dir / "claims.json").read_text(encoding="utf-8")) if (harness_dir / "claims.json").is_file() else []
 
-    if as_json:
-        print(json.dumps({"manifest": manifest, "claims": claims}, indent=2))
+    data = {"manifest": manifest, "claims": claims}
+    shown = _project(_limit_lists(data, limit), fields)
+    if as_json or fields:
+        print(json.dumps(shown, indent=2))
         return
 
     print(f"\n📊 [Worktree Harness Status] Run: {run_id}")
@@ -576,14 +618,14 @@ if __name__ == "__main__":
     # 2. Claim
     p_claim = sub.add_parser("claim", help="Reserve line/file ranges before writing to avoid collisions")
     p_claim.add_argument("--run-id", required=True, help="Harness Run ID")
-    p_claim.add_argument("--worker", required=True, help="Worker name")
+    p_claim.add_argument("--worker", required=True, metavar="N", help="Worker name")
     p_claim.add_argument("--file", required=True, help="Target file path relative to repo root")
-    p_claim.add_argument("--lines", default=None, help="Line range e.g. '10-45'")
+    p_claim.add_argument("--lines", default=None, metavar="N", help="Line range e.g. '10-45'")
 
     # 3. Gate
     p_gate = sub.add_parser("gate", help="Run deterministic test and/or app verification gates on a worker worktree")
     p_gate.add_argument("--run-id", required=True, help="Harness Run ID")
-    p_gate.add_argument("--worker", required=True, help="Worker name")
+    p_gate.add_argument("--worker", required=True, metavar="N", help="Worker name")
     p_gate.add_argument("--test", default=None, help="Shell test command (e.g. 'pytest tests/test_auth.py')")
     p_gate.add_argument("--verify", default=None, help="App verification command (e.g. 'verify-app run --pass .verify/pass.json')")
 
@@ -599,6 +641,10 @@ if __name__ == "__main__":
     p_stat = sub.add_parser("status", help="View status of harness runs, worktrees, and claims")
     p_stat.add_argument("--run-id", default=None, help="Run ID (defaults to latest)")
     p_stat.add_argument("--json", action="store_true", help="Output as JSON")
+    p_stat.add_argument("--fields", metavar="NAME[,NAME...]", default=None,
+                        help="Project status rows/JSON to these fields (comma-separated)")
+    p_stat.add_argument("--limit", type=int, default=None, metavar="N",
+                        help="Cap list values (e.g. claims) to N entries")
 
     # 6. Teardown
     p_tear = sub.add_parser("teardown", help="Clean up worktrees while preserving consolidated branch and event logs")
@@ -634,7 +680,7 @@ if __name__ == "__main__":
         res = cmd_integrate(args.run_id, args.test, args.verify, args.allow_untested)
         print(json.dumps(res, indent=2))
     elif args.action == "status":
-        cmd_status(args.run_id, as_json=args.json)
+        cmd_status(args.run_id, as_json=args.json, fields=args.fields, limit=args.limit)
     elif args.action == "teardown":
         if args.dry_run:
             print(json.dumps({"action": "teardown", "dry_run": True, "run_id": args.run_id,

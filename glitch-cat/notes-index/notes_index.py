@@ -31,6 +31,34 @@ from notes_index_core import (  # noqa: E402
 from cite_check import check as check_citations, render as render_citations  # noqa: E402
 
 
+def _project(obj, fields):
+    """Project a dict or list-of-dicts to comma-separated field names.
+
+    Unknown names are reported on stderr with the available keys and skipped,
+    so a mistyped field never crashes the command.
+    """
+    if not fields:
+        return obj
+    requested = [f.strip() for f in fields.split(",") if f.strip()]
+    if not requested:
+        return obj
+    if isinstance(obj, dict):
+        available = list(obj)
+        unknown = [f for f in requested if f not in obj]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return {k: obj[k] for k in requested if k in obj}
+    if isinstance(obj, list) and obj and all(isinstance(row, dict) for row in obj):
+        available = list(obj[0])
+        unknown = [f for f in requested if f not in available]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return [{k: row[k] for k in requested if k in row} for row in obj]
+    return obj
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="notes-index",
@@ -72,6 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("words", nargs="+", help="Query words")
     p_search.add_argument("--after", default=None, help="Only notes dated on/after YYYY-MM-DD")
     p_search.add_argument("--limit", type=int, default=DEFAULT_LIMIT, metavar="LIMIT", help="Hits to print (default: 5)")
+    p_search.add_argument("--fields", metavar="NAME[,NAME...]", default=None,
+                          help="Project each ranked hit to these fields (comma-separated)")
 
     sub.add_parser("status", parents=[common], help="Files, rows, freshness and last error")
 
@@ -192,17 +222,21 @@ def main(argv=None) -> int:
         if args.command == "search":
             query = " ".join(args.words)
             hits = index.search(query, after=args.after, limit=args.limit)
+            rows = _project([hit.__dict__ for hit in hits], getattr(args, "fields", None))
             if args.json:
-                print(json.dumps({"health": index.health_line(), "hits": [hit.__dict__ for hit in hits]}, indent=2))
+                print(json.dumps({"health": index.health_line(), "hits": rows}, indent=2))
                 return 0
             print(index.health_line())
-            if not hits:
+            if not rows:
                 print("no hits")
                 return 1
-            for hit in hits:
-                print(f"- {hit.date or 'undated'} | {hit.kind:5s} | {hit.path}  (score {hit.score:.5f})")
-                print(f"    {hit.snippet.strip()}")
-                print(f"    {hit.full_path}")
+            for row in rows:
+                if getattr(args, "fields", None):
+                    print("- " + " | ".join(f"{k}={row[k]}" for k in row))
+                else:
+                    print(f"- {row['date'] or 'undated'} | {row['kind']:5s} | {row['path']}  (score {row['score']:.5f})")
+                    print(f"    {row['snippet'].strip()}")
+                    print(f"    {row['full_path']}")
             return 0
 
         if args.command == "status":

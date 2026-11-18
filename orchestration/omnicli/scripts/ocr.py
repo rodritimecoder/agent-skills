@@ -316,7 +316,7 @@ def main() -> int:
     )
     p.add_argument("file", nargs="?", help="PDF or image to OCR")
     p.add_argument("-p", "--prompt", default=DEFAULT_PROMPT, help="extraction prompt")
-    p.add_argument("--pages", help="page selection for PDFs, e.g. 1-3,7 (default: all)")
+    p.add_argument("--pages", metavar="N", help="page selection for PDFs, e.g. 1-3,7 (default: all)")
     p.add_argument("--dpi", type=int, metavar="N", default=200, help="rasterisation DPI (default: 200)")
     p.add_argument("--workers", type=int, metavar="WORKERS", default=2, help="parallel page requests (default: 2)")
     p.add_argument("--max-tokens", type=int, metavar="N", default=2048)

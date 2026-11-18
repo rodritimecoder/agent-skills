@@ -81,6 +81,9 @@ def looks_like_path(s):
 
 
 def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: links.py [ROOT] [--skip FOLDER ...] [--graph FILE] [flags] ...")
+        sys.exit(0)
     args, skip, graph_out = sys.argv[1:], set(SKIP), None
     while "--skip" in args:
         i = args.index("--skip")

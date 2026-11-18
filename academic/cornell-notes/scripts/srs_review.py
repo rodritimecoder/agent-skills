@@ -13,8 +13,11 @@ Usage:
   # Check review status / due cards across notes
   python3 srs_review.py status <notes.json>
 
-  # Start an interactive CLI review session for cards due today
+  # List due cards with their cue IDs (non-interactive)
   python3 srs_review.py review <notes.json>
+
+  # Record a rating for one card; never reads stdin
+  python3 srs_review.py review <notes.json> --cue-id <id> --rating 1-4
 
   # Synchronize / initialize SRS state from notes JSON
   python3 srs_review.py init <notes.json>
@@ -165,7 +168,24 @@ def cmd_status(notes_path: Path):
         print("🎉 All caught up for today! Come back tomorrow.")
 
 
-def cmd_review(notes_path: Path):
+def _require_review_args(deck: list[dict], cue_id: str | None, rating: int | None) -> bool:
+    """Enforce the explicit-flag contract; never read stdin.
+
+    Returns True when both answers were supplied, otherwise prints an
+    actionable message on stderr and returns False.
+    """
+    if cue_id and rating is not None:
+        return True
+    print("Error: review requires --cue-id and --rating; stdin prompts are disabled.", file=sys.stderr)
+    print("Available cue IDs in the due deck:", file=sys.stderr)
+    for card in deck:
+        print(f"  {card['id']}  [{card['heading']}] {card['cue'][:60]}", file=sys.stderr)
+    print("Re-run as: srs_review.py review <notes.json> --cue-id <id> --rating 1-4", file=sys.stderr)
+    return False
+
+
+def cmd_review(notes_path: Path, cue_id: str | None = None, rating: int | None = None) -> int:
+    """Non-interactive review of one card in a single notes file."""
     srs_path = notes_path.with_suffix(".srs.json")
     with open(notes_path, "r", encoding="utf-8") as f:
         notes_data = json.load(f)
@@ -177,7 +197,6 @@ def cmd_review(notes_path: Path):
     # Prioritize cards due today, then new cards
     due_queue = []
     new_queue = []
-
     for card in cards:
         cid = card["id"]
         if cid in state:
@@ -187,81 +206,40 @@ def cmd_review(notes_path: Path):
             new_queue.append(card)
 
     deck = due_queue + new_queue
-
     if not deck:
-        print("\n🎉 Excellent! No cards are due for review right now.")
-        return
+        print("No cards are due for review right now.", file=sys.stderr)
+        return 1
+    if not _require_review_args(deck, cue_id, rating):
+        return 2
 
-    print(f"\n🧠 Starting Spaced-Repetition Session: {len(deck)} card(s) ready")
-    print(f"Instructions: Press ENTER to reveal the answer, then rate your recall (1-4). Type 'q' to quit.\n")
+    matches = [c for c in deck if c["id"] == cue_id]
+    if not matches:
+        print(f"Error: cue id '{cue_id}' is not in the due deck.", file=sys.stderr)
+        return 2
+    card = matches[0]
+    c_state = state.get(cue_id, {
+        "reps": 0, "interval_days": 1, "ease_factor": 2.5, "due_date": today
+    })
 
-    reviewed_count = 0
-
-    for idx, card in enumerate(deck, 1):
-        cid = card["id"]
-        c_state = state.get(cid, {
-            "reps": 0,
-            "interval_days": 1,
-            "ease_factor": 2.5,
-            "due_date": today
-        })
-
-        print(f"-------------------------------------------------------")
-        print(f"Card {idx}/{len(deck)} [{card['heading']}]")
-        print(f"PROMPT (Cue): \033[1;36m{card['cue']}\033[0m")
-        print("-------------------------------------------------------")
-
-        user_input = input("\n[Press Enter to reveal answer, or 'q' to quit]: ")
-        if user_input.strip().lower() == 'q':
-            break
-
-        print("\n\033[1;32mANSWER (Notes):\033[0m")
-        print(card["notes"])
-        print("\nRate recall:")
-        print("  1 = Again/Fail  (1 day reset)")
-        print("  2 = Hard        (1-2 days)")
-        print("  3 = Good/Pass   (3 days / interval * ease)")
-        print("  4 = Easy        (Accelerated interval)")
-
-        while True:
-            choice = input("Your rating [1-4, default=3]: ").strip()
-            if choice == "":
-                quality = 3
-                break
-            if choice in ["1", "2", "3", "4"]:
-                quality = int(choice)
-                break
-            if choice.lower() == "q":
-                break
-            print("Please enter 1, 2, 3, or 4.")
-
-        if choice.lower() == "q":
-            break
-
-        # Compute next SM-2 schedule
-        reps, interval, ease, next_due = calculate_sm2(
-            quality,
-            c_state.get("reps", 0),
-            c_state.get("interval_days", 1),
-            c_state.get("ease_factor", 2.5)
-        )
-
-        state[cid] = {
-            "heading": card["heading"],
-            "cue": card["cue"],
-            "reps": reps,
-            "interval_days": interval,
-            "ease_factor": ease,
-            "due_date": next_due,
-            "last_reviewed": today
-        }
-
-        # Persist immediately so progress isn't lost
-        save_srs_state(srs_path, state)
-        reviewed_count += 1
-        print(f"✓ Scheduled: next review in \033[1m{interval} day(s)\033[0m on {next_due}\n")
-
-    print(f"\nSession finished! Reviewed {reviewed_count} card(s). State saved to {srs_path.name}")
+    reps, interval, ease, next_due = calculate_sm2(
+        rating,
+        c_state.get("reps", 0),
+        c_state.get("interval_days", 1),
+        c_state.get("ease_factor", 2.5)
+    )
+    state[cue_id] = {
+        "heading": card["heading"],
+        "cue": card["cue"],
+        "reps": reps,
+        "interval_days": interval,
+        "ease_factor": ease,
+        "due_date": next_due,
+        "last_reviewed": today
+    }
+    save_srs_state(srs_path, state)
+    print(f"Reviewed {cue_id} [{card['heading']}] "
+          f"({card['cue'][:60]}); next review in {interval} day(s) on {next_due}.")
+    return 0
 
 
 def discover_notes_files(target: Path) -> list[Path]:
@@ -376,11 +354,12 @@ def cmd_status_all(target: Path, as_table: bool = False, as_json: bool = False, 
     print(f"=======================================================\n")
 
 
-def cmd_review_all(target: Path):
+def cmd_review_all(target: Path, cue_id: str | None = None, rating: int | None = None) -> int:
+    """Non-interactive cross-subject review of one card; never reads stdin."""
     notes_files = discover_notes_files(target)
     if not notes_files:
-        print(f"No '*_cornell.json' notes found in {target}")
-        return
+        print(f"No '*_cornell.json' notes found in {target}", file=sys.stderr)
+        return 1
 
     today = date.today().isoformat()
     due_cards = []
@@ -406,79 +385,40 @@ def cmd_review_all(target: Path):
             continue
 
     deck = due_cards + new_cards
-
     if not deck:
-        print("\n🎉 Excellent! No cards are due for review across your notes right now.")
-        return
+        print("No cards are due for review across your notes right now.", file=sys.stderr)
+        return 1
+    if not _require_review_args([card for card, _ in deck], cue_id, rating):
+        return 2
 
-    print(f"\n🧠 Cross-Subject Review Deck: {len(deck)} card(s) ready")
-    print(f"Instructions: Press ENTER to reveal the answer, then rate your recall (1-4). Type 'q' to quit.\n")
+    matches = [(card, state) for card, state in deck if card["id"] == cue_id]
+    if not matches:
+        print(f"Error: cue id '{cue_id}' is not in the due deck.", file=sys.stderr)
+        return 2
+    card, state = matches[0]
+    c_state = state.get(cue_id, {
+        "reps": 0, "interval_days": 1, "ease_factor": 2.5, "due_date": today
+    })
 
-    reviewed_count = 0
-
-    for idx, (card, state) in enumerate(deck, 1):
-        cid = card["id"]
-        c_state = state.get(cid, {
-            "reps": 0,
-            "interval_days": 1,
-            "ease_factor": 2.5,
-            "due_date": today
-        })
-
-        print(f"-------------------------------------------------------")
-        print(f"Card {idx}/{len(deck)} [{card['_doc_title']} / {card['heading']}]")
-        print(f"PROMPT (Cue): \033[1;36m{card['cue']}\033[0m")
-        print("-------------------------------------------------------")
-
-        user_input = input("\n[Press Enter to reveal answer, or 'q' to quit]: ")
-        if user_input.strip().lower() == 'q':
-            break
-
-        print("\n\033[1;32mANSWER (Notes):\033[0m")
-        print(card["notes"])
-        print("\nRate recall:")
-        print("  1 = Again/Fail  (1 day reset)")
-        print("  2 = Hard        (1-2 days)")
-        print("  3 = Good/Pass   (3 days / interval * ease)")
-        print("  4 = Easy        (Accelerated interval)")
-
-        while True:
-            choice = input("Your rating [1-4, default=3]: ").strip()
-            if choice == "":
-                quality = 3
-                break
-            if choice in ["1", "2", "3", "4"]:
-                quality = int(choice)
-                break
-            if choice.lower() == "q":
-                break
-            print("Please enter 1, 2, 3, or 4.")
-
-        if choice.lower() == "q":
-            break
-
-        reps, interval, ease, next_due = calculate_sm2(
-            quality,
-            c_state.get("reps", 0),
-            c_state.get("interval_days", 1),
-            c_state.get("ease_factor", 2.5)
-        )
-
-        state[cid] = {
-            "heading": card["heading"],
-            "cue": card["cue"],
-            "reps": reps,
-            "interval_days": interval,
-            "ease_factor": ease,
-            "due_date": next_due,
-            "last_reviewed": today
-        }
-
-        save_srs_state(card["_srs_path"], state)
-        reviewed_count += 1
-        print(f"✓ Scheduled: next review in \033[1m{interval} day(s)\033[0m on {next_due}\n")
-
-    print(f"\nSession finished! Reviewed {reviewed_count} card(s).")
+    reps, interval, ease, next_due = calculate_sm2(
+        rating,
+        c_state.get("reps", 0),
+        c_state.get("interval_days", 1),
+        c_state.get("ease_factor", 2.5)
+    )
+    state[cue_id] = {
+        "heading": card["heading"],
+        "cue": card["cue"],
+        "reps": reps,
+        "interval_days": interval,
+        "ease_factor": ease,
+        "due_date": next_due,
+        "last_reviewed": today
+    }
+    save_srs_state(card["_srs_path"], state)
+    print(f"Reviewed {cue_id} [{card['_doc_title']} / {card['heading']}] "
+          f"({card['cue'][:60]}); next review in {interval} day(s) on {next_due}.")
+    return 0
 
 
 def main():
@@ -492,8 +432,11 @@ def main():
     status_parser.add_argument("-p", "--project", nargs="*", help="Filter fields in output table or JSON")
     status_parser.add_argument("-n", "--limit", type=int, default=0, help="Limit number of documents inspected")
 
-    review_parser = subparsers.add_parser("review", help="Launch interactive CLI review session (file or folder)")
+    review_parser = subparsers.add_parser("review", help="List due cards or record a rating (file or folder)")
     review_parser.add_argument("notes_target", help="Path to Cornell JSON file or folder containing Cornell notes")
+    review_parser.add_argument("-c", "--cue-id", help="Card ID to review (from the cue list)")
+    review_parser.add_argument("-r", "--rating", type=int, choices=[1, 2, 3, 4],
+                               help="Recall rating: 1=Again 2=Hard 3=Good 4=Easy")
 
     args = parser.parse_args()
     target = Path(args.notes_target)
@@ -506,7 +449,7 @@ def main():
         project_keys = [k.lower() for k in args.project] if args.project else None
         cmd_status_all(target, as_table=args.table, as_json=args.json, project_keys=project_keys, limit=args.limit)
     elif args.command == "review":
-        cmd_review_all(target)
+        sys.exit(cmd_review_all(target, args.cue_id, args.rating))
 
 
 if __name__ == "__main__":

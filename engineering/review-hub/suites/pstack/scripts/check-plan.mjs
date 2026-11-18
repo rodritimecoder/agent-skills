@@ -2,6 +2,11 @@
 import fs from "node:fs";
 import process from "node:process";
 
+if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  console.log("Usage: check-plan.mjs <plan.md> [flags] ...");
+  process.exit(0);
+}
+
 const RULE =
 	"Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.";
 const LANES = /Ten lanes on `[^`<>]+` at the PR head/;

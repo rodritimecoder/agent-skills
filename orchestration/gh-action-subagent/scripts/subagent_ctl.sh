@@ -3,6 +3,29 @@
 
 set -euo pipefail
 
+# Typed contract: one MCP JSON Schema for the command surface. Zero side effects.
+if [ "${1:-}" = "--omni-schema" ]; then
+  python3 - <<'PY'
+import json
+print(json.dumps({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "subagent_ctl",
+  "description": "Dispatch, monitor, and inspect GitHub Actions cloud subagents",
+  "type": "object",
+  "properties": {
+    "action": {"type": "string", "enum": ["dispatch", "status", "logs"], "x-positional": 0},
+    "task": {"type": "string", "x-flag": "--task"},
+    "branch": {"type": "string", "x-flag": "--branch"},
+    "model": {"type": "string", "x-flag": "--model"},
+    "run_id": {"type": "string", "x-positional": 1},
+    "help": {"type": "boolean", "x-flag": "--help"}
+  },
+  "additionalProperties": False
+}, indent=2))
+PY
+  exit 0
+fi
+
 usage() {
   echo "Usage: $0 {dispatch|status|logs|help} [options]"
   echo "  dispatch --task <string> [--branch <string>] [--model <string>]"

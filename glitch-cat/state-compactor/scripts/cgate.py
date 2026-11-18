@@ -5,8 +5,11 @@ import os
 import sys
 from pathlib import Path
 
+# The native cgate binary has no --json/--omni-schema. Serve those requests
+# from this Python wrapper instead of exec'ing the ELF.
+_STRUCTURAL = any(f in sys.argv[1:] for f in ("--json", "--omni-schema"))
 bin_path = Path(__file__).resolve().parent.parent / "bin" / "cgate"
-if bin_path.is_file() and os.access(bin_path, os.X_OK):
+if not _STRUCTURAL and bin_path.is_file() and os.access(bin_path, os.X_OK):
     os.execv(str(bin_path), [str(bin_path)] + sys.argv[1:])
 
 import argparse
@@ -294,5 +297,88 @@ def main() -> int:
 
     return 1
 
+
+_OMNI_SCHEMA = {
+    "name": "cgate",
+    "description": "Context-gated reader and filter",
+    "version": 1,
+    "flags": [
+        {"name": "--json", "kind": "bool", "help": "Emit structured JSON on stdout"},
+        {"name": "--omni-schema", "kind": "bool", "help": "Print this schema and exit 0"},
+    ],
+    "commands": [
+        {"name": "view", "args": ["file"],
+         "flags": ["--symbol", "--lines", "--max-preview"], "mutating": False},
+        {"name": "outline", "args": ["file"], "mutating": False},
+        {"name": "grep", "args": ["pattern", "path"], "flags": ["--limit"], "mutating": False},
+        {"name": "query", "args": ["file", "question"], "mutating": False,
+         "note": "requires the local LLM on :8080"},
+    ],
+}
+
+
+def json_main(argv: list) -> int:
+    """Serve the same commands as main(), but emit one JSON object on stdout."""
+    cmd = next((a for a in argv if a in ("view", "outline", "grep", "query")), None)
+    if cmd is None:
+        print(json.dumps({
+            "tool": "cgate", "json": True,
+            "native_exec": "disabled in --json mode",
+            "commands": [c["name"] for c in _OMNI_SCHEMA["commands"]],
+        }, indent=2))
+        return 0
+    positional = [a for a in argv if not a.startswith("-")]
+    positional.remove(cmd)
+    if cmd == "outline":
+        if not positional:
+            print(json.dumps({"status": "error", "error": "outline requires a file"}))
+            return 1
+        print(json.dumps(get_outline(Path(positional[0])), indent=2, ensure_ascii=False))
+        return 0
+    if cmd == "view":
+        if not positional:
+            print(json.dumps({"status": "error", "error": "view requires a file"}))
+            return 1
+        lines_range = None
+        if "--lines" in argv:
+            raw = argv[argv.index("--lines") + 1]
+            try:
+                parts = [int(p.strip()) for p in raw.split("-")]
+                lines_range = (parts[0], parts[1])
+            except Exception:
+                print(json.dumps({"status": "error", "error": f"invalid --lines '{raw}'"}))
+                return 1
+        symbol = argv[argv.index("--symbol") + 1] if "--symbol" in argv else None
+        print(json.dumps({
+            "file": str(Path(positional[0]).resolve()),
+            "content": view_file_gated(Path(positional[0]), symbol=symbol, lines_range=lines_range),
+        }, indent=2, ensure_ascii=False))
+        return 0
+    if cmd == "grep":
+        if not positional:
+            print(json.dumps({"status": "error", "error": "grep requires a pattern"}))
+            return 1
+        print(json.dumps({
+            "pattern": positional[0],
+            "content": grep_gated(positional[0], Path(positional[1] if len(positional) > 1 else ".")),
+        }, indent=2, ensure_ascii=False))
+        return 0
+    if len(positional) < 2:
+        print(json.dumps({"status": "error", "error": "query requires a file and a question"}))
+        return 1
+    print(json.dumps({
+        "file": str(Path(positional[0]).resolve()),
+        "question": positional[1],
+        "content": query_gated(Path(positional[0]), positional[1]),
+    }, indent=2, ensure_ascii=False))
+    return 0
+
+
 if __name__ == "__main__":
+    _argv = sys.argv[1:]
+    if "--omni-schema" in _argv:
+        print(json.dumps(_OMNI_SCHEMA, indent=2))
+        sys.exit(0)
+    if "--json" in _argv:
+        sys.exit(json_main([a for a in _argv if a != "--json"]))
     sys.exit(main())

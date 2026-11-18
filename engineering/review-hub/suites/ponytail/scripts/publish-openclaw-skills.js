@@ -20,6 +20,11 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: node scripts/publish-openclaw-skills.js [--dry-run] [flags] ...');
+  process.exit(0);
+}
+
 const root = path.join(__dirname, '..');
 const skillsDir = path.join(root, '.openclaw', 'skills');
 

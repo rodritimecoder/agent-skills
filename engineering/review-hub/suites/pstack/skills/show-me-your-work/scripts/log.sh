@@ -3,6 +3,10 @@
 # Usage: log.sh <logfile> <phase> <decision> <why> <evidence> <result>
 set -euo pipefail
 
+case "${1:-}" in
+  -h|--help) printf 'Usage: %s [flags] ...\n' "$(basename "$0")"; exit 0 ;;
+esac
+
 if [ "$#" -ne 6 ]; then
 	printf 'usage: log.sh <logfile> <phase> <decision> <why> <evidence> <result>\n' >&2
 	exit 1

@@ -13,6 +13,11 @@
 const fs = require('fs');
 const path = require('path');
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: check-versions.js [flags] ...');
+  process.exit(0);
+}
+
 const root = path.join(__dirname, '..');
 const PINNED_SEMVER = /^\d+\.\d+\.\d+$/;
 

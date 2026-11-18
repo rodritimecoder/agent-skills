@@ -384,6 +384,15 @@ async function checkInteractions(page, opts) {
 }
 
 (async () => {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log("Usage: check_runner.mjs [flags] ...");
+    console.log("  --target <label=url>   target page (repeatable)");
+    console.log("  --allow-controls       allow web controls inside .win");
+    console.log("  --max-press-ms <n>     latency ceiling (default 100)");
+    console.log("  --min-contrast <n>     contrast floor (default 3.0)");
+    console.log("  --viewports <wxh,...>  viewport list");
+    process.exit(0);
+  }
   const opts = parseArgs(process.argv);
   const playwright = loadPlaywright();
   const browser = await playwright.chromium.launch();

@@ -11,6 +11,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "modules"))
 from ocr_engine import OCREngine, LIGHTON_MODEL_DIR
 
 
+def _project(obj, fields):
+    """Project a dict or list-of-dicts to comma-separated field names.
+
+    Unknown names are listed on stderr with the available keys and skipped, so
+    a mistyped field never crashes the command.
+    """
+    if not fields:
+        return obj
+    requested = [f.strip() for f in fields.split(",") if f.strip()]
+    if not requested:
+        return obj
+    if isinstance(obj, dict):
+        available = list(obj)
+        unknown = [f for f in requested if f not in obj]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return {k: obj[k] for k in requested if k in obj}
+    if isinstance(obj, list) and obj and all(isinstance(row, dict) for row in obj):
+        available = list(obj[0])
+        unknown = [f for f in requested if f not in available]
+        if unknown:
+            print(f"warning: unknown field(s): {', '.join(unknown)}; available: {', '.join(available)}",
+                  file=sys.stderr)
+        return [{k: row[k] for k in requested if k in row} for row in obj]
+    return obj
+
+
 def _reexec_in_venv() -> None:
     """Re-exec under the skill venv when PyMuPDF is missing.
 
@@ -49,6 +77,8 @@ def main():
 
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON format")
+    parent_parser.add_argument("--fields", metavar="NAME[,NAME...]", default=None,
+                               help="Project result fields (comma-separated) for read/doctor/server status")
     parent_parser.add_argument("--host", default=None, help="OCR server host (default: $OCR_HOST or 127.0.0.1, supports Tailscale *.ts.net)")
     parent_parser.add_argument("--lighton-port", type=int, metavar="PORT", default=8082, help="LightOnOCR port (default: 8082)")
 
@@ -62,7 +92,7 @@ def main():
     p_read = sub.add_parser("read", aliases=["doc", "scan"], parents=[parent_parser], help="Document, PDF and slide OCR via LightOnOCR")
     p_read.add_argument("file", help="Input document (.pdf) or image (.png/.jpg)")
     p_read.add_argument("--prompt", "-p", default=None, help="Custom extraction prompt (transcription when omitted)")
-    p_read.add_argument("--pages", help="PDF page range selection (e.g. 1-3,5)")
+    p_read.add_argument("--pages", metavar="N", help="PDF page range selection (e.g. 1-3,5)")
     p_read.add_argument("--engine", choices=["lighton"], default="lighton",
                         help="Document engine; LightOnOCR is the only engine and the default")
     p_read.add_argument("--assets", metavar="DIR", default=None,
@@ -107,10 +137,11 @@ def main():
                 assets_dir=Path(args.assets).expanduser() if args.assets else None,
             )
 
+        shown = _project(res, args.fields)
         if args.output:
             target = Path(args.output).resolve()
-            payload = json.dumps(res, indent=2) if args.json else res["text"]
-            if not args.json:
+            payload = json.dumps(shown, indent=2) if (args.json or args.fields) else res["text"]
+            if not args.json and not args.fields:
                 for asset in res.get("assets") or []:
                     try:
                         payload = payload.replace(asset["path"], os.path.relpath(asset["path"], target.parent))
@@ -120,8 +151,8 @@ def main():
         if res.get("assets") and not args.json:
             print(f"🖼  {len(res['assets'])} figure(s) → {Path(args.assets).resolve()}", file=sys.stderr)
 
-        if args.json:
-            print(json.dumps(res, indent=2))
+        if args.json or args.fields:
+            print(json.dumps(shown, indent=2))
         else:
             print(res["text"])
 
@@ -133,8 +164,8 @@ def main():
             "online": online,
             "models_ready": LIGHTON_MODEL_DIR.is_dir(),
         }
-        if args.json:
-            print(json.dumps(doc, indent=2))
+        if args.json or args.fields:
+            print(json.dumps(_project(doc, args.fields), indent=2))
         else:
             print("🔍 [ocr] Diagnostic Health Check:")
             print(f"  Engine           : {doc['engine']} (port {doc['port']})")
@@ -144,8 +175,8 @@ def main():
     elif args.command == "server":
         if args.action == "status":
             st = {"lighton": "online" if engine.is_lighton_online() else "offline"}
-            if args.json:
-                print(json.dumps(st, indent=2))
+            if args.json or args.fields:
+                print(json.dumps(_project(st, args.fields), indent=2))
             else:
                 print(f"LightOnOCR (:8082): {st['lighton'].upper()}")
 
@@ -155,8 +186,10 @@ def main():
                 time.sleep(1.0)
 
             ok = engine.ensure_lighton()
-            if args.json:
-                print(json.dumps({"action": args.action, "target": "lighton", "results": {"lighton": "started" if ok else "failed"}}, indent=2))
+            if args.json or args.fields:
+                start_doc = {"action": args.action, "target": "lighton",
+                             "results": {"lighton": "started" if ok else "failed"}}
+                print(json.dumps(_project(start_doc, args.fields), indent=2))
             else:
                 print(f"LightOnOCR (:8082): {'STARTED' if ok else 'FAILED'}")
 
@@ -164,8 +197,9 @@ def main():
             ports = [args.lighton_port]
             for p in ports:
                 subprocess.run(["fuser", "-k", f"{p}/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if args.json:
-                print(json.dumps({"action": "stop", "target": "lighton", "ports": ports, "status": "stopped"}, indent=2))
+            if args.json or args.fields:
+                stop_doc = {"action": "stop", "target": "lighton", "ports": ports, "status": "stopped"}
+                print(json.dumps(_project(stop_doc, args.fields), indent=2))
             else:
                 print(f"Stopped server daemons on ports: {ports}")
 

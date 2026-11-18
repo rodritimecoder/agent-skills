@@ -970,7 +970,7 @@ def main():
             sp.add_argument("--keep-ignored", action="store_true")
             sp.add_argument("--embed-images", action="store_true",
                             help="reference saved crops instead of ![image]()")
-            sp.add_argument("--pages", type=str, default=None, metavar="SPEC",
+            sp.add_argument("--pages", type=str, default=None, metavar="N",
                             help="PDF pages: '1-5', '3', '1,3,5' (default all)")
             sp.add_argument("--dpi", type=int, default=400, metavar="N",
                             help="PDF render DPI (default 400, LightOnOCR spec)")

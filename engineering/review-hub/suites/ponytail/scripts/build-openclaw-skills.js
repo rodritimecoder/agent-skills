@@ -51,6 +51,10 @@ function outPath(name) {
 module.exports = { DESCRIPTIONS, NAMES, render, outPath, sourceBody };
 
 if (require.main === module) {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log('Usage: node scripts/build-openclaw-skills.js [flags] ...');
+    process.exit(0);
+  }
   for (const name of NAMES) {
     const p = outPath(name);
     fs.mkdirSync(path.dirname(p), { recursive: true });

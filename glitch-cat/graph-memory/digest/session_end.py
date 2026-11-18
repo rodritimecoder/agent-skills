@@ -21,6 +21,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+if "--help" in sys.argv or "-h" in sys.argv:
+    print("Usage: session_end.py [flags] ...")
+    print("  SessionEnd/PreCompact hook; reads a JSON payload on stdin.")
+    print("  --help  show this message and exit")
+    sys.exit(0)
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 

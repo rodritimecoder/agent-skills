@@ -174,6 +174,9 @@ def check_words_sections(rel, body, sources):
 
 
 def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: quotes.py [ROOT] [--show-cuts] [flags] ...")
+        sys.exit(0)
     args = [a for a in sys.argv[1:] if a != "--show-cuts"]
     root = Path(args[0]).resolve() if args else Path(__file__).resolve().parent.parent
     sources = load_sources(root)

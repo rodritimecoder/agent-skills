@@ -10,5 +10,13 @@
 
 set -euo pipefail
 
+case "${1:-}" in
+  -h|--help)
+    printf 'Usage: %s <file...> [flags] ...\n' "$(basename "$0")"
+    printf '  e.g. run-diarization.sh talk.mp4 --vtt talk.vtt --names Kem,Chase,Vince\n'
+    exit 0
+    ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 exec python3 "$SCRIPT_DIR/audiocpp_cli.py" diarize "$@"

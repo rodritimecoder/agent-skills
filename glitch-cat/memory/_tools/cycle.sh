@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+case "${1:-}" in
+  -h|--help) printf 'Usage: %s [flags] ...\n' "$(basename "$0")"; exit 0 ;;
+esac
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="${MEMORY_ROOT:-$HOME/.memory}"
 PY="${PYTHON:-python3}"

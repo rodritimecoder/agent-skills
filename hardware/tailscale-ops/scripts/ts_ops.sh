@@ -3,6 +3,31 @@
 
 set -euo pipefail
 
+# Typed contract: one MCP JSON Schema for the command surface. Zero side effects.
+if [ "${1:-}" = "--omni-schema" ]; then
+  python3 - <<'PY'
+import json
+print(json.dumps({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ts_ops",
+  "description": "Runtime Tailscale Network Operations for AI Agents",
+  "type": "object",
+  "properties": {
+    "command": {"type": "string", "enum": ["peers", "check-port", "sync", "status", "reset-tunnels", "send-file", "doctor"], "x-positional": 0},
+    "host": {"type": "string", "x-positional": 1},
+    "port": {"type": "integer", "x-positional": 2},
+    "file": {"type": "string", "x-positional": 1},
+    "target": {"type": "string", "x-positional": 2},
+    "dry-run": {"type": "boolean", "x-flag": "--dry-run"},
+    "json": {"type": "boolean", "x-flag": "--json"},
+    "help": {"type": "boolean", "x-flag": "--help"}
+  },
+  "additionalProperties": False
+}, indent=2))
+PY
+  exit 0
+fi
+
 CMD="${1:-peers}"
 shift || true
 

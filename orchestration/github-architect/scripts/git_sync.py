@@ -441,14 +441,11 @@ def stage6_push(branch: str, has_upstream: bool, auto_yes: bool = False):
 
     is_protected = branch in ("main", "master", "production")
     if is_protected and not auto_yes:
-        if not sys.stdin.isatty():
-            sys.exit(
-                f"❌ Refusing to push to protected branch '{branch}' without confirmation.\n"
-                f"   Re-run with -y, or push manually."
-            )
-        confirm = input(f"⚠️  Branch '{branch}' is a protected default branch. Confirm push to remote? [y/N]: ").strip().lower()
-        if confirm not in ("y", "yes"):
-            sys.exit("Push cancelled by user.")
+        # Structural contract: confirmation comes from --yes/-y, never stdin.
+        sys.exit(
+            f"❌ Refusing to push to protected branch '{branch}' without confirmation.\n"
+            f"   Re-run with -y/--yes to confirm, or push manually."
+        )
 
     if not has_upstream:
         run_git(["push", "-u", "origin", branch])

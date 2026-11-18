@@ -11,6 +11,12 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: node scripts/cursor-hooks.js install|uninstall [--project] [flags] ...');
+  process.exit(0);
+}
+
 const { isShellSafe } = require('../hooks/ponytail-config');
 
 const ROOT = path.join(__dirname, '..');

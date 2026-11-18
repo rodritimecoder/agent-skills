@@ -61,6 +61,9 @@ def heading_of(path):
 
 
 def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: viz.py <graph.jsonl...> [-o viz.html] [flags] ...")
+        sys.exit(0)
     args = sys.argv[1:]
     out = None
     if "-o" in args:

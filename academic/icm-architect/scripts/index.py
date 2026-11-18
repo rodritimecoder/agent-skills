@@ -47,6 +47,9 @@ def field(front, name):
 
 
 def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: index.py FOLDER [FOLDER ...] [flags] ...")
+        sys.exit(0)
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     root = Path(__file__).resolve().parent.parent
