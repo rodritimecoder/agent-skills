@@ -591,19 +591,73 @@ def cmd_harness(subaction: str = "list", target: str | None = None, as_json: boo
 # search
 # --------------------------------------------------------------------------
 
+def _search_contract(con, res, as_json: bool, section: str, doc: str):
+    """At ``--depth contract``, return what ``describe`` returns for the top hit.
+
+    The tool is resolved from the top-ranked result's winning chunk (its title
+    is the tool id for script chunks), falling back to that skill's primary
+    script tool. Contract construction is delegated to the same helpers
+    ``cmd_describe`` uses, so the two surfaces cannot drift.
+    """
+    results = res.get("results") or []
+    if not results:
+        if as_json:
+            print(json.dumps({"depth": "contract", "error": "no match",
+                              "note": res.get("note", "")}, indent=2, ensure_ascii=False))
+        else:
+            print(f"\n🔍 No match for: {res.get('query')!r} (no contract to read).\n")
+        return
+
+    top = results[0]
+    chunks = top.get("chunks") or []
+    top_chunk = chunks[0] if chunks else {}
+    target = top_chunk.get("title") if top_chunk.get("kind") in ("script", "tool") else None
+    if target and not con.execute("SELECT 1 FROM tools WHERE id = ?", (target,)).fetchone():
+        target = None
+    if not target:
+        skill = top.get("skill")
+        cands = con.execute(
+            "SELECT id FROM tools WHERE skill = ? AND kind = 'script' ORDER BY id LIMIT 1",
+            (skill,),
+        ).fetchall()
+        target = cands[0]["id"] if cands else skill
+
+    row = con.execute("SELECT * FROM tools WHERE id = ?", (target,)).fetchone()
+    if row is None:
+        # No script tool for this skill: fall back to its own describe (body,
+        # section or document), reusing the existing helper verbatim.
+        return _describe_skill(con, target, section, as_json, doc)
+
+    payload = _build_tool_contract(con, row)
+    if as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+    skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
+    about = skill["description"] if skill and skill["description"] else ""
+    _print_tool_contract(payload, about)
+
+
 def cmd_search(query: str, as_json: bool = False, limit: int = 6,
                explain: bool = False, no_rerank: bool = False, rerank: str = "auto",
-               chunks: bool = False, fusion: str = "auto"):
+               chunks: bool = False, fusion: str = "auto",
+               depth: str = "brief", section: str = "", doc: str = ""):
     con = _require_catalog()
     mode = "never" if no_rerank else rerank
     res = search.search(con, query, limit=limit, rerank_enabled=mode,
                         fusion=fusion, explain=explain)
 
+    # --chunks is the legacy spelling of --depth chunks.
+    if chunks and depth == "brief":
+        depth = "chunks"
+
+    if depth == "contract":
+        return _search_contract(con, res, as_json, section, doc)
+
     if as_json:
         # Routing needs names and scores; the chunk archive is opt-in. The
         # full shape is ~25 KB (~6.3k tokens) for ten results, which is more
         # context than the skill being routed to.
-        if not chunks:
+        if depth != "chunks":
             res = dict(res)
             res["results"] = search.compact(res["results"])
             res["shape"] = "compact"
@@ -810,6 +864,59 @@ def _describe_skill(con, name: str, section_name: str, as_json: bool = False, do
     print(f"   Tool ids:  omnicli tools {name}")
 
 
+def _build_tool_contract(con, row):
+    """Build the describe payload for one tool row.
+
+    Shared by ``cmd_describe`` and ``search --depth contract`` so both
+    surfaces return exactly the same contract shape for the same tool.
+    """
+    contract = json.loads(row["contract"] or "{}")
+    skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
+    return {
+        "id": row["id"],
+        "skill": row["skill"],
+        "kind": row["kind"],
+        "enabled": bool(row["enabled"]),
+        "summary": row["summary"],
+        "path": row["path"],
+        "argv": json.loads(row["argv"] or "[]"),
+        "aliases": json.loads(skill["aliases"] or "[]") if skill else [],
+        "contract": contract,
+    }
+
+
+def _print_tool_contract(payload, about: str = ""):
+    """Render a contract payload in the human describe format."""
+    state = "enabled" if payload["enabled"] else f"DISABLED (run `omnicli enable {payload['id']}`)"
+    print(f"\n📄 [omnicli describe] {payload['id']}\n")
+    print(f"   skill   : {payload['skill']}")
+    print(f"   kind    : {payload['kind']}")
+    print(f"   state   : {state}")
+    if payload["summary"]:
+        print(f"   summary : {payload['summary']}")
+    if about:
+        print(f"   about   : {about[:200]}")
+    if payload["aliases"]:
+        print(f"   aliases : {', '.join(payload['aliases'])}")
+
+    contract = payload["contract"]
+    if contract.get("usage"):
+        print(f"\n   {contract['usage']}")
+    if contract.get("flags"):
+        print(f"\n   flags      : {' '.join(contract['flags'])}")
+    if contract.get("positionals"):
+        print(f"   positionals: {' '.join(contract['positionals'])}")
+    if contract.get("subcommands"):
+        print("\n   subcommands:")
+        for sub in contract["subcommands"]:
+            alias = f" ({', '.join(sub['aliases'])})" if sub.get("aliases") else ""
+            desc = f" — {sub['summary']}" if sub.get("summary") else ""
+            print(f"      {sub['name']}{alias}{desc}")
+    if contract.get("help"):
+        print("\n" + "\n".join("   | " + ln for ln in contract["help"].splitlines()[:40]))
+    print(f"\n   Run: omnicli invoke {payload['id']} [args...]\n")
+
+
 def cmd_describe(tool_id: str, as_json: bool = False, section: str = "", doc: str = ""):
     """Return the exact input contract for ONE tool, or a skill's body."""
     con = _require_catalog()
@@ -827,52 +934,14 @@ def cmd_describe(tool_id: str, as_json: bool = False, section: str = "", doc: st
                      f"Use `omnicli tools <skill>` to list a skill's tools.")
         row = con.execute("SELECT * FROM tools WHERE id = ?", (cands[0]["id"],)).fetchone()
 
-    contract = json.loads(row["contract"] or "{}")
-    skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
-
-    payload = {
-        "id": row["id"],
-        "skill": row["skill"],
-        "kind": row["kind"],
-        "enabled": bool(row["enabled"]),
-        "summary": row["summary"],
-        "path": row["path"],
-        "argv": json.loads(row["argv"] or "[]"),
-        "aliases": json.loads(skill["aliases"] or "[]") if skill else [],
-        "contract": contract,
-    }
-
+    payload = _build_tool_contract(con, row)
     if as_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
 
-    state = "enabled" if row["enabled"] else f"DISABLED (run `omnicli enable {row['id']}`)"
-    print(f"\n📄 [omnicli describe] {row['id']}\n")
-    print(f"   skill   : {row['skill']}")
-    print(f"   kind    : {row['kind']}")
-    print(f"   state   : {state}")
-    if row["summary"]:
-        print(f"   summary : {row['summary']}")
-    if skill and skill["description"]:
-        print(f"   about   : {skill['description'][:200]}")
-    if payload["aliases"]:
-        print(f"   aliases : {', '.join(payload['aliases'])}")
-
-    if contract.get("usage"):
-        print(f"\n   {contract['usage']}")
-    if contract.get("flags"):
-        print(f"\n   flags      : {' '.join(contract['flags'])}")
-    if contract.get("positionals"):
-        print(f"   positionals: {' '.join(contract['positionals'])}")
-    if contract.get("subcommands"):
-        print("\n   subcommands:")
-        for sub in contract["subcommands"]:
-            alias = f" ({', '.join(sub['aliases'])})" if sub.get("aliases") else ""
-            desc = f" — {sub['summary']}" if sub.get("summary") else ""
-            print(f"      {sub['name']}{alias}{desc}")
-    if contract.get("help"):
-        print("\n" + "\n".join("   | " + ln for ln in contract["help"].splitlines()[:40]))
-    print(f"\n   Run: omnicli invoke {row['id']} [args...]\n")
+    skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
+    about = skill["description"] if skill and skill["description"] else ""
+    _print_tool_contract(payload, about)
 
 
 # --------------------------------------------------------------------------
@@ -1720,6 +1789,11 @@ def main():
     p.add_argument("--chunks", action="store_true",
                    help="With --json: include every matching chunk (default is the "
                         "compact routing view: skill, score, why, top hit)")
+    p.add_argument("--depth", choices=["brief", "contract", "chunks"], default="brief",
+                   help="brief=compact routing view (default); contract=the top hit's "
+                        "tool contract (same shape as describe); chunks=full search body")
+    p.add_argument("--section", default="", help="With --depth contract on a skill top hit: section heading")
+    p.add_argument("--doc", default="", help="With --depth contract on a skill top hit: document path/title")
 
     p = sub.add_parser("list", help="List every skill in the registry")
     p.add_argument("--json", action="store_true")
@@ -1894,7 +1968,8 @@ def main():
         with _traced("search", " ".join(args.query) if isinstance(args.query, list) else str(args.query)):
             cmd_search(args.query, as_json=args.json, limit=args.limit,
                        explain=args.explain, no_rerank=args.no_rerank,
-                       rerank=args.rerank, chunks=args.chunks, fusion=args.fusion)
+                       rerank=args.rerank, chunks=args.chunks, fusion=args.fusion,
+                       depth=args.depth, section=args.section, doc=args.doc)
     elif args.action == "list":
         cmd_list(as_json=args.json, show_all=args.all)
     elif args.action == "tools":

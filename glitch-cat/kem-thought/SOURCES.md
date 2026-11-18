@@ -3,7 +3,7 @@
 Every principle in `principles/` is a distillation of something Kem actually said. This file
 maps each one back to the reel, the timestamp, and the mined transcript it came from.
 
-Method: all 42 dated vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
+Method: all 43 dated vault entries under `/run/media/rodri/AI/creator-vault/kem_glitch/` were
 mined (transcript + notes + visuals), and the recurring doctrine was extracted per talk,
 then merged across talks by frequency and by whether the point was load-bearing in his
 argument. A principle survived if it appeared as a rule he states, not as an example he
@@ -87,9 +87,21 @@ already listed below. They add quotes, not principles.
 | `fix-the-measuring-not-the-results` | "It only kind of climbs the hill you put it on." | 01:37 | `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` |
 | `foundations-over-shiny-objects` | "So unless you're deep in autonomy with tokens to burn, you'll get the same or better quality by being clear in your alignment." | 02:29 | `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` |
 
+### `Df2XtROtvML` additional feeds — attention as a measured weight
+
+| Principle | Quote | Time | Vault entry |
+| :--- | :--- | :---: | :--- |
+| `context-is-a-budget` | "Every time you send a message to make that prediction, the model reads everything in its context window and it weighs every one of those tokens against the others." | 00:20 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `context-is-a-budget` | "The longer your session, the more tokens there are to weigh and the more chances for one of them to tip the answer. Keep your session short, keep what you store for the model clean and precise." | 02:31 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `context-poisoning` | "That weighting is called attention. This means every single word you prompt changes the answer. Now that's both the useful ones and the ones you didn't intend." | 00:36 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `context-poisoning` | "More than half of what lands in my message is filler. And the model's answer, Australia does not have a capital city, which is of course wrong." | 01:35 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `context-poisoning` | "The next time you get angry and swear at your model, remember those words, get weighted too." | 02:48 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `the-poison-sits-upstream` | "Now let's see what happens when I delete a single word, coffee. And the correct answer, Canberra is back. That is how sensitive the model's answer really is under the hood to a single token." | 01:55 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+| `the-poison-sits-upstream` | "Now most of the time you'll get away with it. The problem is you never know which time you won't." | 02:13 | `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` |
+
 ## Talks mined
 
-42 dated vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
+43 dated vault entries, all under `/run/media/rodri/AI/creator-vault/kem_glitch/`:
 
 | Vault entry | Topic | Feeds |
 | :--- | :--- | :--- |
@@ -126,6 +138,7 @@ already listed below. They add quotes, not principles.
 | `2026-11-13_tier_list_for_my_reels_based_on_what_builds_reliability_and_` | 117 reels ranked on output gain; S-tier is the development workflow starting with alignment | `foundations-over-shiny-objects`, `fail-back-to-align` |
 | `2026-11-14_an_edit_from_the_live_design_lab_we_had_this_week_in_glitch_` | Comparison beats words; a behaviour checker presses every button and checks latency | `fix-the-measuring-not-the-results`, `give-it-hands-and-eyes` |
 | `2026-11-16_hill_climbing_with_ai_model_councils_worth_it` | Model councils measured: seven runs and nearly twice as long vs one model, one pass with good context; climbs only the hill you put it on | `foundations-over-shiny-objects`, `fix-the-measuring-not-the-results` |
+| `2026-11-17_do_you_really_understand_attention_and_how_it_impacts_how_we` | Attention as a measured weight, context rot, a single distractor token flipping the answer | `context-is-a-budget`, `context-poisoning`, `the-poison-sits-upstream` |
 
 ## Known gaps
 

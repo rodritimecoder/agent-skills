@@ -67,6 +67,8 @@ legacy scorer   top1  41/61 (67.2%)   top3  49/61 ( 80.3%)
 
 The second row's saving comes from the 8 KB response cap; the selection-phase number is paid on every turn whether or not a tool gets used.
 
+`search --depth {brief,contract,chunks}` selects the view: the compact routing line (default), the top hit's tool contract (same shape as `describe`, with `--section`/`--doc` passthrough), or the full chunk body (the legacy `--chunks` shape). The 8 KB cap applies to all three.
+
 ---
 
 ## Why This Exists & Provenance

@@ -28,6 +28,11 @@ omnicli search "turn a recorded podcast into readable text"
 omnicli search "调研一下这个话题在网上的讨论"
 ```
 
+`--depth` picks the view (default `brief`):
+- `brief` — compact routing view (skill, score, why, top hit); the unchanged default.
+- `contract` — the top hit's tool contract, identical to `describe` (`--section`/`--doc` pass through).
+- `chunks` — every matching chunk (the former `--chunks` shape).
+
 BM25 over every skill's full body + curated aliases (weight 12) matches exact
 tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
 embedding leg over descriptions (`K=60`) and damps multi-chunk bodies

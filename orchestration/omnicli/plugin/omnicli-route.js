@@ -155,12 +155,18 @@ export default {
             properties: {
               query: { type: "string", description: "Natural-language intent, e.g. 'transcribe a zoom lecture'." },
               limit: { type: "integer", minimum: 1, maximum: 20, description: "Maximum results (default 5)." },
+              depth: { type: "string", enum: ["brief", "contract", "chunks"], description: "brief=compact routing view (default); contract=the top hit's tool contract; chunks=full search body." },
+              section: { type: "string", description: "With depth=contract on a skill top hit: section heading to read." },
+              doc: { type: "string", description: "With depth=contract on a skill top hit: document path/title to read." },
             },
             required: ["query"],
             additionalProperties: false,
           },
-          async ({ query, limit = 5 }) => {
-            const r = await run(["search", String(query), "--json", "--limit", String(limit)]);
+          async ({ query, limit = 5, depth = "brief", section, doc }) => {
+            const argv = ["search", String(query), "--json", "--limit", String(limit), "--depth", String(depth)];
+            if (section) argv.push("--section", String(section));
+            if (doc) argv.push("--doc", String(doc));
+            const r = await run(argv);
             const text = r.code === 0 ? compactJson(r.stdout) : `omnicli search failed (rc ${r.code}): ${cap(r.stderr || r.stdout)}`;
             return { content: cap(text) };
           },

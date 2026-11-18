@@ -11,3 +11,5 @@
 - Separate it from rot explicitly in your notes: rot is degradation, poisoning is corruption.
 
 **Kem:** *"It lands in the session, it stays there and it shapes every answer after that. That's called context poisoning. The worst part is that it compounds because every answer gets built on it."* — Memory Context Management [01:12]
+
+**Kem:** *"The next time you get angry and swear at your model, remember those words, get weighted too."* — Attention & Prompting [02:48]

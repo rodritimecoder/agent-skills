@@ -10,3 +10,5 @@
 - If the strongest model fails the same way every time, the bug is in your instructions, not the model: find the sentence that left something unsaid.
 
 **Kem:** *"Checking every step shows you which step causes the problem, and a problem in one step carries through. This is propagation risk to every step after it."* — Eval Pipeline [01:54]
+
+**Kem:** *"Now let's see what happens when I delete a single word, coffee. And the correct answer, Canberra is back. That is how sensitive the model's answer really is under the hood to a single token."* — Attention & Prompting [01:55]

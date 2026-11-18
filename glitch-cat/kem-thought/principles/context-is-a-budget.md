@@ -11,3 +11,5 @@
 - Structure folders so grep works; good folder structure works because grep works.
 
 **Kem:** *"Loosely, every token in the window is weighed against every other one. And the model has to pick the next word, right? So more tokens pulling on that probability and the fact you actually care about gets a thinner slice... that's what causes this idea of context rot."* — Memory Context Management [01:31]
+
+**Kem:** *"Every time you send a message to make that prediction, the model reads everything in its context window and it weighs every one of those tokens against the others."* — Attention & Prompting [00:20]
