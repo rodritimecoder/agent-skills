@@ -143,7 +143,7 @@ export default {
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "omnicli",
-        description: "Workstation tool catalogue: search, describe, invoke, and run JavaScript Code Mode plans over 550+ local tools.",
+        description: "Workstation tool catalogue: search, describe, invoke, and run JavaScript Code Mode plans over 529 local tools.",
       });
 
       editor.add(
@@ -232,7 +232,7 @@ export default {
             type: "object",
             properties: {
               script: { type: "string", description: "JavaScript plan source." },
-              sandbox: { type: "string", enum: ["write", "strict", "none"], description: "Sandbox mode (default write)." },
+              sandbox: { type: "string", enum: ["write", "strict", "none"], description: "Sandbox mode (default strict)." },
               max_calls: { type: "integer", minimum: 0, maximum: 1000, description: "Tool-call budget (default 100)." },
               mem_limit: { type: "integer", minimum: 64, maximum: 8192, description: "Optional RLIMIT_AS in MiB." },
               workspace: { type: "string", description: "Writable directory for the plan." },
@@ -240,7 +240,7 @@ export default {
             required: ["script"],
             additionalProperties: false,
           },
-          async ({ script, sandbox = "write", max_calls = 100, mem_limit, workspace }) => {
+          async ({ script, sandbox = "strict", max_calls = 100, mem_limit, workspace }) => {
             await mkdir(PLANS_DIR, { recursive: true });
             const file = join(PLANS_DIR, `plan-${Date.now()}-${process.pid}.mjs`);
             await writeFile(file, String(script), "utf8");

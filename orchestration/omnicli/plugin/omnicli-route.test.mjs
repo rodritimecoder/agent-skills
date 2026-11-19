@@ -124,8 +124,11 @@ test("describe, invoke, and exec build the omnicli argv", async () => {
   });
   assert.match(invoke.content, /invoke local\/decide --omni-project answer,confidence --omni-max-bytes 2048 -- --flag value/);
 
-  const exec = await ctx._tools.get("exec").execute({ script: "print('hi')", sandbox: "strict", max_calls: 7 });
-  assert.match(exec.content, /exec .*plan-.*\.py --sandbox strict --max-calls 7 --json/);
+  const exec = await ctx._tools.get("exec").execute({ script: "console.log('hi')", sandbox: "strict", max_calls: 7 });
+  assert.match(exec.content, /exec .*plan-.*\.mjs --sandbox strict --max-calls 7 --json/);
+
+  const execDefault = await ctx._tools.get("exec").execute({ script: "console.log('hi')" });
+  assert.match(execDefault.content, /exec .*plan-.*\.mjs --sandbox strict --max-calls 100 --json/);
 });
 
 test("denies skill-directory discovery until a catalogue call primes the session", async () => {

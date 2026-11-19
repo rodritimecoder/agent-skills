@@ -1,6 +1,6 @@
 ---
 name: omnicli
-description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering sub-tools across the 580+ tool catalog by intent (`omnicli search`), and (4) local inference (`omnicli llm|ocr|decide|asr`). Port facts live in CONTEXT.md."
+description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via Code Mode (`omnicli exec plan.mjs`), (2) executing CLI tools with token shielding and field projection to prevent context flooding (`omnicli invoke <tool> --omni-project`), (3) discovering sub-tools across the 529 tool catalog by intent (`omnicli search`), and (4) local inference (`omnicli llm|ocr|decide|asr`). Port facts live in CONTEXT.md."
 allowed-tools: "Bash(omnicli:*) Read"
 ---
 
@@ -11,7 +11,7 @@ contract for that one tool, and invoke it with a bounded response — nothing
 else enters the context window.
 
 One control plane (`catalog.db`: FTS5 BM25, weighted aliases, dense vectors)
-over 580+ tools, reached through one of two faces: bounded CLI calls
+over 529 tools, reached through one of two faces: bounded CLI calls
 (`search` / `describe` / `invoke`) or a single JavaScript plan (`exec`) that
 keeps intermediate payloads out of the context window. Ranking internals:
 [references/retrieval-architecture.md](references/retrieval-architecture.md).

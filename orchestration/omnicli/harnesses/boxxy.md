@@ -62,8 +62,8 @@ omnicli status --json
 {
   "tailnet_ip": "100.83.178.106",
   "catalog": {
-    "skills": 54,
-    "tools": 494,
+    "skills": 53,
+    "tools": 529,
     "freshness": "fresh",
     "tier": "bm25"
   },
