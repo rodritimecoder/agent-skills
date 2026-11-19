@@ -181,6 +181,27 @@ CONVENTIONAL_SUBJECT = re.compile(
     r"(\([^)]+\))?!?: \S"
 )
 
+JARGON_TERMS = frozenset(
+    "wip todo fixme tmp temp asdf foo bar baz xxx tweak misc nit cleanup "
+    "various stuff things updates changes".split()
+)
+_JARGON_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(t) for t in sorted(JARGON_TERMS, key=len, reverse=True)) + r")\b",
+    re.IGNORECASE,
+)
+_MANIFEST_BULLET_RE = re.compile(r"^[-*] .+ \((?:\+\d+/-\d+|binary)\)$")
+_MANIFEST_TOKEN_RE = re.compile(r"\(\+\d+/-\d+\)")
+_GENERATED_DELTA_RE = re.compile(r" \(\+\d+/-\d+\)$| \(binary\)$")
+_GENERATED_FILES_RE = re.compile(r"\d+ files?(?: \(\+\d+/-\d+\))?")
+
+DEFAULT_WRAP_WIDTH = 80
+DEFAULT_MAX_TITLE = 120
+DEFAULT_TINY_DIFF_LINES = 3
+DEFAULT_TINY_DIFF_FILES = 1
+DEFAULT_TINY_BODY_CHARS = 600
+DEFAULT_LARGE_DIFF_LINES = 100
+DEFAULT_LARGE_BODY_CHARS = 80
+
 
 def _manifest(changes: list[dict]) -> str:
     """The paths the subject only counted, one bullet each.
@@ -262,6 +283,251 @@ def commits_without_body(upstream: str | None = None, repo: str = None) -> list[
         if not body.strip():
             missing.append((sha[:7], subject))
     return missing
+
+
+def read_commit_records(repo: str = None, upstream: str | None = None, limit: int = 20) -> list[dict]:
+    """One bounded git log plus one diff-tree per commit.
+
+    The framing and range match `commits_without_body()` so every gate reads
+    the same set of outgoing commits. Merge subjects stay in the result marked
+    `is_merge` for reporting, but the audit skips them: git writes their text.
+    """
+    if repo is not None and not Path(repo).is_dir():
+        raise RuntimeError(f"repository not found: {repo}")
+    args = ["log", "--no-merges", "--format=%H%x1f%s%x1f%b%x1e", "-n", str(limit)]
+    if upstream:
+        args.append(f"{upstream}..HEAD")
+    else:
+        args += ["HEAD", "--not", "--remotes"]
+    res = run_git(args, check=False, cwd=repo)
+    if res.returncode != 0:
+        raise RuntimeError(f"git log failed: {res.stderr.strip() or res.stdout.strip()}")
+
+    records = []
+    for chunk in res.stdout.split("\x1e"):
+        chunk = chunk.strip("\n")
+        if not chunk.strip():
+            continue
+        sha, _, rest = chunk.partition("\x1f")
+        subject, _, body = rest.partition("\x1f")
+        sha, subject = sha.strip(), subject.strip()
+        files = added = removed = 0
+        diff = run_git(
+            ["diff-tree", "--no-commit-id", "--numstat", "-r", sha],
+            check=False, cwd=repo,
+        )
+        if diff.returncode == 0:
+            for line in diff.stdout.splitlines():
+                fields = line.split("\t")
+                if len(fields) < 3:
+                    continue
+                a, r, _path = fields[0], fields[1], fields[2]
+                files += 1
+                added += int(a) if a.isdigit() else 0
+                removed += int(r) if r.isdigit() else 0
+        records.append({
+            "sha": sha,
+            "subject": subject,
+            "body": body.strip("\n"),
+            "files": files,
+            "added": added,
+            "removed": removed,
+            "is_merge": subject.startswith("Merge "),
+        })
+    return records
+
+
+def _subject_parts(subject: str):
+    """Return (scope, summary) from a subject, whether or not it is conventional."""
+    head, _, tail = subject.partition(": ")
+    open_i, close_i = head.find("("), head.rfind(")")
+    scope = head[open_i + 1:close_i] if open_i != -1 and close_i > open_i else None
+    return scope or None, tail
+
+
+def _looks_generated_subject(subject: str) -> bool:
+    if not CONVENTIONAL_SUBJECT.match(subject):
+        return False
+    tail = subject.partition(": ")[2].strip()
+    return (tail == "sync working tree"
+            or bool(_GENERATED_FILES_RE.fullmatch(tail))
+            or bool(_GENERATED_DELTA_RE.search(tail)))
+
+
+def _commit_kind(record: dict) -> str:
+    """Composer fallback is a manifest; anything else is author prose."""
+    override = record.get("kind")
+    if override in ("author-written", "generated-manifest"):
+        return override
+    lines = [ln.strip() for ln in (record.get("body") or "").splitlines() if ln.strip()]
+    if not lines or not all(_MANIFEST_BULLET_RE.fullmatch(ln) for ln in lines):
+        return "author-written"
+    if _looks_generated_subject(record.get("subject") or ""):
+        return "generated-manifest"
+    return "author-written"
+
+
+def _paragraphs(body: str) -> list[str]:
+    return [p for p in re.split(r"\n\s*\n", body.strip()) if p.strip()]
+
+
+def audit_commit_messages(records: list[dict], *,
+                          wrap_width: int = DEFAULT_WRAP_WIDTH,
+                          max_title: int = DEFAULT_MAX_TITLE,
+                          tiny_diff_lines: int = DEFAULT_TINY_DIFF_LINES,
+                          tiny_diff_files: int = DEFAULT_TINY_DIFF_FILES,
+                          tiny_body_chars: int = DEFAULT_TINY_BODY_CHARS,
+                          large_diff_lines: int = DEFAULT_LARGE_DIFF_LINES,
+                          large_body_chars: int = DEFAULT_LARGE_BODY_CHARS) -> list[dict]:
+    """PURE: regex/length/threshold checks, no subprocess, model or clock."""
+    findings = []
+    for record in records:
+        if record.get("is_merge"):
+            continue
+        sha = record.get("sha", "")
+        subject = (record.get("subject") or "").strip()
+        body = record.get("body") or ""
+        kind = _commit_kind(record)
+        author = kind == "author-written"
+        conventional = bool(CONVENTIONAL_SUBJECT.match(subject))
+        scope, tail = _subject_parts(subject)
+        paragraphs = _paragraphs(body)
+        body_chars = len(body.strip())
+
+        def add(rule: str, field: str, line: int, message: str, severity: str = "block"):
+            findings.append({
+                "sha": sha, "rule": rule, "severity": severity,
+                "field": field, "line": line, "message": message,
+            })
+
+        if not conventional:
+            add("title-not-conventional", "title", 1,
+                "title must use '<type>(<scope>): <lowercase summary>'")
+        if not estimate_body(subject + "\n\n" + body):
+            add("body-missing", "body", 1, "commit has no description body")
+        if len(subject) > max_title:
+            add("title-too-long", "title", 1,
+                f"title is {len(subject)} chars (max {max_title})")
+
+        if author:
+            if scope is None:
+                add("scope-missing", "title", 1, "title has no (scope)")
+            else:
+                scopes = scope.split(",")
+                if len(scopes) > 4:
+                    add("too-many-scopes", "title", 1,
+                        f"scope lists {len(scopes)} components (max 4)")
+                if any(not s or "/" in s or any(ch.isspace() for ch in s) for s in scopes):
+                    add("scope-is-path", "title", 1,
+                        "scope must be comma-separated component names, no paths or spaces")
+            if tail and tail[0].isupper():
+                add("title-capitalized", "title", 1,
+                    "summary after ': ' must start lowercase")
+            if subject.endswith("."):
+                add("title-trailing-period", "title", 1, "title must not end with a period")
+
+            head_jargon = _JARGON_RE.search(tail)
+            body_jargon = _JARGON_RE.search(body)
+            if head_jargon or body_jargon:
+                hit = head_jargon or body_jargon
+                add("internal-jargon", "title" if head_jargon else "body", 1,
+                    f"mechanism-only word {hit.group(0)!r} is not user-facing copy")
+
+            if "/" in tail or tail.lower().endswith((".py", ".md", ".toml")):
+                add("subject-is-path", "title", 1, "summary must not be a bare file path")
+
+            for line_no, line in enumerate(body.splitlines(), 1):
+                if re.match(r"^[-*] ", line):
+                    add("body-has-bullets", "body", line_no,
+                        "user-facing body must be prose, not bullets")
+                    break
+            if _MANIFEST_TOKEN_RE.search(body):
+                add("body-is-manifest", "body", 1,
+                    "user-facing body contains a (+N/-M) manifest token")
+
+            lower = max(40, wrap_width // 2)
+            for para_no, para in enumerate(paragraphs, 1):
+                lines = [ln.strip() for ln in para.splitlines() if ln.strip()]
+                if len(lines) < 2:
+                    continue
+                lengths = [len(ln) for ln in lines]
+                longest, last = max(lengths), lengths[-1]
+                mean = sum(lengths) / len(lengths)
+                joined = " ".join(lines)
+                if (lower <= longest <= wrap_width and mean >= 0.8 * longest
+                        and last < longest - 10 and len(joined) > wrap_width):
+                    add("hard-wrapped", "body", para_no,
+                        f"paragraph hard-wrapped near {longest} cols within a {wrap_width}-col gate")
+                    break
+        else:
+            add("generated-manifest", "body", 1,
+                "body is the generated file manifest, not user-facing prose", severity="warning")
+
+        diff_lines = int(record.get("added", 0)) + int(record.get("removed", 0))
+        file_count = int(record.get("files", 0))
+        if (diff_lines <= tiny_diff_lines and file_count <= tiny_diff_files
+                and (body_chars > tiny_body_chars or len(paragraphs) > 3)):
+            add("message-too-long-for-change", "diff", 0,
+                f"{body_chars} chars of message for a {diff_lines}-line, {file_count}-file change")
+        if diff_lines >= large_diff_lines and body_chars < large_body_chars:
+            add("message-too-short-for-change", "diff", 0,
+                f"{body_chars} chars of message for a {diff_lines}-line change")
+    return findings
+
+
+def audit_report(records: list[dict], *, repo: str = None, upstream: str | None = None,
+                 limit: int = 20, strict: bool = False) -> dict:
+    """The shared JSON payload for both check-messages and audit --commits."""
+    findings = audit_commit_messages(records)
+    by_sha = {}
+    for finding in findings:
+        by_sha.setdefault(finding["sha"], []).append(
+            {k: v for k, v in finding.items() if k != "sha"}
+        )
+
+    commits = []
+    for record in records:
+        if record.get("is_merge"):
+            continue
+        body = record.get("body") or ""
+        commits.append({
+            "sha": record.get("sha", ""),
+            "title": record.get("subject") or "",
+            "kind": _commit_kind(record),
+            "body_chars": len(body.strip()),
+            "paragraphs": len(_paragraphs(body)),
+            "diff": {
+                "files": int(record.get("files", 0)),
+                "added": int(record.get("added", 0)),
+                "removed": int(record.get("removed", 0)),
+            },
+            "findings": by_sha.get(record.get("sha", ""), []),
+        })
+
+    counts = {"block": 0, "warning": 0}
+    for finding in findings:
+        counts[finding["severity"]] = counts.get(finding["severity"], 0) + 1
+
+    return {
+        "repo": str(Path(repo).resolve()) if repo else str(Path.cwd().resolve()),
+        "range": f"{upstream}..HEAD" if upstream else "HEAD --not --remotes",
+        "limit": limit,
+        "strict": strict,
+        "checked": len(commits),
+        "skipped": {"merge": sum(1 for r in records if r.get("is_merge"))},
+        "passed": not findings,
+        "counts": counts,
+        "thresholds": {
+            "wrap_width": DEFAULT_WRAP_WIDTH,
+            "max_title": DEFAULT_MAX_TITLE,
+            "tiny_diff_lines": DEFAULT_TINY_DIFF_LINES,
+            "tiny_diff_files": DEFAULT_TINY_DIFF_FILES,
+            "tiny_body_chars": DEFAULT_TINY_BODY_CHARS,
+            "large_diff_lines": DEFAULT_LARGE_DIFF_LINES,
+            "large_body_chars": DEFAULT_LARGE_BODY_CHARS,
+        },
+        "commits": commits,
+    }
 
 
 def stage1_look() -> dict:
@@ -566,17 +832,52 @@ def cmd_guarded_commit(args) -> int:
 
 
 def cmd_check_messages(args) -> int:
+    repo = args.repo
+    strict = getattr(args, "strict", False)
+    as_json = getattr(args, "json", False)
+    limit = getattr(args, "limit", 20)
     upstream = args.upstream
     if not upstream:
-        up = run_git(["rev-parse", "--abbrev-ref", "@{upstream}"], check=False, cwd=args.repo)
+        up = run_git(["rev-parse", "--abbrev-ref", "@{upstream}"], check=False, cwd=repo)
         upstream = up.stdout.strip() or None
-    missing = commits_without_body(upstream, repo=args.repo)
-    if missing:
-        listing = "\n".join(f"  {sha} {subject}" for sha, subject in missing)
-        print(f"❌ {len(missing)} commit(s) with no description:\n{listing}")
-        return 1
-    print("✅ Every outgoing commit has a description.")
-    return 0
+
+    if not (strict or as_json):
+        missing = commits_without_body(upstream, repo=repo)
+        if missing:
+            listing = "\n".join(f"  {sha} {subject}" for sha, subject in missing)
+            print(f"❌ {len(missing)} commit(s) with no description:\n{listing}")
+            return 1
+        print("✅ Every outgoing commit has a description.")
+        return 0
+
+    try:
+        records = read_commit_records(repo, upstream, limit=limit)
+    except (RuntimeError, OSError) as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 2
+    report = audit_report(records, repo=repo, upstream=upstream, limit=limit, strict=strict)
+
+    if strict:
+        findings = report["counts"]["block"] + report["counts"]["warning"]
+        report["passed"] = findings == 0
+        exit_code = 1 if findings else 0
+    else:
+        missing = commits_without_body(upstream, repo=repo)
+        report["passed"] = not missing
+        exit_code = 1 if missing else 0
+
+    if as_json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    elif exit_code:
+        print(f"❌ Commit-message audit failed "
+              f"({report['counts']['block']} block, {report['counts']['warning']} warning).")
+        for commit in report["commits"]:
+            for finding in commit["findings"]:
+                print(f"  {commit['sha'][:7]} {finding['rule']} "
+                      f"[{finding['severity']}] {finding['message']}")
+    else:
+        print(f"✅ Commit-message audit passed ({report['checked']} checked).")
+    return exit_code
 
 
 HOOK_TEMPLATE = """#!/usr/bin/env bash
@@ -610,6 +911,9 @@ def main(argv=None):
         )
         cp.add_argument("--repo", default=".", help="Repository to inspect")
         cp.add_argument("--upstream", help="Range start (default: @{upstream})")
+        cp.add_argument("--strict", action="store_true", help="Run the full user-facing message audit")
+        cp.add_argument("--json", action="store_true", help="Emit a JSON audit report")
+        cp.add_argument("--limit", type=int, default=20, help="Maximum commits to inspect (default: 20)")
         return cmd_check_messages(cp.parse_args(argv[1:]))
 
     if argv and argv[0] == "install-hook":

@@ -383,7 +383,9 @@ Private repository owned by {author}. Contains customized pipelines, academic in
 """
 
 
-def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
+def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False,
+              check_commits: bool = False, strict: bool = False,
+              limit: int = 20) -> bool:
     if not target.is_dir():
         print(f"❌ Error: Target directory does not exist: {target}", file=sys.stderr)
         return False
@@ -400,6 +402,8 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
     dirty = False
     branch_tracking = ""
     remote_origin = ""
+    findings: List[dict] = []
+    commit_block: Optional[dict] = None
 
     if has_git:
         remotes = run_cmd("git remote -v", cwd=target, check=False).stdout.strip()
@@ -408,6 +412,72 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
         status_sb = run_cmd("git status -sb", cwd=target, check=False).stdout.strip().splitlines()
         branch_tracking = status_sb[0] if status_sb else ""
         sec_hits, blob_hits = check_secrets_and_blobs(target, staged_only=False)
+
+        if check_commits:
+            from git_sync import read_commit_records, audit_commit_messages
+
+            records = read_commit_records(str(target), limit=limit)
+            findings = audit_commit_messages(records)
+
+            findings_by_sha: Dict[str, List[dict]] = {}
+            for finding in findings:
+                findings_by_sha.setdefault(finding.get("sha"), []).append(finding)
+
+            commit_rows = []
+            for record in records:
+                sha = record.get("sha", "")
+                own_findings = findings_by_sha.get(sha, [])
+                body = record.get("body") or ""
+                paragraphs = [p for p in re.split(r"\n\s*\n", body.strip()) if p.strip()]
+                commit_rows.append({
+                    "sha": sha,
+                    "title": record.get("subject", ""),
+                    "kind": "generated-manifest" if any(
+                        f.get("rule") == "generated-manifest" for f in own_findings
+                    ) else "author-written",
+                    "body_chars": len(body),
+                    "paragraphs": len(paragraphs),
+                    "diff": {
+                        "files": record.get("files", 0),
+                        "added": record.get("added", 0),
+                        "removed": record.get("removed", 0),
+                    },
+                    "findings": [{k: v for k, v in f.items() if k != "sha"} for f in own_findings],
+                })
+
+            counts = {"block": 0, "warning": 0}
+            for finding in findings:
+                severity = finding.get("severity")
+                if severity in counts:
+                    counts[severity] += 1
+
+            if "..." in branch_tracking:
+                upstream_part = branch_tracking.split("...", 1)[1].split()
+                upstream = upstream_part[0] if upstream_part else ""
+                range_label = f"{upstream}..HEAD" if upstream else "HEAD --not --remotes"
+            else:
+                range_label = "HEAD --not --remotes"
+
+            commit_block = {
+                "repo": str(target.resolve()),
+                "range": range_label,
+                "limit": limit,
+                "strict": strict,
+                "checked": len(records),
+                "skipped": {"merge": sum(1 for r in records if r.get("is_merge"))},
+                "passed": counts["block"] == 0,
+                "counts": counts,
+                "thresholds": {
+                    "wrap_width": 80,
+                    "max_title": 120,
+                    "tiny_diff_lines": 3,
+                    "tiny_diff_files": 1,
+                    "tiny_body_chars": 600,
+                    "large_diff_lines": 100,
+                    "large_body_chars": 80,
+                },
+                "commits": commit_rows,
+            }
 
     checks = [
         {"item": "Git Initialized", "status": "Yes" if has_git else "Missing"},
@@ -421,6 +491,17 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
         {"item": "Large Blobs", "status": f"{len(blob_hits)} warning(s)" if blob_hits else f"Clean (<{MAX_BLOB_SIZE_MB}MB)"},
     ]
 
+    if commit_block is not None:
+        parts = []
+        if commit_block["counts"]["block"]:
+            parts.append(f"{commit_block['counts']['block']} block")
+        if commit_block["counts"]["warning"]:
+            parts.append(f"{commit_block['counts']['warning']} warning")
+        status = ", ".join(parts) + " finding(s)" if parts else "Clean"
+        checks.append({"item": "Commit Messages", "status": status})
+
+    gate_pass = not findings if (check_commits and strict) else True
+
     if as_json:
         payload = {
             "target": str(target.resolve()),
@@ -430,13 +511,15 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
             "branch_tracking": branch_tracking,
             "remote": remote_origin
         }
+        if commit_block is not None:
+            payload["commits"] = commit_block
         print(json.dumps(payload, indent=2, ensure_ascii=False))
-        return True
+        return gate_pass
 
     if as_table:
         print(f"### Repository Audit: {target.name}\n")
         print(render_table(checks, ["item", "status"], ["Audit Check", "Status"]))
-        return True
+        return gate_pass
 
     print(f"\n🔍 [Audit] Inspecting repository target: {target.resolve()}")
     print(f"  • Git initialized:   {'✅ Yes' if has_git else '❌ Missing (.git folder)'}")
@@ -468,7 +551,12 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False):
         else:
             print(f"  • Large Blobs:       ✅ All files under {MAX_BLOB_SIZE_MB}MB")
 
-    return True
+        if commit_block is not None:
+            counts = commit_block["counts"]
+            status = "Clean" if commit_block["passed"] else f"{counts['block']} block finding(s)"
+            print(f"  • Commit Messages:   {'✅' if commit_block['passed'] else '⚠️'} {status}")
+
+    return gate_pass
 
 
 def cmd_scaffold(target: Path, repo_name: str, private: bool = True, license_type: str = "private"):
@@ -948,6 +1036,9 @@ def main():
     p_audit.add_argument("path", type=str, nargs="?", default=".", help="Target directory (default: current)")
     p_audit.add_argument("-t", "--table", action="store_true", help="Emit audit checks as compact Markdown table")
     p_audit.add_argument("--json", action="store_true", help="Emit audit checks as structured JSON")
+    p_audit.add_argument("--commits", action="store_true", help="Audit recent commit messages for user-facing quality")
+    p_audit.add_argument("--strict", action="store_true", help="Exit nonzero on commit findings (gate mode)")
+    p_audit.add_argument("--limit", type=int, default=20, help="Maximum commits to inspect (default: 20)")
 
     # scaffold
     p_scaffold = subparsers.add_parser("scaffold", help="Generate .gitignore, LICENSE, and README.md")
@@ -1077,7 +1168,10 @@ def main():
     repo_name = getattr(args, "name", None) or target_path.name
 
     if args.command == "audit":
-        cmd_audit(target_path, as_table=args.table, as_json=args.json)
+        ok = cmd_audit(target_path, as_table=args.table, as_json=args.json,
+                       check_commits=args.commits, strict=args.strict, limit=args.limit)
+        if not ok and args.strict:
+            sys.exit(1)
     elif args.command == "scaffold":
         cmd_scaffold(target_path, repo_name, private=True, license_type=args.license)
     elif args.command == "publish":

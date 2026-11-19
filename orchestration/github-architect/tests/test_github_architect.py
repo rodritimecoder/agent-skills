@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 
 # Import modules under test
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "scripts"))
 
 import github_architect
 import git_sync
@@ -420,6 +420,118 @@ class TestCommitMessage(unittest.TestCase):
             capture_output=True, text=True,
         )
         self.assertEqual(proc.returncode, 2)
+
+
+class TestCommitMessageAudit(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.repo = self.tmp / "repo"
+        self.repo.mkdir()
+        self.run = lambda *a: subprocess.run(["git", "-C", str(self.repo)] + list(a),
+                                             capture_output=True, text=True, check=True)
+        self.run("init", "-b", "main")
+        self.run("config", "user.email", "t@t")
+        self.run("config", "user.name", "t")
+
+    def write(self, rel, text="x\n"):
+        target = self.repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+
+    @staticmethod
+    def _record(subject, body, *, files=4, added=20, removed=10, sha="abc1234", is_merge=False):
+        return {"sha": sha, "subject": subject, "body": body, "files": files,
+                "added": added, "removed": removed, "is_merge": is_merge}
+
+    @staticmethod
+    def _block_rules(findings):
+        return {f["rule"] for f in findings if f["severity"] == "block"}
+
+    def test_n1_hard_wrapped_body_is_blocked(self):
+        body = (
+            "Add a centralized find_first_available_in helper to the claw protocol module\n"
+            "and reuse it across the overlay character selector and the What's New dialog\n"
+            "so every caller agrees on which characters are free."
+        )
+        rec = self._record("fix(palette): share the free-character lookup helper", body)
+        self.assertIn("hard-wrapped", self._block_rules(git_sync.audit_commit_messages([rec])))
+
+    def test_n2_internal_jargon_is_blocked(self):
+        body = "Track the pending palette refactor so reviewers can see the current state."
+        rec = self._record("chore(palette): wip tweaks to internals", body)
+        self.assertIn("internal-jargon", self._block_rules(git_sync.audit_commit_messages([rec])))
+
+    def test_n3_nonconventional_untyped_title_is_blocked(self):
+        body = "Describe the dialog resize behaviour people see when opening the window."
+        rec = self._record("Fixed the dialog resize thing", body)
+        rules = self._block_rules(git_sync.audit_commit_messages([rec]))
+        self.assertIn("title-not-conventional", rules)
+        self.assertIn("scope-missing", rules)
+
+    def test_n3b_conventional_title_without_scope_is_blocked(self):
+        body = "Keep the guard closed while the palette rebuilds its index."
+        rec = self._record("fix: keep the guard closed", body)
+        self.assertIn("scope-missing", self._block_rules(git_sync.audit_commit_messages([rec])))
+
+    def test_n4_long_message_for_tiny_diff_is_blocked(self):
+        body = "\n\n".join([
+            "The command palette now normalizes the query before matching entries so that a "
+            "user who types without punctuation still finds the right command. Apostrophes "
+            "are stripped and hyphens, underscores and dots are treated as spaces in the "
+            "normalized form.",
+            "This keeps the search index small because normalization happens once when "
+            "entries are registered rather than on every keystroke in the palette input. "
+            "The same normalized form is used for the ranking step and for the highlight "
+            "step.",
+            "We also cache the normalized query for the duration of a single palette session "
+            "so repeated edits do not re-normalize the full entry set. The cache is "
+            "invalidated whenever the entry registry changes on disk.",
+            "Finally, the empty-query state now shows the most recently used commands "
+            "instead of an alphabetical dump. That list is persisted across sessions and "
+            "respects the same scope filters as the regular search results.",
+        ])
+        self.assertGreater(len(body), 600)
+        rec = self._record("docs(protocol): explain the query normalization", body,
+                           files=1, added=1, removed=0)
+        self.assertIn("message-too-long-for-change",
+                      self._block_rules(git_sync.audit_commit_messages([rec])))
+
+    def test_n5_bulleted_manifest_in_author_body_is_blocked(self):
+        body = (
+            "The files touched by this change are listed below.\n"
+            "- glitch-cat/kem-thought/SKILL.md (+1/-0)\n"
+            "- glitch-cat/kem-thought/scripts/gates.py (+4/-2)"
+        )
+        rec = self._record("chore(kem-thought): record the touched files", body)
+        rules = self._block_rules(git_sync.audit_commit_messages([rec]))
+        self.assertIn("body-has-bullets", rules)
+        self.assertIn("body-is-manifest", rules)
+
+    def test_n6_missing_body_is_blocked(self):
+        rec = self._record("chore(palette): tidy the palette state", "")
+        self.assertIn("body-missing", self._block_rules(git_sync.audit_commit_messages([rec])))
+
+    def test_p1_full_width_example_passes(self):
+        rec = self._record(
+            "fix(window,terminal,command-palette): guard the palette against a stale index",
+            'Strip apostrophes and treat hyphens, underscores and dots as spaces while '
+            'normalizing queries, so typing "whats new" matches "What\'s New".',
+            files=4, added=40, removed=12,
+        )
+        self.assertEqual(self._block_rules(git_sync.audit_commit_messages([rec])), set())
+
+    def test_cli_strict_check_exits_nonzero_on_violating_commit(self):
+        self.write("palette.py", "x = 1\n")
+        self.run("add", "-A")
+        self.run("commit", "-m", "chore(palette): wip tweaks to internals",
+                 "-m", "Track the pending palette refactor so reviewers can see the state.")
+        proc = subprocess.run(
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"),
+             "check-messages", "--repo", str(self.repo), "--strict"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 1)
 
 
 class TestGate(unittest.TestCase):

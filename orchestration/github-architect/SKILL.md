@@ -50,14 +50,12 @@ with its delta, so `git log` answers "which files" without `--stat`. This is
 enforced, not requested: `guarded-commit` refuses to write a bodyless message,
 and the push gate refuses to publish a bodyless commit.
 
-The header form is the one to use, because the subject is what `git log
---oneline` shows and it should say what changed:
+The header form is the one to use, because the subject is what `git log --oneline` shows and it should say what changed. In Boxxy these messages are surfaced in the "What's New" dialog and fed into "Read What's New" LLM summaries, so write them for that reader:
 
 ```
 fix(window,terminal,command-palette): guard the palette against a stale index
 
-Strip apostrophes and treat hyphens, underscores and dots as spaces while
-normalizing queries, so typing "whats new" matches "What's New".
+Strip apostrophes and treat hyphens, underscores and dots as spaces while normalizing queries, so typing "whats new" matches "What's New".
 ```
 
 Name components in the scope, not file paths; comma-separate several with no
@@ -92,8 +90,8 @@ github-architect status-all [--table] [--json] [--project repository branch work
 # 3. Fleet sync — pull rebase, commit, and push across every repository
 github-architect sync-all [-m "sync fleet updates"]
 
-# 4. Audit one repository — status, auth, secret scan, oversized blob guard
-github-architect audit [path] [--table] [--json]
+# 4. Audit one repository — status, auth, secret scan, oversized blob guard, optional commit-message gate
+github-architect audit [path] [--table] [--json] [--commits] [--strict] [--limit N]
 
 # 5. Sync one repository — pull rebase, auto-commit, push
 github-architect sync [path] [-m "commit message"]
@@ -116,8 +114,8 @@ github-architect guard --source DIR [--source DIR ...] [--published PATH] [--exc
 # 11. Guarded commit — stage by path and refuse to commit a file carrying a credential
 git-sync guarded-commit --repo PATH -m "message" [--exclude PATTERN] [--json]
 
-# 12. Description gate — fail if any outgoing commit has no body (merge commits exempt)
-git-sync check-messages --repo PATH [--upstream ORIGIN/BRANCH]
+# 12. Description gate — fail if any outgoing commit has no body (merge commits exempt); --strict gates the full message standard
+git-sync check-messages --repo PATH [--upstream ORIGIN/BRANCH] [--strict] [--json] [--limit N]
 
 # 13. Install the pre-push description gate so no bare `git push` can bypass it
 git-sync install-hook --repo PATH [--force]

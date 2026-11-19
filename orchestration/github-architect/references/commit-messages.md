@@ -45,21 +45,18 @@ One paragraph on the first thing. One paragraph on the second, or omit it.
    already answers "which files"; `git log --oneline` already shows the
    subject. The generated manifest exists only where no human body does.
 
+### A user-facing artifact
+
+The subject and body are a user-facing artifact, not notes for someone reading the diff: Boxxy renders them in the "What's New" dialog and feeds them into "Read What's New" LLM summaries. Write them for a reader who never sees the diff and has only these words to go on. Name the behaviour and the real symbols plainly, and keep each concern to one full-width paragraph.
+
 ## Worked example
 
 ```
 fix(window,terminal,claw-protocol,command-palette): guard What's New against busy characters and fix dialog resize
 
-Add centralized find_first_available_in, find_first_available_character, and
-has_available_character helpers to boxxy_claw_protocol::characters and reuse
-them across the overlay character selector, pane session launcher, and What's
-New dialog. When all characters are currently claimed in other sessions, disable
-the "Read What's New" button with the label "No Characters Free".
+Add centralized find_first_available_in, find_first_available_character, and has_available_character helpers to boxxy_claw_protocol::characters and reuse them across the overlay character selector, pane session launcher, and What's New dialog. When all characters are currently claimed in other sessions, disable the "Read What's New" button with the label "No Characters Free".
 
-Enable follows-content-size on whats_new_dialog with width-request="700" on
-commits_stack, and apply detail_scrolled's minimum height only while viewing
-the commit detail page so the dialog stays locked at 700px wide while growing
-and shrinking to fit 1..=5 commit rows.
+Enable follows-content-size on whats_new_dialog with width-request="700" on commits_stack, and apply detail_scrolled's minimum height only while viewing the commit detail page so the dialog stays locked at 700px wide while growing and shrinking to fit 1..=5 commit rows.
 ```
 
 Three scopes, one behaviour per paragraph, a symbol in every clause, no list,
@@ -72,10 +69,13 @@ Write the `-m` before you stage, from what you changed and why:
 ```bash
 git-sync -m "fix(github-architect): keep the description when the guard blocks
 
-guarded_commit returned before composing the message, so a blocked file left
-the commit empty instead of reporting the refusal."
+guarded_commit returned before composing the message, so a blocked file left the commit empty instead of reporting the refusal."
 ```
 
 One rule to keep in mind: the subject answers *what changed for the reader*;
 the body answers *why it changed and what it replaced*. Anything that merely
 restates `git show --stat` belongs in neither.
+
+## Enforced by
+
+`git-sync check-messages --strict` and `github-architect audit --commits --strict` gate body presence plus a conventional title, user-facing prose, and full-width unwrapped paragraphs; generated-manifest messages are warnings by default.
