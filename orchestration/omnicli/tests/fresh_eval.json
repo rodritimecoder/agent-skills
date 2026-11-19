@@ -105,17 +105,6 @@
       ]
     },
     {
-      "query": "https://www.instagram.com/p/DeEyZPEtkyH/ lol pretty cute, vault this, kind of an extension of the glitch orchestra, wanna add this to the pages too",
-      "top1": "glitch-orchestra",
-      "expect": [
-        "glitch-orchestra"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "orchestra"
-      ]
-    },
-    {
       "query": "my omnicli vs https://github.com/mksglu/context-mode?",
       "top1": "omnicli",
       "expect": [

@@ -38,7 +38,7 @@
         "icm-architect"
       ],
       "kind": "drift",
-      "note": "Replaces 'find the cheat sheet for a course'. That phrasing was a 0.3-point coin flip between canvas-cli and edstem-cli, with cornell-notes a third candidate — 'cheat sheet' plausibly answers three skills, so as an assertion it tested nothing. Adding it as a canvas-cli alias was measured and did not move the score at all. This query tests the same capability (course material retrieval) unambiguously, with a 1.4x margin."
+      "note": "Replaces 'find the cheat sheet for a course'. That phrasing was a 0.3-point coin flip between canvas-cli and edstem-cli, with cornell-notes a third candidate \u2014 'cheat sheet' plausibly answers three skills, so as an assertion it tested nothing. Adding it as a canvas-cli alias was measured and did not move the score at all. This query tests the same capability (course material retrieval) unambiguously, with a 1.4x margin."
     },
     {
       "query": "transcribe a zoom lecture recording",
@@ -170,7 +170,7 @@
       "kind": "drift"
     },
     {
-      "query": "调研一下这个话题在网上的讨论",
+      "query": "\u8c03\u7814\u4e00\u4e0b\u8fd9\u4e2a\u8bdd\u9898\u5728\u7f51\u4e0a\u7684\u8ba8\u8bba",
       "top1": "agent-reach",
       "expect": [
         "agent-reach"
@@ -443,15 +443,6 @@
       "kind": "drift"
     },
     {
-      "query": "tag each step of my pipeline as deterministic code or model",
-      "top1": "eval-pipeline",
-      "expect": [
-        "eval-pipeline"
-      ],
-      "kind": "prose",
-      "note": "The [D]/[P]/[H] step tagging is eval-pipeline's core contract; a generic 'pipeline' query must not drift to agentic-engineering."
-    },
-    {
       "query": "decide which model should handle this prompt before answering",
       "top1": "eval-router",
       "expect": [
@@ -459,14 +450,6 @@
       ],
       "kind": "prose",
       "note": "Prompt complexity routing. Must not drift to jev-decision, which classifies a *given* value rather than picking a model."
-    },
-    {
-      "query": "act as a conductor supervising several terminal sessions at once",
-      "top1": "glitch-orchestra",
-      "expect": [
-        "glitch-orchestra"
-      ],
-      "kind": "prose"
     },
     {
       "query": "split the test suite across cpu cores so the regression run is faster",
@@ -478,34 +461,10 @@
       "note": "Test-lane partitioning. Must not drift to worktree-harness, which is about git branches, not test suites."
     },
     {
-      "query": "coordinate several agents through a throttled task queue with a memory cap",
-      "top1": "projects-harness",
-      "expect": [
-        "projects-harness"
-      ],
-      "kind": "prose"
-    },
-    {
-      "query": "answer the same question again instantly without paying for the model twice",
-      "top1": "semantic-cache",
-      "expect": [
-        "semantic-cache"
-      ],
-      "kind": "prose"
-    },
-    {
       "query": "my context is rotting in a long session, compact the agent state",
       "top1": "state-compactor",
       "expect": [
         "state-compactor"
-      ],
-      "kind": "prose"
-    },
-    {
-      "query": "stop the workers before they blow the token budget ceiling",
-      "top1": "swarm-contract",
-      "expect": [
-        "swarm-contract"
       ],
       "kind": "prose"
     }

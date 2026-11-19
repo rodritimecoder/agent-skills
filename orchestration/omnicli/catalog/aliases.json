@@ -548,23 +548,6 @@
       "media"
     ]
   },
-  "eval-pipeline": {
-    "aliases": [
-      "step risk tagging",
-      "deterministic or probabilistic step",
-      "propagation risk between steps",
-      "artifact ledger",
-      "halt downstream failures",
-      "assertion gate between steps",
-      "step ledger",
-      "which steps are risky"
-    ],
-    "tags": [
-      "risk",
-      "pipeline",
-      "provenance"
-    ]
-  },
   "eval-router": {
     "aliases": [
       "route a request",
@@ -591,21 +574,6 @@
       "tier"
     ]
   },
-  "glitch-orchestra": {
-    "aliases": [
-      "terminal conductor",
-      "supervise concurrent sessions",
-      "dispatch to child sessions",
-      "track session progress",
-      "completion chime",
-      "claude code mods",
-      "multi session supervision"
-    ],
-    "tags": [
-      "orchestration",
-      "sessions"
-    ]
-  },
   "parallel-test-lane": {
     "aliases": [
       "split the test suite",
@@ -621,38 +589,6 @@
       "testing",
       "parallelism",
       "cpu"
-    ]
-  },
-  "projects-harness": {
-    "aliases": [
-      "three way message routing",
-      "throttled task queue",
-      "memory load cap",
-      "rule clash detection",
-      "dual provenance envelope",
-      "cap on concurrent tasks",
-      "coordinator brief versus owner instructions",
-      "atomic fact update"
-    ],
-    "tags": [
-      "coordination",
-      "multi-agent",
-      "queue"
-    ]
-  },
-  "semantic-cache": {
-    "aliases": [
-      "cache repeated questions",
-      "answer a repeat question instantly",
-      "cosine similarity cache",
-      "skip the expensive retrieval",
-      "instant repeat answer",
-      "verified response cache"
-    ],
-    "tags": [
-      "caching",
-      "rag",
-      "similarity"
     ]
   },
   "state-compactor": {
@@ -672,21 +608,6 @@
       "ledger"
     ]
   },
-  "swarm-contract": {
-    "aliases": [
-      "swarm contract",
-      "token budget ceiling",
-      "scorecard schema for workers",
-      "hit list goals",
-      "hard spending limit",
-      "immutable budget cap"
-    ],
-    "tags": [
-      "budget",
-      "governance",
-      "workers"
-    ]
-  },
   "verification": {
     "aliases": [
       "verify a ui change",
@@ -701,20 +622,6 @@
       "verify a frontend change",
       "check the page for errors",
       "prove it works in the browser"
-    ]
-  },
-  "frontend-uat": {
-    "aliases": [
-      "click through the app",
-      "browser journey test",
-      "uat",
-      "drive the page by intent",
-      "click a target by intent",
-      "sub second browser test",
-      "test the checkout flow",
-      "walk the login flow",
-      "interact with the page",
-      "click the right button"
     ]
   },
   "playwright": {
@@ -987,16 +894,6 @@
       "search my notes",
       "find in my notes",
       "search the vault"
-    ],
-    "tags": []
-  },
-  "reply-meter": {
-    "aliases": [
-      "score an agent reply",
-      "words and sentences count",
-      "faults per 100 words",
-      "stop hook reply scorer",
-      "banned modals in prose"
     ],
     "tags": []
   }
