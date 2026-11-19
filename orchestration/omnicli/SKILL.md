@@ -133,6 +133,38 @@ Architecture, full SDK API and authoring guidelines:
 
 ---
 
+## 🔌 MCP face
+
+`omnicli mcp` exposes the same three-tool surface as the native CLI over
+JSON-RPC 2.0 — a JSON-RPC client sees the surface, not the agent:
+
+```bash
+omnicli mcp                       # stdio NDJSON (default)
+omnicli mcp --http --port 8790    # Streamable HTTP on 127.0.0.1:8790
+```
+
+| Tool | Does |
+|---|---|
+| `omni_search` | intent → routing; `depth: "contract"` adds the top hit's exact contract in one call (no separate describe tool) |
+| `omni_invoke` | run one tool, bounded + projected |
+| `omni_exec` | one JavaScript Code Mode plan that emits one bounded result |
+
+`depth: "contract"` is byte-identical to `omnicli describe`, so discovery and
+contract pull are a single call. `omni_exec` runs with `--sandbox strict` by
+default and is **OFF unless `OMNICLI_MCP_ALLOW_EXEC=1`**; `--no-exec` is an
+extra kill switch (hides it from `tools/list` and refuses calls).
+
+HTTP **refuses to start unless `OMNICLI_MCP_TOKEN` is set** (a deliberate
+negative-control gate); every request needs `Authorization: Bearer <token>`.
+`GET /health` is the plain liveness probe (same token, not an MCP tool). The
+loopback bridge is surfaced on the tailnet as `https://host/omni` via
+`ports.json` + `tailscale-ops sync`. Discovery is not exposure — `omni_invoke`
+is gated by `omnicli enable`, runs the same CLI in one bounded subprocess, and
+every `tools/call` is appended to `~/.local/share/omnicli/mcp-audit.jsonl`
+(no arguments or tokens logged).
+
+---
+
 ## 🌐 Harnesses & Telemetry
 
 Adapters for **T3 Code**, **Antigravity**, **OpenCode**, **Pi** and **Boxxy Claw** live in [harnesses/index.md](harnesses/index.md); each maps the same bounded-invoke contract onto its host primitives.

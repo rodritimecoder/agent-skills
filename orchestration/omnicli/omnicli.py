@@ -2070,6 +2070,12 @@ def main():
     p.add_argument("target", nargs="?", default=None, help="Harness name (t3-code, agy, opencode, pi, boxxy)")
     p.add_argument("--json", action="store_true")
 
+    p = sub.add_parser("mcp", help="MCP face: 3 meta-tools over the catalog (stdio by default)")
+    p.add_argument("--http", action="store_true", help="serve Streamable HTTP on loopback instead of stdio")
+    p.add_argument("--port", type=int, default=8790)
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--no-exec", action="store_true", help="hide omni_exec from this face")
+
     # --- compat ------------------------------------------------------
     p = sub.add_parser("inspect", help="(legacy) Print a skill's SKILL.md body")
     p.add_argument("skill")
@@ -2153,6 +2159,9 @@ def main():
         cmd_usage(trace=args.trace, since=args.since, as_json=args.json, limit=args.limit)
     elif args.action == "harness":
         cmd_harness(subaction=args.subaction, target=args.target, as_json=args.json)
+    elif args.action == "mcp":
+        from catalog import mcp as mcp_mod
+        mcp_mod.main(args)
     elif args.action == "inspect":
         cmd_inspect(args.skill)
     elif args.action == "run":

@@ -82,7 +82,7 @@ usage() {
 # --------------------------------------------------------------------------- #
 # ports:begin
 TS_ROOT=3773
-TS_PATHS=("/chat:7778")
+TS_PATHS=("/chat:7778" "/omni:8790")
 SERVED=(
   "3010:kasmvnc — KasmVNC (podman)"
   "9222:cdp — Chromium DevTools"
