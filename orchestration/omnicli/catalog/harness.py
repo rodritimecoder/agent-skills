@@ -44,7 +44,7 @@ HARNESS_SPECS: dict[str, dict[str, Any]] = {
             "ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \\\n"
             "  ~/.config/opencode/plugins/omnicli-route.js\n"
             "# Then reload the provider (`opencode reload`, or restart T3 Code).\n"
-            "# T3 lists omnicli_search / omnicli_describe / omnicli_invoke / omnicli_exec;\n"
+            "# T3 lists omnicli_search / omnicli_invoke / omnicli_exec;\n"
             "# Code Mode reaches the same functions as tools.omnicli.*.\n"
             "omnicli harness verify t3-code\n"
         ),

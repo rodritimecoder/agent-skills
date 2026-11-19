@@ -10,7 +10,7 @@ T3 Code has **no omnicli integration of its own** — its provider drivers are `
 
 ### Path 1 — Native tools (default; install once)
 
-A global OpenCode plugin registers four catalogue verbs and injects the routing rule at every model call. Because T3 enumerates the OpenCode tool list, the verbs appear in T3, and because they are registered with `codemode: true`, they are also callable inside OpenCode's Code Mode as `tools.omnicli.*`.
+A global OpenCode plugin registers three catalogue verbs and injects the routing rule at every model call. Because T3 enumerates the OpenCode tool list, the verbs appear in T3, and because they are registered with `codemode: true`, they are also callable inside OpenCode's Code Mode as `tools.omnicli.*`.
 
 ```bash
 mkdir -p ~/.config/opencode/plugins
@@ -23,7 +23,6 @@ omnicli harness verify t3-code
 | Tool | What it does |
 |---|---|
 | `omnicli_search` / `tools.omnicli.search` | Rank catalogued tools by intent. Use **before** hand-writing a script or reading a skill. |
-| `omnicli_describe` / `tools.omnicli.describe` | Read one tool's contract (`--section`, `--doc`), not a whole `SKILL.md`. |
 | `omnicli_invoke` / `tools.omnicli.invoke` | Run one tool; 8 KB cap, optional `project` fields and `buffer`. |
 | `omnicli_exec` / `tools.omnicli.exec` | Run a JavaScript plan in one turn; `node:vm` under bubblewrap, 100-call budget, optional memory cap. |
 

@@ -12,11 +12,12 @@ OpenCode reaches `omnicli` through three complementary channels:
 
 ### 1. Native tools (the plugin)
 
-`plugin/omnicli-route.js` registers `omnicli_search`, `omnicli_describe`,
-`omnicli_invoke`, and `omnicli_exec` with `codemode: true`, so they appear in
-the tool list and inside Code Mode as `tools.omnicli.*`. It also injects the
-routing rule and denies skill-directory discovery until a catalogue call has
-run.
+`plugin/omnicli-route.js` registers `omnicli_search`, `omnicli_invoke`, and
+`omnicli_exec` with `codemode: true`, so they appear in the tool list and inside
+Code Mode as `tools.omnicli.*`. Read one tool's contract by calling
+`omnicli_search` with `depth:"contract"` (optionally `section`/`doc`) — the
+native surface is three tools. It also injects the routing rule and denies
+skill-directory discovery until a catalogue call has run.
 
 ```bash
 ln -sf ~/src/my-agent-skills/orchestration/omnicli/plugin/omnicli-route.js \

@@ -87,9 +87,9 @@ async function setup(project) {
   return ctx;
 }
 
-test("registers four codemode tools in the omnicli namespace", async () => {
+test("registers three codemode tools in the omnicli namespace", async () => {
   const ctx = await setup();
-  assert.deepEqual([...ctx._tools.keys()].sort(), ["describe", "exec", "invoke", "search"]);
+  assert.deepEqual([...ctx._tools.keys()].sort(), ["exec", "invoke", "search"]);
   assert.equal(ctx._namespace().name, "omnicli");
   for (const def of ctx._tools.values()) {
     assert.equal(def.options.namespace, "omnicli");
@@ -111,10 +111,15 @@ test("search maps argv and caps oversized output", async () => {
   assert.match(huge.content, /capped at 8000/);
 });
 
-test("describe, invoke, and exec build the omnicli argv", async () => {
+test("search contract depth, invoke, and exec build the omnicli argv", async () => {
   const ctx = await setup();
-  const describe = await ctx._tools.get("describe").execute({ tool_id: "zoom-recorder/scripts/zoom_download" });
-  assert.match(describe.content, /describe zoom-recorder\/scripts\/zoom_download/);
+  const contract = await ctx._tools.get("search").execute({
+    query: "zoom download",
+    depth: "contract",
+    section: "Usage",
+    doc: "SKILL.md",
+  });
+  assert.match(contract.content, /search zoom download --json --limit 5 --depth contract --section Usage --doc SKILL\.md/);
 
   const invoke = await ctx._tools.get("invoke").execute({
     tool_id: "local/decide",

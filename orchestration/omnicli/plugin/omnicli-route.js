@@ -6,7 +6,7 @@
 // Why: T3 Code drives OpenCode. OpenCode ships native tools and its own Code
 // Mode, so a skill that tells the agent to shell out to `omnicli` loses to a
 // native call every time. This plugin puts the catalogue in the tool list:
-//   omnicli_search / omnicli_describe / omnicli_invoke / omnicli_exec
+//   omnicli_search / omnicli_invoke / omnicli_exec
 // and the same functions inside Code Mode as tools.omnicli.*.
 //
 // Rules that matter:
@@ -30,8 +30,7 @@ const ROUTE_LOG = join(homedir(), ".local/share/omnicli/route.jsonl");
 const PLANS_DIR = join(homedir(), ".local/share/omnicli/plans");
 
 const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as native tools. Use them; do not re-derive a tool's CLI from its source.
-- omnicli_search / tools.omnicli.search — find catalogued tools by intent.
-- omnicli_describe / tools.omnicli.describe — read one tool's contract before calling it.
+- omnicli_search / tools.omnicli.search — find catalogued tools by intent; pass depth:"contract" (section/doc supported) for one tool's exact contract.
 - omnicli_invoke / tools.omnicli.invoke — run one catalogued tool; output is capped at 8 KB.
 - omnicli_exec / tools.omnicli.exec — run a JavaScript Code Mode plan (\`node:vm\` + \`omnicli_tools\`) when a job needs two or more catalogue calls or heavy parsing; use \`omnicli spec --stubs\` for \`.d.ts\` signatures.
 Rules: discover with search, never by reading or grepping skill directories. Inside execute use tools.omnicli.* — the bare search() helper indexes tool names, not the omnicli catalogue. Ordinary code and file work in the current repo still uses the native tools.`;
@@ -41,7 +40,7 @@ const SHELL_TOOLS = new Set(["bash", "shell"]);
 // A read verb must be a command token, not a substring: `glitch-cat/...` is not
 // `cat`, and `python3 tools/x.py` is not `ls`.
 const SHELL_READ_VERBS = /(^|[;&|]\s*|\b(?:sudo|command|exec)\s+)(cat|bat|less|head|tail|grep|rg|ag|sed|awk|find|ls|tree)\b/;
-const OMNICLI_TOOL = /^omnicli[._](search|describe|invoke|exec)$/i;
+const OMNICLI_TOOL = /^omnicli[._](search|invoke|exec)$/i;
 
 function omnicliBin() {
   return process.env.OMNICLI_BIN || join(homedir(), ".local/bin/omnicli");
@@ -143,7 +142,7 @@ export default {
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "omnicli",
-        description: "Workstation tool catalogue: search, describe, invoke, and run JavaScript Code Mode plans over 529 local tools.",
+        description: "Workstation tool catalogue: search, invoke, and run JavaScript Code Mode plans over 529 local tools.",
       });
 
       editor.add(
@@ -169,28 +168,6 @@ export default {
             const r = await run(argv);
             const text = r.code === 0 ? compactJson(r.stdout) : `omnicli search failed (rc ${r.code}): ${cap(r.stderr || r.stdout)}`;
             return { content: cap(text) };
-          },
-        ),
-      );
-
-      editor.add(
-        def(
-          "describe",
-          "Read one catalogued tool's contract (usage, flags, required args) before invoking it.",
-          {
-            type: "object",
-            properties: {
-              tool_id: { type: "string", description: "Tool id or skill name, e.g. 'zoom-recorder/scripts/zoom_download'." },
-              section: { type: "string", description: "Optional section heading when tool_id is a skill." },
-            },
-            required: ["tool_id"],
-            additionalProperties: false,
-          },
-          async ({ tool_id, section }) => {
-            const argv = ["describe", String(tool_id)];
-            if (section) argv.push("--section", String(section));
-            const r = await run(argv);
-            return { content: cap(r.code === 0 ? r.stdout : `omnicli describe failed (rc ${r.code}): ${r.stderr || r.stdout}`) };
           },
         ),
       );
