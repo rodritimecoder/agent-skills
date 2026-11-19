@@ -92,7 +92,27 @@ state-compactor inspect
 
 ---
 
----
+### 3. OpenCode bridge — per-session, zero-loss compaction
+
+The plugin at `opencode-plugin/state-compactor-bridge.js` (symlinked into
+`~/.config/opencode/plugins/`) binds the ledger to `OPENCODE_SESSION_ID`, **not** cwd,
+so switching chats cannot interleave facts. State lives at
+`~/.local/state/state-compactor/sessions/<sessionID>/`.
+
+- `prompt` hook: ensure the ledger exists and register a
+  `<context key="state-compactor.handover">` session instruction entry.
+- `context` hook: inject the handover on every agent-loop call so facts stay sharp.
+- `compaction` hook: `event.result = { summary: <handover> }` — the state file
+  **is** the compaction summary; the LLM summarizer is skipped entirely.
+- Tools: `state_record` (verified facts/decisions/forbidden/tasks), `state_inspect`
+  (handover), `state_handoff` (spawn a fresh T3 thread seeded with the handover).
+- `state_handoff --dryRun` prints the exact `t3 thread start` command without running it.
+- Kill switch: `STATE_COMPACTOR_BRIDGE=0`.
+
+The handover mirrors OpenCode's own summary shape (Objective, facts, decisions,
+negative constraints, completed work, open tasks, Next Move), but is rendered only
+from verified ledger fields — never raw transcript — so an error cannot be
+summarised into a fact.
 
 ---
 
@@ -104,4 +124,6 @@ cgate outline <file>            # symbols and shape
 cgate view <file> --symbol <Name>   # one symbol
 - Do not read whole files into context. Slice them.
 - The authoritative state is `.agent_state.json` and `STATE.md`; update them one fact per line.
+- In OpenCode/T3, the authoritative state is the **per-session** ledger at
+  `~/.local/state/state-compactor/sessions/<OPENCODE_SESSION_ID>/`; cwd is not a scope.
 - Never let an old summary overwrite a newer fact. Supersede in place.

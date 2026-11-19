@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -12,8 +13,32 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_STATE_JSON = ".agent_state.json"
 DEFAULT_STATE_MD = "STATE.md"
+DEFAULT_SESSION_ROOT = Path.home() / ".local/state/state-compactor/sessions"
 
-def _find_state_file(target_dir: Optional[str] = None) -> Path:
+
+def session_state_paths(session_id: str, root: Optional[str] = None) -> tuple[Path, Path]:
+    """Per-session ledger paths. Session ID is the only scope: no cwd walk."""
+    if not session_id or not isinstance(session_id, str):
+        raise ValueError("session_id must be a non-empty string")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", session_id):
+        raise ValueError("session_id contains unsupported characters")
+    base = Path(root).expanduser() if root else DEFAULT_SESSION_ROOT
+    base = base / session_id
+    base.mkdir(parents=True, exist_ok=True)
+    return base / DEFAULT_STATE_JSON, base / DEFAULT_STATE_MD
+
+
+def _effective_session_id(session_id: Optional[str] = None) -> Optional[str]:
+    if session_id:
+        return session_id
+    return os.environ.get("STATE_SESSION_ID") or os.environ.get("OPENCODE_SESSION_ID")
+
+
+def _find_state_file(target_dir: Optional[str] = None, session_id: Optional[str] = None) -> Path:
+    sid = _effective_session_id(session_id)
+    if sid:
+        json_path, _ = session_state_paths(sid, target_dir)
+        return json_path
     base = Path(target_dir) if target_dir else Path.cwd()
     json_path = base / DEFAULT_STATE_JSON
     if json_path.is_file():
@@ -115,7 +140,11 @@ def record(
 ):
     json_path = _find_state_file(target_dir)
     if not json_path.is_file():
-        raise FileNotFoundError(f"State file not found at {json_path}. Run `state-compactor init` first.")
+        sid = _effective_session_id()
+        if sid and target_dir is None:
+            init_state(goal=f"OpenCode session {sid}", target_dir=target_dir)
+        else:
+            raise FileNotFoundError(f"State file not found at {json_path}. Run `state-compactor init` first.")
 
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -288,6 +317,60 @@ def generate_handover(target_dir: Optional[str] = None, out_path: Optional[str] 
 
     return content
 
+def bridge_summary(target_dir: Optional[str] = None) -> str:
+    """Render session state in the shape OpenCode uses for compaction summaries.
+
+    Only verified ledger fields are included — never raw transcript text — so an
+    error cannot be silently summarized into a fact (context poisoning shield).
+    """
+    json_path = _find_state_file(target_dir)
+    if not json_path.is_file():
+        return (
+            "## Objective\nNo state ledger initialized for this session yet.\n\n"
+            "## Next Move\nRecord a verified fact with `state_record` before compacting.\n"
+        )
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    lines = [
+        "## Objective",
+        data.get("goal") or "Untitled task",
+        "",
+        "## Active Milestone",
+        data.get("active_milestone") or "None set",
+        "",
+        "## Ground Truth Facts (verbatim, zero-loss)",
+    ]
+    facts = data.get("facts", [])
+    lines += [f"{i}. {fact}" for i, fact in enumerate(facts, 1)] or ["_None recorded._"]
+    lines += ["", "## Decisions"]
+    decisions = data.get("decisions", [])
+    lines += [f"- D{i}: {d}" for i, d in enumerate(decisions, 1)] or ["_None recorded._"]
+    lines += ["", "## Negative Constraints (Do Not Repeat)"]
+    forbidden = data.get("forbidden", [])
+    lines += [f"- RULE-{i}: {f}" for i, f in enumerate(forbidden, 1)] or ["_None recorded._"]
+    lines += ["", "## Completed Work"]
+    done = data.get("tasks_completed", [])
+    lines += [f"- [x] {t}" for t in done] or ["_None yet._"]
+    lines += ["", "## Active Work / Open Tasks"]
+    open_tasks = data.get("tasks_open", [])
+    lines += [f"- [ ] {t}" for t in open_tasks] or ["_None pending._"]
+    lines += ["", "## Next Move"]
+    if open_tasks:
+        lines.append(open_tasks[0])
+    elif data.get("active_milestone"):
+        lines.append(f"Continue: {data['active_milestone']}")
+    else:
+        lines.append("Await direction from the user.")
+    lines += [
+        "",
+        "---",
+        f"Session ledger: `{json_path}` | turns: {data.get('turn_count', 0)} | "
+        "supersede facts in place, never overwrite with an older summary.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def inspect_state(target_dir: Optional[str] = None, as_json: bool = False):
     json_path = _find_state_file(target_dir)
     if not json_path.is_file():
@@ -336,6 +419,7 @@ def inspect_state(target_dir: Optional[str] = None, as_json: bool = False):
 def main():
     p = argparse.ArgumentParser(description="Kem Glitch Zero-Degradation State Compactor")
     p.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
+    p.add_argument("--session", help="Session ID scope (overrides STATE_SESSION_ID / OPENCODE_SESSION_ID)")
     sub = p.add_subparsers(dest="cmd")
 
     init_p = sub.add_parser("init", help="Initialize a new agent state ledger")
@@ -378,7 +462,13 @@ def main():
     ins_p.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
                        help="Emit machine-readable JSON on stdout")
 
+    br_p = sub.add_parser("bridge-summary", help="Render the OpenCode-shaped handover summary")
+    br_p.add_argument("--dir", help="Target directory")
+    br_p.add_argument("--out", help="Write summary to file")
+
     args = p.parse_args()
+    if getattr(args, "session", None):
+        os.environ["STATE_SESSION_ID"] = args.session
     if getattr(args, "dry_run", False):
         plan = {"action": args.cmd, "dry_run": True}
         for key in ("fact", "decision", "task", "done", "milestone", "invariant",
@@ -448,6 +538,13 @@ def main():
                 raise
             print(f"[state-compactor] inspect failed: {type(exc).__name__}: {exc}", file=sys.stderr)
             sys.exit(2)
+    elif args.cmd == "bridge-summary":
+        summary = bridge_summary(target_dir=args.dir)
+        if args.out:
+            Path(args.out).write_text(summary, encoding="utf-8")
+            print(f"[state-compactor] Handover summary written to {args.out}", file=sys.stderr)
+        else:
+            print(summary, end="")
     else:
         p.print_help()
 
