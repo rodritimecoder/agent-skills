@@ -197,6 +197,72 @@ Then `sync-skills propagate` to refresh `surface/`, `~/.local/bin`, harnesses an
 
 ---
 
+## 7. Kem lenses on Code Mode and search
+
+Kem's ideas are about where judgment lives and how a run proves itself; they
+attach at the routing/plan boundary, not inside the gateway. None of them
+require framework code — they are conventions over the same one-plan/one-turn
+shape.
+
+| Kem idea | omnicli seam | What to do |
+| :--- | :--- | :--- |
+| Evidence before invoke | Code Mode `search()` hit | Name `why`/`matched`/`top` in the plan and project them into `emitResult` before invoking. |
+| Actor / Step type / Proof | every plan call | Comment Actor, `D`/`P`/`H` and Proof above each call; emit a `proof` field per step. |
+| Negative controls | `omnicli eval` sets | Pair each positive routing case with a must-not-trigger prompt; require a failing gate. |
+| Fail → align | routing failure | Re-ask which skill owns the phrasing and re-plan; never add a one-off alias. |
+| Concealed holdouts | plan read scope | Keep expected results outside the plan; compare only at verify time. |
+| Factory vs product | aliases/descriptions vs per-run intents | Curate the factory across runs; never mutate it to fit one run. |
+
+### Evidence before invoke
+
+A Code Mode `search()` hit has exactly these keys (verified live): `skill`,
+`score`, `matched`, `why`, `top`, `chunk_count`. Do not invoke on a hit until
+you have named `why`, `matched` and `top` in the plan and projected them into
+`emitResult` — that makes the routing decision auditable. Call this the citation
+hook: provenance enforcement is cheaper than knowledge synthesis. One drift to
+note, not fix here: `retrieval-architecture.md:46` claims every result names
+`found_by`, but the Code Mode result has no such key; rely on
+`why`/`matched`/`top` and treat `found_by` as stale doc text (do not edit that
+file). Do not re-state `70% → 92.5%` as verified — section 5 flags it OCR-backed.
+
+### Actor / Step type / Proof
+
+The local Kem contract (`icm-architect`): every step names its Actor (code,
+agent or human), its Step type (`D` deterministic, `P` probabilistic, `H` human)
+and its Proof. In a plan, write these as short comments above each call and emit
+a `proof` field per step in the result envelope. A `[D]` step names its command;
+a `[P]` step names the model call; an `[H]` step names what a person signs off.
+Nothing moves on without the proof its step declares.
+
+### A gate that can fail
+
+`omnicli eval` ships golden and paraphrase sets, but neither declares an
+explicit should-not-trigger negative control (grep finds "control" only in an
+unrelated browser note). A gate that cannot fail is not a gate: pair every
+positive routing case with a prompt that must NOT select the same skill, run
+both in one harness, and require a non-zero exit when the negative control
+mutates. This is `kem-dev-loop`'s positive-and-negative-in-one-script pattern.
+
+### Fail to align, never patch
+
+When routing fails, do not add a one-off alias to make that single query pass —
+that is the overfitting `tests/overfit_check.py` exists to catch (0 verbatim
+alias echoes across 389 aliases). Go back to intent: which skill *should* own
+this phrasing? Then re-plan. The same rule protects the factory/product split:
+curated aliases and descriptions are the factory, per-run intents the product;
+mutating the factory to fit one product run is decay.
+
+### Concealed holdouts
+
+A plan that can read its own acceptance tests builds to pass them. Keep the
+expected result outside the plan's read scope and compare only at verify time.
+This is `icm-architect`'s agentic-factory holdouts shelf, applied to a plan
+rather than a workspace.
+
+What this does NOT mean: these are plan-time disciplines, not a new runtime layer — the gateway stays one catalog, two faces.
+
+---
+
 ## Read next
 
 - [agent-skills-checklist.md](agent-skills-checklist.md) — frontmatter rules, script contract, verification gates
