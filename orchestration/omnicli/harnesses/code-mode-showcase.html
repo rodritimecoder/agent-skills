@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>omnicli Code Mode — one plan, one turn</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --success: #3fb950;
+    --accent: #58a6ff;
+    --purple: #bc8cff;
+    --amber: #d29922;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "Fantasque Sans Mono", ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace;
+  }
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: var(--font);
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title-group { display: flex; align-items: center; gap: 12px; }
+  .badge-pass {
+    background: rgba(63, 185, 80, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(63, 185, 80, 0.4);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .title { font-size: 20px; font-weight: 600; margin: 0; }
+  .stats { font-size: 13px; color: var(--text-muted); }
+  .stats b { color: var(--text); font-weight: 600; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; }
+  .harness-name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .harness-id { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tag {
+    font-size: 11px; padding: 2px 8px;
+    background: rgba(88, 166, 255, 0.1); color: var(--accent);
+    border-radius: 4px; border: 1px solid rgba(88, 166, 255, 0.2);
+    font-family: var(--font-mono);
+  }
+  .tag.warn { background: rgba(210, 153, 34, 0.1); color: var(--amber); border-color: rgba(210, 153, 34, 0.3); }
+  .tag.purple { background: rgba(188, 140, 255, 0.1); color: var(--purple); border-color: rgba(188, 140, 255, 0.3); }
+  .check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-family: var(--font-mono); }
+  .check-item { display: flex; align-items: flex-start; gap: 8px; color: var(--text); }
+  .check-icon { color: var(--success); font-weight: bold; flex-shrink: 0; }
+  .check-name { color: var(--text-muted); min-width: 120px; }
+  .section-title {
+    grid-column: 1 / -1; font-size: 13px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-muted);
+    border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 8px;
+  }
+  .flow { grid-column: 1 / -1; display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+  .flow .card { flex: 1 1 260px; }
+  .arrow { align-self: center; font-size: 26px; color: var(--accent); font-weight: 700; }
+  pre {
+    margin: 0; background: #0b0f14; border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; overflow-x: auto;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  }
+  pre > code { font-family: inherit; }
+  .k { color: var(--purple); }   /* keyword */
+  .f { color: var(--accent); }   /* function */
+  .s { color: var(--success); }  /* string */
+  .n { color: var(--amber); }    /* number */
+  .c { color: var(--text-muted); } /* comment */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-mono); }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td:first-child { color: var(--text); white-space: nowrap; }
+  .footer {
+    margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 14px;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .copy { cursor: pointer; user-select: none; font-size: 11px; color: var(--text-muted); }
+  .copy:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="title-group">
+      <h1 class="title">omnicli Code Mode — one plan, one turn</h1>
+      <span class="badge-pass">strict · no network</span>
+    </div>
+    <div class="stats"><b>529</b> catalog tools · <b>53</b> skills · <b>3</b> native tools<br>
+      <b>3</b> native tools · <b>9</b> plan globals · <b>0</b> intermediates in context</div>
+  </div>
+
+  <div class="grid">
+    <div class="section-title">The three native tools — one flow</div>
+    <div class="flow">
+      <div class="card">
+        <div class="card-header">
+          <span class="harness-name">🔎 omnicli_search</span>
+          <span class="harness-id">face A / plan</span>
+        </div>
+        <div class="tags"><span class="tag">intent → ranked hits</span><span class="tag">depth:contract</span></div>
+        <ul class="check-list">
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">discover</span><span>BM25 + optional dense leg over 529 tools</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">contract</span><span><code>depth:"contract"</code> returns the exact contract in one call</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">bounded</span><span>skill, score, why, top hit — never the whole body</span></li>
+        </ul>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="card">
+        <div class="card-header">
+          <span class="harness-name">⚡ omnicli_invoke</span>
+          <span class="harness-id">one-shot</span>
+        </div>
+        <div class="tags"><span class="tag">--omni-project</span><span class="tag">--omni-max-bytes</span><span class="tag">--omni-buffer</span></div>
+        <ul class="check-list">
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">run</span><span>one catalogued tool, bounded response</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">project</span><span>keep only named fields; head+tail cap</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">gate</span><span>enable gate + append-only policy audit</span></li>
+        </ul>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="card">
+        <div class="card-header">
+          <span class="harness-name">🧩 omnicli_exec</span>
+          <span class="harness-id">one plan</span>
+        </div>
+        <div class="tags"><span class="tag">node:vm</span><span class="tag">bwrap</span><span class="tag purple">UDS bridge</span></div>
+        <ul class="check-list">
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">sandbox</span><span>strict default; one <code>plan.mjs</code></span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">bridge</span><span>every call crosses one UNIX socket</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">report</span><span><code>exec --json</code>: tool_calls / bridge_calls / bridge_denied</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-title">Plan surface</div>
+    <div class="card">
+      <div class="card-header">
+        <span class="harness-name">🌐 Plan globals + typed surface</span>
+        <span class="harness-id">omnicli_tools</span>
+      </div>
+      <p style="margin:0;font-size:12px;color:var(--text-muted)">
+        Nine globals, plus one generated async function per catalogued tool. One options object is
+        validated against <code>inputSchema</code> before dispatch — a typo throws <code>TypeError</code> at the call site.
+      </p>
+      <div class="tags">
+        <span class="tag">search</span><span class="tag">spec</span><span class="tag">describe</span><span class="tag">invoke</span><span class="tag">output</span>
+        <span class="tag">parallel</span><span class="tag">emitResult</span><span class="tag">getState</span><span class="tag">emitState</span>
+      </div>
+      <div class="card-header"><span class="copy" data-copy="globals">copy ⧉</span></div>
+      <pre id="globals"><code><span class="c">// generated per tool; one-call shape</span>
+<span class="k">await</span> <span class="f">zoom</span>({ url: <span class="s">"https://zoom.us/rec/share/x"</span>, format: <span class="s">"md"</span> });
+<span class="k">await</span> <span class="f">tools</span>[<span class="s">"zoom-recorder/scripts/zoom_download"</span>]({ url, format: <span class="s">"md"</span> }); <span class="c">// Proxy form</span></code></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="harness-name">✨ Sleek APIs</span>
+        <span class="harness-id">new in this run</span>
+      </div>
+      <div class="tags"><span class="tag purple">tools Proxy</span><span class="tag warn">$ strict-gated</span><span class="tag">result()</span><span class="tag">--quiet</span><span class="tag">--plan-header</span></div>
+      <ul class="check-list">
+        <li class="check-item"><span class="check-icon">✓</span><span class="check-name">tools[id]()</span><span>Proxy shorthand; <code>TOOLS</code> alias; validation unchanged</span></li>
+        <li class="check-item"><span class="check-icon">✓</span><span class="check-name">$`…`</span><span>Claude-style shell template; throws in strict before spawning</span></li>
+        <li class="check-item"><span class="check-icon">✓</span><span class="check-name">result()</span><span><code>{ok, tool, proof, data}</code> on the emitResult channel</span></li>
+        <li class="check-item"><span class="check-icon">✓</span><span class="check-name">--quiet</span><span>plain exec prints only the result; no ⚡ status line</span></li>
+        <li class="check-item"><span class="check-icon">✓</span><span class="check-name">--plan-header</span><span>paste-ready header on <code>spec --stubs</code></span></li>
+      </ul>
+      <div class="card-header"><span class="copy" data-copy="sleek">copy ⧉</span></div>
+      <pre id="sleek"><code><span class="k">const</span> out = <span class="k">await</span> <span class="f">$</span><span class="s">`omnicli status --json`</span>.<span class="f">json</span>(); <span class="c">// write/none only</span>
+<span class="f">result</span>({ ok: <span class="k">true</span>, tool: <span class="s">"zoom"</span>, proof: { exit_code: <span class="n">0</span> }, data: { lines: <span class="n">3</span> } });</code></pre>
+    </div>
+
+    <div class="section-title">Authoring patterns</div>
+    <div class="card">
+      <div class="card-header">
+        <span class="harness-name">⌨️ One-call patterns</span>
+        <span class="harness-id">from the SDK guide</span>
+      </div>
+      <div class="card-header"><span class="copy" data-copy="patterns">copy ⧉</span></div>
+      <pre id="patterns"><code><span class="k">const</span> rows = <span class="k">await</span> <span class="f">search</span>(<span class="s">"audio"</span>, <span class="n">2</span>);
+<span class="k">const</span> contract = <span class="k">await</span> <span class="f">describe</span>(<span class="s">"zoom-recorder/scripts/zoom_download"</span>);
+<span class="k">await</span> <span class="f">parallel</span>(INTENTS.<span class="f">map</span>(i =&gt; () =&gt; <span class="f">search</span>(i, <span class="n">2</span>)), <span class="n">8</span>);
+<span class="f">emitResult</span>({ hits: hits.<span class="f">length</span> }); <span class="c">// project; never dump raw</span></code></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="harness-name">📋 Paste-ready header + recipes</span>
+        <span class="harness-id">spec --stubs --plan-header</span>
+      </div>
+      <p style="margin:0;font-size:12px;color:var(--text-muted)">
+        <code>omnicli spec --grep zoom --stubs --plan-header</code> prepends a 5-line header above the
+        declare-function stubs. See <a href="../examples/recipes.mjs" style="color:var(--accent)">examples/recipes.mjs</a> for five runnable recipes.
+      </p>
+      <div class="card-header"><span class="copy" data-copy="header">copy ⧉</span></div>
+      <pre id="header"><code><span class="c">/* omnicli plan — omnicli exec &lt;file&gt;.mjs (strict, no network)
+   tool &lt;sig.id&gt; · skill &lt;sig.skill&gt; · fn &lt;sig.func&gt;
+   globals: search, spec, describe, invoke, output, parallel, emitResult, getState, emitState
+   import { search, spec, &lt;fn&gt;, emitResult } from "omnicli_tools";
+   paste the declare-function stubs below above your plan body */</span></code></pre>
+    </div>
+
+    <div class="section-title">Security boundary</div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-header">
+        <span class="harness-name">🔒 Sandbox modes</span>
+        <span class="harness-id">a capability boundary, not a convenience flag</span>
+      </div>
+      <table>
+        <thead><tr><th>Mode</th><th>Filesystem</th><th>Network</th><th>Tool calls</th></tr></thead>
+        <tbody>
+          <tr><td>write</td><td>/ read-only; workspace writable</td><td>open</td><td>direct subprocess</td></tr>
+          <tr><td>strict (default)</td><td>home masked; workspace + bindings only</td><td><b style="color:var(--amber)">none</b></td><td>one UDS bridge call to parent; allowlisted verbs only</td></tr>
+          <tr><td>none</td><td>unconfined</td><td>open</td><td>direct subprocess</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:0;font-size:12px;color:var(--text-muted)">
+        In <code>strict</code> the plan cannot read <code>~/.ssh</code>, cannot open a socket, and <code>$`…`</code> throws
+        before spawning. <code>exec --json</code> reports <code>bridge_calls</code> and <code>bridge_denied</code>, so a
+        refused verb is evidence rather than silence.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="../SKILL.md">SKILL.md</a>
+    <a href="../references/code-mode-sdk.md">references/code-mode-sdk.md</a>
+    <a href="../examples/recipes.mjs">examples/recipes.mjs</a>
+    <a href="index.md">harnesses/index.md</a>
+    <a href="verification_report.html">verification_report.html</a>
+  </div>
+
+<script>
+  // Static, offline copy-to-clipboard helper. No network, no external assets.
+  document.querySelectorAll('.copy').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var block = document.getElementById(el.getAttribute('data-copy'));
+      if (!block) return;
+      var text = block.textContent;
+      var done = function () { var old = el.textContent; el.textContent = 'copied ✓'; setTimeout(function () { el.textContent = old; }, 900); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      } else {
+        var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+        ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(ta);
+      }
+    });
+  });
+</script>
+</body>
+</html>

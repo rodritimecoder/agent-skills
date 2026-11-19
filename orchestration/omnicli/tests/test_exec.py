@@ -62,6 +62,29 @@ class TestBindings(unittest.TestCase):
         self.assertEqual(check.returncode, 0, check.stderr)
 
     @needs_js_runtime
+    def test_module_is_at_least_25_percent_smaller_than_baseline(self):
+        baseline = 520_823
+        size = (self.out / "omnicli_tools.mjs").stat().st_size
+        ceiling = int(baseline * 0.75)
+        self.assertLessEqual(size, ceiling,
+                             f"module {size} B must be <= {ceiling} B (25% under {baseline} B)")
+
+    def test_dts_declares_the_sleek_surface(self):
+        text = (self.out / "omnicli_tools.d.ts").read_text(encoding="utf-8")
+        for needle in (
+            "export interface PlanResult",
+            "export declare function result(",
+            "export declare const planResult",
+            "export declare function $(",
+            "export interface ShellCommand",
+            "export interface ToolMap",
+            "export declare const TOOLS:",
+            "export declare const tools:",
+        ):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, text)
+
+    @needs_js_runtime
     def test_ensure_rewrites_the_same_package(self):
         con = builder.connect()
         fingerprint = builder.meta_get(con, "fingerprint", "")
@@ -117,6 +140,90 @@ console.log(JSON.stringify(seen));
         for name in ("unknown", "missing", "enum", "type"):
             self.assertEqual(payload[name], "TypeError", f"{name}: {payload[name]}")
 
+    @needs_js_runtime
+    def test_tools_proxy_is_callable_and_indexed(self):
+        # Positive control: tools("skill") still lists tools through the CLI.
+        fake = self.out / "fake_omnicli.sh"
+        fake.write_text("#!/bin/sh\nprintf '{\"listed\":true}'\n", encoding="utf-8")
+        fake.chmod(0o755)
+        proc = _node_probe(self.out, """
+import { tools, TOOLS } from "./omnicli_tools.mjs";
+const known = "cornell-notes/cli";
+console.log(JSON.stringify({
+  listed: await tools("cornell-notes"),
+  callable: typeof tools,
+  alias: TOOLS === tools,
+  known: typeof tools[known],
+  unknown: tools["not-a-real-tool-id"] === undefined,
+  hasKnown: known in tools,
+}));
+""", {"OMNICLI_BIN": str(fake)})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["listed"], {"listed": True})
+        self.assertEqual(payload["callable"], "function")
+        self.assertTrue(payload["alias"])
+        self.assertEqual(payload["known"], "function")
+        self.assertTrue(payload["unknown"])  # negative control for unknown id
+        self.assertTrue(payload["hasKnown"])
+
+    @needs_js_runtime
+    def test_shell_gate_strict_throws_before_spawn_none_succeeds(self):
+        marker = self.out / "shell-gate-marker.txt"
+        strict = _node_probe(self.out, f"""
+import {{ $ }} from "./omnicli_tools.mjs";
+try {{ $`printf leaked > {str(marker)!r}`; console.log("NO-THROW"); }}
+catch (err) {{ console.log(err.message); }}
+""", {"OMNICLI_SANDBOX": "strict"})
+        self.assertEqual(strict.returncode, 0, strict.stderr)
+        self.assertIn("shell commands are disabled in strict sandbox", strict.stdout)
+        # A gate that cannot fail is not a gate: no child was spawned.
+        self.assertFalse(marker.exists(), "strict $ must throw before spawning")
+
+        none = _node_probe(self.out, """
+import { $ } from "./omnicli_tools.mjs";
+console.log(await $`printf shell-ok`.text());
+""", {"OMNICLI_SANDBOX": "none"})
+        self.assertEqual(none.returncode, 0, none.stderr)
+        self.assertEqual(none.stdout.strip(), "shell-ok")
+
+    @needs_js_runtime
+    def test_result_helper_writes_the_envelope(self):
+        target = self.out / "result-envelope.json"
+        proc = _node_probe(self.out, """
+import { result, planResult } from "./omnicli_tools.mjs";
+console.log(typeof result, planResult === result);
+try { result(5); console.log("NO-THROW"); }
+catch (err) { console.log(err.constructor.name + ": " + err.message); }
+result({ ok: true, tool: "probe", proof: "gate", data: { n: 1 } });
+""", {"OMNICLI_RESULT": str(target)})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        lines = proc.stdout.strip().splitlines()
+        self.assertEqual(lines[0], "function true")
+        self.assertIn("TypeError: result: expected a single options object", lines[1])
+        self.assertEqual(
+            json.loads(target.read_text(encoding="utf-8")),
+            {"ok": True, "tool": "probe", "proof": "gate", "data": {"n": 1}},
+        )
+
+    def test_spec_plan_header_changes_output_only_with_the_flag(self):
+        base = [sys.executable, OMNICLI, "spec", "--grep", "cornell-notes/cli", "--limit", "1"]
+        off = subprocess.run(base, capture_output=True, text=True, timeout=60)
+        on = subprocess.run(base + ["--plan-header"], capture_output=True, text=True, timeout=60)
+        self.assertEqual(off.returncode, 0, off.stderr)
+        self.assertEqual(on.returncode, 0, on.stderr)
+        # Negative control: without the flag the output is byte-identical to legacy.
+        self.assertFalse(off.stdout.startswith("/*"))
+        # Positive control: only with the flag a block comment is prepended.
+        self.assertTrue(on.stdout.startswith("/*"))
+        self.assertIn("cornell-notes/cli", on.stdout)
+        self.assertTrue(on.stdout.endswith(off.stdout))
+        # --json stays parseable with the flag (header is plain-mode only).
+        as_json = subprocess.run(base + ["--json", "--plan-header"],
+                                 capture_output=True, text=True, timeout=60)
+        self.assertEqual(as_json.returncode, 0, as_json.stderr)
+        self.assertIsInstance(json.loads(as_json.stdout), list)
+
     def test_filtered_spec_stubs_match_bindings_disambiguation(self):
         # Filtering by --grep must not erase earlier-alphabetical collisions
         # like `design-pack/...:check`, or `spec --stubs` prints `check(...)`
@@ -147,6 +254,12 @@ class TestExec(unittest.TestCase):
         except ValueError:
             self.fail(f"exec did not print a JSON report (rc={proc.returncode}):\n{proc.stderr}")
         return report, proc
+
+    def _exec_plain(self, *argv: str, cwd: str | None = None) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, OMNICLI, "exec", *argv],
+            capture_output=True, text=True, timeout=300, cwd=cwd,
+        )
 
     def _code(self, work: Path, code: str, *extra: str):
         return self._exec("-c", code, "--workspace", str(work), *extra)
@@ -389,6 +502,36 @@ for (;;) big.push(new Array(1 << 20).fill(7));
         )
         self.assertEqual(proc.returncode, 2, proc.stderr)
         self.assertIn("unknown --lang", proc.stderr)
+
+    def test_quiet_suppresses_status_and_prints_result_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            quiet = self._exec_plain(
+                "-c", 'console.log("loud"); result({ok:true,tool:"q",proof:"p",data:{n:1}})',
+                "--quiet", "--sandbox", "none", cwd=tmp,
+            )
+            self.assertEqual(quiet.returncode, 0, quiet.stderr)
+            self.assertNotIn("⚡ [exec]", quiet.stderr)
+            parsed = json.loads(quiet.stdout)
+            self.assertEqual(parsed, {"ok": True, "tool": "q", "proof": "p", "data": {"n": 1}})
+            self.assertNotIn("loud", quiet.stdout)
+
+            # Negative control: without --quiet the status line is present.
+            loud = self._exec_plain("-c", 'console.log("loud")',
+                                    "--sandbox", "none", cwd=tmp)
+            self.assertEqual(loud.returncode, 0, loud.stderr)
+            self.assertIn("⚡ [exec]", loud.stderr)
+            self.assertIn("loud", loud.stdout)
+
+    def test_quiet_with_json_matches_json_report(self):
+        code = 'result({ok:true,tool:"p",proof:"g",data:{n:2}})'
+        with tempfile.TemporaryDirectory() as tmp:
+            q_report, q_proc = self._code(Path(tmp), code, "--quiet", "--sandbox", "none")
+            n_report, n_proc = self._code(Path(tmp), code, "--sandbox", "none")
+        self.assertEqual(q_proc.returncode, 0, q_proc.stderr)
+        self.assertEqual(n_proc.returncode, 0, n_proc.stderr)
+        for report in (q_report, n_report):
+            report.pop("seconds", None)
+        self.assertEqual(q_report, n_report)
 
     def test_exec_arg_validation(self):
         # neither script nor -c

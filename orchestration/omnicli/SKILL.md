@@ -59,6 +59,7 @@ omnicli describe zoom-recorder/scripts/zoom_download   # one tool's usage, flags
 omnicli describe canvas-cli                             # skill frontmatter + section outline
 omnicli describe canvas-cli --section "token shield"    # load only one section
 omnicli spec --grep zoom --stubs                        # typed .d.ts signatures for matching tools
+omnicli spec --grep zoom --stubs --plan-header          # + paste-ready header above the stubs
 ```
 
 Skills are **never modified**; the catalog is a read-only index (`catalog.db`).
@@ -100,10 +101,11 @@ plan inside `node:vm` + `bwrap` instead of round-tripping intermediate payloads
 through context. (Python plans are retired; `.py` / `--lang py` exits 2.)
 
 ```bash
-omnicli spec --grep zoom --stubs
+omnicli spec --grep zoom --stubs --plan-header                         # paste-ready header + stubs
 omnicli bindings                                                      # writes omnicli_tools.mjs + .d.ts
 omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
 omnicli exec plan.mjs                                                 # strict (default); --sandbox write opts out
+omnicli exec plan.mjs --quiet                                         # print only the result; no ⚡ status line
 ```
 
 ```js
@@ -118,11 +120,15 @@ emitResult({ hits: hits.length, exit: asr.exit_code }); // project; never dump r
 - **Zero boilerplate:** `search`, `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult`, `getState`, `emitState`, and every catalogued tool (`tool({ ... })`) are globals inside the VM; imports match `omnicli_tools.d.ts` for editors.
 - **Session state:** `getState()` / `emitState(value)` read and replace one JSON object persisted across `omnicli exec --session ID` runs (default: the trace session identity).
 - **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
+- **Sleek call surface:** `tools[id](args)` is a Proxy over the typed surface (`TOOLS` is an alias); calls go through the same validation. `result({ ok, tool, proof, data })` writes one designed result on the `emitResult` channel. `exec --quiet` prints only that result (JSON when present, else stdout) in plain mode and suppresses the ⚡ status line; `--json` reports are untouched.
+- **Shell snippets:** `` $`cmd` `` is a lazy tagged template with `.text()` / `.json()` / `.nothrow()` for pasted Claude-style shell snippets. It throws `TypeError` in `strict` **before spawning** — the bridge cannot be bypassed; use `--sandbox write` (network) to run one.
 - **Containment & limits:** **`strict` is the default** — use `--sandbox write` to opt out (needed for network plans). `write` binds `/` read-only and keeps only the workspace + `/tmp` writable; `strict` masks `$HOME`, disables network, and routes calls over a UNIX socket bridge (`exec` denied); `--max-calls` (default `100`) and opt-in `--mem-limit MiB` bound execution.
 
 Architecture, full SDK API and authoring guidelines:
 - [references/skill-stack-architecture.md](references/skill-stack-architecture.md) (how agentskills.io, ICM's `AGENTS.md`/`CONTEXT.md`, and omnicli compose into one progressive-disclosure ladder)
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
+- [examples/recipes.mjs](examples/recipes.mjs) (five canonical recipes: discovery → contract → project, in-memory `spec()`, `parallel()` fan-out, a caught typed-validation error, and session state)
+- [harnesses/code-mode-showcase.html](harnesses/code-mode-showcase.html) (self-contained visual walkthrough of the three native tools, plan surface, and strict boundary)
 - [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `tests/verify_agent_skills.py`)
 
 ---

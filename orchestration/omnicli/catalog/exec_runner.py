@@ -192,6 +192,7 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
                   "--bind", str(work), GUEST_WORK,
                   "--chdir", GUEST_WORK,
                   "--setenv", "HOME", GUEST_WORK,
+                  "--setenv", "OMNICLI_SANDBOX", sandbox,
                   "--setenv", "OMNICLI_BINDINGS_DIR", "/tmp/omnicli/bindings",
                   "/tmp/omnicli/node", "--experimental-vm-modules",
                   "--disable-warning=ExperimentalWarning", *heap,
@@ -211,7 +212,7 @@ def run(script: str | None = None, code: str | None = None,
         workspace: str | None = None, out_path: str | None = None,
         sandbox: str = "write", timeout: float = 300.0, as_json: bool = False,
         max_calls: int = 100, mem_limit: int | None = None, lang: str | None = None,
-        session: str | None = None):
+        session: str | None = None, quiet: bool = False):
     _deprecation_check(script, lang)
     if sandbox not in ("write", "strict", "none"):
         sys.exit(f"❌ Error: unknown sandbox mode {sandbox!r}")
@@ -270,6 +271,9 @@ def run(script: str | None = None, code: str | None = None,
         "OMNICLI_STATE": str(state_file),
         "OMNICLI_MAX_CALLS": str(max_calls),
         "OMNICLI_TRUST_INDEX": "1",
+        # The bindings' $ gate reads this; sandboxed modes also pass it
+        # explicitly via --setenv in _sandboxed().
+        "OMNICLI_SANDBOX": sandbox,
     })
 
     heap = [f"--max-old-space-size={mem_limit}"] if mem_limit is not None else []
@@ -389,10 +393,18 @@ def run(script: str | None = None, code: str | None = None,
     if as_json:
         print(json.dumps(report, indent=2))
     else:
-        sys.stdout.write(shown_stdout)
-        bridge_note = f" · bridge={bridge_calls} call(s)" if bridge_calls else ""
-        print(f"⚡ [exec] {calls} tool call(s) in one turn · {elapsed:.2f}s "
-              f"· sandbox={sandbox}{bridge_note}", file=sys.stderr)
+        if quiet and result is not None:
+            # Quiet prints only the synthesized result, never the uncapped
+            # stdout; --out still holds the full buffer and --json is inert.
+            shown_result_only = json.dumps(result, ensure_ascii=False)
+            sys.stdout.write(shown_result_only if shown_result_only.endswith("\n")
+                             else shown_result_only + "\n")
+        else:
+            sys.stdout.write(shown_stdout)
+        if not quiet:
+            bridge_note = f" · bridge={bridge_calls} call(s)" if bridge_calls else ""
+            print(f"⚡ [exec] {calls} tool call(s) in one turn · {elapsed:.2f}s "
+                  f"· sandbox={sandbox}{bridge_note}", file=sys.stderr)
     if stderr_text and (not as_json or proc.returncode != 0):
         sys.stderr.write(stderr_text if stderr_text.endswith("\n") else stderr_text + "\n")
     _merge_exec_trace(trace, seen)

@@ -28,7 +28,7 @@ the 500 KB module.
 |---|---|---|
 | `search` | `search(intent, limit = 6)` → `Promise<SearchResult[]>` | Full-body BM25 + dense vector search across all registered skills; ranked candidates with scores, evidence and tool IDs. |
 | `skills` | `skills()` → `Promise<unknown>` | List every registered skill. |
-| `tools` | `tools(skill)` → `Promise<unknown>` | List the tools registered under one skill. |
+| `tools` | `tools[id](args)` → `Promise<InvokeEnvelope>` | Sleek Proxy over the generated typed functions (`TOOLS` is an alias). To enumerate a skill's tools, use `spec({ skill })` or `skills()`. |
 | `describe` | `describe(toolId)` → `Promise<object>` | Read one tool's usage contract, flags, parameters and help text. |
 | `spec` | `spec(grepOrFilter)` → `SpecRow[]` | Synchronous query over the in-memory spec table — no subprocess. |
 | `invoke` | `invoke(toolId, argsOrArgv?, opts?)` → `Promise<InvokeEnvelope>` | Execute any catalogued tool with output bounding and projection. |
@@ -102,6 +102,31 @@ import { search, spec, zoom, emitResult } from "omnicli_tools";
 
 `vm_runner.mjs` links `omnicli_tools` (and `omnicli_tools.mjs`) to the same module
 namespace, so both forms are the same code path.
+
+To paste a typed surface straight into a plan, add `--plan-header`:
+
+```bash
+omnicli spec --grep zoom --stubs --plan-header
+```
+
+It prepends a short block naming the skill, tool id and `declare function`
+signatures (plus the globals and an import line) above the stubs. Default
+`--stubs` output stays byte-identical without the flag.
+
+### 4. Sleek call surface
+
+Beyond the core globals, the module exposes a few designed forms:
+
+| Form | What it does |
+|---|---|
+| `tools[id](args)` | Proxy over the generated typed functions; `TOOLS` is an alias. Calls pass through the same `_callTool` validation, so behavior is identical to the named wrapper (`zoom({ ... })`). |
+| `` $`cmd` `` | Claude-style tagged template returning a lazy thenable with `.text()`, `.json()` and `.nothrow()`. It throws a `TypeError` in `strict` **before spawning** and caches its promise — use `--sandbox write` (network) to run one. |
+| `result({ ok, tool, proof, data })` | A designed result on the `emitResult` channel (`ok` defaults to `true`). With `exec --quiet`, plain mode prints this JSON (or stdout when no result was emitted) and drops the ⚡ status line. |
+
+`--quiet` is inert with `--json`: reports, output caps, trace rows, the call
+budget, bridge policy, and the detached 🚀 job-id line are all untouched.
+`spec --plan-header` and `--quiet` are the only new CLI flags; no native tool or
+tool-call verb changed.
 
 ---
 
@@ -194,6 +219,12 @@ emitResult({ count: rows.length, skills: [...bySkill.keys()] });
 
 `exec --json` reports that value under `result` while `stdout` keeps the printed
 lines.
+
+All five canonical flows are collected in
+[`examples/recipes.mjs`](../examples/recipes.mjs): discovery → contract →
+project, in-memory `spec()` dedupe, `parallel()` fan-out, a caught typed
+validation error, and session state. Every recipe runs under default `strict`
+with no network and exits 0.
 
 ---
 

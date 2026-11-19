@@ -191,6 +191,38 @@ class JsBindings(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertTrue((self.out / "omnicli_tools.d.ts").is_file())
 
+    def test_generated_dts_declares_the_sleek_surface(self):
+        text = (self.out / "omnicli_tools.d.ts").read_text(encoding="utf-8")
+        for needle in ("export declare function result(", "export declare function $(",
+                       "export declare const tools:", "export declare const TOOLS:"):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, text)
+
+    def test_proxy_index_and_helpers_are_importable(self):
+        probe = Path(self.tmp.name) / "surface_probe.mjs"
+        probe.write_text(
+            'import { tools, TOOLS, result, planResult, $, SPEC } from "./omnicli_tools.mjs";\n'
+            "process.stdout.write(JSON.stringify({\n"
+            "  callable: typeof tools, alias: TOOLS === tools,\n"
+            "  known: typeof tools[SPEC[0].id], unknown: tools.__missing__ === undefined,\n"
+            "  result: typeof result, alias2: planResult === result, shell: typeof $,\n"
+            "}));\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [self.node, str(probe)], capture_output=True, text=True, timeout=60,
+            cwd=self.tmp.name, env=dict(os.environ),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["callable"], "function")
+        self.assertTrue(payload["alias"])
+        self.assertEqual(payload["known"], "function")
+        self.assertTrue(payload["unknown"])
+        self.assertEqual(payload["result"], "function")
+        self.assertTrue(payload["alias2"])
+        self.assertEqual(payload["shell"], "function")
+
     def test_trace_identity_agrees_with_the_cli(self):
         cases = [
             {"T3CODE_CLI_PATH": "/x", "OPENCODE_SESSION_ID": "ses_t3"},

@@ -70,3 +70,5 @@ omnicli harness verify
 - [**OpenCode Guide**](opencode.md) — `opencode.json` skills path, compound bash batching, local model daemon routing.
 - [**Pi Agent Guide**](pi.md) — Interactive terminal usage, rsync sync, tight token budgeting.
 - [**Boxxy Claw Guide**](boxxy.md) — Bubblewrap sandboxing, hot-reload sync, SQLite WAL safety.
+
+**Visual guides:** [Code Mode Showcase](code-mode-showcase.html) — self-contained walkthrough of the three native tools, plan globals, one-call patterns, paste-ready `spec --plan-header`, and the strict boundary · [Verification Report](verification_report.html) — first-party harness check matrix and evidence.

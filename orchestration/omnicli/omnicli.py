@@ -1550,9 +1550,27 @@ def _clip(text: str, max_bytes: int, hint: str) -> str:
     return data[:budget].decode("utf-8", errors="ignore") + banner
 
 
+def _plan_header(pairs) -> str:
+    """Paste-ready JS block comment: skill names, tool ids, typed signatures."""
+    skills = sorted({sig.skill for _, sig in pairs})
+    ids = [sig.id for _, sig in pairs]
+    lines = [
+        "/*",
+        " * omnicli plan header — tool ids and typed signatures for this query.",
+        " * skill(s): " + (", ".join(skills) if skills else "(none)"),
+        " * tool ids: " + ", ".join(ids),
+        " *",
+    ]
+    for _row, sig in pairs:
+        lines.append(" * " + sig.ts_sig().replace("\n", "\n * "))
+    lines.append(" */")
+    return "\n".join(lines) + "\n"
+
+
 def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None = None,
              stubs: bool = False, only_enabled: bool = False, as_json: bool = False,
-             limit: int | None = None, max_bytes: int = DEFAULT_MAX_BYTES):
+             limit: int | None = None, max_bytes: int = DEFAULT_MAX_BYTES,
+             plan_header: bool = False):
     """Query the whole catalog without loading it.
 
     This is the CLI half of `spec()` in a plan: filter 481 contracts down to
@@ -1615,6 +1633,8 @@ def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None
             lines.append(f"  {sig.id:<58} {sig.kind:<10} {sig.func}")
     text = _clip("\n".join(lines) + "\n", max_bytes,
                  "Narrow with --skill/--grep/--limit, or raise --omni-max-bytes.")
+    if plan_header:
+        text = _plan_header(pairs) + text
     sys.stdout.write(text)
 
 def cmd_bindings(out_dir: str | None = None, as_json: bool = False,
@@ -1653,14 +1673,15 @@ def cmd_exec(script: str | None = None, code: str | None = None,
              workspace: str | None = None, out_path: str | None = None,
              sandbox: str = "strict", timeout: float = 300.0, as_json: bool = False,
              max_calls: int = 100, mem_limit: int | None = None,
-             lang: str | None = None, session: str | None = None):
+             lang: str | None = None, session: str | None = None,
+             quiet: bool = False):
     """Run one JavaScript plan inside `node:vm`, sandboxed by default."""
     if exec_runner_mod is None:
         sys.exit("❌ Error: omnicli catalog package not importable.")
     exec_runner_mod.run(script=script, code=code, workspace=workspace,
                         out_path=out_path, sandbox=sandbox, timeout=timeout,
                         as_json=as_json, max_calls=max_calls, mem_limit=mem_limit,
-                        lang=lang, session=session)
+                        lang=lang, session=session, quiet=quiet)
 
 
 # --------------------------------------------------------------------------
@@ -1987,6 +2008,8 @@ def main():
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--omni-max-bytes", type=int, metavar="N", default=DEFAULT_MAX_BYTES)
     p.add_argument("--json", action="store_true")
+    p.add_argument("--plan-header", action="store_true",
+                   help="Prepend a JS block comment with skill names, tool ids and typed signatures")
 
     p = sub.add_parser("bindings", help="Write the JS bindings (`omnicli_tools.mjs` + `.d.ts`) that `omnicli exec` loads")
     p.add_argument("--out", default=None, help="Output directory (default ~/.local/share/omnicli/bindings)")
@@ -2020,6 +2043,9 @@ def main():
     p.add_argument("--session", default=None, metavar="ID",
                    help="Session id for getState()/emitState() (default: trace session identity)")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--quiet", action="store_true",
+                   help="Print only the synthesized result (JSON when present, else stdout) "
+                        "and suppress the ⚡ [exec] status line; no effect with --json")
     p.add_argument("--detach", action="store_true",
                    help="Run as a detached background job; returns a job id")
 
@@ -2105,7 +2131,7 @@ def main():
     elif args.action == "spec":
         cmd_spec(skill=args.skill, grep=args.grep, kind=args.kind, stubs=args.stubs,
                  only_enabled=args.enabled, as_json=args.json, limit=args.limit,
-                 max_bytes=args.omni_max_bytes)
+                 max_bytes=args.omni_max_bytes, plan_header=args.plan_header)
     elif args.action in ("exec", "plan"):
         if args.detach:
             child = [sys.executable, str(SCRIPT_PATH), "exec"] + [
@@ -2117,7 +2143,8 @@ def main():
         cmd_exec(script=args.script, code=args.code, workspace=args.workspace,
                  out_path=args.out, sandbox=mode, timeout=args.timeout,
                  as_json=args.json, max_calls=args.max_calls,
-                 mem_limit=args.mem_limit, lang=args.lang, session=args.session)
+                 mem_limit=args.mem_limit, lang=args.lang, session=args.session,
+                 quiet=args.quiet)
     elif args.action == "poll":
         cmd_poll(args.job_id, as_json=args.json, max_bytes=args.max_bytes)
     elif args.action in ("status", "health"):
