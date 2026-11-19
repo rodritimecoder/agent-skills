@@ -6,7 +6,7 @@ The `omnicli` architecture unifies two foundational production AI patterns:
 
 1. **Uber's MCP Gateway** ([Uber Engineering: Designing an MCP Gateway](https://www.uber.com/au/en/blog/designing-mcp-gateway/)):
    - **Late-Binding Discovery**: Instead of dumping hundreds of tool schemas into turn-0 model context (which triggers the Databricks tool-shadowing degradation), tools are catalogued out-of-band via AutoCrawler/builder into SQLite FTS5 + dense embeddings.
-   - **Bounded Meta-Tools**: Agents discover tools by intent (`search`), inspect single contracts on-demand (`describe`), invoke them with strict byte caps and field projections (`invoke`), and monitor service health (`status`).
+   - **Bounded Meta-Tools** (the archived gateway shape): agents discover tools by intent (`search`), inspect single contracts on-demand (`describe`), invoke them with strict byte caps and field projections (`invoke`), and monitor service health (`status`).
 
 2. **Cloudflare's Code Mode** ([Cloudflare Blog: Code Mode — Execute Code to Invoke Tools Instead of LLM Function Calling](https://blog.cloudflare.com/code-mode/)):
    - **One Plan, One Turn**: Instead of multiple slow, token-expensive round-trips where intermediate tool outputs flood the prompt context, the agent generates executable code (JavaScript) that calls a generated SDK.

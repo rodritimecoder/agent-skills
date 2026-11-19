@@ -29,7 +29,7 @@ omnicli harness verify t3-code
 The plugin also:
 
 - injects a short `[omnicli route]` block into the system instructions on each model call;
-- denies `read`/`grep`/`glob`/`list` (and read-only shell verbs) against `~/src/my-agent-skills/**` until the session has called `omnicli_search`/`describe`/`invoke` — the anti-pattern `AGENTS.md` names;
+- denies `read`/`grep`/`glob`/`list` (and read-only shell verbs) against `~/src/my-agent-skills/**` until the session has called `omnicli_search`/`omnicli_invoke`/`omnicli_exec` — the anti-pattern `AGENTS.md` names;
 - exempts a session whose project root is inside the skills repo, and honours `~/src/my-agent-skills/.omnicli-route-exempt` for maintenance from another project;
 - appends one JSON row per call to `~/.local/share/omnicli/route.jsonl`. Summarise it with `python3 scripts/route_stats.py` (bypass rate, denials, catalogue calls).
 
