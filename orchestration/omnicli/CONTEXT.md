@@ -37,5 +37,6 @@ surface/omnicli -> ../omnicli -> orchestration/omnicli
 - State in ~/.local/share/omnicli/: catalog.db, bindings/, sessions/, trace.jsonl; counts from omnicli status (never hardcode).
 - index_body: false in catalog/aliases.json keeps omnicli docs out of catalog: reach this file by link/path, not omnicli search.
 - Canonical edit orchestration/omnicli/ (surface/bare symlinks); propagate, publish when verified. Root CONTEXT links: ../../CONTEXT.md (SKILL.md), ../../../CONTEXT.md (references/).
+- Doc-drift gate: `python3 tests/doc_drift_check.py --json` proves the plugin registers exactly search/invoke/exec, the MCP face mirrors it (`omni_exec` behind `OMNICLI_MCP_ALLOW_EXEC=1`), live docs carry no stale tool-count claims, and documented commands resolve; exit 0 clean, 1 drift.
 
 Walk test: past ~500 tokens, payload → references/, leave a pointer.
