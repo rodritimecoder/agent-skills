@@ -14,8 +14,8 @@ pack is one page you tell the model to read **before** it does any design work.
 
 The difference from a prompt library: every value here came off a real image, every
 component is drawn in every state, `design-pack verify` **fails** on token drift, and
-`design-pack check` **fails** on layout overlap, clipping, missing keyboard triggers,
-slow presses (`> 100 ms`), or low contrast.
+`design-pack check` **fails** when an interactive part errors or responds slowly
+(`> 100 ms`), or on layout overlap, clipping, sub-10 px text, or `< 3:1` contrast.
 
 ## Layout
 
@@ -52,16 +52,21 @@ design-pack sprite conductor              # the 16x10 map, for debugging
 
 | Zone | What goes in it | Cost |
 | :--- | :--- | :--- |
-| 1 references | real images of one style + `AVOID` comparisons, each with a note on what you like | minutes |
-| 2 style sheet | **8 sections** (Idea / Voice / Mark / Colour by proportion & contrast / Type / Layout / Imagery / Texture & Motion) + drawn `do, don't` pairs | one borrowed format, filled in |
-| 3 components | every piece in **every** state, then its motion | the real work |
+| 1 references | real images of one style + at least two full-fidelity candidates side by side (chosen vs `AVOID` with one concrete reason), each with a note on what you like | minutes |
+| 2 style sheet | named production constraint + explicit `NEVER` block + **8 sections** (Idea / Voice mapped to domain UI states / Mark / Colour by proportion & contrast / Type / Layout / Imagery / Texture & Motion) + drawn `do, don't` pairs | one borrowed format, filled in |
+| 3 components | closed inventory (`N` parts, `M` timings, `K` marks), every piece in **every** state, then its motion | the real work |
 | 4 blocks | full screens assembled from 3 | cheap once 3 exists |
 | 5 design pack | one page with proportions, contrast, type, states, `do/don't`, snippets | assembly |
 
 **Zone 2 is load-bearing.** Do not author a style sheet from nothing: find one you
-like, hand it over *as the format*, and fill it from the references. Specify colour
-**by proportion** (not just a flat hex list) and end sections in **drawn `do, don't`
-pairs**. Format transfers, content must be yours.
+like, hand it over *as the format*, and fill it from the references. Before filling
+the 8 sections, name the production constraint the look must obey (two-ink press,
+zero-pointer terminal, fixed DAW host window) and write an explicit `NEVER` block
+of patterns banned by that constraint (such as smooth gradients, black or white ink,
+soft shadows, or perfect register). Map real UI states in **Voice** to the domain's
+own vocabulary (for a print shop: loading -> "inking up", error -> "a misprint",
+done -> "dry"), specify colour **by proportion** (not just a flat hex list), and
+end sections in **drawn `do, don't` pairs**. Format transfers, content must be yours.
 
 ### A terminal has six primitives, not sixty components
 
@@ -95,10 +100,14 @@ measured against `profiles/vst3-controls.html`).
 
 ## Build a new look
 
-1. **Collect references.** One style only (plus rejected `AVOID` directions). Public domain, or your own work. Write down
-   what you actually like about each image — that note is the annotation.
-2. **Copy the closest look.** `cp -r looks/glitch-console looks/<name>`.
-3. **Sample the references, do not guess.** Pull real hexes out of the frames:
+1. **Collect references.** One style only. Public domain, or your own work. Write down
+   what you actually like about each image: that note is the annotation.
+2. **Compare candidates at full fidelity.** Render at least two candidate directions
+   on the same subject to the same level of finish (a sketch is not comparable). Put
+   them side by side, choose by looking, and tag each rejected sheet `AVOID` with
+   one concrete reason.
+3. **Copy the closest look.** `cp -r looks/glitch-console looks/<name>`.
+4. **Sample the references, do not guess.** Pull real hexes out of the frames:
    ```bash
    python3 - <<'PY'
    from PIL import Image; from collections import Counter
@@ -107,19 +116,27 @@ measured against `profiles/vst3-controls.html`).
        print("#%02x%02x%02x" % c, k)
    PY
    ```
-4. **Fill tokens.css, then pack.html.** Use the 8-section skeleton, specify ink proportions and measured contrast, draw every component state, and add `do / don't` pairs.
-5. **Gate it.** Run both `design-pack verify looks/<name>/pack.html` and `design-pack check looks/<name>/pack.html`, then run them on pages you generated with it. A pack that cannot fail is not a pack.
+5. **Fill tokens.css, then pack.html.** Name the production constraint and write its
+   explicit `NEVER` block first, then fill the 8-section skeleton: map real UI states
+   in Voice to domain vocabulary, specify ink proportions and measured contrast,
+   declare closed inventory counts (`N` parts, `M` timings, `K` marks), draw every
+   component state, and add `do / don't` pairs.
+6. **Gate it.** Run both `design-pack verify looks/<name>/pack.html` and `design-pack check looks/<name>/pack.html`, then run them on pages you generated with it. A pack that cannot fail is not a pack.
 
 ## Use the pack when writing UI
 
 - Read `pack.html` (or at least `tokens.css` + `README.md`) **before** designing.
+- Once a pack passes both gates, treat each new surface (brand guidelines, slide
+  deck, documents, social kit, merch, landing page) as one more prompt that reads
+  `pack.html` and inherits the locked tokens, voice, and motion rather than a fresh
+  design brief.
 - Use `var(--token)` for every colour, size and radius. Keep the ink proportion (`~78%` dark ink ground/body, `~12%` type/rules, `~5%` paper chrome, `~5%` semantic accents).
 - Take components from zone 3 rather than inventing a control. In a terminal look
   there are six primitives and no seventh — see the table above.
 - Motion is stepped: quantise to `floor(t / (1000/fps))`, never an eased property.
 - Run **both** gates on what you produced:
   - `design-pack verify <file>` (static conformance: undeclared colour, off-ladder font/size, radius, easing).
-  - `design-pack check <file>` (runtime behaviour across 7 viewports: overlap, clipping, keyboard reachability, ≤100 ms interaction response, ≥3:1 contrast — then wait for human sign-off).
+  - `design-pack check <file>` (runtime behaviour across 7 viewports: verifies declared interactive controls and `.keybar` triggers actually work within ≤100 ms with zero console/page errors, plus overlap, clipping, 10 px floor, and ≥3:1 contrast, then waits for human sign-off).
   Treat FAIL as a build error, not a suggestion.
 
 ## Sprite pipeline (this look)
@@ -232,6 +249,9 @@ tracks are a lossy summary and should not be trusted.
 ## What this skill does not do
 
 - It does not generate a page for you. It gives the model the corpus to do it well.
+  Once a pack passes both gates, each new surface (brand guidelines, slide deck,
+  documents, social kit, merch, landing page) is one more prompt inheriting the
+  locked tokens, voice, and motion rather than a fresh design brief.
 - It does not judge taste. It only proves the output stayed inside the declared system.
 - It does not ship webfonts. `--font-mono` resolves through `local()` to the installed
   Fantasque Nerd Font Mono, and degrades to a system mono elsewhere.
