@@ -58,12 +58,14 @@ Boxxy companions display status widgets. `omnicli status --json` emits structure
 omnicli status --json
 ```
 
+Counts below are a snapshot — read live values from `omnicli status --json`.
+
 ```json
 {
   "tailnet_ip": "100.83.178.106",
   "catalog": {
     "skills": 53,
-    "tools": 529,
+    "tools": 530,
     "freshness": "fresh",
     "tier": "bm25"
   },

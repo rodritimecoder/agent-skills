@@ -142,7 +142,7 @@ export default {
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "omnicli",
-        description: "Workstation tool catalogue: search, invoke, and run JavaScript Code Mode plans over 529 local tools.",
+        description: "Workstation tool catalogue: search, invoke, and run JavaScript Code Mode plans over the local catalog.",
       });
 
       editor.add(
