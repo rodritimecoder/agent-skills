@@ -48,6 +48,7 @@
     "orchestration/free-swarm",
     "orchestration/gh-action-subagent",
     "orchestration/github-architect",
+    "orchestration/isolate-run",
     "orchestration/omnicli",
     "orchestration/openrouter-free",
     "orchestration/subagent-spaces"
