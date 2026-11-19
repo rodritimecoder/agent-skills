@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -135,10 +136,11 @@ console.log(JSON.stringify(seen));
 
 
 class TestExec(unittest.TestCase):
-    def _exec(self, *argv: str, stdin: str | None = None) -> tuple[dict, subprocess.CompletedProcess]:
+    def _exec(self, *argv: str, stdin: str | None = None,
+              cwd: str | None = None) -> tuple[dict, subprocess.CompletedProcess]:
         proc = subprocess.run(
             [sys.executable, OMNICLI, "exec", *argv, "--json"],
-            input=stdin, capture_output=True, text=True, timeout=300,
+            input=stdin, capture_output=True, text=True, timeout=300, cwd=cwd,
         )
         try:
             report = json.loads(proc.stdout)
@@ -229,6 +231,48 @@ emitResult({ count: rows.length, nonEmpty: rows.every((r) => Array.isArray(r) &&
             self.assertEqual(proc.returncode, 0, report["stderr"])
             self.assertEqual(report["stdout"].strip(), "blocked")
             self.assertFalse(os.path.exists(outside))
+
+    @needs_sandbox
+    def test_exec_from_cwd_tmp_uses_private_guest_workspace(self):
+        # Regression: with cwd=/tmp and no --workspace, the workspace resolved
+        # to /tmp itself and the old `--bind /tmp /tmp` hid the staged
+        # /tmp/omnicli/node runtime, so sandboxed exec died before the plan ran.
+        # The fix binds the workspace at the private guest path /tmp/omnicli/work.
+        def roundtrip_plan(marker: str) -> str:
+            return (
+                'const fs = require("node:fs");\n'
+                f"const name = '.omnicli-tmpcwd-{marker}.txt';\n"
+                f"fs.writeFileSync(name, {marker!r});\n"
+                f"console.log('roundtrip', fs.readFileSync(name, 'utf8') === {marker!r});\n"
+            )
+
+        cwd_files = []
+        try:
+            for sandbox in ("write", "strict"):
+                marker = uuid.uuid4().hex
+                target = Path("/tmp") / f".omnicli-tmpcwd-{marker}.txt"
+                cwd_files.append(target)
+                report, proc = self._exec("-c", roundtrip_plan(marker),
+                                          "--sandbox", sandbox, cwd="/tmp")
+                self.assertEqual(proc.returncode, 0, report["stderr"])
+                self.assertEqual(report["sandbox"], sandbox)
+                self.assertTrue(report["sandboxed"])
+                self.assertIn("roundtrip true", report["stdout"])
+                self.assertTrue(target.is_file())
+                self.assertEqual(target.read_text(encoding="utf-8"), marker)
+        finally:
+            for target in cwd_files:
+                target.unlink(missing_ok=True)
+
+        # Positive control: an explicit --workspace uses the same mechanism.
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = uuid.uuid4().hex
+            report, proc = self._exec("-c", roundtrip_plan(marker), "--workspace", tmp)
+            self.assertEqual(proc.returncode, 0, report["stderr"])
+            self.assertIn("roundtrip true", report["stdout"])
+            target = Path(tmp) / f".omnicli-tmpcwd-{marker}.txt"
+            self.assertTrue(target.is_file())
+            self.assertEqual(target.read_text(encoding="utf-8"), marker)
 
     @needs_sandbox
     def test_strict_mode_masks_home_routes_through_the_bridge_and_denies_exec(self):

@@ -25,6 +25,10 @@ from catalog import invoke as invoke_mod
 
 JS_LANGS = {"js", "javascript", "mjs", "node"}
 PY_LANGS = {"py", "python"}
+# Private in-sandbox mount for the host workspace. Sandboxed modes never bind
+# the workspace at its host path (that collided with /tmp/omnicli and leaked
+# all of host /tmp into strict mode); the host bytes arrive via a bind here.
+GUEST_WORK = "/tmp/omnicli/work"
 DEPRECATION = """❌ Python plans are retired in favor of JavaScript Code Mode.
 
   Python : omnicli exec plan.py      ← no longer supported
@@ -132,6 +136,21 @@ def _prepare(script: str | None, inline_code: str | None,
     return work, Path(temp_plan.name).resolve(), True
 
 
+def _guest_path(path: Path, work: Path) -> str:
+    """Map a host path under `work` to its private guest mount, else leave it.
+
+    Sandboxed modes bind `work` at GUEST_WORK rather than at its host path, so
+    the plan file and the trace/result/state files must be addressed through
+    that mount inside the sandbox. Paths outside `work` are passed unchanged:
+    `--ro-bind / /` still exposes them read-only, as before.
+    """
+    try:
+        rel = path.resolve().relative_to(work)
+    except ValueError:
+        return str(path)
+    return str(Path(GUEST_WORK) / rel)
+
+
 def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
                sandbox: str, script_path: Path, mem_limit: int | None, timeout: float):
     """The bwrap argv plus the bridge and runtime its teardown owns."""
@@ -169,12 +188,14 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
                  "--setenv", "OMNICLI_BRIDGE", "/tmp/omnicli/bridge/bridge.sock",
                  "--setenv", "OMNICLI_BIN", "/tmp/omnicli/bin/omnicli"]
     heap = [f"--max-old-space-size={mem_limit}"] if mem_limit is not None else []
-    cmd = base + ["--bind", str(work), str(work), "--chdir", str(work),
-                  "--setenv", "HOME", str(work),
+    cmd = base + ["--dir", GUEST_WORK,
+                  "--bind", str(work), GUEST_WORK,
+                  "--chdir", GUEST_WORK,
+                  "--setenv", "HOME", GUEST_WORK,
                   "--setenv", "OMNICLI_BINDINGS_DIR", "/tmp/omnicli/bindings",
                   "/tmp/omnicli/node", "--experimental-vm-modules",
                   "--disable-warning=ExperimentalWarning", *heap,
-                  "/tmp/omnicli/vm_runner.mjs", str(script_path)]
+                  "/tmp/omnicli/vm_runner.mjs", _guest_path(script_path, work)]
     if mem_limit is not None:
         if not shutil.which("prlimit"):
             sys.exit("❌ Error: --mem-limit needs prlimit (util-linux) to set RLIMIT_AS")
@@ -264,6 +285,9 @@ def run(script: str | None = None, code: str | None = None,
     else:
         if not bwrap_works():
             sys.exit("❌ Error: bubblewrap is not available; pass --sandbox none to run unsandboxed.")
+        for key, path in (("OMNICLI_TRACE", trace), ("OMNICLI_RESULT", result_file),
+                          ("OMNICLI_STATE", state_file)):
+            env[key] = _guest_path(path, work)
         cmd, serving, runtime, bridge_server = _sandboxed(
             node_real, vm_runner, bindings_dir, work, sandbox, script_path,
             mem_limit, timeout)
