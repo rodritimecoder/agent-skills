@@ -123,7 +123,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **API:** `/v1/chat/completions`
 - **Owner:** `local-llm` · **Used by:** local-llm, omnicli
 - **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf` · `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf`
-- **Quirks:** 131072 context, nextn head, --spec-type draft-mtp (n-max 4), dual-GPU ROCm/HIP tensor split 50/50, -lm none.
+- **Quirks:** 131072 context, nextn head, --spec-type draft-mtp,ngram-simple (n-max 4, ngram m=31), dual-GPU ROCm/HIP tensor split 50/50, -lm none.
 - **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Clover-35B-A3B-Preview` (Q4_K_M, candidate) · `SenseNova-Loop-9B-abliterated` (Q4_K_M + DFlash drafter-2 Q4_K_M, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate) · `llama-router (multi-model multiplexer)` (n/a — presets live in hardware/model-layer/config/llama-router.ini, candidate)
 
 ### `:8081` audio — `local-audio-audiocpp`
