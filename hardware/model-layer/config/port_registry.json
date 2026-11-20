@@ -54,6 +54,14 @@
       "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-small.sh",
       "role": "Vector embeddings for RAG and semantic caching"
     },
+    "8086": {
+      "alias": "local-rerank-bge",
+      "vram_mb": 600,
+      "pinned": false,
+      "name": "bge-reranker-v2-m3",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/bge-reranker-v2-m3.sh",
+      "role": "Cross-encoder reranking for retrieval/search"
+    },
     "8091": {
       "alias": "local-llm-aux",
       "vram_mb": 2200,

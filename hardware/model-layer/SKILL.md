@@ -111,6 +111,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `decision-aux` | `:8089` | `local-decide-aux` | `imajev-decider.sh` | Imajev-4B (Q4_K_M + mmproj f16) | `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf`<br>`models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf` | jev-decision |
 | `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
 | `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
+| `rerank` | `:8086` | `local-rerank-bge` | `bge-reranker-v2-m3.sh` | bge-reranker-v2-m3 (Q4_K_M) | `models/sabafallah/bge-reranker-v2-m3-Q4_K_M-GGUF/bge-reranker-v2-m3-q4_k_m.gguf` | — |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
 | `raon` | `:8085` | `local-raon-nano` | `raon-nano-official-mtp.sh` | Raon-1 nano (official) (Q8_0_MTP) | `models/KRAFTON/Raon-1-nano-gguf/raon-1-nano-Q8_0_MTP.gguf` | — |
 
@@ -180,7 +181,19 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Owner:** `graph-memory` · **Used by:** graph-memory, semantic-cache
 - **Weights:** `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf`
 - **Quirks:** THE ONE SLOT WHERE DIMENSION MATTERS. Indexes must record which candidate built them; see rag.db meta table. DEFAULT.
-- **Candidates:** `bge-small-en-v1.5` (f16, current) · `embeddinggemma-2` (Q8_0 + mmproj Q8_0, alternate)
+- **Candidates:** `bge-small-en-v1.5` (f16, current) · `embeddinggemma-2` (Q8_0 + mmproj Q8_0, alternate) · `qwen3-embedding` (Q8_0, alternate) · `nemotron-embed` (Q4_K_M, alternate) · `bge-m3` (Q8_0, alternate)
+
+### `:8086` rerank — `local-rerank-bge`
+
+- **Role:** Cross-encoder reranking for retrieval/search
+- **Service:** llama-server (Vulkan)
+- **Start:** `bge-reranker-v2-m3.sh` (volume `sh/`; in-repo copy `launchers/bge-reranker-v2-m3.sh`)
+- **Health:** `curl -s http://127.0.0.1:8086/health`
+- **API:** `/v1/rerank`
+- **Owner:** `omnicli` · **Used by:** —
+- **Weights:** `models/sabafallah/bge-reranker-v2-m3-Q4_K_M-GGUF/bge-reranker-v2-m3-q4_k_m.gguf`
+- **Quirks:** All candidates except nemotron-rerank are native /v1/rerank. nemotron needs the Python scorer. ettin-reranker-32m excluded (GGUF missing bert.context_length). DEFAULT.
+- **Candidates:** `bge-reranker-v2-m3` (Q4_K_M, current) · `jina-reranker-v2-base-multilingual` (Q8_0, alternate) · `qwen3-reranker-0.6b` (Q8_0, alternate) · `nemotron-rerank-8b-embed` (Q4_K_M, alternate)
 
 ### `:8091` llm-aux — `local-llm-aux`
 
