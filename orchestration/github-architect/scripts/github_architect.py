@@ -8,6 +8,7 @@ scanning for secrets and large blobs, and managing fleet repositories via the Gi
 """
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -28,8 +29,6 @@ venv/
 env/
 ENV/
 .env/
-.agent-reach-venv/
-container-site-packages/
 
 # Package & Distribution
 build/
@@ -82,7 +81,6 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
-.homelab_litellm.env
 *.pem
 *.key
 *.p12
@@ -103,9 +101,6 @@ Thumbs.db
 *.swo
 *~
 .Trash-*
-
-# Sensitive Course Modules & Local Vaults
-university-notes/
 """
 
 DEFAULT_MIT_LICENSE = """MIT License
@@ -140,68 +135,9 @@ transferring, distribution, or reproduction of this repository or any part there
 via any medium, is strictly prohibited without prior written permission from the owner.
 """
 
-CORE_REPOSITORIES = [
-    {
-        "name": "my-agent-skills",
-        "target": "skills",
-        "description": "Canonical upstream repository of reusable agent skills & ICM workflows",
-    },
-    {
-        "name": "workstation-clis",
-        "target": "workstation-clis",
-        "description": "Curated workstation engineering, sandbox, and local inference CLIs",
-    },
-    {
-        "name": "academic-agent-skills",
-        "target": "academic-agent-skills",
-        "description": "Academic ICM, Canvas LMS, and Cornell active-recall tools",
-    },
-    {
-        "name": "glitch-cat-skills",
-        "target": "glitch-cat-skills",
-        "description": "Autonomous production agent harness implementing Kem's Glitch Cat Club architecture",
-    },
-    {
-        "name": "free-frontier-skills",
-        "target": "free-frontier-skills",
-        "description": "Autonomous subagent coding loops, bash batching, and embeddings on free frontier endpoints",
-    },
-    {
-        "name": "agent-multiplayer-template",
-        "target": "agent-multiplayer-template",
-        "description": "Multiplayer cloud workspace & homelab GPU template",
-    },
-    {
-        "name": "university",
-        "target": "University",
-        "description": "University course materials, notes, and Knowledge Cosmos",
-    },
-]
-
-SECRET_PATTERNS = [
-    (re.compile(r"ghp_[A-Za-z0-9_]{36}"), "GitHub Personal Access Token"),
-    (re.compile(r"github_pat_[A-Za-z0-9_]{82}"), "GitHub Fine-Grained Token"),
-    (re.compile(r"sk-[a-zA-Z0-9-]{20,}"), "OpenAI / LiteLLM Secret Key"),
-    (re.compile(r"AIza[0-9A-Za-z\-_]{35}"), "Google API Key"),
-    (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), "Private Key Block"),
-]
-
 MAX_BLOB_SIZE_MB = 50.0
 
-# Where this machine keeps the AI volume. It is a genuine default, not a
-# portability bug: override it with AI_ROOT on a machine that mounts elsewhere.
-AI_ROOT = Path(os.environ.get("AI_ROOT", "/run/media/rodri/AI"))
-
-# The skills hub is checked out once per machine at this path on every OS; the
-# AI volume only exists on the Linux box, so the hub must not live inside it.
-SKILLS_CHECKOUT = Path(os.environ.get("SKILLS_CANONICAL", Path.home() / "src" / "my-agent-skills"))
-
-FLEET_SEARCH_PATHS = [
-    SKILLS_CHECKOUT.parent,
-    AI_ROOT,
-    Path.home() / "workspace",
-    Path.home(),
-]
+DEFAULT_FLEET_CONFIG = Path.home() / ".config" / "github-architect" / "fleet.json"
 
 
 def run_cmd(cmd, cwd=None, check=True):
@@ -211,14 +147,106 @@ def run_cmd(cmd, cwd=None, check=True):
     return res
 
 
+def _load_publication_guard():
+    """Return publication_guard.scan_file, via import or sibling-file fallback."""
+    try:
+        from publication_guard import scan_file
+        return scan_file
+    except ImportError:
+        import importlib.util
+        script_path = Path(__file__).resolve().parent / "publication_guard.py"
+        spec = importlib.util.spec_from_file_location("publication_guard", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.scan_file
+
+
+def _load_git_sync():
+    """Load the sibling git_sync.py whether invoked via symlink or direct import."""
+    try:
+        import git_sync
+        return git_sync
+    except ImportError:
+        import importlib.util
+        script_path = Path(__file__).resolve().parent / "git_sync.py"
+        spec = importlib.util.spec_from_file_location("git_sync", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+
+def _decode_git_path(raw: str) -> str:
+    """Decode a git-quoted (core.quotepath) path from --porcelain output."""
+    body = raw[1:-1]
+    escapes = {"a": 7, "b": 8, "f": 12, "n": 10, "r": 13, "t": 9, "v": 11, "\\": 92, '"': 34}
+    out = bytearray()
+    i = 0
+    while i < len(body):
+        char = body[i]
+        if char != "\\":
+            out.extend(char.encode("utf-8"))
+            i += 1
+            continue
+        i += 1
+        if i >= len(body):
+            break
+        char = body[i]
+        if char in "01234567":
+            digits = ""
+            while i < len(body) and len(digits) < 3 and body[i] in "01234567":
+                digits += body[i]
+                i += 1
+            out.append(int(digits, 8))
+            continue
+        out.append(escapes.get(char, ord(char)))
+        i += 1
+    return out.decode("utf-8", errors="replace")
+
+
+def scan_repo_worktree(repo_path: Path) -> Tuple[List[str], List[str]]:
+    """Scan every dirty/untracked file in a worktree with publication_guard.
+
+    Returns ``(secret_hits, blob_hits)``; each entry is ``"rel — detail"``.
+    """
+    scan_file = _load_publication_guard()
+    res = run_cmd(
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=repo_path, check=False,
+    )
+    secret_hits: List[str] = []
+    blob_hits: List[str] = []
+
+    for line in res.stdout.splitlines():
+        if not line.strip():
+            continue
+        rel = line[3:].strip()
+        if " -> " in rel:
+            rel = rel.split(" -> ")[-1].strip()
+        if len(rel) >= 2 and rel.startswith('"') and rel.endswith('"'):
+            rel = _decode_git_path(rel)
+        if not rel:
+            continue
+
+        file_path = repo_path / rel
+        if not file_path.is_file():
+            continue
+        for finding in scan_file(file_path, repo_path.name):
+            entry = f"{rel} — {finding.get('detail', '')}"
+            kind = finding.get("kind")
+            if kind == "oversized-blob":
+                blob_hits.append(entry)
+            elif kind in ("secret-filename", "secret-content"):
+                secret_hits.append(entry)
+
+    return secret_hits, blob_hits
+
+
 def compose_commit_message(target: Path, message: Optional[str] = None) -> str:
     """The same commit shape git-sync emits: subject, prose, file manifest.
 
-    No fallback: a silent `except` here is how a commit lost its description
-    before. If git_sync cannot be imported the caller must see it.
+    If git_sync cannot be loaded the caller must see it.
     """
-    from git_sync import compose_message
-    return compose_message(str(target), message)
+    return _load_git_sync().compose_message(str(target), message)
 
 
 def check_gh_status() -> Tuple[bool, str]:
@@ -246,44 +274,10 @@ def ensure_git_identity() -> Tuple[str, str]:
                 run_cmd(f'git config --global user.email "{email}"', check=False)
                 print(f"  🔧 Auto-configured git user.email: {email}")
         else:
-            name = name or "rodritimecoder"
-            email = email or "rodritimecoder@users.noreply.github.com"
+            name = name or "Author"
+            email = email or "author@users.noreply.github.com"
 
     return name, email
-
-
-def check_secrets_and_blobs(repo_path: Path, staged_only: bool = True) -> Tuple[List[str], List[str]]:
-    secret_hits: List[str] = []
-    blob_hits: List[str] = []
-
-    diff_files_cmd = ["git", "diff", "--name-only", "--cached"] if staged_only else ["git", "status", "--porcelain"]
-    res = run_cmd(diff_files_cmd, cwd=repo_path, check=False)
-    lines = res.stdout.strip().splitlines()
-
-    for line in lines:
-        fname = line.strip().split()[-1] if not staged_only else line.strip()
-        p = repo_path / fname
-        if p.is_file():
-            try:
-                size_mb = p.stat().st_size / (1024 * 1024)
-                if size_mb > MAX_BLOB_SIZE_MB:
-                    blob_hits.append(f"{p.relative_to(repo_path)} ({size_mb:.1f} MB > {MAX_BLOB_SIZE_MB} MB limit)")
-            except Exception:
-                pass
-
-    diff_text_cmd = ["git", "diff", "--cached"] if staged_only else ["git", "diff"]
-    diff_res = run_cmd(diff_text_cmd, cwd=repo_path, check=False)
-    for line in diff_res.stdout.splitlines():
-        if line.startswith("+") and not line.startswith("+++"):
-            added = line[1:]
-            for pattern, label in SECRET_PATTERNS:
-                m = pattern.search(added)
-                if m:
-                    token = m.group(0)
-                    masked = token[:6] + "..." + token[-4:] if len(token) > 12 else "***"
-                    secret_hits.append(f"{label}: {masked}")
-
-    return secret_hits, blob_hits
 
 
 def parse_skills_metadata(skills_dir: Path):
@@ -308,79 +302,30 @@ def parse_skills_metadata(skills_dir: Path):
 
 
 def generate_skills_readme(target_path: Path, repo_name: str, author: str) -> str:
+    """Generate a portable skills catalog for a repository without a README.
+
+    No machine-specific paths, harness diagrams, or retired sync commands.
+    """
     skills = parse_skills_metadata(target_path)
+    lines = [f"# {repo_name}", ""]
 
-    rows = []
-    for s in skills:
-        clean_desc = s["description"].split(".")[0] if "." in s["description"] else s["description"]
-        clean_desc = clean_desc.replace("|", "\\|")[:90]
-        rows.append(f"| [`{s['dir']}`]({s['dir']}/) | `{s['name']}` | {clean_desc} |")
+    if skills:
+        lines += [
+            f"This repository contains {len(skills)} agent skill(s).",
+            "",
+            "## Skills",
+            "",
+            "| Skill | Description |",
+            "| :--- | :--- |",
+        ]
+        for skill in skills:
+            desc = skill["description"].replace("|", "\\|").replace("\n", " ").strip()
+            lines.append(f"| [`{skill['dir']}`]({skill['dir']}/) | {desc} |")
+    else:
+        lines.append("Add skills as subdirectories, each containing a `SKILL.md` file.")
 
-    skills_table = "\n".join(rows)
-
-    return f"""# {repo_name}
-
-[![Private Repository](https://img.shields.io/badge/Repository-Private-red.svg)](https://github.com/{author}/{repo_name})
-[![Skills Count](https://img.shields.io/badge/Skills-{len(skills)}-blue.svg)](#skills-catalog)
-[![Upstream Canonical](https://img.shields.io/badge/Source-Upstream%20Canonical-success.svg)](#architecture)
-
-> **Canonical upstream repository** of reusable AI agent skills, CLI automation tools, and ICM (Interpretable Context Methodology) workspaces on this machine.
-
----
-
-## 🏛️ Architecture & Upstream-First Synchronization
-
-This repository serves as the **single source of truth** across all local agent harnesses (`~/.gemini/config/skills` and `~/.pi/agent/skills`).
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│       Canonical Upstream Repository (This Repo)             │
-│                /run/media/rodri/AI/skills                   │
-└──────────────────────────────┬──────────────────────────────┘
-                               │  sync-skills
-                               ▼
-        ┌──────────────────────────────────────────────┐
-        │                                              │
-        ▼                                              ▼
-┌──────────────────────────────┐       ┌──────────────────────────────┐
-│  Antigravity / Gemini CLI   │       │       Pi Agent CLI           │
-│   ~/.gemini/config/skills/   │       │     ~/.pi/agent/skills/      │
-└──────────────────────────────┘       └──────────────────────────────┘
-```
-
-Whenever updating, refactoring, or creating any skill:
-1. Make file edits directly in this repository first.
-2. Run `sync-skills` in the terminal to immediately propagate downstream without ephemeral `.venv` or cache bloat.
-
----
-
-## 📦 Skills Catalog ({len(skills)} Skills)
-
-| Skill Directory | Identifier | Core Capabilities |
-| :--- | :--- | :--- |
-{skills_table}
-
----
-
-## 🚀 Quickstart & Usage
-
-### 1. Synchronize to Local Agent Harnesses
-To push updates from this repository to your active Antigravity and Pi harnesses:
-```bash
-sync-skills
-```
-
-### 2. Pull Downstream Edits (Parity Restore)
-If a skill was modified downstream, pull changes back upstream with:
-```bash
-sync-skills --pull
-```
-
----
-
-## 🔒 License & Confidentiality
-Private repository owned by {author}. Contains customized pipelines, academic integrations, and local inference tooling.
-"""
+    lines += ["", "## License", "", f"Maintained by {author}. See [LICENSE](LICENSE) for terms.", ""]
+    return "\n".join(lines)
 
 
 def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False,
@@ -402,7 +347,6 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False,
     dirty = False
     branch_tracking = ""
     remote_origin = ""
-    findings: List[dict] = []
     commit_block: Optional[dict] = None
 
     if has_git:
@@ -411,73 +355,20 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False,
         dirty = bool(run_cmd("git status --porcelain", cwd=target, check=False).stdout.strip())
         status_sb = run_cmd("git status -sb", cwd=target, check=False).stdout.strip().splitlines()
         branch_tracking = status_sb[0] if status_sb else ""
-        sec_hits, blob_hits = check_secrets_and_blobs(target, staged_only=False)
+        sec_hits, blob_hits = scan_repo_worktree(target)
 
         if check_commits:
-            from git_sync import read_commit_records, audit_commit_messages
-
-            records = read_commit_records(str(target), limit=limit)
-            findings = audit_commit_messages(records)
-
-            findings_by_sha: Dict[str, List[dict]] = {}
-            for finding in findings:
-                findings_by_sha.setdefault(finding.get("sha"), []).append(finding)
-
-            commit_rows = []
-            for record in records:
-                sha = record.get("sha", "")
-                own_findings = findings_by_sha.get(sha, [])
-                body = record.get("body") or ""
-                paragraphs = [p for p in re.split(r"\n\s*\n", body.strip()) if p.strip()]
-                commit_rows.append({
-                    "sha": sha,
-                    "title": record.get("subject", ""),
-                    "kind": "generated-manifest" if any(
-                        f.get("rule") == "generated-manifest" for f in own_findings
-                    ) else "author-written",
-                    "body_chars": len(body),
-                    "paragraphs": len(paragraphs),
-                    "diff": {
-                        "files": record.get("files", 0),
-                        "added": record.get("added", 0),
-                        "removed": record.get("removed", 0),
-                    },
-                    "findings": [{k: v for k, v in f.items() if k != "sha"} for f in own_findings],
-                })
-
-            counts = {"block": 0, "warning": 0}
-            for finding in findings:
-                severity = finding.get("severity")
-                if severity in counts:
-                    counts[severity] += 1
-
+            git_sync = _load_git_sync()
+            records = git_sync.read_commit_records(str(target), limit=limit)
             if "..." in branch_tracking:
                 upstream_part = branch_tracking.split("...", 1)[1].split()
-                upstream = upstream_part[0] if upstream_part else ""
-                range_label = f"{upstream}..HEAD" if upstream else "HEAD --not --remotes"
+                upstream = upstream_part[0] if upstream_part else None
             else:
-                range_label = "HEAD --not --remotes"
-
-            commit_block = {
-                "repo": str(target.resolve()),
-                "range": range_label,
-                "limit": limit,
-                "strict": strict,
-                "checked": len(records),
-                "skipped": {"merge": sum(1 for r in records if r.get("is_merge"))},
-                "passed": counts["block"] == 0,
-                "counts": counts,
-                "thresholds": {
-                    "wrap_width": 80,
-                    "max_title": 120,
-                    "tiny_diff_lines": 3,
-                    "tiny_diff_files": 1,
-                    "tiny_body_chars": 600,
-                    "large_diff_lines": 100,
-                    "large_body_chars": 80,
-                },
-                "commits": commit_rows,
-            }
+                upstream = None
+            commit_block = git_sync.audit_report(
+                records, repo=str(target), upstream=upstream,
+                limit=limit, strict=strict,
+            )
 
     checks = [
         {"item": "Git Initialized", "status": "Yes" if has_git else "Missing"},
@@ -500,7 +391,7 @@ def cmd_audit(target: Path, as_table: bool = False, as_json: bool = False,
         status = ", ".join(parts) + " finding(s)" if parts else "Clean"
         checks.append({"item": "Commit Messages", "status": status})
 
-    gate_pass = not findings if (check_commits and strict) else True
+    gate_pass = bool(commit_block and commit_block["passed"]) if (check_commits and strict) else True
 
     if as_json:
         payload = {
@@ -572,7 +463,7 @@ def cmd_scaffold(target: Path, repo_name: str, private: bool = True, license_typ
 
     lic_path = target / "LICENSE"
     author, _ = ensure_git_identity()
-    year = "2026"
+    year = str(datetime.date.today().year)
     if not lic_path.exists():
         if license_type.lower() == "mit":
             lic_content = DEFAULT_MIT_LICENSE.format(year=year, author=author)
@@ -584,18 +475,23 @@ def cmd_scaffold(target: Path, repo_name: str, private: bool = True, license_typ
         print(f"  ℹ️  LICENSE already exists (preserved)")
 
     readme_path = target / "README.md"
-    is_skills_repo = any((target / s / "SKILL.md").is_file() for s in target.iterdir() if s.is_dir())
-
-    if is_skills_repo:
-        readme_content = generate_skills_readme(target, repo_name, author)
-        readme_path.write_text(readme_content, encoding="utf-8")
-        print(f"  ✅ Generated enriched skills README.md with architecture flowchart & catalog table")
-    elif not readme_path.exists():
-        basic_readme = f"# {repo_name}\n\nPrivate repository managed by {author}.\n"
-        readme_path.write_text(basic_readme, encoding="utf-8")
-        print(f"  ✅ Generated base README.md")
-    else:
+    if readme_path.exists():
         print(f"  ℹ️  README.md already exists (preserved)")
+    else:
+        is_skills_repo = any(
+            (target / item / "SKILL.md").is_file()
+            for item in target.iterdir() if item.is_dir()
+        )
+        if is_skills_repo:
+            readme_path.write_text(
+                generate_skills_readme(target, repo_name, author), encoding="utf-8"
+            )
+            print(f"  ✅ Generated portable skills catalog README.md")
+        else:
+            readme_path.write_text(
+                f"# {repo_name}\n\nRepository managed by {author}.\n", encoding="utf-8"
+            )
+            print(f"  ✅ Generated base README.md")
 
 
 def cmd_publish(target: Path, repo_name: str, private: bool = True, license_type: str = "private", is_template: bool = False, force: bool = False):
@@ -613,24 +509,37 @@ def cmd_publish(target: Path, repo_name: str, private: bool = True, license_type
         run_cmd(["git", "init", "-b", "main"], cwd=target)
         print("  ✅ Initialized local Git repository (branch: main)")
 
-    sec_hits, blob_hits = check_secrets_and_blobs(target, staged_only=False)
-    if (sec_hits or blob_hits) and not force:
-        print("\n❌ Publishing ABORTED due to Grounded Security Guard:")
-        for s in sec_hits:
-            print(f"  ⚠️  Detected Secret: {s}")
-        for b in blob_hits:
-            print(f"  ⚠️  Detected Oversized Blob: {b}")
-        print("\n💡 Pass '--force' if you explicitly intend to publish these files.")
-        return False
+    git_sync = _load_git_sync()
+    init_msg = (
+        f"feat({repo_name}): initial repository setup\n\n"
+        "Initialize repository scaffold, ignore rules, license, and initial project files."
+    )
 
-    run_cmd(["git", "add", "."], cwd=target)
-    status = run_cmd(["git", "status", "--porcelain"], cwd=target).stdout.strip()
-    if status:
-        commit_msg = compose_commit_message(target, "feat: initial commit with github-architect scaffold")
-        run_cmd(["git", "commit", "-m", commit_msg], cwd=target)
-        print("  ✅ Committed all staged files")
+    if not force:
+        result = git_sync.guarded_commit(str(target), init_msg)
+        if result["blocked"]:
+            print("\n❌ Publishing ABORTED: publication guard blocked the following file(s):")
+            for rel, reason in result["blocked"]:
+                print(f"  ⚠️  {rel} — {reason}")
+            print("Nothing was staged or committed. Fix the findings or pass --force.")
+            return False
     else:
-        print("  ℹ️  No changes to commit (working tree clean)")
+        sec_hits, blob_hits = scan_repo_worktree(target)
+        if sec_hits or blob_hits:
+            print("\n⚠️  --force: publication guard findings (publishing anyway):")
+            for hit in sec_hits:
+                print(f"  ⚠️  Secret: {hit}")
+            for hit in blob_hits:
+                print(f"  ⚠️  Oversized blob: {hit}")
+        run_cmd(["git", "add", "."], cwd=target)
+        status = run_cmd(
+            ["git", "status", "--porcelain"], cwd=target, check=False
+        ).stdout.strip()
+        if status:
+            run_cmd(["git", "commit", "-m", init_msg], cwd=target)
+            print("  ✅ Committed all staged files")
+        else:
+            print("  ℹ️  No changes to commit (working tree clean)")
 
     remotes = run_cmd(["git", "remote"], cwd=target, check=False).stdout.strip().splitlines()
     visibility_flag = "--private" if private else "--public"
@@ -638,13 +547,29 @@ def cmd_publish(target: Path, repo_name: str, private: bool = True, license_type
     if "origin" not in remotes:
         print(f"  🌐 Creating remote repository '{repo_name}' on GitHub ({visibility_flag})...")
         gh_cmd = ["gh", "repo", "create", repo_name, visibility_flag, "--source=.", "--remote=origin", "--push"]
-        res = run_cmd(gh_cmd, cwd=target)
+        res = run_cmd(gh_cmd, cwd=target, check=False)
+        if res.returncode != 0:
+            print(f"  ❌ Failed to create remote repository: {res.stderr.strip()}")
+            return False
         print(f"  ✅ Successfully published to GitHub: {res.stdout.strip()}")
     else:
-        print(f"  📤 Remote 'origin' already exists. Pulling latest and pushing to origin...")
-        run_cmd(["git", "pull", "--rebase", "origin", "main"], cwd=target, check=False)
-        run_cmd(["git", "push", "-u", "origin", "main"], cwd=target)
-        print("  ✅ Pushed changes to existing remote origin")
+        branch = run_cmd(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=target, check=False
+        ).stdout.strip() or "main"
+        print(f"  📤 Remote 'origin' exists. Pulling and pushing to origin/{branch}...")
+        pull_res = run_cmd(
+            ["git", "pull", "--no-rebase", "origin", branch], cwd=target, check=False
+        )
+        if pull_res.returncode != 0:
+            print(f"  ❌ Pull failed:\n{pull_res.stderr.strip()}")
+            return False
+        push_res = run_cmd(
+            ["git", "push", "-u", "origin", branch], cwd=target, check=False
+        )
+        if push_res.returncode != 0:
+            print(f"  ❌ Push failed:\n{push_res.stderr.strip()}")
+            return False
+        print(f"  ✅ Pushed changes to existing remote origin")
 
     owner_repo = run_cmd(["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], cwd=target, check=False).stdout.strip()
     repo_url = run_cmd(["gh", "repo", "view", "--json", "url", "--jq", ".url"], cwd=target, check=False).stdout.strip()
@@ -675,35 +600,39 @@ def cmd_sync(target: Path, message: Optional[str] = None, force: bool = False) -
 
     branch = run_cmd(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=target, check=False).stdout.strip() or "main"
 
-    sec_hits, blob_hits = check_secrets_and_blobs(target, staged_only=False)
-    if (sec_hits or blob_hits) and not force:
-        print("\n❌ Sync ABORTED due to Grounded Security Guard:")
-        for s in sec_hits:
-            print(f"  ⚠️  Detected Secret: {s}")
-        for b in blob_hits:
-            print(f"  ⚠️  Detected Oversized Blob: {b}")
-        print("\n💡 Pass '--force' if you explicitly intend to sync these files.")
-        return False
+    git_sync = _load_git_sync()
 
-    status = run_cmd(["git", "status", "--porcelain"], cwd=target, check=False).stdout.strip()
-    if status:
-        print("  📝 Local changes detected. Staging and committing...")
-        run_cmd(["git", "add", "."], cwd=target)
-        commit_msg = compose_commit_message(target, message)
-        run_cmd(["git", "commit", "-m", commit_msg], cwd=target)
-        print(f"  ✅ Committed local changes: '{commit_msg.splitlines()[0]}'")
+    if not force:
+        result = git_sync.guarded_commit(str(target), message)
+        if result["blocked"]:
+            print("\n❌ Sync ABORTED: publication guard blocked the following file(s):")
+            for rel, reason in result["blocked"]:
+                print(f"  ⚠️  {rel} — {reason}")
+            print("Nothing was staged or committed. Fix the findings or pass --force.")
+            return False
     else:
-        print("  ℹ️  Working tree clean (no new local changes to commit).")
+        status = run_cmd(
+            ["git", "status", "--porcelain"], cwd=target, check=False
+        ).stdout.strip()
+        if status:
+            print("  📝 Local changes detected. Staging and committing...")
+            run_cmd(["git", "add", "."], cwd=target)
+            commit_msg = compose_commit_message(target, message)
+            run_cmd(["git", "commit", "-m", commit_msg], cwd=target)
+            print(f"  ✅ Committed local changes: '{commit_msg.splitlines()[0]}'")
+        else:
+            print("  ℹ️  Working tree clean (no new local changes to commit).")
 
-    print(f"  📥 Pulling remote changes from origin/{branch} (rebase)...")
-    pull_res = run_cmd(["git", "pull", "--rebase", "origin", branch], cwd=target, check=False)
+    print(f"  📥 Pulling remote changes from origin/{branch}...")
+    pull_res = run_cmd(
+        ["git", "pull", "--no-rebase", "origin", branch], cwd=target, check=False
+    )
     if pull_res.returncode != 0:
-        print(f"  ⚠️ Warning: Pull rebase had warnings/conflicts:\n{pull_res.stderr.strip()}")
-    else:
-        print(f"  ✅ Branch origin/{branch} rebased cleanly.")
+        print(f"  ❌ Pull failed:\n{pull_res.stderr.strip()}")
+        return False
+    print(f"  ✅ Branch origin/{branch} pulled cleanly.")
 
-    from git_sync import commits_without_body
-    missing = commits_without_body(f"origin/{branch}", repo=str(target))
+    missing = git_sync.commits_without_body(f"origin/{branch}", repo=str(target))
     if missing:
         listing = "\n".join(f"     {sha} {subject}" for sha, subject in missing)
         print(f"  ❌ Refusing to push {len(missing)} commit(s) with no description:")
@@ -719,41 +648,66 @@ def cmd_sync(target: Path, message: Optional[str] = None, force: bool = False) -
         print(f"  ❌ Push failed:\n{push_res.stderr.strip()}")
         return False
 
-    # Propagate skills if applicable
-    if (target / "sync_skills.sh").is_file() or (target / "scripts" / "sync_skills.sh").is_file():
-        sync_sh = target / "sync_skills.sh" if (target / "sync_skills.sh").is_file() else target / "scripts" / "sync_skills.sh"
-        print("  🔄 Propagating skills to downstream CLI harnesses...")
-        run_cmd(["bash", str(sync_sh)], cwd=target, check=False)
-
     return True
 
 
-def discover_fleet_repos() -> List[Dict[str, Any]]:
-    fleet = []
+def load_fleet_config(config_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Load fleet entries from an explicit path, the env var, or the default."""
+    path = config_path or os.environ.get("GITHUB_ARCHITECT_FLEET") or DEFAULT_FLEET_CONFIG
+    path = Path(path).expanduser()
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"⚠️  Could not read fleet config {path}: {exc}", file=sys.stderr)
+        return []
+
+    entries = data.get("repos", []) if isinstance(data, dict) else data
+    if not isinstance(entries, list):
+        return []
+
+    result: List[Dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not name:
+            continue
+        raw_path = item.get("path")
+        entry: Dict[str, Any] = {
+            "name": name,
+            "path": Path(raw_path).expanduser() if raw_path else None,
+        }
+        if item.get("slug"):
+            entry["slug"] = item["slug"]
+        if item.get("description"):
+            entry["description"] = item["description"]
+        result.append(entry)
+    return result
+
+
+def discover_fleet_repos(config_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Return configured fleet entries that are actual git checkouts."""
+    fleet: List[Dict[str, Any]] = []
     seen_paths = set()
 
-    for repo_def in CORE_REPOSITORIES:
-        target_name = repo_def["target"]
-        repo_name = repo_def["name"]
-        found_path = None
-
-        for base in FLEET_SEARCH_PATHS:
-            cand = base / target_name
-            if (cand / ".git").is_dir():
-                found_path = cand
-                break
-            cand_alt = base / repo_name
-            if (cand_alt / ".git").is_dir():
-                found_path = cand_alt
-                break
-
-        if found_path and found_path.resolve() not in seen_paths:
-            seen_paths.add(found_path.resolve())
-            fleet.append({
-                "name": repo_name,
-                "path": found_path.resolve(),
-                "description": repo_def["description"]
-            })
+    for entry in load_fleet_config(config_path):
+        repo_path = entry.get("path")
+        if not repo_path:
+            continue
+        repo_path = Path(repo_path)
+        if not (repo_path / ".git").is_dir():
+            continue
+        resolved = repo_path.resolve()
+        if resolved in seen_paths:
+            continue
+        seen_paths.add(resolved)
+        fleet.append({
+            "name": entry["name"],
+            "path": resolved,
+            "description": entry.get("description", ""),
+        })
 
     return fleet
 
@@ -819,13 +773,14 @@ def get_fleet_status_records(fleet: list[dict]) -> list[dict]:
     return records
 
 
-def cmd_status_all(as_table: bool = False, as_json: bool = False, project_keys: list[str] | None = None, limit: int = 0) -> None:
-    fleet = discover_fleet_repos()
+def cmd_status_all(as_table: bool = False, as_json: bool = False, project_keys: list[str] | None = None, limit: int = 0, config_path: Optional[Path] = None) -> None:
+    fleet = discover_fleet_repos(config_path)
     if not fleet:
         if as_json:
             print("[]")
         else:
             print("❌ No workstation fleet repositories found.")
+            print(f"   Configure {DEFAULT_FLEET_CONFIG} or pass --config <file>.")
         return
 
     records = get_fleet_status_records(fleet)
@@ -868,11 +823,12 @@ def cmd_status_all(as_table: bool = False, as_json: bool = False, project_keys: 
     print()
 
 
-def cmd_sync_all(message: Optional[str] = None, force: bool = False) -> None:
-    fleet = discover_fleet_repos()
+def cmd_sync_all(message: Optional[str] = None, force: bool = False, config_path: Optional[Path] = None) -> bool:
+    fleet = discover_fleet_repos(config_path)
     if not fleet:
         print("❌ No workstation fleet repositories found.")
-        return
+        print(f"   Configure {DEFAULT_FLEET_CONFIG} or pass --config <file>.")
+        return False
 
     print(f"\n🚀 [Fleet Sync] Synchronizing all {len(fleet)} workstation repositories...\n")
     success_count = 0
@@ -885,6 +841,7 @@ def cmd_sync_all(message: Optional[str] = None, force: bool = False) -> None:
 
     print(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print(f"🎉 Fleet Sync Complete: {success_count}/{len(fleet)} repositories synchronized cleanly.")
+    return success_count == len(fleet)
 
 
 def cmd_clone(repo: str, dest: Optional[Path] = None):
@@ -907,10 +864,19 @@ def cmd_clone(repo: str, dest: Optional[Path] = None):
         return False
 
 
-def cmd_bootstrap(dest_dir: Optional[Path] = None):
-    if dest_dir is None:
-        dest_dir = AI_ROOT if AI_ROOT.is_dir() else (Path.home() / "workspace")
+def cmd_bootstrap(dest_dir: Optional[Path] = None, config_path: Optional[Path] = None) -> bool:
+    entries = load_fleet_config(config_path)
+    if not entries:
+        print("❌ No fleet configuration found; nothing to bootstrap.")
+        print(f"Create {DEFAULT_FLEET_CONFIG} with a JSON object like:")
+        print(json.dumps({
+            "repos": [{"name": "skills", "path": "~/src/my-agent-skills", "slug": "owner/skills"}]
+        }, indent=2))
+        print("Or pass --config <file> (or set GITHUB_ARCHITECT_FLEET).")
+        return False
 
+    if dest_dir is None:
+        dest_dir = Path.home() / "workspace"
     print(f"\n🚀 [Bootstrap] Setting up agent environment in: {dest_dir.resolve()}")
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -919,97 +885,50 @@ def cmd_bootstrap(dest_dir: Optional[Path] = None):
         print("❌ Error: GitHub CLI ('gh') is not authenticated. Run: gh auth login")
         return False
     print(f"  ✅ Authenticated as GitHub user: @{user}")
-
     ensure_git_identity()
 
-    for repo in CORE_REPOSITORIES:
-        repo_name = repo["name"]
-        target_path = SKILLS_CHECKOUT if repo_name == "my-agent-skills" else dest_dir / repo["target"]
-        repo_slug = f"{user}/{repo_name}"
+    all_ok = True
+    for entry in entries:
+        name = entry["name"]
+        configured_path = entry.get("path")
+        target_path = Path(configured_path) if configured_path else dest_dir / name
+        target_path = target_path.expanduser()
+        repo_slug = entry.get("slug") or f"{user}/{name}"
 
         if (target_path / ".git").is_dir():
-            print(f"\n📦 Repository already exists at {target_path}. Synchronizing...")
-            cmd_sync(target_path)
+            print(f"\n📦 Repository exists at {target_path}. Synchronizing...")
+            if not cmd_sync(target_path):
+                all_ok = False
         else:
             print(f"\n📦 Cloning {repo_slug} -> {target_path}...")
-            clone_cmd = ["gh", "repo", "clone", repo_slug, str(target_path)]
-            res = run_cmd(clone_cmd, check=False)
+            res = run_cmd(
+                ["gh", "repo", "clone", repo_slug, str(target_path)], check=False
+            )
             if res.returncode == 0:
                 print(f"  ✅ Successfully cloned {repo_slug}")
             else:
                 print(f"  ⚠️ Could not clone {repo_slug}: {res.stderr.strip()}")
+                all_ok = False
 
     local_bin = Path.home() / ".local" / "bin"
     local_bin.mkdir(parents=True, exist_ok=True)
+    script = Path(__file__).resolve()
+    for source, link_name in (
+        (script, "github-architect"),
+        (script.parent / "git_sync.py", "git-sync"),
+    ):
+        link = local_bin / link_name
+        if link.is_symlink() or link.is_file():
+            link.unlink()
+        link.symlink_to(source)
+        try:
+            source.chmod(0o755)
+        except OSError:
+            pass
+        print(f"  ✅ Linked {link_name} -> {link}")
 
-    skills_dir = SKILLS_CHECKOUT
-    if not (skills_dir / "sync_skills.sh").is_file():
-        skills_dir = dest_dir / "skills"
-        if not skills_dir.exists():
-            skills_dir = dest_dir / "my-agent-skills"
-
-    if skills_dir.is_dir():
-        sync_script = skills_dir / "sync_skills.sh"
-        if sync_script.is_file():
-            sync_symlink = local_bin / "sync-skills"
-            if sync_symlink.is_symlink() or sync_symlink.is_file():
-                sync_symlink.unlink()
-            sync_symlink.symlink_to(sync_script)
-            sync_script.chmod(0o755)
-            print(f"  ✅ Linked sync-skills -> {sync_symlink}")
-
-        arch_script = skills_dir / "github-architect" / "scripts" / "github_architect.py"
-        if arch_script.is_file():
-            arch_symlink = local_bin / "github-architect"
-            if arch_symlink.is_symlink() or arch_symlink.is_file():
-                arch_symlink.unlink()
-            arch_symlink.symlink_to(arch_script)
-            arch_script.chmod(0o755)
-            print(f"  ✅ Linked github-architect -> {arch_symlink}")
-
-        if sync_script.is_file():
-            print("\n🔄 Propagating skills into Antigravity & Pi harnesses...")
-            run_cmd(["bash", str(sync_script)], cwd=skills_dir, check=False)
-
-    print("\n🎉 Bootstrap Complete! All repositories cloned, skills linked, and tools configured.")
-    return True
-
-
-def cmd_insights(target_dir: Path):
-    print(f"\n🧠 [Insights] Synthesizing machine model knowledge into docs/...")
-    docs_dir = target_dir / "docs"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    guide_path = docs_dir / "models_and_services.md"
-
-    summary = """# Autonomous Workstation Model Directory & Rankings
-
-Synthesized by `github-architect` from local GPU inference configs, launchers, and agent conversation transcripts.
-
----
-
-## 🏛️ Local Inference Ports
-
-| Port | Model / Engine | Launcher | Best Used For |
-|---|---|---|---|
-| `:8080` | **Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP** | `sh/luffy-hermes-mtp-vulkan.sh` | Complex reasoning, coding, uncensored generation |
-| `:8081` | **Nemotron 3.5 ASR + Kokoro TTS** | `audio.cpp` server | Real-time speech-to-text (40 langs) + fast speech synthesis |
-| `:8082` | **LightOnOCR-3-0.8B** | `launchers/lighton-ocr.sh` | **Flagship Video, Slide & Scanned-PDF OCR** |
-| `:8083` | **h2o-lightning-4b Decision Model (vision)** | `sh/h2o.sh` | Native `/v1/systemone` bool/choice/score + image gating |
-| `:8084` | **bge-small-en-v1.5 (384d)** | `launchers/bge-small.sh` | Text embeddings for RAG + semantic cache |
-| `:8089` | **Imajev-4B** | `launchers/imajev-decider.sh` | Secondary decision engine (A/B against :8083) |
-| `:8091` | **LFM3-1.7B-Uncensored-AD** | `launchers/lfm3-1.7b-uncensored.sh` | Short-form and creative generation |
-
----
-
-## 🏆 Model Rankings by Task
-
-- **Video, Slide & Document OCR**: `LightOnOCR-3-1B` (#1) > `SmolDocling-256M` (#2) > `CrispEmbed` (#3)
-- **Calibrated Decisions**: `h2o-lightning-4b` (Vision + Text, `/v1/systemone`)
-- **Browser Visual Grounding**: `DeskForge-Qwen3.5-4B` (GUI coordinates)
-- **Speech-to-Text**: `Nemotron-3.5-ASR` (Streaming RNNT on `:8081`)
-"""
-    guide_path.write_text(summary, encoding="utf-8")
-    print(f"  ✅ Generated: {guide_path.resolve()}")
+    print("\n🎉 Bootstrap Complete!")
+    return all_ok
 
 
 def main():
@@ -1025,11 +944,13 @@ def main():
     p_status.add_argument("--json", action="store_true", help="Emit status as structured JSON")
     p_status.add_argument("-p", "--project", nargs="*", help="Filter output fields (e.g. repository branch worktree remote_sync)")
     p_status.add_argument("-n", "--limit", type=int, default=0, help="Limit number of repositories displayed")
+    p_status.add_argument("--config", type=str, default=None, help="Fleet config JSON file")
 
     # sync-all
     p_sync_all = subparsers.add_parser("sync-all", help="Synchronize and rebase all workstation fleet repositories in one command")
     p_sync_all.add_argument("-m", "--message", type=str, default=None, help="Optional commit message for dirty repos")
     p_sync_all.add_argument("--force", action="store_true", help="Bypass secret and oversized blob guards")
+    p_sync_all.add_argument("--config", type=str, default=None, help="Fleet config JSON file")
 
     # audit
     p_audit = subparsers.add_parser("audit", help="Audit local repo structure, files, git, secrets, and gh status")
@@ -1069,10 +990,7 @@ def main():
     # bootstrap
     p_boot = subparsers.add_parser("bootstrap", help="Clone and set up all workstation repos and skills on a new machine")
     p_boot.add_argument("--dest", type=str, default=None, help="Destination directory for repositories")
-
-    # insights
-    p_ins = subparsers.add_parser("insights", help="Scan machine transcripts and configs to generate model docs")
-    p_ins.add_argument("path", type=str, nargs="?", default=".", help="Target directory")
+    p_boot.add_argument("--config", type=str, default=None, help="Fleet config JSON file")
 
     # guard
     p_guard = subparsers.add_parser(
@@ -1081,6 +999,7 @@ def main():
     )
     p_guard.add_argument("--source", action="append", required=True, help="Directory to scan (repeatable)")
     p_guard.add_argument("--published", action="append", default=[], help="Published relative path of a source (repeatable)")
+    p_guard.add_argument("--exclude", action="append", default=[], help="rsync-style exclude pattern (repeatable)")
     p_guard.add_argument("--label", default="bundle", help="Name of the bundle being published")
     p_guard.add_argument("--json", action="store_true")
 
@@ -1122,8 +1041,7 @@ def main():
             raw_args.append("--table")
         if args.json:
             raw_args.append("--json")
-        gitsync_main(raw_args)
-        return
+        sys.exit(gitsync_main(raw_args) or 0)
 
     if args.command == "guard":
         try:
@@ -1140,6 +1058,8 @@ def main():
             raw += ["--source", s]
         for p in args.published:
             raw += ["--published", p]
+        for e in args.exclude:
+            raw += ["--exclude", e]
         raw += ["--label", args.label]
         if args.json:
             raw.append("--json")
@@ -1147,21 +1067,28 @@ def main():
 
     if args.command == "status-all":
         project_keys = [k.lower() for k in args.project] if args.project else None
-        cmd_status_all(as_table=args.table, as_json=args.json, project_keys=project_keys, limit=args.limit)
+        config = Path(args.config).expanduser() if args.config else None
+        cmd_status_all(as_table=args.table, as_json=args.json, project_keys=project_keys,
+                       limit=args.limit, config_path=config)
         return
 
     if args.command == "sync-all":
-        cmd_sync_all(message=args.message, force=args.force)
+        config = Path(args.config).expanduser() if args.config else None
+        if not cmd_sync_all(message=args.message, force=args.force, config_path=config):
+            sys.exit(1)
         return
 
     if args.command == "bootstrap":
         dest_path = Path(args.dest).resolve() if args.dest else None
-        cmd_bootstrap(dest_path)
+        config = Path(args.config).expanduser() if args.config else None
+        if not cmd_bootstrap(dest_path, config_path=config):
+            sys.exit(1)
         return
 
     if args.command == "clone":
         dest_path = Path(args.dest).resolve() if args.dest else None
-        cmd_clone(args.repo, dest_path)
+        if not cmd_clone(args.repo, dest_path):
+            sys.exit(1)
         return
 
     target_path = Path(args.path).resolve()
@@ -1170,16 +1097,17 @@ def main():
     if args.command == "audit":
         ok = cmd_audit(target_path, as_table=args.table, as_json=args.json,
                        check_commits=args.commits, strict=args.strict, limit=args.limit)
-        if not ok and args.strict:
+        if not ok:
             sys.exit(1)
     elif args.command == "scaffold":
         cmd_scaffold(target_path, repo_name, private=True, license_type=args.license)
     elif args.command == "publish":
-        cmd_publish(target_path, repo_name, private=not args.public, license_type=args.license, is_template=args.template, force=args.force)
+        if not cmd_publish(target_path, repo_name, private=not args.public,
+                           license_type=args.license, is_template=args.template, force=args.force):
+            sys.exit(1)
     elif args.command == "sync":
-        cmd_sync(target_path, message=getattr(args, "message", None), force=args.force)
-    elif args.command == "insights":
-        cmd_insights(target_path)
+        if not cmd_sync(target_path, message=getattr(args, "message", None), force=args.force):
+            sys.exit(1)
 
 
 if __name__ == "__main__":

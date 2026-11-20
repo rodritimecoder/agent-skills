@@ -2,15 +2,15 @@
 """
 publication_guard.py — Pre-publication safety gate for public skill bundles.
 
-The hub (`my-agent-skills`) is private. The spokes (`workstation-clis`,
-`glitch-cat-skills`, `academic-agent-skills`, `free-frontier-skills`) are
-public. Every file the sync copies from a hub into a spoke is a one-way trip:
+The hub is private; the public spokes are one-way publication targets. Every
+file the sync copies from a private hub into a public spoke is a one-way trip:
 a mistake made in the hub becomes permanent and public on the next push, and
 fixing it later means rewriting public history.
 
 This gate runs before each spoke publication and refuses to publish:
 
-  * secret-shaped filenames (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`)
+  * secret-shaped filenames (`.env`, `*.pem`, `*.key`, SSH private keys,
+    `credentials.json`)
   * credential content in any text file
   * files above the 50 MB blob ceiling
   * a skill published from an `archived/` path that carries no archived status
@@ -24,7 +24,7 @@ Usage:
     publication_guard.py scan --source DIR [--source DIR ...] --label NAME [--json]
     publication_guard.py reap --root DIR --managed-file FILE --current a,b,c [--json]
 
-Exit codes: 0 clean, 1 blocked.
+Exit codes: 0 clean, 2 blocked on scan (reap always returns 0).
 """
 
 import argparse
@@ -49,11 +49,10 @@ SECRET_FILE_PATTERNS = [
     (re.compile(r"\.env$"), "env file"),
     (re.compile(r"\.pem$"), "private key file"),
     (re.compile(r"\.key$"), "private key file"),
-    (re.compile(r"^id_rsa"), "ssh private key"),
+    (re.compile(r"^id_(?:rsa|dsa|ecdsa|ed25519)(?!.*\.pub$)"), "ssh private key"),
     (re.compile(r"\.pfx$"), "pkcs12 bundle"),
     (re.compile(r"\.p12$"), "pkcs12 bundle"),
     (re.compile(r"credentials\.json$"), "credentials file"),
-    (re.compile(r"^id_(rsa|dsa|ecdsa|ed25519)$"), "ssh private key"),
 ]
 
 SECRET_CONTENT_PATTERNS = [
@@ -90,17 +89,27 @@ def is_placeholder(value: str) -> bool:
 
 def is_excluded(rel_path: Path, patterns: list) -> bool:
     """Model rsync's --exclude semantics: a bare pattern matches any path
-    component, a pattern containing '/' matches the relative path."""
+    component, a pattern containing '/' matches the relative path. A trailing
+    slash restricts a bare pattern to directories: it matches entries inside
+    that directory but not the directory entry itself."""
+    rel_str = rel_path.as_posix()
     for pattern in patterns:
         if not pattern:
             continue
-        if "/" in pattern:
-            if fnmatch.fnmatch(str(rel_path), pattern):
+        trailing_slash = pattern.endswith("/")
+        norm = pattern.rstrip("/")
+        if not norm:
+            continue
+        if "/" in norm:
+            if (fnmatch.fnmatch(rel_str, norm) or rel_str == norm
+                    or rel_str.startswith(norm + "/")):
+                return True
+        elif trailing_slash:
+            if any(fnmatch.fnmatch(part, norm) for part in rel_path.parts[:-1]):
                 return True
         else:
-            for part in rel_path.parts:
-                if fnmatch.fnmatch(part, pattern):
-                    return True
+            if any(fnmatch.fnmatch(part, norm) for part in rel_path.parts):
+                return True
     return False
 
 

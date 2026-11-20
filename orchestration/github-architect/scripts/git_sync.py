@@ -45,32 +45,6 @@ def render_table(rows: list[dict], columns: list[str] | None = None, headers: li
         row_lines.append(row_str)
     return "\n".join([header_line, sep_line] + row_lines) + "\n"
 
-SECRET_FILE_PATTERNS = [
-    r"^\.env(?!\.example$)",
-    r"\.pem$",
-    r"\.key$",
-    r"^id_rsa",
-    r"\.pfx$",
-    r"\.p12$",
-    r"credentials\.json$",
-]
-
-SECRET_CONTENT_PATTERNS = [
-    (r"ghp_[A-Za-z0-9]{36}", "GitHub Personal Access Token"),
-    (r"gho_[A-Za-z0-9]{36}", "GitHub OAuth Token"),
-    (r"ghu_[A-Za-z0-9]{36}", "GitHub User-to-Server Token"),
-    (r"ghs_[A-Za-z0-9]{36}", "GitHub Server-to-Server Token"),
-    (r"github_pat_[A-Za-z0-9_]{22,}", "GitHub Fine-Grained Token"),
-    (r"sk-ant-[A-Za-z0-9\-_]{20,}", "Anthropic API Key"),
-    (r"sk-[a-zA-Z0-9]{20,}", "OpenAI / API Secret Key"),
-    (r"AIza[0-9A-Za-z-_]{35}", "Google API Key"),
-    (r"hf_[A-Za-z0-9]{34}", "HuggingFace Token"),
-    (r"xox[baprs]-[A-Za-z0-9\-]{10,}", "Slack Token"),
-    (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
-    (r"-----BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY-----", "Private Key Header"),
-]
-
-
 def run_git(args: list[str], check: bool = True, capture: bool = True, cwd=None) -> subprocess.CompletedProcess:
     return subprocess.run(["git"] + args, check=check, text=True, capture_output=capture, cwd=cwd)
 
@@ -181,10 +155,7 @@ CONVENTIONAL_SUBJECT = re.compile(
     r"(\([^)]+\))?!?: \S"
 )
 
-JARGON_TERMS = frozenset(
-    "wip todo fixme tmp temp asdf foo bar baz xxx tweak misc nit cleanup "
-    "various stuff things updates changes".split()
-)
+JARGON_TERMS = frozenset("wip todo fixme tmp asdf foo bar baz xxx".split())
 _JARGON_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(t) for t in sorted(JARGON_TERMS, key=len, reverse=True)) + r")\b",
     re.IGNORECASE,
@@ -360,9 +331,7 @@ def _commit_kind(record: dict) -> str:
     if override in ("author-written", "generated-manifest"):
         return override
     lines = [ln.strip() for ln in (record.get("body") or "").splitlines() if ln.strip()]
-    if not lines or not all(_MANIFEST_BULLET_RE.fullmatch(ln) for ln in lines):
-        return "author-written"
-    if _looks_generated_subject(record.get("subject") or ""):
+    if lines and all(_MANIFEST_BULLET_RE.fullmatch(ln) for ln in lines):
         return "generated-manifest"
     return "author-written"
 
@@ -515,7 +484,7 @@ def audit_report(records: list[dict], *, repo: str = None, upstream: str | None 
         "strict": strict,
         "checked": len(commits),
         "skipped": {"merge": sum(1 for r in records if r.get("is_merge"))},
-        "passed": not findings,
+        "passed": counts["block"] == 0,
         "counts": counts,
         "thresholds": {
             "wrap_width": DEFAULT_WRAP_WIDTH,
@@ -528,6 +497,27 @@ def audit_report(records: list[dict], *, repo: str = None, upstream: str | None 
         },
         "commits": commits,
     }
+
+
+def _parse_porcelain_paths(stdout: str) -> list[str]:
+    """Extract paths from `git status --porcelain --untracked-files=all`.
+
+    Git quotes paths containing spaces (or other special characters) with
+    surrounding double quotes, and renders renames as ``old -> new``. Return
+    the destination of a rename with any quote wrapper stripped.
+    """
+    paths = []
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        path = line[3:].strip()
+        if " -> " in path:
+            path = path.split(" -> ")[-1].strip()
+        if len(path) >= 2 and path.startswith('"') and path.endswith('"'):
+            path = path[1:-1]
+        if path:
+            paths.append(path)
+    return paths
 
 
 def stage1_look() -> dict:
@@ -566,7 +556,7 @@ def stage1_look() -> dict:
     # entry, and a directory is not a file, so the guard would scan nothing
     # while `git add dir/` stages everything inside it.
     status_res = run_git(["status", "--porcelain", "--untracked-files=all"])
-    changed_files = [line[3:].strip() for line in status_res.stdout.splitlines() if line.strip()]
+    changed_files = _parse_porcelain_paths(status_res.stdout)
 
     return {
         "branch": branch,
@@ -579,41 +569,22 @@ def stage1_look() -> dict:
 
 
 def stage2_guard(changed_files: list[str], repo: str = None) -> list[str]:
+    scan_file = _load_publication_guard()
     safe_files = []
     blocked_files = []
 
     for f_str in changed_files:
-        p = Path(f_str)
-        fname = p.name
-
-        # 1. Filename secret checks
-        is_secret = any(re.search(pat, fname, re.IGNORECASE) for pat in SECRET_FILE_PATTERNS)
-        if is_secret:
-            blocked_files.append((f_str, "Secret file pattern blocked"))
+        target = Path(f_str) if repo is None else Path(repo) / f_str
+        if not target.is_file():
+            # A deleted path has nothing to scan; treating it as missing from
+            # disk is the whole point of staging its removal.
+            safe_files.append(f_str)
             continue
-
-        # 2. Oversized blob check (>50 MB)
-        if p.is_file() and p.stat().st_size > 50 * 1024 * 1024:
-            blocked_files.append((f_str, f"Oversized file ({p.stat().st_size // (1024*1024)} MB > 50 MB ceiling)"))
-            continue
-
-        # 3. Diff content secret scan
-        if p.is_file():
-            try:
-                diff_res = run_git(["diff", "HEAD", "--", f_str], check=False, cwd=repo)
-                diff_text = diff_res.stdout
-                leak_found = False
-                for pat, label in SECRET_CONTENT_PATTERNS:
-                    if re.search(pat, diff_text):
-                        blocked_files.append((f_str, f"Diff contains leaked {label}"))
-                        leak_found = True
-                        break
-                if leak_found:
-                    continue
-            except Exception:
-                pass
-
-        safe_files.append(f_str)
+        findings = scan_file(target, "git-sync")
+        if findings:
+            blocked_files.append((f_str, findings[0]["detail"]))
+        else:
+            safe_files.append(f_str)
 
     if blocked_files:
         print("\n🛡️  [Security Guard] Blocked files from staging:")
@@ -675,6 +646,18 @@ def stage4_gate():
         if shutil.which("pytest") and (root / "tests").is_dir():
             checks_run.append("pytest")
             subprocess.run(["pytest", "-q"], check=True)
+
+    # 3. Rust checks
+    elif (root / "Cargo.toml").is_file():
+        if shutil.which("cargo"):
+            checks_run.append("cargo test")
+            subprocess.run(["cargo", "test", "--quiet"], check=True)
+
+    # 4. Go checks
+    elif (root / "go.mod").is_file():
+        if shutil.which("go"):
+            checks_run.append("go test")
+            subprocess.run(["go", "test", "./..."], check=True)
 
     return checks_run
 
@@ -748,16 +731,7 @@ def _load_exclude_matcher():
 def changed_files_in(repo: str) -> list[str]:
     """Every path the working tree differs on, including untracked files."""
     res = run_git(["status", "--porcelain", "--untracked-files=all"], check=False, cwd=repo)
-    files = []
-    for line in res.stdout.splitlines():
-        if not line.strip():
-            continue
-        path = line[3:].strip()
-        if " -> " in path:
-            path = path.split(" -> ")[-1].strip()
-        if path:
-            files.append(path)
-    return files
+    return _parse_porcelain_paths(res.stdout)
 
 
 def _matches_patterns(rel_path: Path, patterns: list, is_excluded) -> bool:
@@ -765,10 +739,16 @@ def _matches_patterns(rel_path: Path, patterns: list, is_excluded) -> bool:
         return True
     rel_str = str(rel_path)
     for pattern in patterns:
-        if not pattern:
-            continue
         norm = pattern.rstrip("/")
-        if "/" in norm and (rel_str == norm or rel_str.startswith(norm + "/")):
+        if not norm:
+            continue
+        if "/" in norm:
+            if rel_str == norm or rel_str.startswith(norm + "/"):
+                return True
+        elif pattern.endswith("/"):
+            if norm in rel_path.parts[:-1]:
+                return True
+        elif norm in rel_path.parts:
             return True
     return False
 
@@ -858,9 +838,9 @@ def cmd_check_messages(args) -> int:
     report = audit_report(records, repo=repo, upstream=upstream, limit=limit, strict=strict)
 
     if strict:
-        findings = report["counts"]["block"] + report["counts"]["warning"]
-        report["passed"] = findings == 0
-        exit_code = 1 if findings else 0
+        blocks = report["counts"]["block"]
+        report["passed"] = blocks == 0
+        exit_code = 1 if blocks else 0
     else:
         missing = commits_without_body(upstream, repo=repo)
         report["passed"] = not missing
@@ -962,7 +942,7 @@ def main(argv=None):
             print(json.dumps({"status": "clean", "branch": branch, "message": "Branch is clean and in sync with remote."}, indent=2))
         else:
             print(f"✨ Branch '{branch}' is clean and in sync with remote.")
-        return
+        return 0
 
     # Stage 2: Guard
     safe_files, blocked_files = stage2_guard(changed)
@@ -982,7 +962,7 @@ def main(argv=None):
             print(f"   Safe to stage ({len(safe_files)}): {', '.join(safe_files) if safe_files else 'none'}")
             print(f"   Blocked ({len(blocked_files)}): {', '.join([f[0] for f in blocked_files]) if blocked_files else 'none'}")
             print(f"   Ahead: {look_info['ahead']} | Behind: {look_info['behind']}")
-        return
+        return 0
 
     # Stage 3: Commit
     committed = []
@@ -1015,19 +995,19 @@ def main(argv=None):
             "blocked": [{"file": bf, "reason": r} for bf, r in blocked_files]
         }
         print(json.dumps(receipt, indent=2))
-        return
+        return 0
 
     if args.table:
         rows = [
             {"step": "Branch", "status": branch, "details": look_info.get("upstream") or "local only"},
             {"step": "Commit", "status": f"{len(committed)} commit(s)" if committed else "Clean", "details": ", ".join(f"{s} {m}" for s, m in committed) if committed else "Working tree clean"},
-            {"step": "Pull", "status": pull_status, "details": "Merged remote changes" if "Auto" in pull_status else pull_status},
+            {"step": "Pull", "status": pull_status, "details": pull_status},
             {"step": "Push", "status": "Success", "details": f"Pushed upstream to {branch}"},
             {"step": "Left Out", "status": f"{len(blocked_files)} blocked" if blocked_files else "None", "details": ", ".join(bf for bf, _ in blocked_files) if blocked_files else "Clean"},
         ]
         print(f"### git-sync Receipt: `{branch}`\n")
         print(render_table(rows, ["step", "status", "details"]))
-        return
+        return 0
 
     print("\n📋 \033[1m[git-sync Receipt]\033[0m")
     print("─" * 60)
@@ -1045,6 +1025,7 @@ def main(argv=None):
         for bf, reason in blocked_files:
             print(f"     • {bf} ({reason})")
     print("─" * 60 + "\n")
+    return 0
 
 
 if __name__ == "__main__":

@@ -47,16 +47,16 @@ One paragraph on the first thing. One paragraph on the second, or omit it.
 
 ### A user-facing artifact
 
-The subject and body are a user-facing artifact, not notes for someone reading the diff: Boxxy renders them in the "What's New" dialog and feeds them into "Read What's New" LLM summaries. Write them for a reader who never sees the diff and has only these words to go on. Name the behaviour and the real symbols plainly, and keep each concern to one full-width paragraph.
+The subject and body are a user-facing artifact, not notes for someone reading the diff: they surface in changelogs and release notes and feed LLM-generated summaries. Write them for a reader who never sees the diff and has only these words to go on. Name the behaviour and the real symbols plainly, and keep each concern to one full-width paragraph.
 
 ## Worked example
 
 ```
-fix(window,terminal,claw-protocol,command-palette): guard What's New against busy characters and fix dialog resize
+fix(sync,guard,commit): keep a blocked file from leaving an empty commit and report the refusal
 
-Add centralized find_first_available_in, find_first_available_character, and has_available_character helpers to boxxy_claw_protocol::characters and reuse them across the overlay character selector, pane session launcher, and What's New dialog. When all characters are currently claimed in other sessions, disable the "Read What's New" button with the label "No Characters Free".
+guarded_commit now propagates the refusal from publication_guard before composing the message, so a credential caught by the whole-file scan leaves nothing staged and the blocked path reaches the caller instead of an empty header.
 
-Enable follows-content-size on whats_new_dialog with width-request="700" on commits_stack, and apply detail_scrolled's minimum height only while viewing the commit detail page so the dialog stays locked at 700px wide while growing and shrinking to fit 1..=5 commit rows.
+bundle_sync records that path in its five-line receipt and exits non-zero, so a secret planted in an untracked file is named in the output rather than passing a diff-only check as silent success.
 ```
 
 Three scopes, one behaviour per paragraph, a symbol in every clause, no list,
@@ -78,4 +78,4 @@ restates `git show --stat` belongs in neither.
 
 ## Enforced by
 
-`git-sync check-messages --strict` and `github-architect audit --commits --strict` gate body presence plus a conventional title, user-facing prose, and full-width unwrapped paragraphs; generated-manifest messages are warnings by default.
+`git-sync check-messages --strict` and `github-architect audit --commits --strict` gate body presence plus a conventional title, user-facing prose, and full-width unwrapped paragraphs. `--strict` blocks missing bodies, non-conventional titles, placeholder jargon, bullets or manifests in author prose, hard-wrapped paragraphs, and size mismatches. Generated-manifest commits — including a conventional header with no body (Mode 2) — are reported as warnings with `severity: "warning"`, not blocks.

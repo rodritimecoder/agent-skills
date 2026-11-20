@@ -9,7 +9,7 @@ description: >
   workstation onboarding, driven by the `github-architect` and `git-sync` CLIs.
 
 compatibility: "Requires git and an authenticated GitHub CLI."
-allowed-tools: "Bash(git:*) Bash(gh:*) Bash(github-architect:*) Read Write"
+allowed-tools: "Bash(git:*) Bash(gh:*) Bash(github-architect:*) Bash(git-sync:*) Read Write"
 ---
 
 # GitHub Architect (`github-architect`)
@@ -26,10 +26,10 @@ are **strictly private** by default.
 | Stage | What it does | What it prevents |
 | :--- | :--- | :--- |
 | **Look** | Validates branch, upstream tracking, rebase/merge locks, uncommitted changes | Pushing from a broken state |
-| **Guard** | Scans dirty files for secret patterns (`ghp_*`, `sk-*`, `AIza*`, private keys, `.env`) and blocks files over 50 MB | Leaking a token, or a rejected push |
+| **Guard** | Whole-file scan via `publication_guard.py` (secret filenames + token/key patterns + 50 MB blob ceiling, with placeholder exemption) across both `git-sync` and `github-architect` | Leaking a token from a tracked or untracked file, or a rejected push |
 | **Commit** | Stages only validated files, explicitly — never a blanket `git add -A` | Sweeping an unrelated file into the commit |
-| **Gate** | Detects and runs the project's own quality gate (`npm test`, `pytest`, `cargo test`, `go test`) | Pushing code that does not pass |
-| **Pull** | Safe merge pull (`--no-rebase`), preserving local commit topology | Rewriting published history |
+| **Gate** | Auto-detects and runs fast checks (`npm run typecheck`/`npm test`, `pytest`, `cargo test`, `go test`) | Pushing code that does not pass |
+| **Pull** | Safe merge pull (`--no-rebase`) across both `git-sync` and `github-architect sync`, preserving local commit topology | Rewriting published history |
 | **Push** | Pushes upstream, confirming before touching a protected default branch (`main`/`master`); `-y` overrides | Force-pushing over someone else's work |
 | **Report** | Emits a 5-line receipt: commits, pull/push status, files left out | Not knowing what actually happened |
 
@@ -44,18 +44,24 @@ are **strictly private** by default.
 | plain prose | diff-derived subject, your prose underneath |
 | nothing | diff-derived subject, then a generated file manifest |
 
+The second form (a conventional header with no body) is classified as a
+`generated-manifest` **warning**, not a hard block, under `--strict`: it keeps
+your header and appends a manifest instead of publishing a bodyless commit.
+
 **Every commit carries a body.** A subject is a receipt; the body is the
 description. When you do not write one, the manifest names every staged path
 with its delta, so `git log` answers "which files" without `--stat`. This is
 enforced, not requested: `guarded-commit` refuses to write a bodyless message,
 and the push gate refuses to publish a bodyless commit.
 
-The header form is the one to use, because the subject is what `git log --oneline` shows and it should say what changed. In Boxxy these messages are surfaced in the "What's New" dialog and fed into "Read What's New" LLM summaries, so write them for that reader:
+The header form is the one to use, because the subject is what `git log --oneline` shows and it should say what changed. Commit messages double as user-facing changelog and release-note copy and as input to LLM-generated summaries, so write them for a reader who never sees the diff:
 
 ```
-fix(window,terminal,command-palette): guard the palette against a stale index
+fix(sync,guard,commit): keep a blocked file from leaving an empty commit
 
-Strip apostrophes and treat hyphens, underscores and dots as spaces while normalizing queries, so typing "whats new" matches "What's New".
+guarded_commit now returns the refusal reason before the commit is composed, so a path rejected by publication_guard no longer produces a header whose body is only a generated manifest.
+
+The push gate reports the blocked path by name instead of claiming the sync succeeded, so the failure is visible in `git log --oneline` rather than silent.
 ```
 
 Name components in the scope, not file paths; comma-separate several with no
@@ -69,7 +75,7 @@ diff cannot express:
 
 ```bash
 git-sync -m "refactor(github-architect): derive commit subjects from the diff"
-sync-skills --push -m "feat(kem-thought): add the scribe principle"
+sync-skills publish -m "feat(kem-thought): add the scribe principle"
 ```
 
 Timestamps are not written into the subject. The commit object already stores
@@ -84,16 +90,16 @@ leaves every entry identical.
 # 1. Disciplined branch synchronization
 git-sync [-m "commit message"] [-y] [--dry-run] [--no-pull] [--no-gate] [--table] [--json]
 
-# 2. Fleet dashboard — every workstation repository at a glance
-github-architect status-all [--table] [--json] [--project repository branch worktree remote_sync] [--limit 5]
+# 2. Fleet dashboard — every workstation repository at a glance (fleet from ~/.config/github-architect/fleet.json or GITHUB_ARCHITECT_FLEET)
+github-architect status-all [--config PATH] [--table] [--json] [--project repository branch worktree remote_sync] [--limit 5]
 
-# 3. Fleet sync — pull rebase, commit, and push across every repository
-github-architect sync-all [-m "sync fleet updates"]
+# 3. Fleet sync — safe --no-rebase merge pull + guarded commit + push across every repository
+github-architect sync-all [--config PATH] [-m "sync fleet updates"]
 
 # 4. Audit one repository — status, auth, secret scan, oversized blob guard, optional commit-message gate
 github-architect audit [path] [--table] [--json] [--commits] [--strict] [--limit N]
 
-# 5. Sync one repository — pull rebase, auto-commit, push
+# 5. Sync one repository — safe --no-rebase merge pull + guarded commit, then push
 github-architect sync [path] [-m "commit message"]
 
 # 6. Scaffold documentation, .gitignore, and LICENSE without committing
@@ -102,8 +108,8 @@ github-architect scaffold [path] [--name repo-name]
 # 7. Publish to GitHub — private by default; --template, --public
 github-architect publish [path] [--name repo-name] [--template] [--public]
 
-# 8. Bootstrap a whole agent environment on a new machine
-github-architect bootstrap [--dest ~/workspace]
+# 8. Bootstrap a whole agent environment on a new machine (fleet from ~/.config/github-architect/fleet.json or GITHUB_ARCHITECT_FLEET)
+github-architect bootstrap [--config PATH] [--dest ~/workspace]
 
 # 9. Clone any GitHub repository via the gh CLI
 github-architect clone <repo-name> [dest]
@@ -112,7 +118,7 @@ github-architect clone <repo-name> [dest]
 github-architect guard --source DIR [--source DIR ...] [--published PATH] [--exclude PATTERN] [--label NAME] [--json]
 
 # 11. Guarded commit — stage by path and refuse to commit a file carrying a credential
-git-sync guarded-commit --repo PATH -m "message" [--exclude PATTERN] [--json]
+git-sync guarded-commit --repo PATH -m "message" [--include PATTERN] [--exclude PATTERN] [--json]
 
 # 12. Description gate — fail if any outgoing commit has no body (merge commits exempt); --strict gates the full message standard
 git-sync check-messages --repo PATH [--upstream ORIGIN/BRANCH] [--strict] [--json] [--limit N]
@@ -125,14 +131,11 @@ git-sync install-hook --repo PATH [--force]
 
 ## 🛡️ Publication Guard
 
-The hub (`my-agent-skills`) is private; the spokes (`workstation-clis`,
-`glitch-cat-skills`, `academic-agent-skills`, `free-frontier-skills`) are
-public. Everything the bundle sync copies from a hub into a spoke is a
-one-way trip, so a mistake made in the hub becomes permanent and public on
-the next push.
-
-`github-architect guard` runs before each spoke publication and **blocks** the
-bundle when it finds:
+Publication is a one-way trip from a private hub to its public spokes: the
+bundle sync copies curated directories out into a public bundle repository,
+so a mistake made in the hub becomes permanent and public on the next push.
+`github-architect guard` runs before each publication so that never happens,
+and **blocks** the bundle when it finds:
 
 - a secret-shaped filename (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`)
 - credential content in a text file (GitHub, OpenAI, Anthropic, Google, HuggingFace,
@@ -152,7 +155,8 @@ sync instead of freezing in place.
 
 ### Two layers, both fail-closed
 
-The private hub is guarded too. `git-sync guarded-commit` replaces the raw
+The private hub is guarded too, by the same `publication_guard.py` module.
+`git-sync guarded-commit` replaces the raw
 `git add -A` in the bundle sync: it stages by path and refuses to commit a
 file that carries a credential or an oversized blob. Its content scan reads
 **whole files**, not diffs — a brand-new file is untracked, so `git diff HEAD`
@@ -163,10 +167,10 @@ A planted secret is caught twice, independently:
 
 ```
 🛡️  [guard] Blocked files from staging:
-   ❌ academic/canvas-cli/planted-leak.py — GitHub Personal Access Token: ghp_AA...AAAA
+   ❌ skills/example/planted-leak.py — GitHub Personal Access Token: ghp_AA...AAAA
 🛑 [guard] 1 file(s) blocked; nothing committed.
-🛡️  [publication-guard] academic-agent-skills: 1 blocked file(s)
-🛑 [bundle-sync] BLOCKED: academic-agent-skills not published.
+🛡️  [publication-guard] public-skills: 1 blocked file(s)
+🛑 [bundle-sync] BLOCKED: public-skills not published.
 🛑 One or more bundles were blocked and left untouched.
 ```
 

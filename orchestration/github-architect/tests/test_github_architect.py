@@ -141,6 +141,32 @@ class TestGitSync(unittest.TestCase):
         self.assertIn("| Branch | main    | origin/main     |", table)
 
 
+class TestStage2GuardRepo(unittest.TestCase):
+    """Wave 1: stage2_guard must scan files relative to an explicit repo,
+    not the process CWD, and must leave placeholder credentials alone."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.repo = self.tmp / "outside-repo"
+        self.repo.mkdir()
+
+    def test_untracked_secret_outside_cwd_is_blocked(self):
+        (self.repo / "leak.txt").write_text(TestPublicationGuard.FAKE_PAT + "\n", encoding="utf-8")
+        safe, blocked = git_sync.stage2_guard(["leak.txt"], repo=str(self.repo))
+        self.assertEqual(safe, [])
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0][0], "leak.txt")
+
+    def test_placeholder_credential_is_allowed(self):
+        (self.repo / "doc.md").write_text(
+            'api_key = "YOUR_API_KEY_HERE"\n', encoding="utf-8"
+        )
+        safe, blocked = git_sync.stage2_guard(["doc.md"], repo=str(self.repo))
+        self.assertEqual(blocked, [])
+        self.assertEqual(safe, ["doc.md"])
+
+
 class TestPublicationGuard(unittest.TestCase):
     # Built at runtime, never written as a literal: a PAT-shaped string in
     # this file would be published to the public spokes and the gate would
@@ -207,6 +233,26 @@ class TestPublicationGuard(unittest.TestCase):
         (d / ".env").write_text("TOKEN=x\n", encoding="utf-8")
         findings = publication_guard.scan_source(d, "t", excludes=[".env"])
         self.assertEqual([f for f in findings if f["severity"] == "block"], [])
+
+    def test_trailing_slash_exclude_matches_contents_not_the_dir_itself(self):
+        # rsync-style: "foo/" excludes entries inside foo, but the directory
+        # entry Path("foo") itself is not considered excluded.
+        self.assertFalse(publication_guard.is_excluded(Path("foo"), ["foo/"]))
+        self.assertTrue(publication_guard.is_excluded(Path("foo") / "notes.md", ["foo/"]))
+        self.assertFalse(publication_guard.is_excluded(Path("bar") / "other.md", ["foo/"]))
+
+    def test_ssh_private_keys_are_blocked_but_public_key_is_allowed(self):
+        for name in ("id_ed25519", "id_ed25519_work"):
+            with self.subTest(name=name):
+                key = self.tmp / name
+                key.write_text("not a real key\n", encoding="utf-8")
+                findings = publication_guard.scan_file(key, "t")
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0]["kind"], "secret-filename")
+                self.assertEqual(findings[0]["severity"], "block")
+        pub = self.tmp / "id_ed25519.pub"
+        pub.write_text("ssh-ed25519 AAAAcomment\n", encoding="utf-8")
+        self.assertEqual(publication_guard.scan_file(pub, "t"), [])
 
     def test_reap_removes_only_stale_managed_dirs(self):
         (self.tmp / "old").mkdir()
@@ -285,6 +331,35 @@ class TestGuardedCommit(unittest.TestCase):
             capture_output=True, text=True).stdout
         self.assertIn("new.txt", committed)
         self.assertNotIn("draft.md", committed)
+
+    def _seed_two_dirs(self):
+        (self.repo / "foo").mkdir()
+        (self.repo / "bar").mkdir()
+        (self.repo / "foo" / "notes.md").write_text("foo notes\n", encoding="utf-8")
+        (self.repo / "bar" / "other.md").write_text("bar notes\n", encoding="utf-8")
+
+    def _committed_names(self):
+        return subprocess.run(
+            ["git", "-C", str(self.repo), "show", "--name-only", "--format=", "HEAD"],
+            capture_output=True, text=True).stdout
+
+    def test_include_with_trailing_slash_stages_only_that_directory(self):
+        self._seed_two_dirs()
+        result = git_sync.guarded_commit(str(self.repo), "sync: include", includes=["foo/"])
+        self.assertEqual(result["blocked"], [])
+        committed = self._committed_names()
+        self.assertIn("foo/notes.md", committed)
+        self.assertNotIn("bar/other.md", committed)
+        # The un-included file is left dirty in the working tree.
+        self.assertIn("bar/other.md", git_sync.changed_files_in(str(self.repo)))
+
+    def test_exclude_with_trailing_slash_skips_that_directory(self):
+        self._seed_two_dirs()
+        result = git_sync.guarded_commit(str(self.repo), "sync: exclude", excludes=["foo/"])
+        self.assertEqual(result["blocked"], [])
+        committed = self._committed_names()
+        self.assertNotIn("foo/notes.md", committed)
+        self.assertIn("bar/other.md", committed)
 
     def test_changed_files_includes_untracked(self):
         (self.repo / "brand_new.txt").write_text("x\n", encoding="utf-8")
@@ -416,10 +491,19 @@ class TestCommitMessage(unittest.TestCase):
     def test_blocked_commit_exits_nonzero(self):
         self.write("academic/new-skill/scripts/config.py", TestPublicationGuard.FAKE_PAT + "\n")
         proc = subprocess.run(
-            [sys.executable, str(HERE / "git_sync.py"), "guarded-commit", "--repo", str(self.repo)],
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"),
+             "guarded-commit", "--repo", str(self.repo)],
             capture_output=True, text=True,
         )
         self.assertEqual(proc.returncode, 2)
+        # The guard actually ran: a secret was reported (and the script was
+        # found), rather than Python exiting 2 on a missing file.
+        self.assertTrue(
+            "Blocked files from staging" in proc.stderr
+            or "blocked; nothing committed" in proc.stdout,
+            f"guard did not report a blocked file: {proc.stdout!r} {proc.stderr!r}",
+        )
+        self.assertNotIn("No such file", proc.stderr)
 
 
 class TestCommitMessageAudit(unittest.TestCase):
@@ -533,6 +617,87 @@ class TestCommitMessageAudit(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 1)
 
+    def test_mode2_generated_manifest_is_a_warning_and_passes(self):
+        rec = self._record("fix(guard): keep guard closed", "- a/b.py (+1/-0)")
+        findings = git_sync.audit_commit_messages([rec])
+        manifest = [f for f in findings if f["rule"] == "generated-manifest"]
+        self.assertEqual(len(manifest), 1)
+        self.assertEqual(manifest[0]["severity"], "warning")
+        self.assertEqual([f for f in findings if f["severity"] == "block"], [])
+        self.assertTrue(
+            git_sync.audit_report([rec], repo=str(self.repo), strict=True)["passed"]
+        )
+
+    def test_cli_strict_check_accepts_mode2_warning_only_commit(self):
+        self.write("palette.py", "x = 1\n")
+        self.run("add", "-A")
+        self.run("commit", "-m", "fix(guard): keep guard closed",
+                 "-m", "- a/b.py (+1/-0)")
+        proc = subprocess.run(
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"),
+             "check-messages", "--repo", str(self.repo), "--strict"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
+    def test_normal_english_words_are_not_internal_jargon(self):
+        rec = self._record(
+            "docs(guard): describe the changes and updates",
+            "Cover the cleanup of temp files so reviewers understand the work.",
+        )
+        rules = self._block_rules(git_sync.audit_commit_messages([rec]))
+        self.assertNotIn("internal-jargon", rules)
+        self.assertEqual(rules, set())
+
+    def test_jargon_words_are_still_blocked(self):
+        for word in ("wip", "todo", "asdf"):
+            with self.subTest(word=word):
+                rec = self._record(
+                    f"chore(guard): {word} tweaks",
+                    "Describe the work so reviewers can follow along.",
+                )
+                self.assertIn(
+                    "internal-jargon", self._block_rules(git_sync.audit_commit_messages([rec]))
+                )
+
+    def _audit_json(self, subject, body):
+        self.write("note.txt", "x = 1\n")
+        self.run("add", "-A")
+        self.run("commit", "-m", subject, "-m", body)
+        buf = io.StringIO()
+        with patch("sys.stdout", buf), \
+             patch.object(github_architect, "check_gh_status", return_value=(True, "testuser")):
+            ok = github_architect.cmd_audit(
+                self.repo, check_commits=True, strict=True, as_json=True
+            )
+        data = json.loads(buf.getvalue())
+        return ok, data
+
+    def test_cmd_audit_fails_on_block_commit(self):
+        ok, data = self._audit_json(
+            "chore(guard): wip tweaks",
+            "Track the pending palette refactor so reviewers can see the state.",
+        )
+        self.assertFalse(ok)
+        self.assertFalse(data["commits"]["passed"])
+        expected = git_sync.audit_report(
+            git_sync.read_commit_records(str(self.repo)),
+            repo=str(self.repo), strict=True,
+        )
+        self.assertEqual(data["commits"], expected)
+
+    def test_cmd_audit_passes_on_mode2_warning_commit(self):
+        ok, data = self._audit_json(
+            "fix(guard): keep guard closed", "- a/b.py (+1/-0)"
+        )
+        self.assertTrue(ok)
+        self.assertTrue(data["commits"]["passed"])
+        expected = git_sync.audit_report(
+            git_sync.read_commit_records(str(self.repo)),
+            repo=str(self.repo), strict=True,
+        )
+        self.assertEqual(data["commits"], expected)
+
 
 class TestGate(unittest.TestCase):
     def test_gate_runs_on_a_python_project_without_crashing(self):
@@ -606,6 +771,115 @@ class TestCommitComposition(unittest.TestCase):
     def test_merge_commits_are_exempt_from_the_body_rule(self):
         git_sync.run_git(["commit", "--allow-empty", "-m", "Merge branch 'topic'"], cwd=str(self.repo))
         self.assertEqual(git_sync.commits_without_body(repo=str(self.repo)), [])
+
+
+SCRIPT = HERE.parent / "scripts" / "github_architect.py"
+
+
+class TestPublishGuard(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def test_cmd_publish_refuses_untracked_secret_in_fresh_dir(self):
+        target = self.tmp / "fresh"
+        target.mkdir()
+        (target / "leak.txt").write_text(TestPublicationGuard.FAKE_PAT + "\n", encoding="utf-8")
+        with patch.object(github_architect, "check_gh_status", return_value=(True, "testuser")), \
+             patch.object(github_architect, "ensure_git_identity", return_value=("t", "t@t")):
+            ok = github_architect.cmd_publish(target, "fresh-repo")
+        self.assertFalse(ok)
+        self.assertFalse((target / ".git" / "refs" / "heads" / "main").exists())
+        staged = subprocess.run(
+            ["git", "-C", str(target), "diff", "--cached", "--name-only"],
+            capture_output=True, text=True,
+        ).stdout
+        self.assertEqual(staged.strip(), "")
+
+    def test_publish_subprocess_exits_nonzero_on_untracked_secret(self):
+        target = self.tmp / "fresh-cli"
+        target.mkdir()
+        (target / "leak.txt").write_text(TestPublicationGuard.FAKE_PAT + "\n", encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "publish", str(target)],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
+
+class TestArchitectCli(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.source = self.tmp / "source"
+        self.source.mkdir()
+        (self.source / ".env").write_text("TOKEN=x\n", encoding="utf-8")
+
+    def _guard(self, *extra):
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "guard", "--source", str(self.source), *extra],
+            capture_output=True, text=True,
+        )
+
+    def test_guard_accepts_exclude_and_exits_zero_when_env_excluded(self):
+        proc = self._guard("--exclude", ".env")
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
+    def test_guard_exits_two_without_exclude(self):
+        proc = self._guard()
+        self.assertEqual(proc.returncode, 2, f"{proc.stdout}\n{proc.stderr}")
+
+    def test_insights_command_is_removed(self):
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "insights"], capture_output=True, text=True
+        )
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("invalid choice", proc.stderr)
+
+
+class TestFleetConfig(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def test_discover_fleet_repos_loads_existing_git_repos(self):
+        repo = self.tmp / "real-repo"
+        repo.mkdir()
+        subprocess.run(["git", "-C", str(repo), "init", "-b", "main"],
+                       capture_output=True, text=True, check=True)
+        plain = self.tmp / "plain-dir"
+        plain.mkdir()
+        config = self.tmp / "fleet.json"
+        config.write_text(json.dumps({"repos": [
+            {"name": "real-repo", "path": str(repo), "description": "a git checkout"},
+            {"name": "plain-dir", "path": str(plain)},
+        ]}), encoding="utf-8")
+
+        fleet = github_architect.discover_fleet_repos(config)
+        self.assertEqual(len(fleet), 1)
+        self.assertEqual(fleet[0]["name"], "real-repo")
+        self.assertEqual(fleet[0]["path"], repo.resolve())
+        self.assertEqual(fleet[0]["description"], "a git checkout")
+
+    def test_discover_fleet_repos_empty_for_missing_config(self):
+        self.assertEqual(github_architect.discover_fleet_repos(self.tmp / "missing.json"), [])
+
+
+class TestScaffoldNonDestructive(unittest.TestCase):
+    def test_scaffold_preserves_existing_readme_with_a_skill(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        skill = tmp / "my-skill"
+        skill.mkdir()
+        (skill / "SKILL.md").write_text("---\nname: s\ndescription: d\n---\n\nbody\n", encoding="utf-8")
+        readme = tmp / "README.md"
+        custom = "# My own README\n\nHand written, do not overwrite.\n"
+        readme.write_text(custom, encoding="utf-8")
+
+        with patch.object(github_architect, "ensure_git_identity", return_value=("t", "t@t")):
+            github_architect.cmd_scaffold(tmp, "repo")
+
+        self.assertEqual(readme.read_text(encoding="utf-8"), custom)
 
 
 if __name__ == "__main__":
