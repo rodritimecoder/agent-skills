@@ -179,7 +179,14 @@ the block instead of claiming success.
 
 ---
 
+## 🧵 T3 Code PR & Worktree Handoff
+
+**When running inside T3 Code** (when `link_pull_request`, `watch_pull_request`, `delegate_task`, or `t3_worktree_handoff` tools are available): keep using `git-sync` and `github-architect` for guarded commits, pushes, repo publishing, and fleet sync, and read `references/t3-github.md` for worktree-to-PR handoff, PR linking, and reactive PR watching. Outside T3 Code, ignore this section and use `gh` directly.
+
+---
+
 ## Reference
 
 - `references/capabilities.md` — fleet sync, secret guard, onboarding, templates, git identity
 - `references/commit-messages.md` — the commit description standard (header, prose body, worked example)
+- `references/t3-github.md` — T3 Code worktree-to-PR handoff, PR linking, and reactive PR watching (T3 Code sessions only)
