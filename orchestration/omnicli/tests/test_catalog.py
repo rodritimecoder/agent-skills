@@ -379,7 +379,7 @@ class TestFusionMode(unittest.TestCase):
         self.assertEqual(search.normalize_fusion("auto"), "auto")
         self.assertIs(search.normalize_fusion(True), True)
         self.assertIs(search.normalize_fusion(False), False)
-        self.assertEqual(search.normalize_fusion(None), "auto")
+        self.assertEqual(search.normalize_fusion(None), "never")
 
     def test_fusion_never_is_pure_lexical(self):
         con = builder.connect()

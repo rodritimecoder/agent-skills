@@ -13,8 +13,9 @@ BM25 over every skill's full body plus hand-curated aliases (weight 12) matches 
 | mode | golden (56) | combined (130) | fresh (37) |
 |---|---|---|---|
 | `--fusion never` (default) | 56/56 | 107/130 | 22/37 |
-| `--fusion auto` | 56/56 | 104/130 | — |
-| `--fusion always` (dense-only) | — | 83/130 | — |
+| `--fusion auto` | 55/56 | 104/130 | — |
+| `--fusion always` (RRF) | — | 101/130 | — |
+| pure dense (`vectors.dense_rank`) | — | 83/130 | — |
 
 The golden set shares this catalog's vocabulary, so the lexical leg wins it (56/56). The combined (130) and fresh (37) sets are paraphrased intent authored with the descriptions in view — read them as *"the mechanism responds"*, not as an expected accuracy ceiling.
 

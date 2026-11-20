@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,15 +56,23 @@ class TestDefaultBm25(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_default_search_is_pure_bm25(self):
-        proc = run_omnicli("search", "turn a recorded podcast into readable text", "--no-rerank", "--json", env=self.env)
+        proc = run_omnicli("search", "turn a recorded podcast into readable text", "--json", env=self.env)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         data = json.loads(proc.stdout)
         self.assertEqual(data.get("tier"), "bm25", data)
         self.assertFalse(data.get("dense", {}).get("ran"), data)
         self.assertFalse(self.marker.exists(), "llama-rig ensure 8084 must not be invoked by default search")
 
+    def test_fusion_always_triggers_llama_rig_under_shim(self):
+        proc = run_omnicli("search", "transcribe a zoom lecture recording", "--fusion", "always", "--json", env=self.env)
+        self.assertTrue(self.marker.exists(), "llama-rig ensure 8084 must be invoked by --fusion always")
+
+    def test_fusion_auto_triggers_llama_rig_under_shim(self):
+        proc = run_omnicli("search", "transcribe a zoom lecture recording", "--fusion", "auto", "--json", env=self.env)
+        self.assertTrue(self.marker.exists(), "llama-rig ensure 8084 must be invoked by --fusion auto")
+
     def test_fusion_always_runs_dense_when_available(self):
-        proc = run_omnicli("search", "transcribe a zoom lecture recording", "--no-rerank", "--fusion", "always", "--json")
+        proc = run_omnicli("search", "transcribe a zoom lecture recording", "--fusion", "always", "--json")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         data = json.loads(proc.stdout)
         if not data.get("dense", {}).get("ran"):
@@ -74,9 +81,10 @@ class TestDefaultBm25(unittest.TestCase):
         self.assertIn("dense", data["tier"])
 
     def test_cjk_regression_agent_reach_top(self):
-        proc = run_omnicli("search", "调研一下这个话题在网上的讨论", "--no-rerank", "--json", env=self.env)
+        proc = run_omnicli("search", "调研一下这个话题在网上的讨论", "--json", env=self.env)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         data = json.loads(proc.stdout)
+        self.assertEqual(data.get("tier"), "bm25", data)
         self.assertTrue(data.get("results"), data)
         self.assertEqual(data["results"][0]["skill"], "agent-reach", data)
 

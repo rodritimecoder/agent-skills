@@ -142,10 +142,10 @@ def normalize_fusion(mode: bool | str | None) -> bool | str:
     if isinstance(mode, bool):
         return mode
     if mode is None:
-        return "auto"
+        return "never"
     if isinstance(mode, str):
-        return FUSION_MODES.get(mode.strip().lower(), "auto")
-    return "auto"
+        return FUSION_MODES.get(mode.strip().lower(), "never")
+    return "never"
 
 
 
@@ -572,7 +572,7 @@ def search(
     query: str,
     limit: int = DEFAULT_LIMIT,
     *,
-    rerank_enabled: bool | str = "auto",
+    rerank_enabled: bool | str = "never",
     fusion: bool | str = "never",
     explain: bool = False,
 ) -> dict[str, Any]:

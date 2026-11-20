@@ -41,10 +41,12 @@ into the dense leg with `--fusion always` (or `--fusion auto`, which fuses only
 when BM25's margin is thin). When enabled, the dense leg embeds descriptions
 with `K=60` and damps multi-chunk bodies (`OMNICLI_CHUNK_ALPHA=0.2`). The
 dense leg is `:8084` (bge-small-en-v1.5, `-ngl 0` — CPU only, ~271 MB RAM).
-Unless `--rerank never` / `--no-rerank` is set, `omnicli search` delegates to
-model-layer's primitive `llama-rig ensure 8084 --json`: it brings the slot up
-if needed and waits for it (bounded timeout), returning `started` /
-`waited_ms` / `status` for the audit line. If the index was built with dense
+Autostart of `:8084` is gated on `--fusion always` / `--fusion auto`: default
+search is pure BM25 (no rerank, no dense) and never spawns `llama-rig`.
+When fusion is enabled, `omnicli search` delegates to model-layer's primitive
+`llama-rig ensure 8084 --json`: it brings the slot up if needed and waits for
+it (bounded timeout), returning `started` / `waited_ms` / `status` for the
+audit line. If the index was built with dense
 offline (zero vectors), it runs exactly one `omnicli index --rebuild`. The slot
 is left warm — `llama-rig down 8084` frees the RAM manually. Set
 `OMNICLI_NO_AUTOSTART=1` to opt out; a failed start degrades to BM25 with a

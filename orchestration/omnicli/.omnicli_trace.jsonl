@@ -12,3 +12,7 @@
 {"kind":"done","call":"invoke","tool":"video-miner/scripts/vault_mine:add","ms":552,"rc":1,"harness":"t3-code","session":"ses_e15c7623affeY2Sl4QKETNvjlE","via":"exec"}
 {"kind":"call","call":"invoke","tool":"omnicli/omnicli:questions","t":1794966082.301,"harness":"t3-code","session":"ses_e15c7623affeY2Sl4QKETNvjlE","via":"exec"}
 {"kind":"done","call":"invoke","tool":"omnicli/omnicli:questions","ms":81,"rc":1,"harness":"t3-code","session":"ses_e15c7623affeY2Sl4QKETNvjlE","via":"exec"}
+{"kind":"call","call":"search","tool":"turn a recorded podcast into readable text","t":1795187044.713,"harness":"agy","session":"1a32ee4a-5549-4171-b5db-91b7ac775a2c","via":"exec"}
+{"kind":"done","call":"search","tool":"turn a recorded podcast into readable text","ms":105,"rc":0,"harness":"agy","session":"1a32ee4a-5549-4171-b5db-91b7ac775a2c","via":"exec"}
+{"kind":"call","call":"search","tool":"transcribe a zoom lecture recording","t":1795187063.436,"harness":"agy","session":"1a32ee4a-5549-4171-b5db-91b7ac775a2c","via":"exec"}
+{"kind":"done","call":"search","tool":"transcribe a zoom lecture recording","ms":222,"rc":0,"harness":"agy","session":"1a32ee4a-5549-4171-b5db-91b7ac775a2c","via":"exec"}
