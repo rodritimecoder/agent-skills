@@ -36,16 +36,17 @@ omnicli search "调研一下这个话题在网上的讨论"
 - `contract` — the top hit's tool contract, identical to `describe` (`--section`/`--doc` pass through).
 - `chunks` — every matching chunk (the former `--chunks` shape).
 
-BM25 over every skill's full body + curated aliases (weight 12) matches exact
-tokens; when BM25's margin is thin (`--fusion auto`), `omnicli` fuses a dense
-embedding leg over descriptions (`K=60`) and damps multi-chunk bodies
-(`OMNICLI_CHUNK_ALPHA=0.2`). The dense leg is `:8084` (bge-small-en-v1.5,
-~400 MB VRAM). Unless `--rerank never` / `--no-rerank` is set, `omnicli search`
-delegates to model-layer's primitive `llama-rig ensure 8084 --json`: it brings
-the slot up if needed and waits for it (bounded timeout), returning `started` /
+BM25 is the default: `omnicli search` ranks purely lexically unless you opt
+into the dense leg with `--fusion always` (or `--fusion auto`, which fuses only
+when BM25's margin is thin). When enabled, the dense leg embeds descriptions
+with `K=60` and damps multi-chunk bodies (`OMNICLI_CHUNK_ALPHA=0.2`). The
+dense leg is `:8084` (bge-small-en-v1.5, `-ngl 0` — CPU only, ~271 MB RAM).
+Unless `--rerank never` / `--no-rerank` is set, `omnicli search` delegates to
+model-layer's primitive `llama-rig ensure 8084 --json`: it brings the slot up
+if needed and waits for it (bounded timeout), returning `started` /
 `waited_ms` / `status` for the audit line. If the index was built with dense
 offline (zero vectors), it runs exactly one `omnicli index --rebuild`. The slot
-is left warm — `llama-rig down 8084` frees the VRAM manually. Set
+is left warm — `llama-rig down 8084` frees the RAM manually. Set
 `OMNICLI_NO_AUTOSTART=1` to opt out; a failed start degrades to BM25 with a
 stderr line naming the manual fix (`llama-rig up local-embed-bge`). The slot
 roster, launcher, `ensure` primitive and alias `local-embed-bge` are owned by

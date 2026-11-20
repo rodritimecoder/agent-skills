@@ -573,7 +573,7 @@ def search(
     limit: int = DEFAULT_LIMIT,
     *,
     rerank_enabled: bool | str = "auto",
-    fusion: bool | str = "auto",
+    fusion: bool | str = "never",
     explain: bool = False,
 ) -> dict[str, Any]:
     """Search the catalog. Returns a dict with results and retrieval metadata."""

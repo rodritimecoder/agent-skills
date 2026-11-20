@@ -742,11 +742,13 @@ def _ensure_embed_slot(con):
 
 def cmd_search(query: str, as_json: bool = False, limit: int = 6,
                explain: bool = False, no_rerank: bool = False, rerank: str = "auto",
-               chunks: bool = False, fusion: str = "auto",
+               chunks: bool = False, fusion: str = "never",
                depth: str = "brief", section: str = "", doc: str = ""):
     con = _require_catalog()
     mode = "never" if no_rerank else rerank
-    if mode != "never":
+    # :8084 (dense leg) is only brought up when the caller explicitly opts into
+    # dense fusion. Default search stays pure BM25 and never spawns llama-rig.
+    if fusion in ("always", "auto"):
         con = _ensure_embed_slot(con)
     res = search.search(con, query, limit=limit, rerank_enabled=mode,
                         fusion=fusion, explain=explain)
@@ -1908,10 +1910,10 @@ def main():
     p.add_argument("--rerank", choices=["auto", "always", "never"], default="auto",
                    help="auto=only re-rank when the lexical ranking is unsure (default), "
                         "always=re-rank every query, never=never re-rank")
-    p.add_argument("--fusion", choices=["auto", "always", "never"], default="auto",
-                   help="auto=fuse the dense leg only when BM25 is unsure (default), "
-                        "always=fuse on every query (best on unseen phrasing), "
-                        "never=lexical leg only")
+    p.add_argument("--fusion", choices=["auto", "always", "never"], default="never",
+                   help="never=lexical leg only (default); "
+                        "auto=fuse the dense leg only when BM25 is unsure; "
+                        "always=fuse on every query (best on unseen phrasing)")
     p.add_argument("--chunks", action="store_true",
                    help="With --json: include every matching chunk (default is the "
                         "compact routing view: skill, score, why, top hit)")

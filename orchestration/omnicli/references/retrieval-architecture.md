@@ -10,13 +10,13 @@ BM25 over every skill's full body plus hand-curated aliases (weight 12) matches 
 
 `fusion=auto` fuses only when BM25's own margin is thin (below `RERANK_GATE_MARGIN`), because fusion buys unseen phrasings and costs tuned ones:
 
-| mode | golden top-1 | held-out top-1 | median latency |
+| mode | golden (56) | combined (130) | fresh (37) |
 |---|---|---|---|
-| `--fusion never` | 59/61 | 24/30 | 3.8 ms |
-| `--fusion auto` (default) | 56/61 | 26/30 | 4.5 ms |
-| `--fusion always` | 52/61 | 28/30 | 12.8 ms |
+| `--fusion never` (default) | 56/56 | 107/130 | 22/37 |
+| `--fusion auto` | 56/56 | 104/130 | — |
+| `--fusion always` (dense-only) | — | 83/130 | — |
 
-The golden set shares this catalog's vocabulary, so the lexical leg wins it. The held-out set is paraphrased intent authored with the descriptions in view — read it as *"the mechanism responds"*, not as an expected accuracy ceiling.
+The golden set shares this catalog's vocabulary, so the lexical leg wins it (56/56). The combined (130) and fresh (37) sets are paraphrased intent authored with the descriptions in view — read them as *"the mechanism responds"*, not as an expected accuracy ceiling.
 
 ---
 
@@ -43,21 +43,22 @@ On this corpus, every BM25 top-1 miss was also a dense top-1 miss (oracle rescue
 
 BM25 normalizes per chunk (`b=0.75`), but aggregation takes the best chunk per skill, giving a 93-chunk body 93 chances at one good chunk vs 1 for a short skill. `CHUNK_PENALTY_ALPHA` (default `0.2`, env `OMNICLI_CHUNK_ALPHA`) damps the score by `chunks**-alpha`, removing multi-chunk hijacks and moving held-out `fusion=always` top-3 from 29/30 → 30/30 and top-1 from 26/30 → 28/30.
 
-Every result names the legs that found it (`found_by`), normalizes fused scores to 0–1 while preserving `lexical_score`, and falls back cleanly to BM25 when `:8084` is offline.
+Fused rankings set `found_by` and preserve `lexical_score` on full results; `--depth brief` (the default) compacts each result to skill/score/matched/why/top/chunk_count and drops those fields. Falls back cleanly to BM25 when `:8084` is offline.
 
 ---
 
 ## Empirical Routing & Token Cost Measurements
 
-Measured 2026-11-14 across the 59-skill catalog (`:8084` offline):
+Measured across the committed eval sets (`:8084` offline):
 
 ```
-BM25 catalog    top1  56/61 (91.8%)   top3  61/61 (100.0%)
-legacy scorer   top1  41/61 (67.2%)   top3  49/61 ( 80.3%)
+BM25 (golden)   top1  56/56 (100.0%)
+BM25 (combined) top1 107/130 (82.3%)
+BM25 (fresh)    top1  22/37 (59.5%)
 ```
 
 - `tests/overfit_check.py` audits `catalog/aliases.json` against eval queries (**0** echoes across 389 aliases).
-- On the 39-case paraphrase set (`tests/paraphrase_eval.json`), BM25 alone scores 21/39 (53.8%) top-1 and 24/39 (61.5%) top-3 (`legacy`: 19/39).
+- On the fresh set (`tests/fresh_eval.json`), BM25 alone scores 22/37 top-1.
 - `tests/measure_tokens.py` counts context landing on the model via Qwen3.5 tokenizer across 58 non-archived skills:
 
 | | prompt shelf | omnicli | |
@@ -74,7 +75,7 @@ The second row's saving comes from the 8 KB response cap; the selection-phase nu
 ## Why This Exists & Provenance
 
 - **Skill-shadowing decay:** The Databricks study measured tool selection dropping from 88% to 52.6% as prompt shelves grew past ~30 skills, with two thirds of failures caused by picking wrong or picking nothing. Moving selection off turn-0 context onto SQLite FTS5 BM25 + curated aliases keeps selection flat.
-- **Eval caveats:** In the 2026-11-14 snapshot (`91.8%` golden top-1), 32 of 61 golden queries share a curated alias string (`overfit_check.py` reports 0 verbatim echoes across 389 aliases). On the 39-case paraphrase set (`tests/paraphrase_eval.json`), BM25 alone scores 21/39 (53.8%) top-1 and 24/39 (61.5%) top-3 (`legacy`: 19/39); `--fusion auto|always|never` and `--rerank auto|always|never` exercise the dense/reranker legs when `:8084` / reranker are online.
+- **Eval caveats:** Committed eval numbers: golden 56/56 (BM25), combined 107/130 (BM25) vs 104/130 (auto) vs 83/130 (dense-only), fresh 22/37 (BM25). `--fusion auto|always|never` and `--rerank auto|always|never` exercise the dense/reranker legs when `:8084` / reranker are online.
 - **Architectural lineage:**
   1. [Uber's MCP Gateway](https://www.uber.com/au/en/blog/designing-mcp-gateway/): late-binding catalog discovery, single-contract `describe`, bounded `invoke`.
   2. [Cloudflare's Code Mode](https://blog.cloudflare.com/code-mode/): sandboxed JS plans (`omnicli exec`) keeping intermediates in variables rather than round-trip prompt turns.
