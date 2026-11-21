@@ -132,10 +132,12 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
         },
         "rows": rows,
     }
+    failures = [r for r in rows if not (r["pass_top1"] and r["pass_top3"]
+                                        and r["pass_negative"] and r["pass_margin"])]
 
     if as_json:
         print(json.dumps(summary, indent=2))
-        return summary
+        return 0 if not failures else 1
 
     if verbose:
         for r in rows:
@@ -162,8 +164,6 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
     print(f"  delta           top1 {b1-l1:+d}   top3 {b3-l3:+d}")
     print("=" * 66)
 
-    failures = [r for r in rows if not (r["pass_top1"] and r["pass_top3"]
-                                        and r["pass_negative"] and r["pass_margin"])]
     if failures:
         print(f"\n  {len(failures)} failing case(s):\n")
         for r in failures:
@@ -178,7 +178,7 @@ def run(verbose: bool = False, as_json: bool = False, rerank: str = "never",
                 reasons.append(f"margin {r['margin']}x < required {r['min_margin']}x")
             print(f"    - {r['query']}")
             print(f"        {'; '.join(reasons)}   [legacy gave: {r['legacy_top1']}]")
-    return summary
+    return 0 if not failures else 1
 
 
 if __name__ == "__main__":
@@ -195,5 +195,5 @@ if __name__ == "__main__":
             eval_set = arg.split("=", 1)[1]
         elif arg.startswith("--split="):
             split = arg.split("=", 1)[1]
-    run(verbose="--verbose" in sys.argv, as_json="--json" in sys.argv,
-        rerank=mode, fusion=fusion, eval_set=eval_set, split=split)
+    sys.exit(run(verbose="--verbose" in sys.argv, as_json="--json" in sys.argv,
+                 rerank=mode, fusion=fusion, eval_set=eval_set, split=split))

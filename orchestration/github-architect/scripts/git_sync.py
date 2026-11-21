@@ -861,11 +861,19 @@ def cmd_check_messages(args) -> int:
 
 
 HOOK_TEMPLATE = """#!/usr/bin/env bash
-# Managed by github-architect. Refuses to publish a commit with no description.
-# Advisory hybrid audit (reach lint/overlap) never blocks the push.
+# Managed by github-architect. Refuses a commit with no description, and
+# blocks a routing regression on the skills repo. Reach audit is advisory.
 repo="$(git rev-parse --show-toplevel)"
 python3 "{script}" check-messages --repo "$repo"
 rc=$?
+if [ "$repo" = "{skills_repo}" ]; then
+  gate="{gate}"
+  if [ -f "$gate" ]; then
+    python3 "$gate" || grc=$?
+    grc=${{grc:-0}}
+    [ "$rc" -eq 0 ] && rc=$grc
+  fi
+fi
 audit="{audit}"
 if [ -f "$audit" ]; then
   python3 "$audit" --repo "$repo" >/dev/null 2>&1 || true
@@ -883,7 +891,7 @@ def cmd_install_hook(args) -> int:
             print(f"❌ {hook} exists and was not written by github-architect. Pass --force to replace it.")
             return 1
     hook.parent.mkdir(parents=True, exist_ok=True)
-    hook.write_text(HOOK_TEMPLATE.format(script=Path(__file__).resolve(), audit=Path(__file__).resolve().parent.parent / ".." / "omnicli" / "tests" / "reach_audit.py"))
+    hook.write_text(HOOK_TEMPLATE.format(script=Path(__file__).resolve(), skills_repo=Path(__file__).resolve().parents[3], gate=Path(__file__).resolve().parent.parent / ".." / "omnicli" / "tests" / "routing_gate.py", audit=Path(__file__).resolve().parent.parent / ".." / "omnicli" / "tests" / "reach_audit.py"))
     hook.chmod(0o755)
     print(f"🪝 Installed pre-push description gate at {hook}")
     return 0

@@ -1993,9 +1993,10 @@ def main():
                         "catalog's own default is auto)")
     p.add_argument("--fusion", choices=["auto", "always", "never"], default="never",
                    help="dense-leg fusion used during the eval (default: never)")
-    p.add_argument("--set", dest="eval_set", choices=["golden", "paraphrase"],
+    p.add_argument("--set", dest="eval_set", choices=["golden", "paraphrase", "fresh"],
                    default="golden", help="golden=tuned routes, paraphrase=blind "
-                                          "user prompts harvested from this machine")
+                                          "user prompts harvested from this machine, "
+                                          "fresh=held-out evaluation set")
 
     p = sub.add_parser("questions",
                        help="Inspect or curate the distilled-question snapshot")

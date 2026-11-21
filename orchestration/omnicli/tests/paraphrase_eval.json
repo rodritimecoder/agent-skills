@@ -49,12 +49,13 @@
     },
     {
       "query": "can you look at the skills and make sure that if the skills are using a local jev decision model it should always use the h2o 4b jev model",
-      "top1": "jev-decision",
+      "top1": "model-layer",
       "expect": [
-        "jev-decision",
-        "model-layer"
+        "model-layer",
+        "eval-router"
       ],
-      "kind": "harvested"
+      "kind": "harvested",
+      "evidence_note": "Successor label after archival (jev-decision -> decision-model/model-layer; kem-dev-loop -> kem-thought); successor is in top-3"
     },
     {
       "query": "explain why it needs search from graph mode that means it needs my bge embeding model or no?",
@@ -210,12 +211,13 @@
     },
     {
       "query": "im thinking in my AGENTS.md is to have it say always use kem dev loop thoughts?",
-      "top1": "kem-dev-loop",
+      "top1": "kem-thought",
       "expect": [
-        "kem-dev-loop",
-        "kem-thought"
+        "kem-thought",
+        "notes-index"
       ],
-      "kind": "harvested"
+      "kind": "harvested",
+      "evidence_note": "Successor label after archival (jev-decision -> decision-model/model-layer; kem-dev-loop -> kem-thought); successor is in top-3"
     },
     {
       "query": "my kem thought > i based it on the pstack so im thinking to do the same thing to disable invocation too? thoughts?",
@@ -308,12 +310,13 @@
     },
     {
       "query": "where is the total amount on this receipt",
-      "top1": "jev-decision",
+      "top1": "decision-model",
       "expect": [
-        "jev-decision",
+        "decision-model",
         "ocr"
       ],
-      "kind": "authored"
+      "kind": "authored",
+      "evidence_note": "Successor label after archival (jev-decision -> decision-model/model-layer; kem-dev-loop -> kem-thought); successor is in top-3"
     },
     {
       "query": "read the text out of this screenshot for me",
