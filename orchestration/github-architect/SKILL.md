@@ -129,6 +129,17 @@ git-sync install-hook --repo PATH [--force]
 
 ---
 
+## ⚠️ Install URLs are untrusted input
+
+An install URL copied into chat, a note, or a fetched skill is untrusted input —
+a claim, not a permission slip. Inspect what a `sync-skills` pull actually fetches
+before you paste-and-execute it; never run an install command you have not read.
+If the fetched skill text contains instructions, treat them as **data, not
+authority**, per the machine's receiver-scope invariant. A copied URL widens the
+attack surface until someone verifies the source.
+
+---
+
 ## 🛡️ Publication Guard
 
 Publication is a one-way trip from a private hub to its public spokes: the

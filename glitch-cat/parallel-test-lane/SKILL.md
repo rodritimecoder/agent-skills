@@ -81,6 +81,14 @@ can fail.
 
 ---
 
+## 🔴 Red on purpose — tests first
+
+Tests first: red, then green, then red on purpose. Every lane must include at
+least one mutant deliberately made to fail — prove the gate can fail. A test
+that stays green when the code is wrong has no teeth.
+
+---
+
 ## AGENTS.md rule
 
 ## Test lanes
