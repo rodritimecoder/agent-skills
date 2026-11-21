@@ -12,8 +12,9 @@
 // Rules that matter:
 //   - argv arrays only; never interpolate user input into a shell
 //   - every response is capped (the 8 KB default is omnicli's own)
-//   - the only denial is the documented anti-pattern: discovering tools by
-//     reading skill directories. Code edits are never gated.
+//   - two denials: destructive shell commands (guard-hooks, unconditional) and
+//     the documented anti-pattern of discovering tools by reading skill dirs
+//   - OMNICLI_ROUTE_OFF=1 disables the whole plugin, guard included
 //   - logging must never fail the agent run
 
 import { execFile } from "node:child_process";
@@ -28,6 +29,7 @@ const SKILLS_ROOT = process.env.OMNICLI_SKILLS_ROOT || join(homedir(), "src/my-a
 const EXEMPT_MARKER = join(SKILLS_ROOT, ".omnicli-route-exempt");
 const ROUTE_LOG = join(homedir(), ".local/share/omnicli/route.jsonl");
 const PLANS_DIR = join(homedir(), ".local/share/omnicli/plans");
+const GUARD_BIN = process.env.GUARD_BIN || join(homedir(), ".local/bin/guard-hooks");
 
 const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as native tools. Use them; do not re-derive a tool's CLI from its source.
 - omnicli_search / tools.omnicli.search — find catalogued tools by intent; pass depth:"contract" (section/doc supported) for one tool's exact contract.
@@ -73,6 +75,42 @@ function run(argv, { timeout = 60_000 } = {}) {
       });
     });
   });
+}
+
+function runGuard(command) {
+  return new Promise((resolveGuard) => {
+    // `--` is mandatory: without it a command starting with `-h` is parsed as
+    // a clap flag, prints help and exits 0 — the gate would pass an attack.
+    execFile(GUARD_BIN, ["check", "--", command], { timeout: 5_000, maxBuffer: 64 * 1024, encoding: "utf8" }, (error, stdout, stderr) => {
+      resolveGuard({
+        code: error ? (error.code ?? null) : 0,
+        output: String(stdout || stderr || "").trim(),
+        cause: error && error.code !== 1 ? String(error.message || error) : null,
+      });
+    });
+  });
+}
+
+async function guardCommand(tool, command, sessionID) {
+  const result = await runGuard(command);
+  if (result.code === 0) {
+    void logRoute({ session: sessionID, tool, kind: "guard", decision: "allow" });
+    return;
+  }
+  const reason = result.code === 1
+    ? (result.output || "guard-hooks refused this command")
+    : `guard-hooks unavailable (${result.cause || result.output || result.code}); refusing at the execution boundary`;
+  const detail = cap(reason, 400);
+  void logRoute({ session: sessionID, tool, kind: "guard", decision: "deny", reason: detail });
+  const structured = { gate: "guard-hooks", tool, decision: "deny", reason: detail };
+  throw new Error(
+    `Denied by omnicli-route/guard-hooks at the execution boundary.\n` +
+      `command: ${cap(command, 400)}\n` +
+      `reason: ${detail}\n` +
+      `structured: ${JSON.stringify(structured)}\n` +
+      `Do not retry the same command; rewrite it without the destructive operation. ` +
+      `If the operation is intentional, ask the operator to run it.`,
+  );
 }
 
 async function logRoute(row) {
@@ -236,6 +274,12 @@ export default {
       const name = String(event?.tool || "");
       const input = event?.input || {};
       const sessionID = String(event?.sessionID || event?.messageID || "global");
+
+      // Unconditional: priming, marker files and project location must never
+      // disarm the destructive-command gate.
+      if (SHELL_TOOLS.has(name) && typeof input?.command === "string" && input.command.trim()) {
+        await guardCommand(name, input.command, sessionID);
+      }
 
       if (OMNICLI_TOOL.test(name) || (name === "execute" && /omnicli/i.test(String(input?.code || "")))) {
         primed.add(sessionID);

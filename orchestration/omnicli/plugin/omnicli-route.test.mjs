@@ -31,8 +31,28 @@ esac
 await writeFile(bin, script, "utf8");
 await chmod(bin, 0o755);
 
+const guardBin = join(root, "guard-hooks");
+await writeFile(
+  guardBin,
+  `#!/bin/sh
+case "$1" in
+  check)
+    [ "$2" = "--" ] || { printf 'fixture: expected -- separator'; exit 2; }
+    case "$3" in
+      *"rm -rf"*) printf 'BLOCKED: destructive recursive deletion (fixture)' >&2; exit 1 ;;
+      *) printf 'permitted (fixture)'; exit 0 ;;
+    esac
+    ;;
+  *) exit 2 ;;
+esac
+`,
+  "utf8",
+);
+await chmod(guardBin, 0o755);
+
 process.env.HOME = root;
 process.env.OMNICLI_BIN = bin;
+process.env.GUARD_BIN = guardBin;
 process.env.OMNICLI_SKILLS_ROOT = skills;
 const { default: plugin } = await import(`./omnicli-route.js?test=${Date.now()}`);
 
@@ -183,6 +203,63 @@ test("leaves ordinary repo reads and code-mode calls alone", async () => {
   await before({ tool: "read", input: { path: join(root, "project", "src/index.ts") }, sessionID: "s5" });
   await before({ tool: "grep", input: { path: join(root, "project") }, sessionID: "s5" });
   await before({ tool: "execute", input: { code: "return await tools.omnicli.search({query:'x'})" }, sessionID: "s6" });
+});
+
+test("guards shell commands with a structured, actionable denial", async () => {
+  const ctx = await setup();
+  const before = ctx._hooks["execute.before"];
+
+  await before({ tool: "shell", input: { command: "python3 -m pytest tests -q" }, sessionID: "g1" });
+
+  await assert.rejects(
+    () => before({ tool: "bash", input: { command: "rm -rf /home/rodri" }, sessionID: "g1" }),
+    (err) => {
+      assert.match(err.message, /Denied by omnicli-route\/guard-hooks/);
+      assert.match(err.message, /command: rm -rf \/home\/rodri/);
+      assert.match(err.message, /BLOCKED: destructive recursive deletion/);
+      assert.match(err.message, /"gate":"guard-hooks","tool":"bash","decision":"deny"/);
+      assert.match(err.message, /Do not retry the same command/);
+      return true;
+    },
+  );
+});
+
+test("a command starting with a flag cannot slip past the guard via --", async () => {
+  const ctx = await setup();
+  const before = ctx._hooks["execute.before"];
+  await assert.rejects(
+    () => before({ tool: "shell", input: { command: "-h ; rm -rf /" }, sessionID: "g-flag" }),
+    /BLOCKED: destructive recursive deletion/,
+  );
+});
+
+test("guard is unconditional: priming, marker and project location do not disarm it", async () => {
+  const ctx = await setup(skills);
+  const before = ctx._hooks["execute.before"];
+  await before({ tool: "omnicli_search", input: { query: "demo" }, sessionID: "g2" });
+  await writeFile(join(skills, ".omnicli-route-exempt"), "", "utf8");
+
+  await assert.rejects(
+    () => before({ tool: "shell", input: { command: "rm -rf /" }, sessionID: "g2" }),
+    /Denied by omnicli-route\/guard-hooks/,
+  );
+  await rm(join(skills, ".omnicli-route-exempt"));
+});
+
+test("fails closed when the guard binary is unavailable", async () => {
+  const original = process.env.GUARD_BIN;
+  process.env.GUARD_BIN = join(root, "missing-guard-hooks");
+  try {
+    const { default: noGuard } = await import(`./omnicli-route.js?noguard=${Date.now()}`);
+    const ctx = fakeCtx();
+    await noGuard.setup(ctx);
+    await assert.rejects(
+      () => ctx._hooks["execute.before"]({ tool: "shell", input: { command: "ls" }, sessionID: "g3" }),
+      /guard-hooks unavailable/,
+    );
+  } finally {
+    process.env.GUARD_BIN = original;
+  }
 });
 
 test("injects the routing block once", async () => {
