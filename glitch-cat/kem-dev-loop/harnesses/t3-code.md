@@ -41,12 +41,11 @@ When breaking a complex feature into independent modules:
    {
      "task": "Implement OAuth token refresh endpoint according to specs in specs/auth.md. Own only src/auth/refresh.ts.",
      "mode": "async",
+     "isolation": "worktree",
      "target": {
-       "isolation": "worktree",
-       "options": {
-         "providerInstanceId": "...",
-         "model": "..."
-       }
+       "providerInstanceId": "antigravity",
+       "model": "gemini-4-neon",
+       "options": { "thought_level": "high" }
      }
    }
    ```
@@ -91,6 +90,35 @@ Before accepting passing tests:
 4. Save the mutation ledger to `mutant_verification.json`.
 
 ---
+
+## 🔗 Capability bindings — T3-native first, portable fallback
+
+Skills declare the **outcome**; this table binds it to a harness. Keep the
+outcome column portable: a skill says "isolate this edit", never
+"call `delegate_task`". Adding a binding here changes no trigger and no gate —
+the escalation ladder in `apiv-loop` stays the source of truth for *when*.
+
+| Outcome (portable) | T3 Code binding | Portable fallback |
+| :--- | :--- | :--- |
+| Isolate a same-file edit | `delegate_task(isolation: "worktree")`; `t3_worktree_list` / `t3_worktree_status` to see refs and paths | `worktree-harness start/claim/gate/integrate` for non-delegate workers; never shell `git worktree add` for a delegate |
+| Hand off a finished worktree | `t3_worktree_handoff` after the branch's gate passes | `worktree-harness teardown` + scoped guarded-commit |
+| Link a PR to the session | `link_pull_request` / `link_pull_requests`; `list_thread_pull_requests` for stack order | `github-architect` + `git-sync`; record the PR URL in the run ledger |
+| Watch CI reactively | `watch_pull_request` — wakes on checks, reviews, conflicts, merge; `ci_logs` / `ci_rerun` on demand | `gh run list --watch` / `gh pr checks`; no polling loops in any harness |
+| Inspect a PR diff | `read_pull_request_guide` — temp checkout, per-stop code excerpts and line notes; `write_pull_request_guides` to generate | `gh pr diff` or `git diff base..head` redirected to a file; cite line ranges, never paste the diff into chat |
+| Triage issues | `read_issue` / `create_issue` / `comment_on_issue` | `gh issue view/create/comment` |
+| Fresh-context review | `delegate_task(role: "review")`, or a new native subagent with only the diff and scorecard | native subagent / `review-hub` with a lean prompt |
+| Enforce at the execution boundary | the harness plugin behind T3 (OpenCode `execute.before` via `omnicli-route`) — verify with the route log, do not assume | `guard-hooks check` in CLI plus a git pre-push hook |
+
+Two rules keep this table honest:
+
+1. **Bindings are not doctrine.** If a portable skill grows a T3 tool name, that
+   is a leak — move it here. If this table omits a capability that T3 owns,
+   add a row with both cells filled; a row without a fallback is not a binding.
+2. **Lowering a threshold is not changing a trigger.** Native worktrees make L1
+   cheap, so use them more readily for same-file work. They do not change the
+   security boundary: a worktree still shares host, network and credentials.
+   Untrusted or host-mutating work still goes to `subagent-spaces` (Podman) or
+   a VM. See `../apiv-loop/SKILL.md` → Triggered escalation.
 
 ## 🚫 T3 Anti-Patterns to Avoid
 
