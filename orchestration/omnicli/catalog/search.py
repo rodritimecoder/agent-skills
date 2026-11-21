@@ -244,6 +244,10 @@ COORDINATION_GAMMA = 0.65
 # bonus. Bounded, because an uncapped bonus lets a large generic document
 # accumulate score purely by having more text to match in.
 COVERAGE_CAP = 4
+# Reference chunks are docs/tables, not a skill's own statement of intent.
+# Discount them so they cannot win routing on conversational filler.
+REFERENCE_CHUNK_DISCOUNT = 0.95
+
 COVERAGE_WEIGHT = 0.15
 
 # Coordination is applied only to the top candidates by lexical score. A

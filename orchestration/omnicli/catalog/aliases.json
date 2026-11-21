@@ -665,7 +665,10 @@
       "omnicli sdk",
       "exec a plan",
       "code mode treatment",
-      "bm25"
+      "bm25",
+      "symlinks",
+      "group skills",
+      "first class"
     ],
     "tags": [
       "gateway",

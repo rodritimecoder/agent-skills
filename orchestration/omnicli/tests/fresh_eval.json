@@ -176,10 +176,11 @@
       "expect": [
         "ocr"
       ],
-      "kind": "harvested-fresh",
+      "kind": "harvester-noise",
       "evidence": [
         "vulkan"
-      ]
+      ],
+      "evidence_note": "Context-free fragment: 'it' has no antecedent. Vulkan is documented by both ocr (multimodal/ocr/SKILL.md compatibility: 'Requires an AMD Radeon RX 9060 XT GPU with Vulkan and the LightOnOCR-3-0.8B server on :8082') and model-layer (CONTEXT.md:9 dual RX 9060 XT Vulkan host; launchers/AGENTS.md :8080 Vulkan dual-GPU split; model-layer SKILL.md owns GPU/server/weights docs). BM25's model-layer is a defensible owner of Vulkan server docs, but the fragment alone cannot pick a single skill, so this is not a clean single-label routing case."
     },
     {
       "query": "lets fix the transcription mode so it auto works with lighton 0.8b? howd you do it?",
@@ -206,14 +207,15 @@
     },
     {
       "query": "https://huggingface.co/incoai/Qwen3.8-27B-DFlash2-GGUF/tree/main tho this one looks newer as its from 9 days ago delete the current one then redownload it",
-      "top1": "guard-hooks",
+      "top1": "model-layer",
       "expect": [
-        "guard-hooks"
+        "model-layer"
       ],
       "kind": "harvested-fresh",
       "evidence": [
         "delete"
-      ]
+      ],
+      "evidence_note": "Intent is GGUF weights/model management (delete old candidate, redownload new one), not destructive-command safety. model-layer SKILL.md owns 'every local model server ... launcher script, weights files', curated aliases 'weights, launcher, model server management, ports manifest'; .apiv/local-models-fix/plan.md: 'missing GGUF weights stay a ports.py check warning'. guard-hooks only matches the keyword 'delete' via its 'destructive command' alias."
     },
     {
       "query": "https://github.com/boxxy-dev/boxxy/commit/1d49862f6c6fba8c8155cc42aadf9291f9bd96c3 i was thinking something like this for example like the prompt should follow what ever prompt this person followed",
@@ -221,10 +223,11 @@
       "expect": [
         "github-architect"
       ],
-      "kind": "harvested-fresh",
+      "kind": "harvester-noise",
       "evidence": [
         "example"
-      ]
+      ],
+      "evidence_note": "Depends on external content not in the catalog: the commit hash appears only in this eval file, and 'whatever prompt this person followed' has no referent in-machine. github-architect owns git hygiene/commits but this is not a commit request; playwright's BM25 hit is driven by the bare GitHub URL ('open a url and take a screenshot') with no doc tying 'follow a person's prompt' to browser control. No catalog skill documents this intent, so it cannot be a clean single-label routing case."
     },
     {
       "query": "explain how all this works now the video miner",
@@ -276,25 +279,27 @@
     },
     {
       "query": "whats wrong with the ub 8192 kv in ram? looks like the speed penalty is negliable and we get the 8k benefit",
-      "top1": "ocr",
+      "top1": "decision-model",
       "expect": [
-        "ocr"
+        "decision-model"
       ],
       "kind": "harvested-fresh",
       "evidence": [
         "speed"
-      ]
+      ],
+      "evidence_note": "decision-model SKILL.md:157: 'Why it was retired: ... an 8192-token ubatch (-ub 8192 -b 8192), consuming ~8.2 GB VRAM and spilling ~7.9 GB into GTT system RAM'; CONTEXT.md:114 repeats the -ub 8192 / -b 8192 + GTT system RAM cause; SKILL.md:123 documents its no-KV-cache behavior. The exact 'ub 8192' + 'ram' + 'kv' facts live in decision-model docs, not ocr."
     },
     {
       "query": "ngl pipeline is cool but im thinking that lego block modular thing would be better",
-      "top1": "notes-index",
+      "top1": "kem-thought",
       "expect": [
-        "notes-index"
+        "kem-thought"
       ],
       "kind": "harvested-fresh",
       "evidence": [
         "would"
-      ]
+      ],
+      "evidence_note": "kem-thought owns the lego-block principle: glitch-cat/kem-thought/references/voice.md table: 'Lego bricks | Verified, optimised blocks you snap together as a system'; curated aliases include 'kem steering principles, load a named principle, deterministic step ownership'. notes-index only owns vault FTS search ('search my notes, find in my notes, search the vault'), with no lego/modular doc."
     },
     {
       "query": "no as in just as in the name? of 'sync: propagate skills update [2026-10-26T14:34:42Z]' yeah its syncing but like when the gh vets commit something, the name is more profresh and like descriptive? more on the descriptive part its really not descriptive at all",
@@ -325,10 +330,11 @@
       "expect": [
         "gh-action-subagent"
       ],
-      "kind": "harvested-fresh",
+      "kind": "harvester-noise",
       "evidence": [
         "openai"
-      ]
+      ],
+      "evidence_note": "Prompt is about an OpenAI account/API usage console and burn rate ('7% monthly usage used in 4.5 hours? should i be worried?'). No catalog skill documents OpenAI console/billing/usage monitoring (no 'monthly usage' / '7%' doc hit). BM25's design-pack match is a spurious lexical hit on 'consol' -> multimodal/design-pack/looks/glitch-console/, a retro UI demo unrelated to billing; gh-action-subagent (GitHub Actions cloud agents) has no relation to OpenAI usage either. Not a clean single-label routing case."
     },
     {
       "query": "explain the form factor of the free openrouter skill again? for the free models is it typescript or python",
