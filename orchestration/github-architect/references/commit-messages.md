@@ -30,7 +30,7 @@ One paragraph on the first thing. One paragraph on the second, or omit it.
    `chore`, `build`, `ci`, `style`, `revert`.
 2. **Scope** names the component a reader would recognise — the skill, crate
    or module — never a file path. Several scopes go comma-separated with no
-   spaces: `fix(window,terminal,command-palette): …`. Three or four is fine;
+   spaces: `fix(sync,guard,commit): …`. Three or four is fine;
    past that the change is really a `chore` or wants splitting.
 3. **Subject** states what changed for a user of that component, in plain
    words. Lowercase after the colon, no trailing period. Two related things
