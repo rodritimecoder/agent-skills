@@ -17,8 +17,6 @@
     "glitch-cat/eval-router",
     "glitch-cat/graph-memory",
     "glitch-cat/guard-hooks",
-    "glitch-cat/jev-decision",
-    "glitch-cat/kem-dev-loop",
     "glitch-cat/kem-thought",
     "glitch-cat/memory",
     "glitch-cat/notes-index",

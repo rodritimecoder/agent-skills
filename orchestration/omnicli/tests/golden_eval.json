@@ -38,7 +38,7 @@
         "icm-architect"
       ],
       "kind": "drift",
-      "note": "Replaces 'find the cheat sheet for a course'. That phrasing was a 0.3-point coin flip between canvas-cli and edstem-cli, with cornell-notes a third candidate \u2014 'cheat sheet' plausibly answers three skills, so as an assertion it tested nothing. Adding it as a canvas-cli alias was measured and did not move the score at all. This query tests the same capability (course material retrieval) unambiguously, with a 1.4x margin."
+      "note": "Replaces 'find the cheat sheet for a course'. That phrasing was a 0.3-point coin flip between canvas-cli and edstem-cli, with cornell-notes a third candidate — 'cheat sheet' plausibly answers three skills, so as an assertion it tested nothing. Adding it as a canvas-cli alias was measured and did not move the score at all. This query tests the same capability (course material retrieval) unambiguously, with a 1.4x margin."
     },
     {
       "query": "transcribe a zoom lecture recording",
@@ -170,7 +170,7 @@
       "kind": "drift"
     },
     {
-      "query": "\u8c03\u7814\u4e00\u4e0b\u8fd9\u4e2a\u8bdd\u9898\u5728\u7f51\u4e0a\u7684\u8ba8\u8bba",
+      "query": "调研一下这个话题在网上的讨论",
       "top1": "agent-reach",
       "expect": [
         "agent-reach"
@@ -315,19 +315,21 @@
     },
     {
       "query": "classify this ticket and give me a confidence probability",
-      "top1": "jev-decision",
+      "top1": "eval-router",
       "expect": [
-        "jev-decision"
+        "eval-router"
       ],
-      "kind": "drift"
+      "kind": "drift",
+      "evidence_note": "Ambiguous between decision-model (choice+confidence) and eval-router (classifies with confidence); eval-router is the documented match for classify+confidence wording. Was jev-decision pre-archive."
     },
     {
       "query": "pick one of these labels and score the confidence",
-      "top1": "jev-decision",
+      "top1": "decision-model",
       "expect": [
-        "jev-decision"
+        "decision-model"
       ],
-      "kind": "drift"
+      "kind": "drift",
+      "evidence_note": "jev-decision archived 2026-11-21; decision-model is the strict superset (bool/choice/score/box + candidate rotation)"
     },
     {
       "query": "search my knowledge base for what we know about refunds",

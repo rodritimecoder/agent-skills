@@ -50,10 +50,10 @@
       "scrape",
       "social media posts",
       "reddit twitter youtube bilibili xiaohongshu",
-      "\u8c03\u7814",
-      "\u641c\u7d22",
-      "\u67e5\u4e00\u4e0b",
-      "\u7f51\u4e0a"
+      "调研",
+      "搜索",
+      "查一下",
+      "网上"
     ],
     "tags": [
       "research",
@@ -850,7 +850,8 @@
       "which decision candidate is loaded",
       "typed judgement client",
       "gliclass speed question",
-      "bounding box from the decision slot"
+      "bounding box from the decision slot",
+      "classify with confidence"
     ],
     "tags": []
   },

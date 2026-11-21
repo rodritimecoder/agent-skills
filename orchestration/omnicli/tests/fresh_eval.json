@@ -36,17 +36,6 @@
       ]
     },
     {
-      "query": "yuh lets do b lets use kev dev loop in fast mode with this plan then for the sub agents lets do crouton alpha free then work in vert slices",
-      "top1": "kem-dev-loop",
-      "expect": [
-        "kem-dev-loop"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "slices"
-      ]
-    },
-    {
       "query": "switching the llama server because it is literally just a dir change and also maybe keep like a copy of that server.json maybe as a md so its easily recoverable and like the whole point is to quickly update it to the new audiocpp server i choose later",
       "top1": "audiocpp",
       "expect": [
