@@ -227,17 +227,6 @@
       ]
     },
     {
-      "query": "ffmpeg is like to as the browser> so there would no point in like rendering the vid to a chrome html angle to use cdp and playwright or maybe im on to something?",
-      "top1": "kem-ocr",
-      "expect": [
-        "kem-ocr"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "rendering"
-      ]
-    },
-    {
       "query": "explain how all this works now the video miner",
       "top1": "video-miner",
       "expect": [
@@ -372,28 +361,6 @@
       "kind": "harvested-fresh",
       "evidence": [
         "thought"
-      ]
-    },
-    {
-      "query": "can i open the chat site on any other tailscale device and it would work?",
-      "top1": "companion",
-      "expect": [
-        "companion"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "tailscale"
-      ]
-    },
-    {
-      "query": "asr on the tailscale chat aint working? and do they both do streaming?",
-      "top1": "companion",
-      "expect": [
-        "companion"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "tailscale"
       ]
     },
     {

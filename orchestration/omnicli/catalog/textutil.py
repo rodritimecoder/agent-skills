@@ -18,7 +18,7 @@ import re
 
 # Han, Hiragana/Katakana, Hangul, plus CJK punctuation that delimits runs.
 CJK_RUN = re.compile(r"[぀-ヿ㐀-䶿一-鿿가-힯]+")
-WORD = re.compile(r"[\w']+", re.UNICODE)
+WORD = re.compile(r"\w+", re.UNICODE)
 
 
 def cjk_runs(text: str) -> list[str]:

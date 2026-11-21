@@ -412,7 +412,8 @@
       "hosted embeddings",
       "batch shell commands",
       "free tts",
-      "coding loop free"
+      "coding loop free",
+      "open router"
     ],
     "tags": [
       "cloud",
@@ -663,7 +664,8 @@
       "javascript code mode",
       "omnicli sdk",
       "exec a plan",
-      "code mode treatment"
+      "code mode treatment",
+      "bm25"
     ],
     "tags": [
       "gateway",
