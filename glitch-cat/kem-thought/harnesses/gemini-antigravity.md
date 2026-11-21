@@ -10,7 +10,7 @@ Antigravity (Google DeepMind's agentic CLI engine powering Gemini agents) provid
 ## 🏛️ Antigravity Host Invariants
 
 1. **Native Python Workflow Execution (`run_workflow`):** Antigravity injects Python primitives (`pipeline`, `parallel`, `agent`, `phase`, `log`) into inline workflow scripts. This is the optimal execution environment for Kem's multi-step pipelines.
-2. **Dynamic Subagent Definition:** Custom roles can be registered on-the-fly with `define_subagent` (specifying tool permissions and system prompts) and invoked via `invoke_subagent`.
+2. **Dynamic Subagent Definition:** Custom roles can be registered on-the-fly with `define_subagent` (specifying tool permissions and system prompts) and invoked via `invoke_subagent`. `invoke_subagent` selects by **tier only** (`inherit|flash_lite|flash|pro`) — it cannot target an exact model ID or cross providers, so a named Gemini model in T3 Code must go through `delegate_task` with `target.providerInstanceId: "antigravity"` instead. `agy --print` is a one-shot runner, not a subagent: reserve it for headless shell pipelines.
 3. **Workspace Isolation (`Workspace` parameter):**
    - `"inherit"` (default): uses parent workspace.
    - `"branch"`: creates an isolated git clone branched from parent.
