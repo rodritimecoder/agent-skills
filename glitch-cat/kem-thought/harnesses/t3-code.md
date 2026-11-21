@@ -18,6 +18,7 @@ T3 Code is an agentic IDE environment driven by the **Agent Client Protocol (ACP
 5. **Reactive Wakeup (Zero Polling):** Never run polling loops with `task_status`, `sleep`, or timers. T3 Code automatically resumes your turn when background delegates or tasks complete. Stop calling tools to yield.
 6. **Thread Linking:** When mentioning a thread, always use its markdown `link` verbatim. Never use a plain title or raw thread ID.
 7. **Visual Rendering:** To present diagrams, dashboards, or validation reports to the user, write the HTML to a file, call `html_preview`, and then call `html_render`. Never start a local web server to display results.
+8. **Native Git/PR UI:** Open threads inside a registered git-repo project with an `origin` remote (never a parent folder above nested `.git` repos) so T3 renders "Changes vs origin/*" and the per-turn "Open diff" card automatically. After creating a PR with `gh pr create`, call `link_pull_request` to light up the PR/CI/Merge row. The diff card is passive host UI — no agent tool creates it. A token alone does not register a project: `t3_project_create` the nested repo.
 
 ---
 
@@ -102,8 +103,8 @@ the escalation ladder in `apiv-loop` stays the source of truth for *when*.
 | :--- | :--- | :--- |
 | Isolate a same-file edit | `delegate_task(isolation: "worktree")`; `t3_worktree_list` / `t3_worktree_status` to see refs and paths | `worktree-harness start/claim/gate/integrate` for non-delegate workers; never shell `git worktree add` for a delegate |
 | Hand off a finished worktree | `t3_worktree_handoff` after the branch's gate passes | `worktree-harness teardown` + scoped guarded-commit |
-| Link a PR to the session | `link_pull_request` / `link_pull_requests`; `list_thread_pull_requests` for stack order | `github-architect` + `git-sync`; record the PR URL in the run ledger |
-| Watch CI reactively | `watch_pull_request` — wakes on checks, reviews, conflicts, merge; `ci_logs` / `ci_rerun` on demand | `gh run list --watch` / `gh pr checks`; no polling loops in any harness |
+| Link a PR to the session | `link_pull_request` / `link_pull_requests`; `list_thread_pull_requests` for stack order. `gh pr create` does NOT auto-link — call `link_pull_request` explicitly (a native `pull_request_create`, if listed, links itself) | `github-architect` + `git-sync`; record the PR URL in the run ledger |
+| Watch CI / open & merge PR | Only when these tools are listed in the live MCP catalog: `pull_request_*`, `watch_pull_request` (reactive wake), `ci_logs` / `ci_rerun`. They are NOT present in a fresh `/home/rodri` thread even with a GitHub token | `gh pr create/checks/merge` + `gh run list --watch`; no polling loops in any harness |
 | Inspect a PR diff | `read_pull_request_guide` — temp checkout, per-stop code excerpts and line notes; `write_pull_request_guides` to generate | `gh pr diff` or `git diff base..head` redirected to a file; cite line ranges, never paste the diff into chat |
 | Triage issues | `read_issue` / `create_issue` / `comment_on_issue` | `gh issue view/create/comment` |
 | Fresh-context review | `delegate_task(role: "review")`, or a new native subagent with only the diff and scorecard | native subagent / `review-hub` with a lean prompt |
