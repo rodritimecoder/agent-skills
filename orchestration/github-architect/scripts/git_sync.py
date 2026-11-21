@@ -862,7 +862,15 @@ def cmd_check_messages(args) -> int:
 
 HOOK_TEMPLATE = """#!/usr/bin/env bash
 # Managed by github-architect. Refuses to publish a commit with no description.
-exec python3 "{script}" check-messages --repo "$(git rev-parse --show-toplevel)"
+# Advisory hybrid audit (reach lint/overlap) never blocks the push.
+repo="$(git rev-parse --show-toplevel)"
+python3 "{script}" check-messages --repo "$repo"
+rc=$?
+audit="{audit}"
+if [ -f "$audit" ]; then
+  python3 "$audit" --repo "$repo" >/dev/null 2>&1 || true
+fi
+exit $rc
 """
 
 
@@ -875,7 +883,7 @@ def cmd_install_hook(args) -> int:
             print(f"❌ {hook} exists and was not written by github-architect. Pass --force to replace it.")
             return 1
     hook.parent.mkdir(parents=True, exist_ok=True)
-    hook.write_text(HOOK_TEMPLATE.format(script=Path(__file__).resolve()))
+    hook.write_text(HOOK_TEMPLATE.format(script=Path(__file__).resolve(), audit=Path(__file__).resolve().parent.parent / ".." / "omnicli" / "tests" / "reach_audit.py"))
     hook.chmod(0o755)
     print(f"🪝 Installed pre-push description gate at {hook}")
     return 0
