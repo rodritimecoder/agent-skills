@@ -274,19 +274,10 @@ vault-mine reindex
 
 ### One-liner: `vault-kem-reel`
 
-For Kem Glitch reels, the canonical one-liner is `~/.local/bin/vault-kem-reel` —
-a thin wrapper that delegates to the authoritative launcher at
-`/run/media/rodri/AI/sh/vault-kem-reel`:
-
-```bash
-vault-kem-reel "https://www.instagram.com/reel/DgAgLrRAbga/"
-# equivalent to: vault-mine kem "https://www.instagram.com/reel/DgAgLrRAbga/"
-```
-
-Both are the same one line: `exec vault-mine kem "$@"`. The launcher in
-`/run/media/rodri/AI/sh/` is the source of truth (edit it there, then
-`sync-skills propagate`); `~/.local/bin/vault-kem-reel` is a symlink to it, so
-the command stays live without a second edit.
+`vault-kem-reel "<url>"` is the canonical one-liner for Kem reels — a thin wrapper
+over `vault-mine kem` (`exec vault-mine kem "$@"`). The authoritative launcher is
+`/run/media/rodri/AI/sh/vault-kem-reel`; `~/.local/bin/vault-kem-reel` symlinks to
+it, so this mining pipeline stays live after `sync-skills propagate`.
 
 A reel is mined in one pass: download (with its info JSON and any subtitle
 track), transcript, dHash-deduped keyframes, notes. `--ocr auto` (default)
