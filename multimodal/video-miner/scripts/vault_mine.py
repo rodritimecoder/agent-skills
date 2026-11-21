@@ -338,6 +338,93 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
     return render_transcript(parse_vtt_blocks(vtt_file))
 
 
+_TRANSCRIPT_BLOCK_RE = re.compile(r"^\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*\s*(.*?)\s*$")
+
+
+def parse_transcript_blocks(transcript_text: str) -> List[tuple]:
+    """Return ``[(timestamp, verbatim_text)]`` from a ``**[mm:ss]** text`` transcript."""
+    blocks: List[tuple] = []
+    for line in (transcript_text or "").splitlines():
+        m = _TRANSCRIPT_BLOCK_RE.match(line.strip())
+        if not m:
+            continue
+        ts, text = m.group(1), m.group(2).strip()
+        if not text or text.startswith("_"):
+            continue
+        blocks.append((ts, text))
+    return blocks
+
+
+def _excerpt(text: str, max_chars: int = 160) -> str:
+    """Verbatim prefix cut at a word boundary; ellipsis marks omitted words."""
+    text = " ".join(text.split())
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars].rsplit(" ", 1)[0]
+    return cut.rstrip(" ,;:.!?") + "..."
+
+
+def _claim_label(text: str) -> str:
+    """Short label derived from the block's own words (keywords first)."""
+    low = text.lower()
+    for needle, label in (
+        ("false sense", "False sense of security"),
+        ("sycophant", "Sycophancy catch"),
+        ("blog post", "Theo's equivalent"),
+        ("restate", "Restate question"),
+        ("favorite question", "The question"),
+        ("general bar", "The bar"),
+        ("planning", "Move to planning"),
+        ("important", "The thesis"),
+    ):
+        if needle in low:
+            return label
+    words = text.split()
+    return " ".join(words[:5]) + ("..." if len(words) > 5 else "")
+
+
+def derive_kem_notes_content(transcript_text: str) -> tuple[List[str], List[str]]:
+    """Transcript-derived provenance rows + extractive synthesis (no new deps).
+
+    Returns ``(prov_rows, synthesis_lines)`` ready to splice into the kem notes
+    template: real verbatim quotes/timestamps replace the ``Core Thesis | ...``
+    stub, and a deterministic extractive synthesis replaces the placeholder
+    "Synthesize ..." instruction.
+    """
+    blocks = parse_transcript_blocks(transcript_text)
+    if not blocks:
+        return (
+            ['| Transcript | "_No timestamped blocks captured_" | N/A |'],
+            ["_No timestamped transcript blocks were available to synthesize._"],
+        )
+    cap = 6
+    if len(blocks) > cap:
+        # Keep the opening/thesis block, then prefer blocks that actually carry
+        # the argument (restate, the bar, sycophancy, Theo's fallback) over an
+        # arbitrary even spread that can drop the reel's central claim.
+        signal = ("restate", "general bar", "planning", "blog post",
+                  "sycophant", "false sense", "favorite question", "important")
+        scored = sorted(
+            range(1, len(blocks)),
+            key=lambda i: (-sum(s in blocks[i][1].lower() for s in signal), i),
+        )
+        keep = sorted({0} | set(scored[:cap - 1]))
+        picked = [blocks[i] for i in keep]
+    else:
+        picked = blocks
+
+    prov_rows = [
+        f"| {_claim_label(text)} | \"{_excerpt(text)}\" | {ts} |"
+        for ts, text in picked
+    ]
+    synthesis_lines = [
+        "_Extractive synthesis of the transcript (deterministic; verbatim timestamps)._",
+        "",
+    ]
+    synthesis_lines += [f"- **[{ts}]** {_excerpt(text, 220)}" for ts, text in picked]
+    return prov_rows, synthesis_lines
+
+
 def update_vault_index(vault_dir: Path) -> None:
     index_file = vault_dir / "INDEX.md"
     rows: List[str] = []
@@ -735,6 +822,9 @@ def fast_mine_video(
         reel_id = meta.get("id") or ""
 
         if creator_slug == "kem_glitch":
+            prov_rows, synthesis_lines = derive_kem_notes_content(
+                (target_dir / "transcript.md").read_text(encoding="utf-8")
+            )
             notes_lines = [
                 f"# {title_name}",
                 "",
@@ -758,7 +848,7 @@ def fast_mine_video(
                 "",
                 "| Claim | Quote | Time |",
                 "| :--- | :--- | :---: |",
-                "| Core Thesis | \"...\" | 00:00 |",
+                *prov_rows,
                 "",
                 "**Modeled in this note** — our synthesis, not his literal words.",
                 "",
@@ -770,7 +860,7 @@ def fast_mine_video(
                 "",
                 "## 🎯 Executive Architectural Synthesis",
                 "",
-                "*(Synthesize key architectural patterns, principles, and trade-offs from the transcript here)*",
+                *synthesis_lines,
                 "",
             ]
         else:

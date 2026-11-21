@@ -272,6 +272,22 @@ vault-mine import ./my_video_run --creator "kem_glitch" --title "5-agents-worktr
 vault-mine reindex
 ```
 
+### One-liner: `vault-kem-reel`
+
+For Kem Glitch reels, the canonical one-liner is `~/.local/bin/vault-kem-reel` —
+a thin wrapper that delegates to the authoritative launcher at
+`/run/media/rodri/AI/sh/vault-kem-reel`:
+
+```bash
+vault-kem-reel "https://www.instagram.com/reel/DgAgLrRAbga/"
+# equivalent to: vault-mine kem "https://www.instagram.com/reel/DgAgLrRAbga/"
+```
+
+Both are the same one line: `exec vault-mine kem "$@"`. The launcher in
+`/run/media/rodri/AI/sh/` is the source of truth (edit it there, then
+`sync-skills propagate`); `~/.local/bin/vault-kem-reel` is a symlink to it, so
+the command stays live without a second edit.
+
 A reel is mined in one pass: download (with its info JSON and any subtitle
 track), transcript, dHash-deduped keyframes, notes. `--ocr auto` (default)
 calls `llama-rig ensure ocr` for `:8082` when it is not ready, then OCRs the four
@@ -312,8 +328,10 @@ the commit. The `git show --stat HEAD | grep <new-entry>` line is the gate: if i
 prints nothing, re-commit with the bare prefix before pushing.
 
 `source.mp4` is gitignored: the video stays local, notes/transcripts/frames
-publish. The generated `notes.md` is a **template stub** (`"Core Thesis | '...'"`)
-— write the synthesis before committing. If reindex picked up an unrelated
+publish. The generated `notes.md` is **transcript-derived**: the Provenance table
+holds real verbatim quotes + timestamps detected in `transcript.md`, and the
+Executive Architectural Synthesis is an extractive synthesis of those blocks —
+no placeholder stub. Review it before committing. If reindex picked up an unrelated
 untracked reel in `INDEX.md`, remove that line before staging, or use `--include`
 to stage only your own entry.
 
