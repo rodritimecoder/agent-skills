@@ -1,0 +1,22 @@
+[
+  {"query": "transcribe this recording.wav to text", "should_trigger": true, "kind": "path"},
+  {"query": "turn my podcast into readable text", "should_trigger": true, "kind": "drift"},
+  {"query": "narrate this sentence into a wav file with a named voice", "should_trigger": true, "kind": "prose"},
+  {"query": "clone my voice from /run/media/rodri/AI/voice/maomao.wav", "should_trigger": true, "kind": "path"},
+  {"query": "get millisecond word timestamps for alignment", "should_trigger": true, "kind": "prose"},
+  {"query": "who spoke when in this meeting? diarize it", "should_trigger": true, "kind": "casual"},
+  {"query": "asr this speech.wav with crisperwhisper", "should_trigger": true, "kind": "abbrev"},
+  {"query": "tts this for me", "should_trigger": true, "kind": "abbrev"},
+  {"query": "read this out loud in my voice", "should_trigger": true, "kind": "drift"},
+  {"query": "doctor the audio.cpp binary and list installed models", "should_trigger": true, "kind": "prose"},
+  {"query": "transcribe the slides in this lecture video into notes", "should_trigger": false, "kind": "prose"},
+  {"query": "read the text out of this screenshot", "should_trigger": false, "kind": "terse"},
+  {"query": "get the YouTube captions for this online video", "should_trigger": false, "kind": "prose"},
+  {"query": "narrate a spoken chat page with an animated avatar", "should_trigger": false, "kind": "prose"},
+  {"query": "download the audio from this Zoom cloud recording", "should_trigger": false, "kind": "context"},
+  {"query": "transcribe the text in this PDF", "should_trigger": false, "kind": "terse"},
+  {"query": "swap the :8081 slot to a different candidate", "should_trigger": false, "kind": "prose"},
+  {"query": "extract the audio track from talk.mp4 with ffmpeg", "should_trigger": false, "kind": "path"},
+  {"query": "recognise the words in this scanned image", "should_trigger": false, "kind": "casual"},
+  {"query": "align the two PDF columns before OCR", "should_trigger": false, "kind": "prose"}
+]

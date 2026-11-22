@@ -1,0 +1,22 @@
+[
+  {"query": "use kem mode for this session", "should_trigger": true, "kind": "drift"},
+  {"query": "what would kem do about this gate that never fails?", "should_trigger": true, "kind": "prose"},
+  {"query": "load the 'code decides wherever it can' principle", "should_trigger": true, "kind": "drift"},
+  {"query": "always run the control before I claim this works", "should_trigger": true, "kind": "drift"},
+  {"query": "a gate that cannot fail is not a gate — check ours", "should_trigger": true, "kind": "prose"},
+  {"query": "tag every step as deterministic or probabilistic", "should_trigger": true, "kind": "drift"},
+  {"query": "name the job and the actor before we start", "should_trigger": true, "kind": "prose"},
+  {"query": "cite what you claim in that summary", "should_trigger": true, "kind": "drift"},
+  {"query": "the poison sits upstream — find the first broken step", "should_trigger": true, "kind": "drift"},
+  {"query": "use fresh-context judges for the review of my work", "should_trigger": true, "kind": "drift"},
+  {"query": "check the control plane health of the llama-swap rig", "should_trigger": false, "kind": "prose"},
+  {"query": "gate the PR on passing CI checks", "should_trigger": false, "kind": "terse"},
+  {"query": "decide which model should answer this prompt", "should_trigger": false, "kind": "prose"},
+  {"query": "measure the VRAM usage of the new candidate", "should_trigger": false, "kind": "casual"},
+  {"query": "measure the token count of this prompt", "should_trigger": false, "kind": "terse"},
+  {"query": "load the principle of least privilege for the container", "should_trigger": false, "kind": "prose"},
+  {"query": "check the judge score from the decision slot", "should_trigger": false, "kind": "prose"},
+  {"query": "run the debug build of llama.cpp and check for errors", "should_trigger": false, "kind": "context"},
+  {"query": "what would a senior engineer do here?", "should_trigger": false, "kind": "casual"},
+  {"query": "label the ports in ports.json with new aliases", "should_trigger": false, "kind": "terse"}
+]

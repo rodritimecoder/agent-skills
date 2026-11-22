@@ -1,0 +1,22 @@
+[
+  {"query": "build this feature with align plan implement verify and parallel builders", "should_trigger": true, "kind": "prose"},
+  {"query": "grill the brief first, then split work into non-overlapping slices", "should_trigger": true, "kind": "drift"},
+  {"query": "set up a flat shared board with board add/claim/check for my agents", "should_trigger": true, "kind": "path"},
+  {"query": "my builder failed the check — re-align instead of patching", "should_trigger": true, "kind": "prose"},
+  {"query": "intent driven build loop for the new routing feature", "should_trigger": true, "kind": "drift"},
+  {"query": "verify like a user with a walkthrough before calling it done", "should_trigger": true, "kind": "drift"},
+  {"query": "write the own-words restatement into plan.md and get sign-off", "should_trigger": true, "kind": "path"},
+  {"query": "cap re-alignments at 2 then surface to the human", "should_trigger": true, "kind": "terse"},
+  {"query": "five level validation gates for this implementation", "should_trigger": true, "kind": "drift"},
+  {"query": "should I escalate this to BMAD for a whole-team build?", "should_trigger": true, "kind": "prose"},
+  {"query": "run the unit tests and report the exit code", "should_trigger": false, "kind": "terse"},
+  {"query": "patch the failing test in test_foo.py and re-run it", "should_trigger": false, "kind": "path"},
+  {"query": "grill the API response schema for missing fields", "should_trigger": false, "kind": "casual"},
+  {"query": "use a Kanban board with columns for my project tasks", "should_trigger": false, "kind": "prose"},
+  {"query": "align the OCR output columns with the source PDF", "should_trigger": false, "kind": "prose"},
+  {"query": "verify the checksum of this downloaded GGUF file", "should_trigger": false, "kind": "terse"},
+  {"query": "plan the model swap on the :8083 slot", "should_trigger": false, "kind": "context"},
+  {"query": "implement a JSON parser in 20 lines", "should_trigger": false, "kind": "terse"},
+  {"query": "check the CI logs for the failing PR", "should_trigger": false, "kind": "prose"},
+  {"query": "escalate to a bigger model because the answer is wrong", "should_trigger": false, "kind": "casual"}
+]

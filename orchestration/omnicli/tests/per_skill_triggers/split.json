@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "description": "Fixed 60/40 train/validation split of query indices for every per-skill trigger corpus. Each skill has 20 queries (indices 0-19): 10 should_trigger=true (0-9) then 10 should_trigger=false (10-19). Train = indices where i % 5 in {0,1,2}; validation = indices where i % 5 in {3,4}. This yields 12 train / 8 validation per skill, 6 positives + 6 negatives in train and 4 + 4 in validation.",
+  "ratio": {"train": 0.6, "validation": 0.4},
+  "rule": "train = [i for i in range(n) if i % 5 < 3]; validation = [i for i in range(n) if i % 5 >= 3]",
+  "skills": {
+    "agent-reach": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "apiv-loop": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "eval-router": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "kem-thought": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "audiocpp": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "decision-model": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "llama-build": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "model-layer": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "ocr": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "video-miner": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    },
+    "isolate-run": {
+      "train": [0, 1, 2, 5, 6, 7, 10, 11, 12, 15, 16, 17],
+      "validation": [3, 4, 8, 9, 13, 14, 18, 19]
+    }
+  }
+}

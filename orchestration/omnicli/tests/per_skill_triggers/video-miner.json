@@ -1,0 +1,22 @@
+[
+  {"query": "turn this lecture recording into study notes", "should_trigger": true, "kind": "prose"},
+  {"query": "mine this pile of recordings for what they teach", "should_trigger": true, "kind": "drift"},
+  {"query": "get the transcript and slides out of ~/Videos/lecture.mp4", "should_trigger": true, "kind": "path"},
+  {"query": "vault-mine add this reel into creator-vault", "should_trigger": true, "kind": "path"},
+  {"query": "run the 6-stage pipeline up to the ASR checkpoint", "should_trigger": true, "kind": "prose"},
+  {"query": "step through the video mining stages one at a time", "should_trigger": true, "kind": "prose"},
+  {"query": "use --ocr minicpm with the structural gate for dense screen text", "should_trigger": true, "kind": "context"},
+  {"query": "show a high-density timeline outline of the video", "should_trigger": true, "kind": "drift"},
+  {"query": "diarize the speakers with --speaker-names Kem,Chase", "should_trigger": true, "kind": "terse"},
+  {"query": "reindex the creator vault after mining the reel", "should_trigger": true, "kind": "prose"},
+  {"query": "transcribe this audio recording with no picture", "should_trigger": false, "kind": "prose"},
+  {"query": "download the slides from a Zoom cloud recording", "should_trigger": false, "kind": "prose"},
+  {"query": "get the YouTube captions for this video online", "should_trigger": false, "kind": "prose"},
+  {"query": "read the text in this screenshot", "should_trigger": false, "kind": "terse"},
+  {"query": "transcribe my podcast.wav to text", "should_trigger": false, "kind": "path"},
+  {"query": "convert this PDF into markdown", "should_trigger": false, "kind": "terse"},
+  {"query": "check the health of the :8082 OCR slot", "should_trigger": false, "kind": "prose"},
+  {"query": "publish the creator-vault repo to GitHub", "should_trigger": false, "kind": "prose"},
+  {"query": "mine this CSV for sales trends", "should_trigger": false, "kind": "casual"},
+  {"query": "summarise this YouTube video by reading its comments", "should_trigger": false, "kind": "context"}
+]

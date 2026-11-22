@@ -1,0 +1,22 @@
+[
+  {"query": "read the text out of this screenshot", "should_trigger": true, "kind": "drift"},
+  {"query": "extract text from a scanned document", "should_trigger": true, "kind": "drift"},
+  {"query": "OCR this PDF report pages 1-5 into markdown", "should_trigger": true, "kind": "path"},
+  {"query": "get the slide text from lecture.png with boxes", "should_trigger": true, "kind": "path"},
+  {"query": "recognise the handwriting in this image", "should_trigger": true, "kind": "drift"},
+  {"query": "pull the figures and chart tables out of page.png", "should_trigger": true, "kind": "prose"},
+  {"query": "ocr doctor to check the engine and port", "should_trigger": true, "kind": "terse"},
+  {"query": "screenshot to markdown with figure crops in notes/assets", "should_trigger": true, "kind": "path"},
+  {"query": "transcribe the text in this Fraktur scan", "should_trigger": true, "kind": "prose"},
+  {"query": "start the lighton OCR daemon", "should_trigger": true, "kind": "prose"},
+  {"query": "find where the total amount is in receipt.png", "should_trigger": false, "kind": "prose"},
+  {"query": "coordinate the PDF conversion pipeline", "should_trigger": false, "kind": "context"},
+  {"query": "transcribe this lecture.mp4 speech into text", "should_trigger": false, "kind": "prose"},
+  {"query": "extract the text from this YouTube video's captions", "should_trigger": false, "kind": "prose"},
+  {"query": "use the OXR engine to OCR this page", "should_trigger": false, "kind": "terse"},
+  {"query": "get the bounding box of the figure in the slide", "should_trigger": false, "kind": "prose"},
+  {"query": "read the text from this image with the decision slot on :8083", "should_trigger": false, "kind": "path"},
+  {"query": "start the ocr slot by editing ports.json by hand", "should_trigger": false, "kind": "context"},
+  {"query": "scan this QR code and open the URL", "should_trigger": false, "kind": "casual"},
+  {"query": "read the OCR model weights from disk to check quantization", "should_trigger": false, "kind": "context"}
+]

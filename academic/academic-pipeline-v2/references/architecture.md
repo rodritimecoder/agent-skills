@@ -187,12 +187,12 @@ Exit codes gate CI. "Always run the control."
 
 ## 12. Still open (need your call)
 
-1. ~~Classifier concurrency~~ — RESOLVED: local 35B (Qwen3.6-35B-A3B, :8080) + OpenRouter free models in parallel.
+1. ~~Classifier concurrency~~ — RESOLVED: local 35B (Qwen3.6-35B-A3B, :8080) running alongside the free hosted classifier tier in parallel.
 2. ~~Smart digestion~~ — RESOLVED: first stage; light classifier (`jev-decision` bool) triages on Canvas metadata (names) before download; scope = weeks 1-12 notes + tutorial solutions only.
 3. ~~Anki~~ — RESOLVED: full hub (deck mgmt + review), reusing the Anki UI from old `viz.html`.
 4. ~~Phase 0 subject~~ — RESOLVED: user-specified subject list (default all 4: 41200, 48430, 48520, 48521); not hardcoded.
 5. ~~Kem verification~~ — RESOLVED: a micro-gate at every stage (hard stop on failure, serialized evidence).
-6. `eval-router` CLI contract — RESOLVED (see §7.1): `python3 glitch-cat/eval-router/eval_router.py {route,exec,stats,harvest}`.
+6. Request-routing CLI contract — RESOLVED (see §7.1 for the exact command).
 
 ## 13. Out of scope (deliberately)
 

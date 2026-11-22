@@ -1,18 +1,15 @@
 ---
 name: decision-model
 description: >
-  Calibrated decision and visual grounding engine for the :8083 slot. It rotates between
+  Calibrated decision and visual grounding engine for the :8083 slot. Use this skill when you
+  need a calibrated yes/no, a categorical choice, a numeric score, a visual bounding box, or a
+  performance/memory question about a decision candidate — which model is loaded, how fast it
+  runs, its RAM/VRAM needs, or whether it runs on ONNX or CPU. It rotates between
   h2o-lightning-4b, Valen-Decision-1.5-0.8B (vision + native bbox head), Fastino GLiDE-0.4B
   (ModernBERT + 255-way readout), and GLiCLASS v4 Edge (CPU + ONNX, ~600 MB RAM, 0 VRAM,
   ~26 ms median). Answers typed bool, choice, score and bounding-box queries (normalized
   4-corner coordinates with calibrated confidence) without open-ended prose. The client
-  names the served model in every result.
-
-  Use this skill when the user asks about the decision model itself — which candidate is
-  loaded, how fast one runs, how much RAM or VRAM it needs, whether it runs on ONNX or CPU,
-  or "how fast is gliclass v4 edge" — as well as when they want a judgement or a bounding
-  box out of it. A performance or memory question about a decision candidate belongs here;
-  the server roster and swapping belongs to model-layer.
+  names the served model in every result. The server roster and swapping belongs to model-layer.
 compatibility: "Requires a decision server on :8083 answering /v1/systemone (noul | choice | score). h2o-lightning-4b runs behind the h2o-serve shim with its pinned llama.cpp on :8621; Valen-Decision-1.5 runs on its own `valen` runtime (gguf-runtime 0.2.0, CPU) with bbox served natively; GLiDE-0.4B runs behind glide-serve with a private llama.cpp encoder. Set DECISION_REQUIRE_H2O=1 to reject any other slot occupant."
 allowed-tools: "Bash(python3:*) Bash(decision-model:*) Bash(h2o-serve:*) Bash(glide-serve:*) Read Write"
 ---

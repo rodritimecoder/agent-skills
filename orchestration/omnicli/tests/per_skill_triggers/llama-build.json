@@ -1,0 +1,22 @@
+[
+  {"query": "is my llama build stale?", "should_trigger": true, "kind": "drift"},
+  {"query": "which binary is the rig using?", "should_trigger": true, "kind": "drift"},
+  {"query": "update llama.cpp and rebuild llama-server", "should_trigger": true, "kind": "prose"},
+  {"query": "show the checkout HEAD and drift vs origin/master", "should_trigger": true, "kind": "prose"},
+  {"query": "map every llama-server build to its launcher or rig macro", "should_trigger": true, "kind": "drift"},
+  {"query": "record a patch for qwen3.6-35b with its symptom", "should_trigger": true, "kind": "path"},
+  {"query": "check whether a recorded patch still applies", "should_trigger": true, "kind": "prose"},
+  {"query": "dry-run the update so I can see the exact commands", "should_trigger": true, "kind": "terse"},
+  {"query": "which fork produced this llama-server binary?", "should_trigger": true, "kind": "prose"},
+  {"query": "flag any broken build tree missing libhipblas.so.3", "should_trigger": true, "kind": "path"},
+  {"query": "swap the rig config to point at build-rocm10", "should_trigger": false, "kind": "prose"},
+  {"query": "add a new model alias to ports.json", "should_trigger": false, "kind": "terse"},
+  {"query": "rebuild my Rust project after pulling", "should_trigger": false, "kind": "casual"},
+  {"query": "check git status of the my-agent-skills repo", "should_trigger": false, "kind": "prose"},
+  {"query": "commit my local changes so the update can proceed", "should_trigger": false, "kind": "context"},
+  {"query": "which llama-server model is listening on :8080?", "should_trigger": false, "kind": "prose"},
+  {"query": "patch the typo in README.md", "should_trigger": false, "kind": "terse"},
+  {"query": "force push my branch to origin", "should_trigger": false, "kind": "casual"},
+  {"query": "benchmark the ASR models and report RTF", "should_trigger": false, "kind": "prose"},
+  {"query": "check the version of the audio.cpp binary", "should_trigger": false, "kind": "prose"}
+]

@@ -1,0 +1,22 @@
+[
+  {"query": "look up what people on Reddit think about the ROCm 7.0 driver", "should_trigger": true, "kind": "prose"},
+  {"query": "调研一下 llama.cpp 最新的 fork 情况", "should_trigger": true, "kind": "drift"},
+  {"query": "find recent V2EX hot topics about AMD GPUs", "should_trigger": true, "kind": "prose"},
+  {"query": "search GitHub repos for a llama.cpp frok with MTP support", "should_trigger": true, "kind": "typo"},
+  {"query": "check public sentiment about the new AMD card on Twitter/X", "should_trigger": true, "kind": "context"},
+  {"query": "grab the YouTube captions for that quantization talk", "should_trigger": true, "kind": "prose"},
+  {"query": "pull Xiaohongshu posts about this product", "should_trigger": true, "kind": "drift"},
+  {"query": "查一下这个开源项目的维护状态", "should_trigger": true, "kind": "drift"},
+  {"query": "read this article via r.jina.ai/https://example.com/post", "should_trigger": true, "kind": "path"},
+  {"query": "look up LLM engineer job postings on LinkedIn", "should_trigger": true, "kind": "prose"},
+  {"query": "write a report summarizing the Reddit sentiment I already collected", "should_trigger": false, "kind": "casual"},
+  {"query": "post this comment to the GitHub issue for me", "should_trigger": false, "kind": "casual"},
+  {"query": "search my own notes for the phrase 'ROCm driver'", "should_trigger": false, "kind": "prose"},
+  {"query": "translate this Xiaohongshu post into English", "should_trigger": false, "kind": "prose"},
+  {"query": "analyze the spreadsheet of Twitter engagement numbers I downloaded", "should_trigger": false, "kind": "context"},
+  {"query": "like all the posts in this Bilibili playlist", "should_trigger": false, "kind": "casual"},
+  {"query": "look up the price of a RX 9060 XT in ~/data/store-prices.json", "should_trigger": false, "kind": "path"},
+  {"query": "find the Reddit credentials in ~/.agent-reach/ and rotate them", "should_trigger": false, "kind": "path"},
+  {"query": "research which model to route this prompt to", "should_trigger": false, "kind": "terse"},
+  {"query": "look up the Xueqiu ticker in my local watchlist.csv", "should_trigger": false, "kind": "path"}
+]

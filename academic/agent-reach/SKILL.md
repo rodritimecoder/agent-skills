@@ -2,11 +2,12 @@
 name: agent-reach
 
 description: >
-  Internet and social media research router. Use this skill whenever the user asks you to
-  find anything about a topic online — a distro, a driver or ROCm/AMD issue, an open-source
-  project, a product, a person, or public sentiment — across auth-walled sites, video
-  transcripts and structured feeds: Reddit, Twitter/X, LinkedIn, YouTube, Bilibili,
-  Xiaohongshu, V2EX, Xueqiu, GitHub, RSS, and web articles via Jina Reader.
+  Internet and social-media research router. Use this skill when the user asks you to find or
+  research anything about a topic online — even without saying "web search" — including tech
+  and community subjects such as Linux distributions, GPU and driver stacks, open-source
+  projects, products or public sentiment. Covers auth-walled sites, video transcripts and
+  structured feeds: Reddit, Twitter/X, LinkedIn, YouTube, Bilibili, Xiaohongshu, V2EX,
+  Xueqiu, GitHub, RSS, and web articles via Jina Reader.
 
   Features deterministic token shielding and table projection via reach_filter.py (CLI and
   Python Code Mode API for omnicli). Zero config for 6 public channels. Run

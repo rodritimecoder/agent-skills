@@ -1,9 +1,10 @@
 ---
 name: kem-thought
 description: >
-  Kem's 33 steering principles and the /kem-mode contract. Load when the operator says "use kem
-  mode", "what would kem do", or names a principle; or when a task turns on a gate, a control run,
-  deterministic step ownership, or a claim that needs measurement before it ships.
+  Kem's 33 steering principles and the /kem-mode contract. Use this skill when the operator says
+  "use kem mode", "what would kem do", or names a principle; or when a task turns on a gate, a
+  control run, a calibrated decision, deterministic step ownership, or a claim that needs
+  measurement before it ships. Use for named-model routing and steering by principle.
 ---
 
 # Kem Thought (`kem-thought`)

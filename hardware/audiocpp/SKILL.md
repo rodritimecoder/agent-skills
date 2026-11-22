@@ -4,9 +4,10 @@ name: audiocpp
 description: >
   Local audio intelligence: speech-to-text, text-to-speech, forced alignment and voice
   cloning, powered by audio.cpp v0.9.4 on dual AMD Radeon RX 9060 XT GPUs. Every model runs
-  faster than real time. Use to transcribe a recording, turn speech into text, narrate or
-  speak text out loud to a wav file, clone a voice, align a transcript to its audio, or work
-  out who said what. For a spoken chat page with an avatar, use companion.
+  faster than real time. Use this skill when you need to transcribe a recording, turn speech
+  into text, narrate or speak text out loud to a wav file, clone a voice, align a transcript to
+  its audio, identify who spoke when, or diarize speakers. For a spoken chat page with an
+  avatar, use companion.
 
 compatibility: "Requires Dual AMD Radeon RX 9060 XT GPUs with Vulkan and the audio.cpp v0.9.4 binary."
 allowed-tools: "Bash(audiocpp:*) Bash(python3:*) Read Write"

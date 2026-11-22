@@ -1,0 +1,22 @@
+[
+  {"query": "run this untrusted JS snippet in a sandbox with no permissions", "should_trigger": true, "kind": "prose"},
+  {"query": "sandbox a scoring function with a V8 isolate", "should_trigger": true, "kind": "drift"},
+  {"query": "deno run --profile pure with a heap cap", "should_trigger": true, "kind": "path"},
+  {"query": "execute this JSON transform with a wall-clock timeout", "should_trigger": true, "kind": "prose"},
+  {"query": "run a pure-JS test shard with ms startup", "should_trigger": true, "kind": "prose"},
+  {"query": "give the snippet read access to exactly one file", "should_trigger": true, "kind": "prose"},
+  {"query": "allow network only to 127.0.0.1:8080 for this script", "should_trigger": true, "kind": "path"},
+  {"query": "prove the capability gate can fail with a negative control", "should_trigger": true, "kind": "drift"},
+  {"query": "run an untrusted policy script with --mem 32 --timeout 2", "should_trigger": true, "kind": "path"},
+  {"query": "capability-gated Deno isolate for model-generated code", "should_trigger": true, "kind": "drift"},
+  {"query": "run pytest in a Podman container with workspace mounts", "should_trigger": false, "kind": "prose"},
+  {"query": "run cargo check on the Rust project", "should_trigger": false, "kind": "terse"},
+  {"query": "run headless Chrome to check a PR", "should_trigger": false, "kind": "prose"},
+  {"query": "sandbox this Python script in a Docker container", "should_trigger": false, "kind": "casual"},
+  {"query": "install the deno binary from apt", "should_trigger": false, "kind": "terse"},
+  {"query": "run the unit tests in a worktree with full access", "should_trigger": false, "kind": "context"},
+  {"query": "execute arbitrary shell commands in an isolated VM", "should_trigger": false, "kind": "prose"},
+  {"query": "run a Cloudflare Worker with durable objects", "should_trigger": false, "kind": "prose"},
+  {"query": "set the V8 heap cap for the Node.js dev server", "should_trigger": false, "kind": "context"},
+  {"query": "deno --version to check the installed runtime", "should_trigger": false, "kind": "terse"}
+]

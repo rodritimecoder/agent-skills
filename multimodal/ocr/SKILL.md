@@ -4,8 +4,8 @@ name: ocr
 description: >
   LightOnOCR-3-0.8B OCR hub on :8082: transcribe documents, PDFs, slides,
   screenshots and scans into Markdown, with optional grounding that returns typed
-  blocks, 0-1000 boxes, figure crops and chart tables. Use to read text out of an
-  image, screenshot or scanned page, to OCR a PDF or slide deck, or to pull
+  blocks, 0-1000 boxes, figure crops and chart tables. Use this skill when you need to read
+  text out of an image, screenshot or scanned page, to OCR a PDF or slide deck, or to pull
   figures out of a page. This is the only OCR engine on the machine. To locate a
   described object rather than read its text, use `jev box`; to coordinate a PDF
   conversion pipeline, use doc-layout.

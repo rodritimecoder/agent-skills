@@ -1,0 +1,22 @@
+[
+  {"query": "start the llama rig", "should_trigger": true, "kind": "drift"},
+  {"query": "how much vram is free rn?", "should_trigger": true, "kind": "abbrev"},
+  {"query": "swap the :8082 slot to another candidate", "should_trigger": true, "kind": "prose"},
+  {"query": "which model is loaded on :8083?", "should_trigger": true, "kind": "drift"},
+  {"query": "unload the models i don't need to free headroom", "should_trigger": true, "kind": "drift"},
+  {"query": "is there room for a 262k context on the 16GB card?", "should_trigger": true, "kind": "context"},
+  {"query": "check health of every local model server before debugging", "should_trigger": true, "kind": "prose"},
+  {"query": "llama-rig ensure ocr --json before running the pipeline", "should_trigger": true, "kind": "path"},
+  {"query": "edit ports.json to add a candidate and re-render the roster", "should_trigger": true, "kind": "path"},
+  {"query": "what is resident and what should I evict?", "should_trigger": true, "kind": "prose"},
+  {"query": "update llama.cpp to the latest upstream commit", "should_trigger": false, "kind": "prose"},
+  {"query": "which llama-server build tree is stale?", "should_trigger": false, "kind": "terse"},
+  {"query": "check the health of the decision model's calibrated outputs", "should_trigger": false, "kind": "prose"},
+  {"query": "how fast is gliclass v4 edge on the decision slot", "should_trigger": false, "kind": "context"},
+  {"query": "record a patch for the model's MTP crash", "should_trigger": false, "kind": "prose"},
+  {"query": "decide which model should answer this prompt", "should_trigger": false, "kind": "prose"},
+  {"query": "render the tailnet serve config for my services", "should_trigger": false, "kind": "context"},
+  {"query": "how much RAM does gliclass reserve at 8k tokens?", "should_trigger": false, "kind": "prose"},
+  {"query": "stop the eval-router proxy on :8100", "should_trigger": false, "kind": "terse"},
+  {"query": "run the live RTF benchmark across every model", "should_trigger": false, "kind": "terse"}
+]

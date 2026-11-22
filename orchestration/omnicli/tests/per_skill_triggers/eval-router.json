@@ -1,0 +1,22 @@
+[
+  {"query": "route this prompt to the right model", "should_trigger": true, "kind": "drift"},
+  {"query": "pick a cheap model for this prompt unless it's hard", "should_trigger": true, "kind": "drift"},
+  {"query": "which model should answer this question?", "should_trigger": true, "kind": "prose"},
+  {"query": "cut token spend without losing quality on these requests", "should_trigger": true, "kind": "prose"},
+  {"query": "classify this prompt as easy moderate or hard", "should_trigger": true, "kind": "prose"},
+  {"query": "show me the shadow evaluation pass rate and dollar savings", "should_trigger": true, "kind": "drift"},
+  {"query": "harvest failed evaluations into the training set", "should_trigger": true, "kind": "drift"},
+  {"query": "point OpenCode at the OpenAI-compatible proxy on :8100", "should_trigger": true, "kind": "path"},
+  {"query": "use the local zero-cost tier for simple formatting requests", "should_trigger": true, "kind": "context"},
+  {"query": "self calibrating router for prompt difficulty", "should_trigger": true, "kind": "drift"},
+  {"query": "ask three models the same question and compare answers", "should_trigger": false, "kind": "prose"},
+  {"query": "decide which candidate is loaded in the :8083 slot", "should_trigger": false, "kind": "prose"},
+  {"query": "route the request to the correct tool in omnicli", "should_trigger": false, "kind": "casual"},
+  {"query": "swap the :8080 slot to the Clover candidate", "should_trigger": false, "kind": "prose"},
+  {"query": "run the test suite and tell me if it passes", "should_trigger": false, "kind": "terse"},
+  {"query": "which llama-server binary is the rig using?", "should_trigger": false, "kind": "prose"},
+  {"query": "classify these support tickets by urgency with the decision slot", "should_trigger": false, "kind": "context"},
+  {"query": "check how much VRAM the cheap model needs", "should_trigger": false, "kind": "casual"},
+  {"query": "harvest the failing check logs from CI", "should_trigger": false, "kind": "context"},
+  {"query": "dispatch the parallel builders to their worktrees", "should_trigger": false, "kind": "prose"}
+]

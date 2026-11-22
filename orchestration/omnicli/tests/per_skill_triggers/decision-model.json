@@ -1,0 +1,22 @@
+[
+  {"query": "is this refund within policy? give me a calibrated bool", "should_trigger": true, "kind": "prose"},
+  {"query": "which lane should these tests run in: sequential or parallel?", "should_trigger": true, "kind": "prose"},
+  {"query": "score this test suite quality from 0 to 1", "should_trigger": true, "kind": "terse"},
+  {"query": "find the bounding box of the total amount in receipt.png", "should_trigger": true, "kind": "path"},
+  {"query": "how fast is gliclass v4 edge?", "should_trigger": true, "kind": "drift"},
+  {"query": "which decision candidate is loaded on :8083?", "should_trigger": true, "kind": "drift"},
+  {"query": "does valen need any VRAM or is it CPU only?", "should_trigger": true, "kind": "casual"},
+  {"query": "classify this request with confidence using the decision slot", "should_trigger": true, "kind": "context"},
+  {"query": "run $DM caps to see what the slot can answer", "should_trigger": true, "kind": "path"},
+  {"query": "how much ram does the glid encoder reserve at 8k?", "should_trigger": true, "kind": "typo"},
+  {"query": "rotate the :8083 slot to the Valen candidate", "should_trigger": false, "kind": "prose"},
+  {"query": "which model is resident on :8080?", "should_trigger": false, "kind": "terse"},
+  {"query": "decide which model should answer this prompt", "should_trigger": false, "kind": "prose"},
+  {"query": "read the text in receipt.png", "should_trigger": false, "kind": "terse"},
+  {"query": "check the VRAM headroom before I start the LLM", "should_trigger": false, "kind": "casual"},
+  {"query": "score the students' essays", "should_trigger": false, "kind": "prose"},
+  {"query": "choose the cheapest tier for this prompt", "should_trigger": false, "kind": "context"},
+  {"query": "swap h2o.sh for glide-decider.sh and restart the server", "should_trigger": false, "kind": "path"},
+  {"query": "crop the figure out of page.png", "should_trigger": false, "kind": "path"},
+  {"query": "how fast is the llama-server binary on Vulkan?", "should_trigger": false, "kind": "prose"}
+]

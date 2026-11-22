@@ -53,7 +53,9 @@
       "调研",
       "搜索",
       "查一下",
-      "网上"
+      "网上",
+      "omarchy",
+      "rocm"
     ],
     "tags": [
       "research",
@@ -319,7 +321,8 @@
       "which model is loaded",
       "weights",
       "launcher",
-      "ports manifest"
+      "ports manifest",
+      "litellm"
     ],
     "tags": [
       "gpu",
@@ -373,7 +376,8 @@
       "image to markdown",
       "lightonocr speed engine",
       "text bounding boxes",
-      "scene text coordinates"
+      "scene text coordinates",
+      "navidc"
     ],
     "tags": [
       "vision",
@@ -542,7 +546,8 @@
       "lecture slides",
       "speaker transcript",
       "slide deck from a talk",
-      "recorded talk"
+      "recorded talk",
+      "deskforge"
     ],
     "tags": [
       "education",
@@ -900,6 +905,27 @@
       "search my notes",
       "find in my notes",
       "search the vault"
+    ],
+    "tags": []
+  },
+  "llama-build": {
+    "aliases": [
+      "llama.cpp",
+      "update llama.cpp",
+      "rebuild llama-server",
+      "stale llama build",
+      "which llama binary serves a slot",
+      "record a patch for a model"
+    ],
+    "tags": []
+  },
+  "isolate-run": {
+    "aliases": [
+      "js sandbox",
+      "deno isolate",
+      "v8 isolate",
+      "untrusted js snippet",
+      "run untrusted javascript"
     ],
     "tags": []
   }
