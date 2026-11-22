@@ -422,7 +422,7 @@ def cmd_review_all(target: Path, cue_id: str | None = None, rating: int | None =
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Spaced Repetition (SM-2) Engine for Cornell Notes")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Spaced Repetition (SM-2) Engine for Cornell Notes")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     status_parser = subparsers.add_parser("status", help="Show review stats and due cards (file or folder)")

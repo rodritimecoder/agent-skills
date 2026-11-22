@@ -320,7 +320,7 @@ def run(workspace, dry_run=False, deps=None):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Write per-stage CONTEXT.md files")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Write per-stage CONTEXT.md files")
     parser.add_argument("workspace", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)

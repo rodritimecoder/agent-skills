@@ -403,7 +403,7 @@ def cmd_benchmark(json_mode: bool = False):
 
 
 def main():
-    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', add_help=False)
     parent_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON format")
     parent_parser.add_argument("--metrics", action="store_true", help="Print RTF and performance metrics (to stderr in non-JSON mode)")
     parent_parser.add_argument("--quiet", "-q", action="store_true", help="Suppress console status messages")
@@ -411,7 +411,7 @@ def main():
     parent_parser.add_argument("--port", type=int, default=8081, metavar="PORT", help="audio.cpp port (default: $AUDIOCPP_PORT or 8081)")
     parent_parser.add_argument("--no-autostart", action="store_true", help="Skip auto-starting the local audio server (llama-rig up audio) before HTTP requests")
 
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         description="audiocpp — Unified Local Audio Engineering Hub (Vulkan / Dual-GPU)",
         parents=[parent_parser]
     )

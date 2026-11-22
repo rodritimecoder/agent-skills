@@ -491,26 +491,6 @@
       "network"
     ]
   },
-  "video-miner": {
-    "aliases": [
-      "video",
-      "youtube",
-      "transcribe a video",
-      "key frames",
-      "summarise a recording",
-      "slides from video",
-      "video knowledge notes",
-      "video miner pipeline",
-      "lecture recordings",
-      "recorded lecture",
-      "screen recording notes",
-      "video to markdown notes"
-    ],
-    "tags": [
-      "video",
-      "media"
-    ]
-  },
   "worktree-harness": {
     "aliases": [
       "git worktree",
@@ -888,14 +868,6 @@
       "standing memory header",
       "cross reference transcripts",
       "recall from an earlier session"
-    ],
-    "tags": []
-  },
-  "notes-index": {
-    "aliases": [
-      "search my notes",
-      "find in my notes",
-      "search the vault"
     ],
     "tags": []
   },

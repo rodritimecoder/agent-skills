@@ -417,7 +417,7 @@ def inspect_state(target_dir: Optional[str] = None, as_json: bool = False):
     print("")
 
 def main():
-    p = argparse.ArgumentParser(description="Kem Glitch Zero-Degradation State Compactor")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Kem Glitch Zero-Degradation State Compactor")
     p.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
     p.add_argument("--session", help="Session ID scope (overrides STATE_SESSION_ID / OPENCODE_SESSION_ID)")
     sub = p.add_subparsers(dest="cmd")

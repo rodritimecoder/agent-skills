@@ -440,7 +440,7 @@ def cmd_prune() -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="subagent-spaces",
         description="Isolated CPU-pinned containerized sandbox environments for autonomous subagents."
     )

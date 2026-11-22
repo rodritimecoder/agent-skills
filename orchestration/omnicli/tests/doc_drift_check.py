@@ -12,8 +12,13 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parent.parent
 REPO = SKILL.parent.parent
-NATIVE = {"search", "invoke", "exec"}
-MCP = {"omni_search", "omni_invoke", "omni_exec"}
+NATIVE = {"exec"}
+MCP = {"omni_exec"}
+# The registered native surface is exec-only (NATIVE above). The retired
+# search/invoke names still exist as CLI verbs and as omnicli_tools bindings
+# inside an exec plan, and harness docs still name them historically. They are
+# known, not drift; the STALE guard below remains the stale-claim authority.
+KNOWN_METHODS = NATIVE | {"search", "invoke"}
 
 STALE = (
     r"omnicli_describe",
@@ -65,7 +70,9 @@ def mcp_face(timeout):
         enabled = probe(True)
     except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as e:
         return item("mcp_face", False, f"probe failed: {e}")
-    ok = default == MCP - {"omni_exec"} and enabled == MCP
+    # One-tool shape: omni_exec is the only visible tool in both states. The
+    # opt-in flag now gates execution, not listing.
+    ok = default == MCP and enabled == MCP
     return item("mcp_face", ok,
                 f"default={sorted(default)}; with OMNICLI_MCP_ALLOW_EXEC=1={sorted(enabled)}")
 
@@ -101,7 +108,7 @@ def documented_commands(timeout):
     except (OSError, subprocess.TimeoutExpired) as e:
         return item("commands", False, f"omnicli --help failed: {e}")
     bad_verbs = sorted(v for v in verbs if v not in live and v not in aliases)
-    bad_methods = sorted(methods - NATIVE)
+    bad_methods = sorted(methods - KNOWN_METHODS)
     ok = not bad_verbs and not bad_methods
     detail = f"{len(verbs)} verbs, {len(methods)} code-mode methods checked"
     if not ok:

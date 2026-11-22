@@ -14,6 +14,7 @@ case "${1:-}" in
   -h|--help)
     printf 'Usage: %s <file...> [flags] ...\n' "$(basename "$0")"
     printf '  e.g. run-diarization.sh talk.mp4 --vtt talk.vtt --names Kem,Chase,Vince\n'
+    echo 'Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.'
     exit 0
     ;;
 esac

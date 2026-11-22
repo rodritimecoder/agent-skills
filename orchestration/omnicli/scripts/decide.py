@@ -528,7 +528,7 @@ def _run_one(model, state, question, opts, typ, a):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    ap = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("state_pos", nargs="?", help="the state to evaluate (text)")
     ap.add_argument("question_pos", nargs="?", help="the question")

@@ -399,7 +399,7 @@ def _run_one(workspace, stage_number, dry_run=False, real=False, course_id=None)
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="run_pipeline.py",
         description="Academic Notes Pipeline v2 stage dispatcher.",
     )

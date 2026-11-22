@@ -19,6 +19,7 @@ Environment variables:
   STATE    text state to evaluate
   QUESTION question to answer
   OPTIONS  comma-separated labels (for choice/score)
+Exit codes: 0 success; 1 request/model error; 2 invalid arguments.
 EOF
     exit 0
     ;;

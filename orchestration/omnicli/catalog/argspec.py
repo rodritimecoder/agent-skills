@@ -120,6 +120,10 @@ class Signature:
     command: bool
     commands: list[str]
     usage: str
+    # A tool with no schema and no help-parsed surface has no named arguments
+    # to validate. Give its binding an `argv?: string[]` escape hatch so raw
+    # flags and positionals can still reach the CLI without a TypeError.
+    argv_escape: bool = False
 
     def ordered_positionals(self) -> list[Param]:
         return sorted(self.positionals, key=lambda p: not p.required)
@@ -158,6 +162,8 @@ class Signature:
                        [p for p in self.params if not p.required]):
             for param in params:
                 fields.append((_ts_prop(param.name), param.required, param.ts_type()))
+        if self.argv_escape:
+            fields.append(("argv", False, "string[]"))
         return fields
 
     def ts_sig(self) -> str:
@@ -566,6 +572,11 @@ def signatures(rows: list[Any]) -> list[Signature]:
         has_commands, commands = _commands(contract, usage)
         flags = parse_flags(contract)
         positionals = _positionals(contract, usage, {p.name for p in flags})
+        # "empty/fallback inputSchema" in practice means nothing callable was
+        # recovered: no flags, no positionals, no subcommands. The CLI still
+        # takes raw argv, so the typed surface must offer a raw argv escape
+        # hatch instead of rejecting every key as "unknown argument".
+        argv_escape = not flags and not positionals and not has_commands
         out.append(Signature(
             id=tool_id,
             skill=str(row["skill"]),
@@ -577,6 +588,7 @@ def signatures(rows: list[Any]) -> list[Signature]:
             command=has_commands,
             commands=commands,
             usage=usage,
+            argv_escape=argv_escape,
         ))
     return out
 
@@ -596,6 +608,12 @@ def _docstring(sig: Signature) -> str:
 
 def emit_module(sig: Signature) -> str:
     """One annotated function whose body builds argv and calls invoke()."""
+    if sig.argv_escape and not sig.params and not sig.positionals and not sig.command:
+        doc = _docstring(sig).replace("\\", "\\\\").replace('"""', "'''")
+        return (f"def {sig.func}(argv: list[str] | None = None) -> dict:\n"
+                f'    """{doc}"""\n'
+                f"    return invoke({sig.id!r}, *(argv or []))\n")
+
     positionals = [p.declaration() for p in sig.ordered_positionals()]
     required = [p.declaration() for p in sig.params if p.required]
     optional = [p.declaration() for p in sig.params if not p.required]

@@ -713,7 +713,7 @@ def cmd_motion_verify(args) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="sprite-forge", description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(prog="sprite-forge", description=__doc__.splitlines()[0], epilog='Exit codes: 0 pass, 1 fail, 2 usage error, 3 runtime/dependency unavailable.')
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("crop", help="cut a fixed rect out of one frame")

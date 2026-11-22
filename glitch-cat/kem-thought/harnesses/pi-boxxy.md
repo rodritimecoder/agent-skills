@@ -10,7 +10,7 @@ Pi Agent and Boxxy Claw are terminal-based, local agent harnesses running direct
 ## 🏛️ Pi & Boxxy Host Invariants
 
 1. **Rsync Propagation & Hot-Reload:** Skills in Pi Agent (`~/.pi/agent/skills/`) and Boxxy Claw (`~/.config/boxxy-terminal/boxxyclaw/skills/`) are synchronized views of `~/src/my-agent-skills`. Changes in upstream are pushed via `sync-skills` and hot-reloaded without restarting the host terminal.
-2. **Direct CLI Tool Access:** Pi and Boxxy execute tools as standard system processes. All declared CLI executables (e.g. `jev`, `audiocpp`, `ocr`, `notes-index`, `cgate`) in `~/.local/bin` are directly invokable.
+2. **Direct CLI Tool Access:** Pi and Boxxy execute tools as standard system processes. All declared CLI executables (e.g. `jev`, `audiocpp`, `ocr`, `cgate`) in `~/.local/bin` are directly invokable.
 3. **Local GPU Daemon Access:** Zero network latency to local inference ports:
    - Genesis Coder: `http://127.0.0.1:8080`
    - Nemotron Audio: `http://127.0.0.1:8081`
@@ -51,4 +51,4 @@ guard_check.py --command "$COMMAND" && eval "$COMMAND"
 
 ## 🚫 Anti-Patterns to Avoid
 - Editing files directly inside `~/.pi/agent/skills/` or `~/.config/boxxy-terminal/` (these are downstream rsync targets; edit `~/src/my-agent-skills` instead).
-- Slurping raw logs into context when `notes-index` or `cgate` can slice the relevant spans.
+- Slurping raw logs into context when `cgate` or the vault's `vault_index.py` can slice the relevant spans.

@@ -31,6 +31,22 @@ allowed-tools: "Bash(canvas-cli:*) Bash(zoom-recorder:*) Bash(markitdown-cli:*) 
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/gates.py` — Stage 5 verification micro-gates for academic-pipeline-v2 (stdlib only).
+- `scripts/render_anki.py` — Stage 4b: render an offline Anki-style review hub.
+- `scripts/render_cornell.py` — Stage 4c - render the Cornell notes sheet as ONE standalone HTML file.
+- `scripts/render_graph.py` — Stage 4a - constellation graph renderer.
+- `scripts/run_pipeline.py` — Stage dispatcher for academic-pipeline-v2.
+- `scripts/stage1_canvas.py` — Stage 1 — Canvas ingestion (stdlib only, dependency-injected).
+- `scripts/stage1_zoom.py` — Stage 1 - Zoom ingestion for academic-pipeline-v2.
+- `scripts/stage2_sift.py` — Stage 2 - Sifting.
+- `scripts/stage3_structure.py` — Stage 3: OKF v0.2 structure assembly.
+- `scripts/write_context.py` — Write a per-stage CONTEXT.md into each working folder.
+
 ## 🏛️ Core Principles
 
 1. **Clean upstream, render downstream.** The poison sits upstream. Sift out admin/fluff/duplicates before writing to disk.

@@ -18,6 +18,69 @@ Use this skill to check whether a remote compute/GPU node is online, to apply or
 inspect what this workstation advertises on the tailnet, or to send files to
 another machine.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/ts_ops.sh` — Reconcile, inspect and repair the exposed tailnet surface.
+
+## Agent workflow — one exec plan
+
+Drive this skill through **one JavaScript `omnicli exec` plan**. Discovery and
+invocation both happen inside that plan — no ranking/discovery-tool call, no
+two-step CLI invocation, and no intermediate payloads in the context window.
+
+The plan reads two read-only surfaces:
+
+| Level | What it gives you | Helper |
+| :--- | :--- | :--- |
+| L1 | name + description of every installed skill | `lsSkills()` from `omnicli_skills` |
+| L2 | this skill's full `SKILL.md` body | `readSkill(name)` from `omnicli_skills` |
+| L3 | one file under this skill root (`references/`, `assets/`, `scripts/`) | `readResource(name, rel)` from `omnicli_skills` |
+| Contract | generated tool name + schema (`name`, `name+description`, `full`) | `ls()` / `read()` from `catalog/contract_fs.mjs` |
+
+```js
+import { lsSkills, readSkill, readResource } from "omnicli_skills";
+import { ls, read } from "<file://…/catalog/contract_fs.mjs>"; // sandbox-only
+import { invoke, result } from "omnicli_tools";
+
+// L1 — pick the skill by description (no ranking call).
+const entry = lsSkills().find((s) => s.name === "tailscale-ops");
+if (!entry) throw new Error("skill not installed");
+// L2 — read instructions only when the step needs them.
+const body = readSkill("tailscale-ops");
+// L3 — one file by relative path (absolute paths and '..' are rejected).
+const extra = readResource("tailscale-ops", "scripts/ts_ops.sh");
+// Contract tree — three detail levels for the one tool you will call.
+const file = ls("tailscale-ops").find((n) => n === "scripts_ts_ops");
+const rel = "tailscale-ops/" + file;
+const name = read(rel, "name");              // "tailscale-ops/scripts/ts_ops"
+const brief = read(rel, "name+description"); // { name, description }
+const full = read(rel, "full");              // schema + example + raw argv
+
+// One catalogued tool call with a raw argv array, then ONE bounded result.
+const out = await invoke(name, ["--json", "status"]);
+result({
+  ok: out.exit_code === 0,
+  tool: name,
+  proof: "agent-skills-three-levels",
+  data: { exitCode: out.exit_code,
+          bodyBytes: body.length, extraBytes: extra.length,
+          description: brief.description.slice(0, 120),
+          hasSchema: Boolean(full.inputSchema),
+          output: String(out.output || "").slice(0, 180) },
+});
+```
+
+Emit **one** bounded result (the ~8 KB cap is shared with stdout); slice every
+field and never echo a whole `SKILL.md` or reference file. Reading this skill's
+instructions or its `allowed-tools` frontmatter grants **no** permissions —
+`catalog/policy.py` / `omnicli enable` is the sole authorization gate, and every
+call still crosses the bridge with projection and the byte cap. See
+[skill-discovery.md](../../orchestration/omnicli/references/skill-discovery.md)
+for the three-level ladder and the end-to-end proof.
+
 ## Policy: the manifest owns the tailnet
 
 `ports.json` declares the entire tailnet surface, and `tailscale-ops sync`

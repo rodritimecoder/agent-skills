@@ -391,6 +391,7 @@ async function checkInteractions(page, opts) {
     console.log("  --max-press-ms <n>     latency ceiling (default 100)");
     console.log("  --min-contrast <n>     contrast floor (default 3.0)");
     console.log("  --viewports <wxh,...>  viewport list");
+    console.log("Exit codes: 0 pass, 1 fail, 2 usage error, 3 runtime/dependency unavailable.");
     process.exit(0);
   }
   const opts = parseArgs(process.argv);

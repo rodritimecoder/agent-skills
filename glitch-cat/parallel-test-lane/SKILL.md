@@ -28,6 +28,14 @@ allowed-tools: "Bash(parallel-test-lane:*) Bash(python3:*) Bash(pytest:*) Read W
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/mutate.py` — Tiny stdlib-only mutation tester: prove a test can fail.
+- `scripts/test_lane.py` — Parallel Test Lane — AI Blast Radius Containment.
+
 ## ⚡ What It Solves (Reel `DbSgqTXt-3c`)
 
 > *"We spoke about AI blast radius and how to stop it: run regression tests. But when you've got thousands of tests, running them sequentially takes an hour between AI turns... The simple answer: understand which tests need to run in sequence vs parallel, split them across CPU cores in separate lanes. That fits across modern hardware, giving a 5x improvement — what was taking 40 minutes is now 7–8 minutes."*

@@ -590,7 +590,7 @@ if __name__ == "__main__":  # pragma: no cover - manual smoke run
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Stage 5 verification micro-gates; writes 05_verify/step_05.json.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Stage 5 verification micro-gates; writes 05_verify/step_05.json.")
     parser.add_argument("workspace", nargs="?", default=".", metavar="DIR",
                         help="ICM workspace root (default: .)")
     parser.add_argument("--dry-run", action="store_true", help="run the gates without writing step_05.json")

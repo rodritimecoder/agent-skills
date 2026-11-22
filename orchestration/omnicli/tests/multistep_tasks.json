@@ -44,17 +44,6 @@
       }
     },
     {
-      "id": "ms-04",
-      "intent": "notes-index fts5 search creator vault notes",
-      "expected_skill": "notes-index",
-      "grep": "search|fts|index",
-      "expected_result": {
-        "skill": "notes-index",
-        "matched": 4,
-        "ids": ["notes-index/cli", "notes-index/notes_index", "notes-index/notes_index:init"]
-      }
-    },
-    {
       "id": "ms-05",
       "intent": "jev-decision typed bool choice score primitive",
       "expected_skill": "decision-model",
@@ -85,17 +74,6 @@
         "skill": "ocr-cli",
         "matched": 6,
         "ids": ["ocr-cli/cli", "ocr-cli/ocr:doc", "ocr-cli/ocr:doctor"]
-      }
-    },
-    {
-      "id": "ms-08",
-      "intent": "mine knowledge from a video reel",
-      "expected_skill": "video-miner",
-      "grep": "video|reel|transcribe",
-      "expected_result": {
-        "skill": "video-miner",
-        "matched": 9,
-        "ids": ["video-miner/cli", "video-miner/scripts/vault_mine", "video-miner/scripts/vault_mine:add"]
       }
     }
   ]

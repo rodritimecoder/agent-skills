@@ -150,23 +150,6 @@
       "kind": "harvested"
     },
     {
-      "query": "uh ngl i thought we were updated my video miner pipeline? maybe we can marry them up",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner"
-      ],
-      "kind": "harvested"
-    },
-    {
-      "query": "is the video miner also using crisper whisper?",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner",
-        "audiocpp"
-      ],
-      "kind": "harvested"
-    },
-    {
       "query": "thinking adapting my academic v2 into that new template? but idk about the py checks from the v2 the look very convoluted",
       "top1": "academic-pipeline-v2",
       "expect": [
@@ -213,8 +196,7 @@
       "query": "im thinking in my AGENTS.md is to have it say always use kem dev loop thoughts?",
       "top1": "kem-thought",
       "expect": [
-        "kem-thought",
-        "notes-index"
+        "kem-thought"
       ],
       "kind": "harvested",
       "evidence_note": "Successor label after archival (jev-decision -> decision-model/model-layer; kem-dev-loop -> kem-thought); successor is in top-3"
@@ -332,15 +314,6 @@
       "expect": [
         "markitdown-cli",
         "doc-layout"
-      ],
-      "kind": "authored"
-    },
-    {
-      "query": "i have a pile of lecture recordings, get the transcript and the slides out of them",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner",
-        "zoom-recorder"
       ],
       "kind": "authored"
     }

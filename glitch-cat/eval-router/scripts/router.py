@@ -346,7 +346,7 @@ def print_harvest():
         print(f"      Reason: {item.get('eval_reason')}\n")
 
 def main():
-    p = argparse.ArgumentParser(description="Kem Glitch Self-Calibrating Eval Router CLI")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Kem Glitch Self-Calibrating Eval Router CLI")
     sub = p.add_subparsers(dest="cmd")
 
     r_p = sub.add_parser("route", help="Route prompt and show tier classification without executing")

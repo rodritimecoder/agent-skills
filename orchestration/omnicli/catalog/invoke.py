@@ -24,8 +24,11 @@ tool logged progress, which silently disabled projection for those tools.
 from __future__ import annotations
 
 import json
+import os
+import re
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Any
 
 DEFAULT_MAX_BYTES = 8000
@@ -216,10 +219,90 @@ def _split_parent_args(extra_args: list[str], parent_params: list[dict]) -> tupl
     return before, after
 
 
+# --------------------------------------------------------------------------
+# skill script runtime
+# --------------------------------------------------------------------------
+
+_PEP723_START = re.compile(r"^\s*#\s*///\s*script\s*$", re.MULTILINE)
+_SCRIPT_SUFFIXES = (".py", ".js", ".mjs")
+
+
+class Command(list):
+    """An argv list that also carries the cwd a skill script must run in.
+
+    `omnicli invoke` builds a command with build_cmd() and hands it straight to
+    execute(). A plain list has nowhere to put the cwd without changing that
+    caller's signature, so the cwd rides on this subclass. It is still a list:
+    iteration, indexing and equality are unchanged for every existing caller.
+    """
+
+    def __init__(self, argv, *, cwd: str | None = None,
+                 skill_dir: str | None = None, pep723: bool = False):
+        super().__init__(argv)
+        self.cwd = cwd
+        self.skill_dir = skill_dir
+        self.pep723 = pep723
+
+
+def _script_token(argv: list[str]) -> str | None:
+    """The script an argv template runs, before placeholder substitution."""
+    for token in argv:
+        text = str(token)
+        if text.endswith(_SCRIPT_SUFFIXES) or "{skill}" in text:
+            return text
+    return None
+
+
+def skill_root(script: str | Path) -> str | None:
+    """Nearest ancestor of ``script`` holding a SKILL.md.
+
+    A skill's scripts live under its own root (usually in ``scripts/``), so the
+    nearest SKILL.md ancestor is the cwd the script expects. Shims under
+    ``~/.local/bin`` and standalone tools have no such ancestor and keep the
+    host cwd, which is the legacy behaviour.
+    """
+    try:
+        path = Path(str(script)).resolve()
+    except OSError:
+        return None
+    for parent in path.parents:
+        try:
+            if (parent / "SKILL.md").is_file():
+                return str(parent)
+        except OSError:
+            continue
+    return None
+
+
+def has_pep723_marker(script: str | Path) -> bool:
+    """True when a script declares PEP 723 inline metadata (``# /// script``)."""
+    try:
+        with open(str(script), "r", encoding="utf-8", errors="replace") as fh:
+            head = fh.read(8192)
+    except OSError:
+        return False
+    return bool(_PEP723_START.search(head))
+
+
 def build_cmd(argv: list[str], extra_args: list[str], *, python: str,
               skill_dir: Any, parent_params: list[dict] | None = None,
-              node: str | None = None) -> list[str]:
+              node: str | None = None) -> Command:
     node_bin = node or shutil.which("node") or "node"
+
+    # Discover the runtime context from the script itself. The catalog records
+    # skill_dir on each tool row; the same root is recovered here from the
+    # script's nearest SKILL.md ancestor, so the argv template stays intact.
+    script = _script_token(argv)
+    root = None
+    pep723 = False
+    if script is not None:
+        resolved_script = (str(script)
+                           .replace("{python}", python)
+                           .replace("{node}", node_bin)
+                           .replace("{skill}", str(skill_dir)))
+        root = skill_root(resolved_script)
+        pep723 = str(resolved_script).endswith(".py") and has_pep723_marker(resolved_script)
+
     rendered = [
         str(a)
         .replace("{python}", python)
@@ -231,14 +314,42 @@ def build_cmd(argv: list[str], extra_args: list[str], *, python: str,
     if parent_params and len(rendered) >= 2:
         before, after = _split_parent_args(extra, parent_params)
         if before:
-            return rendered[:-1] + before + rendered[-1:] + after
-    return rendered + extra
+            cmd = rendered[:-1] + before + rendered[-1:] + after
+        else:
+            cmd = rendered + extra
+    else:
+        cmd = rendered + extra
+
+    # PEP 723 scripts declare their own dependencies. Prefer the skill's own
+    # virtualenv, then `uv run` (which reads the inline metadata), and only then
+    # fall back to the host interpreter the caller supplied. Without the marker
+    # the interpreter is exactly what the caller supplied, as before.
+    if pep723 and len(cmd) >= 2:
+        venv = os.path.join(root, ".venv", "bin", "python") if root else ""
+        if venv and os.path.isfile(venv) and os.access(venv, os.X_OK):
+            cmd[0] = venv
+        else:
+            uv = shutil.which("uv")
+            if uv:
+                cmd = [uv, "run", cmd[1], *cmd[2:]]
+
+    return Command(cmd, cwd=root, skill_dir=root, pep723=pep723)
 
 
 def execute(cmd: list[str], timeout: float = 300.0) -> dict[str, Any]:
-    """Run a tool. stdout and stderr stay separate on purpose."""
+    """Run a tool. stdout and stderr stay separate on purpose.
+
+    A command from build_cmd() carries the skill root; running the script there
+    is what makes relative references inside a skill resolve. A hand-built argv
+    (or a tool with no skill root) has no cwd and behaves exactly as before.
+    """
+    kwargs: dict[str, Any] = {}
+    cwd = getattr(cmd, "cwd", None)
+    if cwd and os.path.isdir(str(cwd)):
+        kwargs["cwd"] = str(cwd)
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=timeout, **kwargs)
         return {"exit_code": proc.returncode, "stdout": proc.stdout or "",
                 "stderr": proc.stderr or "", "timed_out": False}
     except subprocess.TimeoutExpired:

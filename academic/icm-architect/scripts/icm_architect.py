@@ -591,7 +591,7 @@ def cmd_map(target_dir: Path, mermaid: bool = False, fields=None,
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="icm-architect",
         description="Autonomous Interpretable Context Methodology (ICM) Workspace Architect & Validator",
     )

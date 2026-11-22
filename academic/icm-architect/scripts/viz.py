@@ -63,6 +63,7 @@ def heading_of(path):
 def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print("Usage: viz.py <graph.jsonl...> [-o viz.html] [flags] ...")
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
         sys.exit(0)
     args = sys.argv[1:]
     out = None

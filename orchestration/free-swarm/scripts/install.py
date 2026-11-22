@@ -61,7 +61,7 @@ def remove() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__)
     parser.add_argument("--check", action="store_true", help="report link state, exit 1 if anything is missing")
     parser.add_argument("--remove", action="store_true", help="unlink every free-*.md this script owns")
     parser.add_argument("--dry-run", action="store_true")

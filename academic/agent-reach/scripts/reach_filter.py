@@ -322,7 +322,7 @@ def filter_data(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Filter and format Agent Reach platform payloads into high-density Markdown tables.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Filter and format Agent Reach platform payloads into high-density Markdown tables.")
     parser.add_argument("platform", nargs="?", default="auto", choices=["auto", "v2ex", "twitter", "reddit", "bilibili", "xhs", "xiaohongshu", "github", "generic"], help="Target platform adapter (default: auto)")
     parser.add_argument("-i", "--input", default="-", help="Input JSON file or '-' for stdin")
     parser.add_argument("-o", "--out", help="Buffer full output to file and emit 1-line receipt")

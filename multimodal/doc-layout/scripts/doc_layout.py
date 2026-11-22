@@ -924,7 +924,7 @@ def cmd_render(a):
 
 def main():
     _reexec_in_venv()
-    ap = argparse.ArgumentParser(prog="doc-layout",
+    ap = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', prog="doc-layout",
                                  description="PP-DocLayoutV3 -> crops -> VLM -> Markdown")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

@@ -84,7 +84,7 @@ def check(path, test_cmd, limit=8):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Mutation-test one Python file.")
+    ap = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Mutation-test one Python file.")
     ap.add_argument("file", help="source file to mutate")
     ap.add_argument("--test", required=True, help="test command; non-zero exit kills a mutant")
     ap.add_argument("--limit", type=int, default=8, metavar="LIMIT", help="max mutants to run (default 8)")

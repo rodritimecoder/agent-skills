@@ -100,5 +100,9 @@ def to_markdown(text):
 
 
 if __name__ == "__main__":
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("usage: tree_to_md.py [FILE]   (reads stdin when FILE is omitted)")
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
+        sys.exit(0)
     src = sys.stdin.read() if len(sys.argv) < 2 else open(sys.argv[1]).read()
     print(to_markdown(src))

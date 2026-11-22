@@ -17,6 +17,15 @@ allowed-tools: "Bash(gh:*) Bash(python3:*) Read Write"
 
 Use this skill to dispatch tasks to ephemeral GitHub Actions runners via a single API call. Each subagent runs in an isolated Ubuntu VM with the `playwright` skill's native client (browser daemon on :9222), the guard hooks, and the OpenCode CLI running the restricted `lane` agent.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/cdp_verify.py` — cdp_verify.py — Lightweight Chrome DevTools Protocol (CDP) verification helper.
+- `scripts/roster.py` — roster.py — OpenCode Go model roster with sourced limits and tier roles.
+- `scripts/subagent_ctl.sh` — Control local OpenCode-Go subagent sessions from CI.
+
 ## Prerequisites
 - GitHub CLI (`gh`) authenticated, OR `GITHUB_TOKEN` exported in the environment.
 - Workflow file `.github/workflows/subagent.yml` committed to the repository `main` branch — copy `assets/subagent.yml` from this skill; its `workflow_dispatch` inputs (`task`, `target_branch`, `model`) are exactly what `gh-subagent dispatch` sends.

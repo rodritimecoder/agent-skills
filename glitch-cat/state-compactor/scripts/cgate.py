@@ -7,7 +7,7 @@ from pathlib import Path
 
 # The native cgate binary has no --json/--omni-schema. Serve those requests
 # from this Python wrapper instead of exec'ing the ELF.
-_STRUCTURAL = any(f in sys.argv[1:] for f in ("--json", "--omni-schema"))
+_STRUCTURAL = any(f in sys.argv[1:] for f in ("--json", "--omni-schema", "--help", "-h"))
 bin_path = Path(__file__).resolve().parent.parent / "bin" / "cgate"
 if not _STRUCTURAL and bin_path.is_file() and os.access(bin_path, os.X_OK):
     os.execv(str(bin_path), [str(bin_path)] + sys.argv[1:])
@@ -239,7 +239,7 @@ def query_gated(file_path: Path, question: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="cgate: Context-Gated Reader & Filter (Kem Glitch Architecture)")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="cgate: Context-Gated Reader & Filter (Kem Glitch Architecture)")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     v_p = sub.add_parser("view", help="View a file with automatic context guarding")

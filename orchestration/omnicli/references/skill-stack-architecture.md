@@ -145,7 +145,7 @@ This is the boundary most likely to be misread. `omnicli search` retrieves **cap
 | Question | Correct mechanism | Why |
 | :--- | :--- | :--- |
 | "which tool transcribes audio?" | `omnicli search` | routing over capabilities |
-| "what did Kem say about knowledge graphs?" | `notes-index --folder .../creator-vault search` | FTS5 over note bodies |
+| "what did Kem say about knowledge graphs?" | `python3 /run/media/rodri/AI/creator-vault/vault_index.py search --folder .../creator-vault "knowledge graphs"` | FTS5 over note bodies |
 | "what superseded claim X?" | `graph-memory recall --hops 2` | k-hop entity traversal |
 
 Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. `omnicli search` is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.

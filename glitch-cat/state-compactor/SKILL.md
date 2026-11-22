@@ -31,6 +31,15 @@ allowed-tools: "Bash(state-compactor:*) Bash(python3:*) Read Write"
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/cgate.py` — cgate: Context-Gated Reader & Filter (Kem Glitch Architecture).
+- `scripts/compactor.py` — Kem Glitch Zero-Degradation State Compactor.
+- `scripts/test_bridge.py` — Unit tests for the per-session state bridge (Kem control-probe style).
+
 ## ⚡ Grounded Architecture (Reels `DdyqnietB8C` & `DaCtZ6FtkjI`)
 
 1. **Context Rot & Token Exhaustion:** Long conversations degrade reasoning, drop earlier constraints, and burn context windows on massive log files or code dumps.

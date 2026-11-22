@@ -10,6 +10,17 @@ Build workspaces where the folder structure does the orchestration. One agent, r
 
 Method: Interpretable Context Methodology (Van Clief & McDermott, arXiv:2603.16021, MIT-licensed). It runs in any agent or model that can read files: nothing in a workspace depends on one vendor's tools.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/icm_architect.py` — Workspace Graph Memory & Hybrid RAG Engine.
+- `scripts/index.py` — Write _index.md in each folder named: one line per note, built from the note itself.
+- `scripts/links.py` — List every relative link and input path that does not resolve. Exit 1 if there are any.
+- `scripts/quotes.py` — Verify quoted lines appear word-for-word in their raw sources.
+- `scripts/viz.py` — Draw one or more graph files written by links.py into one viz.html.
+
 ## The invariants
 
 Every ICM starts from these ten. They are defaults: when you know what works and need a nuanced change, break one on purpose and write why in the nearest `CONTEXT.md` or `AGENTS.md`.

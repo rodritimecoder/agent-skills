@@ -690,7 +690,7 @@ def determine_output_path(input_json_path: Path, output_arg: str | None) -> Path
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         description="Format structured JSON into print-ready Cornell Notes HTML & Anki flashcards."
     )
     parser.add_argument("json_file", help="Path to intermediate Cornell notes JSON file.")

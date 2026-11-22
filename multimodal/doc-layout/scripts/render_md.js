@@ -2,6 +2,11 @@
 // Usage: node render_md.js IN.md OUT.html [--cdn]
 // Math spans are masked before marked runs: `_{o}` inside \( ... \) would
 // otherwise be turned into <em> and corrupt the LaTeX.
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('usage: node render_md.js IN.md OUT.html [--cdn]');
+  console.log('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.');
+  process.exit(0);
+}
 const fs = require('fs');
 const path = require('path');
 

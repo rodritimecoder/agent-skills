@@ -495,7 +495,7 @@ def run(workspace, dry_run=False, deps=None):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Stage 4b: render offline Anki hub HTML.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Stage 4b: render offline Anki hub HTML.")
     parser.add_argument("--workspace", default="./workspace")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)

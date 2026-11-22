@@ -20,6 +20,15 @@ JSON.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/ed_cli.py` — EdStem CLI - High Performance Deterministic Discussion & Course Gateway.
+- `scripts/ed_ws.js` — Node helper for the EdStem live workspace bridge.
+- `scripts/workspace_sync.py` — Preview and safely apply Ed workspace snapshots to a Git repository.
+
 ## 🏛️ The Command Groups
 
 | Group | Example request |

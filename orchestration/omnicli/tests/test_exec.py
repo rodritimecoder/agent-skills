@@ -264,6 +264,21 @@ class TestExec(unittest.TestCase):
     def _code(self, work: Path, code: str, *extra: str):
         return self._exec("-c", code, "--workspace", str(work), *extra)
 
+    def _assert_strict_import_refused(self, code: str, module: str):
+        """A strict plan that imports *module* dies at the VM boundary.
+
+        Slice 1 refuses node:net / node:child_process / node:worker_threads for
+        require(), static import and dynamic import alike. The plan body never
+        runs: the process exits non-zero and stderr names the blocked module.
+        """
+        report, proc = self._exec("-c", code, "--sandbox", "strict")
+        self.assertNotEqual(proc.returncode, 0, report["stderr"])
+        self.assertEqual(report["sandbox"], "strict")
+        self.assertNotEqual(report["exit_code"], 0)
+        self.assertIn(f"omnicli: {module} is blocked in the strict sandbox",
+                      report["stderr"])
+        return report, proc
+
     @needs_sandbox
     def test_inline_plan_uses_globals_without_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -391,57 +406,73 @@ emitResult({ count: rows.length, nonEmpty: rows.every((r) => Array.isArray(r) &&
     def test_strict_mode_masks_home_routes_through_the_bridge_and_denies_exec(self):
         sentinel = Path.home() / f".omnicli-probe-{os.getpid()}"
         sentinel.write_text("secret", encoding="utf-8")
+        # Only allowed imports here (node:fs and omnicli_tools), so the plan
+        # still runs under strict: $HOME is masked and search crosses the bridge.
         probe = """
 import fs from "node:fs";
-import net from "node:net";
-import { execFileSync } from "node:child_process";
 import { search } from "omnicli_tools";
 
 try { fs.readFileSync(SENTINEL, "utf8"); console.log("home: readable"); }
 catch (err) { console.log("home: masked"); }
 
-const outcome = await new Promise((resolve) => {
-  const sock = net.connect({ port: PORT, host: "127.0.0.1" });
-  sock.setTimeout(1500);
-  sock.once("connect", () => { sock.destroy(); resolve("network: open"); });
-  sock.once("error", () => { sock.destroy(); resolve("network: blocked"); });
-  sock.once("timeout", () => { sock.destroy(); resolve("network: blocked"); });
-});
-console.log(outcome);
-
 console.log("search:", (await search("ocr", 1)).length);
-
-let rc = 0;
-try { execFileSync(process.env.OMNICLI_BIN, ["exec", "--help"], { stdio: "pipe" }); }
-catch (err) { rc = err.status === undefined ? err.code : err.status; }
-console.log("rc", rc);
 """
-        listener = socket.socket()
-        listener.bind(("127.0.0.1", 0))
-        listener.listen(1)
-        port = listener.getsockname()[1]
         with tempfile.TemporaryDirectory() as tmp:
             plan = Path(tmp) / "strict.mjs"
-            plan.write_text(probe.replace("SENTINEL", repr(str(sentinel))).replace("PORT", str(port)),
+            plan.write_text(probe.replace("SENTINEL", repr(str(sentinel))),
                             encoding="utf-8")
             try:
                 readable, _ = self._exec(str(plan), "--sandbox", "write")
                 report, proc = self._exec(str(plan), "--sandbox", "strict")
             finally:
                 sentinel.unlink(missing_ok=True)
-                listener.close()
-            self.assertIn("home: readable", readable["stdout"])
-            self.assertIn("search:", readable["stdout"])
-            self.assertIn("home: masked", report["stdout"])
-            self.assertIn("network: blocked", report["stdout"])
-            self.assertIn("search: 1", report["stdout"])
-            self.assertIn("rc 126", report["stdout"])
-            self.assertEqual(report["sandbox"], "strict")
-            self.assertGreaterEqual(report["bridge_calls"], 1)
-            self.assertIn("exec", report["bridge_denied"])
+
+        # Equivalent non-strict (write) behaviour: the real $HOME is visible
+        # and search still returns rows.
+        self.assertIn("home: readable", readable["stdout"])
+        self.assertIn("search:", readable["stdout"])
+
+        # Strict behaviour: bwrap masks $HOME and the tool call is routed over
+        # the bridge (which is why bridge_calls is non-zero).
+        self.assertEqual(proc.returncode, 0, report["stderr"])
+        self.assertEqual(report["sandbox"], "strict")
+        self.assertIn("home: masked", report["stdout"])
+        self.assertNotIn("home: readable", report["stdout"])
+        self.assertIn("search: 1", report["stdout"])
+        self.assertGreaterEqual(report["bridge_calls"], 1)
+
+        # Slice 1 denies exec by refusing node:child_process at the import
+        # boundary: the old execFileSync(OMNICLI_BIN, ...) probe can no longer
+        # even load, so assert the refusal for require, static and dynamic
+        # import. worker_threads is refused by the same boundary.
+        self._assert_strict_import_refused(
+            'const cp = require("node:child_process"); console.log(typeof cp);',
+            "node:child_process")
+        self._assert_strict_import_refused(
+            'import { execFileSync } from "node:child_process";',
+            "node:child_process")
+        self._assert_strict_import_refused(
+            'export const marker = 1; const cp = await import("node:child_process");',
+            "node:child_process")
+        self._assert_strict_import_refused(
+            'const wt = require("node:worker_threads"); console.log(typeof wt);',
+            "node:worker_threads")
+
+        # Non-strict (write) behaviour: child_process stays available when the
+        # import boundary is not strict.
+        with tempfile.TemporaryDirectory() as tmp:
+            write, w_proc = self._code(Path(tmp), """
+const cp = require("node:child_process");
+console.log("child_process ok", typeof cp.execFileSync);
+""", "--sandbox", "write")
+        self.assertEqual(w_proc.returncode, 0, write["stderr"])
+        self.assertIn("child_process ok function", write["stdout"])
 
     @needs_sandbox
     def test_strict_mode_blocks_the_network_write_mode_allows(self):
+        # Slice 1 refuses node:net at the strict VM import boundary, so an
+        # OS-level connect probe only runs in write mode. Strict mode is
+        # expected to die at import time with stderr naming node:net.
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
         listener.listen(1)
@@ -459,12 +490,31 @@ console.log(outcome);
 """.replace("PORT", str(port))
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                writable, _ = self._code(Path(tmp), code, "--sandbox", "write")
-                strict, _ = self._code(Path(tmp), code, "--sandbox", "strict")
+                writable, w_proc = self._code(Path(tmp), code, "--sandbox", "write")
+                strict, s_proc = self._code(Path(tmp), code, "--sandbox", "strict")
         finally:
             listener.close()
+
+        # Non-strict (write): node:net imports and reaches the local listener.
+        self.assertEqual(w_proc.returncode, 0, writable["stderr"])
+        self.assertEqual(writable["sandbox"], "write")
         self.assertIn("network: open", writable["stdout"])
-        self.assertIn("network: blocked", strict["stdout"])
+        self.assertNotIn("network: blocked", writable["stdout"])
+
+        # Strict: the import is refused, so no connect probe output appears.
+        self.assertNotEqual(s_proc.returncode, 0)
+        self.assertEqual(strict["sandbox"], "strict")
+        self.assertNotEqual(strict["exit_code"], 0)
+        self.assertNotIn("network:", strict["stdout"])
+        self.assertIn("omnicli: node:net is blocked in the strict sandbox",
+                      strict["stderr"])
+
+        # Static and dynamic import forms are refused by the same boundary.
+        self._assert_strict_import_refused(
+            'import net from "node:net"; console.log(typeof net);', "node:net")
+        self._assert_strict_import_refused(
+            'export const marker = 1; const net = await import("node:net");',
+            "node:net")
 
     @needs_sandbox
     def test_mem_limit_trips_on_a_large_js_allocation(self):

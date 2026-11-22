@@ -499,7 +499,7 @@ def run(workspace, out_dir=None) -> dict:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Render the stage 4a constellation graph.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Render the stage 4a constellation graph.")
     parser.add_argument("--workspace", default="./workspace", help="course workspace directory")
     parser.add_argument("--out", default=None, help="output directory (default: <workspace>/04_render)")
     args = parser.parse_args(argv)

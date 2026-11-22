@@ -24,6 +24,13 @@ Specification reference: [Google Cloud Platform Knowledge Catalog OKF v0.2](http
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/okf_architect.py` — okf_architect.py: Open Knowledge Format (OKF v0.2) bundle architect and validator.
+
 ## 🏛️ Core Principles of OKF v0.2
 
 1. **Human & Agent Readable**: Zero schema registry or bespoke SDK required. Plain UTF-8 Markdown with YAML frontmatter. If you can `cat` a file, you can read it; if you can `git clone` a repository, you can distribute it.

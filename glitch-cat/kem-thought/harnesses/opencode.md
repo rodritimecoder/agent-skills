@@ -73,12 +73,13 @@ jev bool "Does this patch implement all requirements in specs/payment.md?" \
 ```
 This returns a calibrated probability `p(true)` in under 150ms without consuming context tokens with explanations.
 
-### 4. Fast Retrieval with Notes Index (`notes-index`)
-Never grep through thousands of markdown files or vault folders. Use the SQLite FTS5 index:
+### 4. Fast Retrieval with the Vault Index (`vault_index.py`)
+Never grep through thousands of markdown files or vault folders. Use the vault's own SQLite FTS5 index:
 ```bash
-notes-index search "payment webhook signature verification" --limit 3 --cite
+python3 /run/media/rodri/AI/creator-vault/vault_index.py search \
+  --folder .../creator-vault "payment webhook signature verification" --limit 3
 ```
-Every citation is verified to exist on disk before it enters the prompt.
+Verify cited paths and quotes with `vault_index.py cite <answer.md>` before they enter the prompt.
 
 ### 5. Deterministic Guard-Hooks (`guard-hooks`)
 Install guard rails into your shell session to prevent destructive accidents:

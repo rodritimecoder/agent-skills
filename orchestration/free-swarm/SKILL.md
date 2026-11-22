@@ -23,6 +23,14 @@ They are deliberately **read-only**: `edit`, `shell`, `subagent` and `question`
 are denied. That is what makes running nine of them at once safe, and it is why
 they answer instead of acting.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/fanout.py` — Fan one task out to every free-swarm agent at once and land the answers on disk.
+- `scripts/install.py` — Publish the free-swarm agents into this machine's OpenCode config.
+
 ## Roster
 
 | Agent | Model | Context / output | Use it for |

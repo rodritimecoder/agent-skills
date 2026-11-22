@@ -20,6 +20,13 @@ allowed-tools: "Bash(review-hub:*) Bash(python3:*) Read Write"
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/update_suites.py` — update_suites.py — Refresh the vendored upstream suites.
+
 ## 🏛️ The 8 Core Review Suites & Disciplines
 
 | # | Suite ID | Discipline & Core Philosophy |

@@ -124,6 +124,7 @@ pin_config() {
 case "${1:-}" in
   ""|-h|--help)
     sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    echo 'Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.'
     exit 0
     ;;
   --status) status; exit 0 ;;

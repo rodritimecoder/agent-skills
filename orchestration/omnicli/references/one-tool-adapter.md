@@ -1,27 +1,29 @@
 # One-tool harness adapter
 
-`orchestration/omnicli/catalog/one_tool_adapter.py` is a reversible view over
-the tool surface the harness sees. Normally the harness front line
-(`plugin/omnicli-route.js`, mirrored by the MCP face) registers the native
-omnicli tools `omnicli_search`, `omnicli_invoke` and `omnicli_exec`. The adapter
-can collapse that surface to exactly one visible tool — the code-exec surface
-`omnicli_exec` — and switch back to the previous surface on demand.
+`orchestration/omnicli/catalog/one_tool_adapter.py` is a reversible local view
+over the tool surface the harness sees. The harness front line
+(`plugin/omnicli-route.js`, mirrored by the MCP face) now registers **exactly
+one** native tool — the code-exec surface `omnicli_exec`. The one-tool surface
+is permanent: it is what the harness actually registers, not a mode the agent
+has to opt into.
 
-The adapter is a *client-side view*. It is not an install step and it writes no
-host state: no checkout file, no harness config, no `ports.json`, no policy
-file. Enabling and disabling flip an in-memory flag, so the switch is always
-reversible and there is nothing persistent to undo or commit.
+The adapter's in-memory flag remains a reversible *local view*. It narrows the
+adapter's snapshotted surface down to the single exec tool and can switch back;
+enabling and disabling flip that flag only. The flag changes what the adapter
+reports, not what the harness registers. It writes no host state: no checkout
+file, no harness config, no `ports.json`, no policy file. There is nothing
+persistent to undo or commit.
 
 ## How to enable and disable it
 
 Per invocation (the `--one-tool` flag applies only to that process):
 
 ```bash
-# One-tool state: the harness sees exactly one visible tool.
+# One-tool state: the adapter reports exactly one visible tool.
 python3 orchestration/omnicli/catalog/one_tool_adapter.py --one-tool count
 # -> 1
 
-# Disabled state: the previous (full) surface is back.
+# Disabled state: the adapter restores its snapshotted surface (see below).
 python3 orchestration/omnicli/catalog/one_tool_adapter.py count
 # -> 3
 
@@ -37,25 +39,25 @@ from catalog.one_tool_adapter import OneToolAdapter
 
 adapter = OneToolAdapter()
 adapter.enable()                 # visible_tool_count() == 1
-adapter.disable()                # visible_tool_count() == 3 (previous surface restored)
+adapter.disable()                # visible_tool_count() == 3 (snapshot restored)
 
 with adapter.enabled():          # temporarily one-tool, always restored on exit
     assert adapter.visible_tool_count() == 1
 assert adapter.visible_tool_count() == 3
 ```
 
-`previous_surface` is snapshotted when the adapter is constructed, so
-`disable()` always restores that exact surface (`omnicli_search`,
-`omnicli_invoke`, `omnicli_exec`) rather than whatever happens to be around
-later.
+`previous_surface` is a snapshot taken when the adapter is constructed — the
+pre-collapse three-tool view (`omnicli_search`, `omnicli_invoke`,
+`omnicli_exec`). It is a local fixture used only to prove the switch is
+reversible: `disable()` always restores that exact snapshot. It does not
+describe what the harness registers today, which is exec only.
 
 ## Relation to the front-line state file
 
 This machine already runs gateway mode: `~/.config/skills-frontline` selects
 the `gateway` front line, so `surface/` exposes only the `omnicli` skill and
 `sync-skills` keeps the harness copies in step. The adapter works one layer
-below that, on the native tools the gateway registers: it narrows the
-gateway's visible surface from those tools down to `omnicli_exec`.
+below that, on the single native tool the gateway registers: `omnicli_exec`.
 
 It deliberately does **not** write `~/.config/skills-frontline`, does not call
 `sync-skills propagate`, and does not edit the plugin or `opencode.json`. The
@@ -90,7 +92,7 @@ refused would be useless, so both are required.
 ## The claim is observable
 
 - `visible_tool_count()` returns `1` in the enabled state and the size of the
-  previous surface in the disabled state.
+  adapter's snapshotted surface in the disabled state.
 - `status` prints `visible_tool_count`, `visible_tools`, `previous_surface`,
   the gate name, and an in-memory audit of inner calls as JSON.
 - `verify` runs the mechanical checks in one process and exits 0 only if every
@@ -104,11 +106,13 @@ reported. From the checkout root:
 | Check | Command | Expected |
 | :--- | :--- | :--- |
 | Enabled state reports one visible tool | `python3 orchestration/omnicli/catalog/one_tool_adapter.py --one-tool count` | prints `1`, exit 0 |
-| Disabled state restores previous surface | `python3 orchestration/omnicli/catalog/one_tool_adapter.py count` | prints `3`, exit 0 |
+| Disabled state restores the adapter's snapshot | `python3 orchestration/omnicli/catalog/one_tool_adapter.py count` | prints `3`, exit 0 |
 | Negative control — disabled tool refused | `python3 orchestration/omnicli/catalog/one_tool_adapter.py --one-tool invoke "$DISABLED"` where `$DISABLED` is an id from `omnicli policy --json` | `REFUSED: ...`, exit 3 |
 | Positive control — enabled tool allowed | `python3 orchestration/omnicli/catalog/one_tool_adapter.py --one-tool invoke "$ENABLED"` | allow record, exit 0 |
 | All checks in one process | `python3 orchestration/omnicli/catalog/one_tool_adapter.py --one-tool verify` | `"ok": true`, exit 0 |
 | Distribution stays clean | `sync-skills verify` | clean, exit 0 |
 
-The negative control is mandatory. If a disabled tool is ever allowed through
-the adapter, or if the enabled count is not exactly one, `verify` fails.
+The `3` in the disabled state is the adapter's local snapshot, not the harness's
+registered surface (which is now one tool). The negative control is mandatory.
+If a disabled tool is ever allowed through the adapter, or if the enabled count
+is not exactly one, `verify` fails.

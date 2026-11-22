@@ -296,3 +296,14 @@ def run(workspace: Path, dry_run: bool = False, deps: dict | None = None) -> dic
         "keyframes={keyframes} weeks={weeks}".format(**counts)
     )
     return _payload(started_at, status, inputs, outputs=outputs, evidence=evidence, errors=errors)
+
+
+# --- documentation-only --help (module stays import-safe) ---
+if __name__ == "__main__":
+    import sys
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print('Stage 1 Zoom ingestion module (injected dependencies). Import run().')
+        print()
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
+        print("This module has no standalone commands; it is imported by its skill's CLI.")
+        sys.exit(0)

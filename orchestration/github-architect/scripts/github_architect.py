@@ -932,7 +932,7 @@ def cmd_bootstrap(dest_dir: Optional[Path] = None, config_path: Optional[Path] =
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="github-architect",
         description="github-architect — Automated GitHub repo builder, fleet syncer & publisher"
     )

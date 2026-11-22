@@ -27,6 +27,13 @@ Autonomous verification turns claims into evidence. Instead of checking intent a
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/verify.py` — verification — hands and eyes for an agent that has to prove its own work.
+
 ## 📚 Documentation & References (Late-Binding)
 
 Read the specific reference card when needed for details:

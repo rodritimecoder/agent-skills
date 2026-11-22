@@ -611,7 +611,7 @@ def cmd_transcribe(ns) -> int:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> int:
-    p = argparse.ArgumentParser(
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="asr.py",
         description="Local speech-to-text via the audio.cpp server (Nemotron ASR).",
     )

@@ -23,6 +23,14 @@ JSON.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/canvas_cli.py` — Canvas LMS CLI - High Performance Deterministic LMS Gateway.
+- `scripts/pdf_ocr.py` — pdf_ocr.py - Scanned & Handwritten PDF OCR utility with zero-token stroke detection.
+
 ## 🏛️ The Command Groups
 
 | Group | Example request |

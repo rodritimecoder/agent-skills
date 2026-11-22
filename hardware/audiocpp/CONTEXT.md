@@ -24,7 +24,7 @@ Two paths, and they do not share a transport:
 - **ASR & Diarization** — `scripts/audiocpp_cli.py asr` and `scripts/audiocpp_cli.py diarize`
   resolve the slug to a `family` + path and run the `audiocpp_cli` **binary**
   (`--task asr` / `--task diar`). Word timestamps (`--words-out`) and speaker turns
-  exist only on this path, which is why `video-miner` uses it.
+  exist only on this path, which is why the vault's `vault_mine.py` uses it.
 - **TTS / align** — the same wrapper, but requests reach the **server** on `:8081`
   (`/v1/audio/speech`, `/v1/audio/transcriptions`), which lazy-loads up to 3 models.
 
@@ -78,8 +78,8 @@ speed lives in `references/benchmarks.md`. Neither is repeated here.
 3. **The config is source, the index is not.** `server.json` is versioned in
    `references/`; `rag.db`-style artifacts are disposable. An install that ships no
    config gets seeded, never assumed.
-4. **`crisperwhisper` stays the mining model.** `video-miner` passes `--model`
-   explicitly, so changing the CLI default cannot move it.
+4. **`crisperwhisper` stays the mining model.** The vault's `vault_mine.py` passes
+   `--model` explicitly, so changing the CLI default cannot move it.
 5. **Default TTS is `kokoro`, default ASR is `nemotron`, both `streaming`.** The CLI
    constants, `server.json`'s modes and the `Defaults:` line in this file are checked
    against each other. `crisperwhisper` stays the mining model — requested explicitly,
@@ -95,7 +95,7 @@ speed lives in `references/benchmarks.md`. Neither is repeated here.
 | `architecture.md` said `0.9.3`, symlink pointed at `0.9.4` | a duplicate of a fact that has one home | folded into this file |
 | `maomao` read as a model, then as a kokoro voice | it is an `audio8_tts` **voice preset** in `server.json` | inventory in `references/server-json.md` |
 | ROCm build promoted and then refused to run | nothing validated a candidate before the flip | `switch-version.sh` runs `--version` first, rolls back on failure |
-| Transcript header said `Duration: N/A` | Instagram metadata carries no duration | `video-miner` writes ffprobe duration (pending) |
+| Transcript header said `Duration: N/A` | Instagram metadata carries no duration | the vault's `vault_mine.py` writes ffprobe duration (pending) |
 
 ## Changing the version
 

@@ -21,6 +21,13 @@ Instead of running builds, tests, or untrusted code directly on the host or incu
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/subagent_spaces.py` — Isolated CPU-pinned containerized sandbox environments for autonomous subagents.
+
 ## 🖥️ CPU Core Topology (16-Thread Ryzen Substrate)
 
 * **Host Desktop Reserve (`0–3`)**: Cores 0, 1, 2, 3 (4 threads) reserved exclusively for Host OS, Desktop, Display Server, and GPU drivers.

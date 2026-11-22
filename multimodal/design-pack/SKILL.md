@@ -17,6 +17,16 @@ component is drawn in every state, `design-pack verify` **fails** on token drift
 `design-pack check` **fails** when an interactive part errors or responds slowly
 (`> 100 ms`), or on layout overlap, clipping, sub-10 px text, or `< 3:1` contrast.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/check_components.py` — check_components — the behavioural & structural gate for design-pack.
+- `scripts/check_runner.mjs` — Behavioural check runner driving rendered components in a headless browser.
+- `scripts/design_pack.py` — design-pack — the token gate.
+- `scripts/sprite_forge.py` — sprite-forge — trace a pixel-art sprite out of video, in code.
+
 ## Layout
 
 ```

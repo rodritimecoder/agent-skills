@@ -31,6 +31,7 @@ usage() {
   echo "  dispatch --task <string> [--branch <string>] [--model <string>]"
   echo "  status"
   echo "  logs <run_id>"
+  echo 'Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.'
 }
 
 ACTION="${1:-status}"

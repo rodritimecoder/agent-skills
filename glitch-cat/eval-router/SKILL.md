@@ -51,6 +51,15 @@ allowed-tools: "Bash(eval-router:*) Bash(python3:*) Read Write"
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/harvest.py` — Eval Router Harvesting & Continuous Calibration.
+- `scripts/router.py` — Kem Glitch Self-Calibrating Eval Router CLI.
+- `scripts/server.py` — Serve the eval-router HTTP endpoint for harvest/calibration traffic.
+
 ## ⚡ What It Solves (The Kem Glitch Architecture)
 1. **The Cost Dilemma**: Sending simple formatting, typos, and straightforward scripts to expensive frontier models ($3–$15/M tokens) wastes 30–40% of API budgets.
 2. **The Cheap Model Fear**: Developers avoid cheap or local models because they fear silent errors, truncation, or hallucinations.

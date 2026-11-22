@@ -196,7 +196,7 @@ def refresh(name: str) -> dict:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__)
     parser.add_argument("--suite", default="all", choices=["all"] + sorted(SUITES))
     parser.add_argument("--check", action="store_true", help="report versions without changing anything")
     args = parser.parse_args(argv)

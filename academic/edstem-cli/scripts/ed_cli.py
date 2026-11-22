@@ -864,7 +864,7 @@ def cmd_lesson(client: EdClient, args: argparse.Namespace):
         render_output(res, args)
 
 def main():
-    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', add_help=False)
     common_parser.add_argument("--format", "-f", choices=["json", "table", "ids"], default=argparse.SUPPRESS, help="Output format")
     common_parser.add_argument("--table", "-t", action="store_true", default=argparse.SUPPRESS, help="Shorthand for --format table")
     common_parser.add_argument("--project", "-p", default=argparse.SUPPRESS, help="Comma-separated keys to project (e.g. id,title,category)")
@@ -874,7 +874,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog="ed_cli.py",
         description="EdStem CLI - High Performance Deterministic Discussion & Course Gateway",
-        epilog="Default output is JSON. Use --table, --project, or --out to shield context tokens.",
+        epilog="Default output is JSON. Use --table, --project, or --out to shield context tokens. Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.",
         parents=[common_parser]
     )
     parser.add_argument("--token", help="Override ED_API_TOKEN")

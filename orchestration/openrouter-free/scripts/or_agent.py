@@ -848,7 +848,7 @@ def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenRouter Free Multimodal & Subagent CLI (Uber Protocol)")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="OpenRouter Free Multimodal & Subagent CLI (Uber Protocol)")
     parser.add_argument("--json", action="store_true", dest="global_json",
                         help="machine-readable output for every command")
     sub = parser.add_subparsers(dest="mode", required=True)

@@ -298,22 +298,6 @@
       "kind": "prose"
     },
     {
-      "query": "extract the knowledge from this youtube video into notes",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner"
-      ],
-      "kind": "prose"
-    },
-    {
-      "query": "sample keyframes from a video and transcribe the audio",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner"
-      ],
-      "kind": "prose"
-    },
-    {
       "query": "classify this ticket and give me a confidence probability",
       "top1": "eval-router",
       "expect": [

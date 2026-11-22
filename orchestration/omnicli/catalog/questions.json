@@ -585,28 +585,6 @@
         "quote": "before writing code that calls one"
       }
     ],
-    "notes-index": [
-      {
-        "question": "how do I search my old markdown notes without grepping everything",
-        "quote": "searches the index instead of grepping"
-      },
-      {
-        "question": "what did we decide about the deployment last month",
-        "quote": "when answering questions about past work, decisions or notes"
-      },
-      {
-        "question": "searching my notes folder is slow and eats too many tokens",
-        "quote": "Cuts memory-search token spend by up to half"
-      },
-      {
-        "question": "is there a cheaper way to find notes than pasting them all into context",
-        "quote": "one SQLite FTS5 index, fingerprint-based refresh"
-      },
-      {
-        "question": "check that every quote in my answer actually appears in the source",
-        "quote": "every quoted span is verbatim in the cited file"
-      }
-    ],
     "nvidia-nim": [
       {
         "question": "how do I call a big hosted model when I have no local gpu",
@@ -891,28 +869,6 @@
       {
         "question": "I have before and after screenshots of a page that shifted",
         "quote": "compares before/after pixels"
-      }
-    ],
-    "video-miner": [
-      {
-        "question": "pull the notes out of this lecture recording",
-        "quote": "turn a recorded lecture, talk, webinar or screen recording"
-      },
-      {
-        "question": "turn a screen recording into a written summary",
-        "quote": "get a transcript plus slides out of video you already have"
-      },
-      {
-        "question": "the transcript from my recording is full of duplicate junk frames",
-        "quote": "perceptual dedup + blank rejection"
-      },
-      {
-        "question": "is there a way to get study notes without watching the whole thing",
-        "quote": "mine a pile of video for what it teaches"
-      },
-      {
-        "question": "I have a pile of mp4 files and a webinar link",
-        "quote": "from video files or URLs into structured markdown notes"
       }
     ],
     "worktree-harness": [

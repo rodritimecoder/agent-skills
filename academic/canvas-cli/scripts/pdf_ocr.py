@@ -242,7 +242,7 @@ def process_pdf(
     return report
 
 def main():
-    parser = argparse.ArgumentParser(description="Zero-token handwritten stroke detector & OCR pipeline.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Zero-token handwritten stroke detector & OCR pipeline.")
     parser.add_argument("pdf", type=Path, help="Path to PDF file")
     parser.add_argument("-o", "--output", type=Path, help="Output markdown file path")
     parser.add_argument("--dpi", type=int, default=200, metavar="N", help="Rasterization DPI for OCR (default: 200)")

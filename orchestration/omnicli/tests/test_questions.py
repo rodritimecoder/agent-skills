@@ -118,11 +118,11 @@ class TestSemanticGate(unittest.TestCase):
             "question": "pull the transcript out of a cloud recording",
             "quote": "Download transcripts, slide keyframes, and metadata",
         }
-        raw = {"questions": {SKILL: [question], "video-miner": [dict(question)]}}
-        res = question_build.build(raw, {SKILL: SOURCE, "video-miner": SOURCE},
+        raw = {"questions": {SKILL: [question], "ocr-cli": [dict(question)]}}
+        res = question_build.build(raw, {SKILL: SOURCE, "ocr-cli": SOURCE},
                                    embed=self._embed)
         self.assertEqual(len(res["accepted"][SKILL]), 1)
-        self.assertEqual(res["accepted"].get("video-miner", []), [])
+        self.assertEqual(res["accepted"].get("ocr-cli", []), [])
         self.assertTrue(any(r["reason"].startswith("duplicate")
                             for r in res["rejected"]))
 

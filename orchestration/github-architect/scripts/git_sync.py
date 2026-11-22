@@ -901,7 +901,7 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
 
     if argv and argv[0] == "check-messages":
-        cp = argparse.ArgumentParser(
+        cp = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
             prog="git-sync check-messages",
             description="Fail if any outgoing commit has no description body",
         )
@@ -913,7 +913,7 @@ def main(argv=None):
         return cmd_check_messages(cp.parse_args(argv[1:]))
 
     if argv and argv[0] == "install-hook":
-        ip = argparse.ArgumentParser(
+        ip = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
             prog="git-sync install-hook",
             description="Install the pre-push description gate",
         )
@@ -922,7 +922,7 @@ def main(argv=None):
         return cmd_install_hook(ip.parse_args(argv[1:]))
 
     if argv and argv[0] == "guarded-commit":
-        gp = argparse.ArgumentParser(
+        gp = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
             prog="git-sync guarded-commit",
             description="Stage and commit only the files that pass the secret guard",
         )
@@ -934,7 +934,7 @@ def main(argv=None):
         gargs = gp.parse_args(argv[1:])
         return cmd_guarded_commit(gargs)
 
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="git-sync",
         description="Disciplined 6-Stage Git Branch Synchronization Engine (Look -> Guard -> Commit -> Gate -> Pull -> Push -> Report)"
     )

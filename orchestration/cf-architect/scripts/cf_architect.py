@@ -254,7 +254,7 @@ def doctor() -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="cf-architect",
         description="Cloudflare capability probe, free-tier budget math, and CLI remedies.",
     )

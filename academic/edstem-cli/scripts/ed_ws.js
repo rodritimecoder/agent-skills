@@ -313,6 +313,7 @@ async function main() {
     console.log("Usage: ed_ws.js [flags] ...");
     console.log("  ed_ws.js <files|cat|pull|sync> <workspace_id> [args...]");
     console.log("  sync flags: --push --once");
+    console.log('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.');
     process.exit(0);
   }
   const cmd = args[0];

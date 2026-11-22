@@ -219,29 +219,6 @@
       "evidence_note": "Depends on external content not in the catalog: the commit hash appears only in this eval file, and 'whatever prompt this person followed' has no referent in-machine. github-architect owns git hygiene/commits but this is not a commit request; playwright's BM25 hit is driven by the bare GitHub URL ('open a url and take a screenshot') with no doc tying 'follow a person's prompt' to browser control. No catalog skill documents this intent, so it cannot be a clean single-label routing case."
     },
     {
-      "query": "explain how all this works now the video miner",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "video"
-      ]
-    },
-    {
-      "query": "i thought video miner used key frames because that would make a lot of sense?",
-      "top1": "video-miner",
-      "expect": [
-        "video-miner"
-      ],
-      "kind": "harvested-fresh",
-      "evidence": [
-        "frames",
-        "video"
-      ]
-    },
-    {
       "query": "gh architect? it commits something how does it determine like the paragraph below it too?",
       "top1": "github-architect",
       "expect": [
@@ -288,7 +265,7 @@
       "evidence": [
         "would"
       ],
-      "evidence_note": "kem-thought owns the lego-block principle: glitch-cat/kem-thought/references/voice.md table: 'Lego bricks | Verified, optimised blocks you snap together as a system'; curated aliases include 'kem steering principles, load a named principle, deterministic step ownership'. notes-index only owns vault FTS search ('search my notes, find in my notes, search the vault'), with no lego/modular doc."
+      "evidence_note": "kem-thought owns the lego-block principle: glitch-cat/kem-thought/references/voice.md table: 'Lego bricks | Verified, optimised blocks you snap together as a system'; curated aliases include 'kem steering principles, load a named principle, deterministic step ownership'."
     },
     {
       "query": "no as in just as in the name? of 'sync: propagate skills update [2026-10-26T14:34:42Z]' yeah its syncing but like when the gh vets commit something, the name is more profresh and like descriptive? more on the descriptive part its really not descriptive at all",

@@ -294,3 +294,14 @@ def run(workspace, dry_run=False, deps=None):
 
     status = "failed" if errors else "ok"
     return _payload(started_at, inputs, status, outputs, evidence, errors)
+
+
+# --- documentation-only --help (module stays import-safe) ---
+if __name__ == "__main__":
+    import sys
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print('Stage 1 Canvas ingestion module (stdlib only, dependency-injected). Import run().')
+        print()
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
+        print("This module has no standalone commands; it is imported by its skill's CLI.")
+        sys.exit(0)

@@ -58,9 +58,11 @@ only plan data.
 
 ### 2. Typed Surface Functions
 
-Every catalogued tool is also exposed as one async function, generated from its
-extracted JSON Schema (`inputSchema`, produced by `schema_extract.py` from the
-tool's own `--help`):
+Every *enabled* catalogued tool is also exposed as one async function,
+generated from its extracted JSON Schema (`inputSchema`, produced by
+`schema_extract.py` from the tool's own `--help`). Disabled tools are absent
+from the typed `SPEC` and from the generated bindings, matching the contract
+tree: a tool the policy has not opened cannot be bound to at all.
 
 ```js
 zoom({ url: "https://zoom.us/rec/share/example", format: "md" });
@@ -82,6 +84,14 @@ the tool expects positionals is passed through in order:
 
 ```js
 invoke("audiocpp/scripts/audiocpp_cli", ["asr", "talk.wav"], { maxBytes: 4000 });
+```
+
+A tool with an empty or help-fallback `inputSchema` has no named arguments to
+validate, so its generated function takes an `argv?: string[]` escape hatch
+instead of rejecting every key as "unknown argument":
+
+```js
+tools["some/schema-less-tool"]({ argv: ["--flag", "value", "positional"] });
 ```
 
 ### 3. Zero boilerplate or ESM — same module
@@ -120,7 +130,7 @@ Beyond the core globals, the module exposes a few designed forms:
 | Form | What it does |
 |---|---|
 | `tools[id](args)` | Proxy over the generated typed functions; `TOOLS` is an alias. Calls pass through the same `_callTool` validation, so behavior is identical to the named wrapper (`zoom({ ... })`). |
-| `` $`cmd` `` | Claude-style tagged template returning a lazy thenable with `.text()`, `.json()` and `.nothrow()`. It throws a `TypeError` in `strict` **before spawning** and caches its promise — use `--sandbox write` (network) to run one. |
+| `` $`cmd` `` | Claude-style tagged template returning a lazy thenable with `.text()`, `.json()` and `.nothrow()`. It throws an `Error` in `strict` **before spawning** and caches its promise — use `--sandbox write` (network) to run one. Outside `strict` it runs `guard-hooks check -- <cmd>` first; a refusal or an unavailable gate throws an `Error` before any child process starts. |
 | `result({ ok, tool, proof, data })` | A designed result on the `emitResult` channel (`ok` defaults to `true`). With `exec --quiet`, plain mode prints this JSON (or stdout when no result was emitted) and drops the ⚡ status line. |
 
 `--quiet` is inert with `--json`: reports, output caps, trace rows, the call

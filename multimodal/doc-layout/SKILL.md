@@ -32,6 +32,14 @@ The VLM never controls the layout model. Control flows `CLI -> {layout, VLM}`;
 both are stateless services. This mirrors OpenBMB's `minicpmvocr` SDK, which
 runs PP-DocLayoutV3 first and then posts crops to a separate inference service.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/doc_layout.py` — doc-layout — PP-DocLayoutV3 layout detection -> crops -> VLM -> Markdown.
+- `scripts/render_md.js` — Render layout-detected crops into Markdown via the local VLM.
+
 ## Why layout-first
 
 Whole-page OCR fails when columns, figures and formulas interleave. Layout

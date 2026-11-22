@@ -603,7 +603,7 @@ if __name__ == "__main__":
         if sys.argv[1] not in ["start", "claim", "gate", "integrate", "status", "teardown", "dispatch", "-h", "--help"]:
             sys.argv.insert(1, "dispatch")
 
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="worktree-harness",
         description="Multi-Agent Git Worktree Orchestration & Quality Gate Harness (Uber Protocol)"
     )

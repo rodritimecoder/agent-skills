@@ -27,6 +27,13 @@ prevents the execution.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/guard.py` — Deterministic Guard Hooks (Kem Glitch Architecture).
+
 ## 🏛️ Skill vs. Hook
 
 | | |

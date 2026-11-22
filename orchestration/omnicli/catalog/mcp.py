@@ -1,16 +1,16 @@
-"""Three-tool MCP face for the omnicli catalog.
+"""Single-tool MCP face for the omnicli catalog.
 
 One core, two transports: newline-delimited JSON-RPC on stdio for local
 harnesses, and Streamable HTTP (2025-06-18) on loopback for remote clients.
 Both speak the same JSON-RPC dispatcher and run the *same* CLI in a subprocess
 for every tool call — no second implementation of discovery or invocation.
 
-The surface mirrors omnicli's native three tools, not the retired four-tool
-shape: search (with ``depth: contract`` pulling the exact contract in the same
-call), invoke, and exec (Code Mode). A JSON-RPC client sees these three tools,
-not the agent's internals. Discovery is not exposure — ``omni_invoke`` is
-gated by ``omnicli enable``, enforced by the CLI itself. ``omni_exec`` is
-off by default and needs ``OMNICLI_MCP_ALLOW_EXEC=1``.
+The surface mirrors omnicli's native one-tool shape: ``omni_exec`` is the only
+tool a JSON-RPC client sees, and it is listed by default. The retired search
+and invoke tools are gone from this face; their work happens as inner calls
+inside a plan, where the CLI still enforces the ``omnicli enable`` gate.
+Listing is not authorization: actually running ``omni_exec`` still needs
+``OMNICLI_MCP_ALLOW_EXEC=1`` (``--no-exec`` is an extra kill switch).
 
 Stdlib only. No MCP SDK is installed, and the subset needed here is small.
 """
@@ -61,65 +61,13 @@ AUDIT_FILENAME = "mcp-audit.jsonl"
 
 TOOLS: list[dict[str, Any]] = [
     {
-        "name": "omni_search",
-        "title": "Search the catalog by intent",
-        "description": (
-            "One call for discovery and contract: `depth: \"contract\"` returns "
-            "routing AND the top hit's exact tool contract byte-identically to "
-            "`omnicli describe` — that is why there is no separate describe "
-            "tool. `depth: \"brief\"` (default) is the compact routing view; "
-            "`chunks` returns every matching chunk. Discovery is NOT exposure: "
-            "a found tool stays un-runnable until `omnicli enable` opens it."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Plain-language intent."},
-                "limit": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
-                "depth": {"type": "string", "enum": ["brief", "contract", "chunks"],
-                          "default": "brief"},
-                "section": {"type": "string", "description": "Section heading for a skill contract."},
-                "doc": {"type": "string", "description": "Document path/title for a skill contract."},
-                "max_bytes": {"type": "integer", "minimum": 64, "maximum": 10000000, "default": 8000},
-            },
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-    },
-    {
-        "name": "omni_invoke",
-        "title": "Invoke one catalogued tool",
-        "description": (
-            "Run one catalogued tool with bounded, projected output. Execution "
-            "is gated by `omnicli enable`: discovery alone never grants "
-            "execution, and the gate is enforced by the CLI itself. Args are "
-            "passed verbatim after `--` so tool flags cannot be eaten."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "tool_id": {"type": "string", "description": "Enabled tool id to run."},
-                "args": {"type": "array", "items": {"type": "string"}, "default": []},
-                "max_bytes": {"type": "integer", "minimum": 64, "maximum": 10000000, "default": 8000},
-                "timeout": {"type": "number", "default": 300},
-                "fields": {"type": "array", "items": {"type": "string"},
-                           "description": "Dotted JSON fields to project."},
-                "jq": {"type": "string", "description": "Optional jq filter expression."},
-                "grep": {"type": "string", "description": "Optional regex line filter."},
-            },
-            "required": ["tool_id"],
-            "additionalProperties": False,
-        },
-    },
-    {
         "name": "omni_exec",
         "title": "Run one JavaScript plan (Code Mode)",
         "description": (
             "Run one JavaScript plan that can search, spec, describe, invoke "
             "and emit one bounded result — intermediate payloads stay out of "
-            "context. Sandbox defaults to `strict`. OFF by default here: this "
-            "tool is listed and callable only when the operator sets "
-            "OMNICLI_MCP_ALLOW_EXEC=1; `--no-exec` is an extra kill switch."
+            "context. Sandbox defaults to `strict`. Listed by default; calling "
+            "it still needs OMNICLI_MCP_ALLOW_EXEC=1 (--no-exec is a kill switch)."
         ),
         "inputSchema": {
             "type": "object",
@@ -179,7 +127,7 @@ def _number_arg(args: dict[str, Any], key: str, default: float, low: float, high
 
 
 def _run_cli(argv: list[Any], timeout: float) -> dict[str, Any]:
-    """The one subprocess path. All three meta-tools go through here."""
+    """The one subprocess path. The exec meta-tool goes through here."""
     cmd = [sys.executable, str(OMNICLI_PATH)] + [str(a) for a in argv]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -247,47 +195,6 @@ def _audit(ctx: dict[str, Any], tool: str | None, target: str | None,
 # meta-tool implementations
 # --------------------------------------------------------------------------
 
-def tool_search(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
-    query = str(args.get("query") or "").strip()
-    if not query:
-        return _error_result('{"error": "query is required"}')
-    limit = _int_arg(args, "limit", 5, 1, 20)
-    max_bytes = _int_arg(args, "max_bytes", 8000, 64, 10000000)
-    depth = str(args.get("depth") or "brief")
-    if depth not in ("brief", "contract", "chunks"):
-        depth = "brief"
-    argv: list[Any] = ["search", query, "--json", "--depth", depth,
-                       "--limit", str(limit), "--no-rerank"]
-    section = str(args.get("section") or "").strip()
-    doc = str(args.get("doc") or "").strip()
-    if section:
-        argv += ["--section", section]
-    if doc:
-        argv += ["--doc", doc]
-    # --no-rerank keeps discovery independent of the embedding slot;
-    # depth=contract is the CLI's byte-identical describe contract.
-    return _call_and_shape(argv, max_bytes)
-
-
-def tool_invoke(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
-    tool_id = str(args.get("tool_id") or "").strip()
-    if not tool_id:
-        return _error_result('{"error": "tool_id is required"}')
-    max_bytes = _int_arg(args, "max_bytes", 8000, 64, 10000000)
-    timeout = _number_arg(args, "timeout", 300.0, 0.1, 3600.0)
-    argv: list[Any] = ["invoke", tool_id, "--omni-json", "--omni-max-bytes", str(max_bytes)]
-    fields = args.get("fields")
-    if fields:
-        argv += ["--omni-project", ",".join(str(f) for f in fields)]
-    if args.get("jq"):
-        argv += ["--omni-jq", str(args["jq"])]
-    if args.get("grep"):
-        argv += ["--omni-grep", str(args["grep"])]
-    # `--` MUST precede user args so tool flags are not eaten by the gateway.
-    argv += ["--"] + [str(a) for a in (args.get("args") or [])]
-    return _call_and_shape(argv, max_bytes, timeout=timeout)
-
-
 def tool_exec(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     if not ctx.get("allow_exec", False):
         return _error_result(
@@ -313,8 +220,6 @@ def tool_exec(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 HANDLERS.update({
-    "omni_search": tool_search,
-    "omni_invoke": tool_invoke,
     "omni_exec": tool_exec,
 })
 
@@ -324,15 +229,13 @@ HANDLERS.update({
 # --------------------------------------------------------------------------
 
 def _visible_tools(ctx: dict[str, Any]) -> list[dict[str, Any]]:
-    if ctx.get("allow_exec", False):
-        return TOOLS
-    return [t for t in TOOLS if t["name"] != "omni_exec"]
+    # The one-tool surface is permanent: `omni_exec` is always listed.
+    # allow_exec gates execution (tool_exec / dispatch), never visibility.
+    return list(TOOLS)
 
 
 def _call_target(name: Any, arguments: dict[str, Any]) -> str | None:
-    if name == "omni_invoke":
-        value = str(arguments.get("tool_id") or "").strip()
-        return value or None
+    # No tool on this face exposes a callable target; kept for the audit shape.
     return None
 
 

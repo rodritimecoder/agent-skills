@@ -5,9 +5,9 @@
 //
 // Why: T3 Code drives OpenCode. OpenCode ships native tools and its own Code
 // Mode, so a skill that tells the agent to shell out to `omnicli` loses to a
-// native call every time. This plugin puts the catalogue in the tool list:
-//   omnicli_search / omnicli_invoke / omnicli_exec
-// and the same functions inside Code Mode as tools.omnicli.*.
+// native call every time. This plugin exposes the catalogue as one native tool:
+//   omnicli_exec
+// and the same function inside Code Mode as tools.omnicli.exec.
 //
 // Rules that matter:
 //   - argv arrays only; never interpolate user input into a shell
@@ -31,18 +31,16 @@ const ROUTE_LOG = join(homedir(), ".local/share/omnicli/route.jsonl");
 const PLANS_DIR = join(homedir(), ".local/share/omnicli/plans");
 const GUARD_BIN = process.env.GUARD_BIN || join(homedir(), ".local/bin/guard-hooks");
 
-const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as native tools. Use them; do not re-derive a tool's CLI from its source.
-- omnicli_search / tools.omnicli.search — find catalogued tools by intent; pass depth:"contract" (section/doc supported) for one tool's exact contract.
-- omnicli_invoke / tools.omnicli.invoke — run one catalogued tool; output is capped at 8 KB.
-- omnicli_exec / tools.omnicli.exec — run a JavaScript Code Mode plan (\`node:vm\` + \`omnicli_tools\`) when a job needs two or more catalogue calls or heavy parsing; use \`omnicli spec --stubs\` for \`.d.ts\` signatures.
-Rules: discover with search, never by reading or grepping skill directories. Inside execute use tools.omnicli.* — the bare search() helper indexes tool names, not the omnicli catalogue. Ordinary code and file work in the current repo still uses the native tools.`;
+const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as one native tool, omnicli_exec / tools.omnicli.exec. Use it; do not re-derive a tool's CLI from its source.
+- omnicli_exec / tools.omnicli.exec — run a JavaScript Code Mode plan (\`node:vm\` + \`omnicli_tools\`) for any catalogue work; use \`omnicli spec --stubs\` for \`.d.ts\` signatures.
+Rules: inside the plan call the omnicli_tools bindings (search, spec, describe, invoke); every inner call is checked against the enable/disable gate. Do not read or grep skill directories to find a tool. Ordinary code and file work in the current repo still uses the native tools.`;
 
 const NATIVE_READ_TOOLS = new Set(["read", "grep", "glob", "list", "ls"]);
 const SHELL_TOOLS = new Set(["bash", "shell"]);
 // A read verb must be a command token, not a substring: `glitch-cat/...` is not
 // `cat`, and `python3 tools/x.py` is not `ls`.
 const SHELL_READ_VERBS = /(^|[;&|]\s*|\b(?:sudo|command|exec)\s+)(cat|bat|less|head|tail|grep|rg|ag|sed|awk|find|ls|tree)\b/;
-const OMNICLI_TOOL = /^omnicli[._](search|invoke|exec)$/i;
+const OMNICLI_TOOL = /^omnicli[._]exec$/i;
 
 function omnicliBin() {
   return process.env.OMNICLI_BIN || join(homedir(), ".local/bin/omnicli");
@@ -55,14 +53,6 @@ function cap(text, max = CAP) {
   const head = s.slice(0, Math.floor(max * 0.65));
   const tail = s.slice(-Math.floor(max * 0.25));
   return `${head}\n… [${bytes} bytes; capped at ${max}] …\n${tail}`;
-}
-
-function compactJson(raw) {
-  try {
-    return JSON.stringify(JSON.parse(raw));
-  } catch {
-    return raw;
-  }
 }
 
 function run(argv, { timeout = 60_000 } = {}) {
@@ -180,64 +170,8 @@ export default {
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "omnicli",
-        description: "Workstation tool catalogue: search, invoke, and run JavaScript Code Mode plans over the local catalog.",
+        description: "Workstation tool catalogue: run JavaScript Code Mode plans over the local catalog.",
       });
-
-      editor.add(
-        def(
-          "search",
-          "Search the omnicli tool catalogue by natural-language intent. Returns ranked tools with skill, score and best hit. Use this instead of reading or grepping skill directories. This is NOT the Code Mode tool index.",
-          {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Natural-language intent, e.g. 'transcribe a zoom lecture'." },
-              limit: { type: "integer", minimum: 1, maximum: 20, description: "Maximum results (default 5)." },
-              depth: { type: "string", enum: ["brief", "contract", "chunks"], description: "brief=compact routing view (default); contract=the top hit's tool contract; chunks=full search body." },
-              section: { type: "string", description: "With depth=contract on a skill top hit: section heading to read." },
-              doc: { type: "string", description: "With depth=contract on a skill top hit: document path/title to read." },
-            },
-            required: ["query"],
-            additionalProperties: false,
-          },
-          async ({ query, limit = 5, depth = "brief", section, doc }) => {
-            const argv = ["search", String(query), "--json", "--limit", String(limit), "--depth", String(depth)];
-            if (section) argv.push("--section", String(section));
-            if (doc) argv.push("--doc", String(doc));
-            const r = await run(argv);
-            const text = r.code === 0 ? compactJson(r.stdout) : `omnicli search failed (rc ${r.code}): ${cap(r.stderr || r.stdout)}`;
-            return { content: cap(text) };
-          },
-        ),
-      );
-
-      editor.add(
-        def(
-          "invoke",
-          "Run one catalogued tool through omnicli. Output is capped at 8 KB by default; project fields to keep only what matters.",
-          {
-            type: "object",
-            properties: {
-              tool_id: { type: "string", description: "Catalogued tool id." },
-              args: { type: "array", items: { type: "string" }, description: "Arguments passed after `--`." },
-              project: { type: "string", description: "Comma-separated output fields to keep (--omni-project)." },
-              max_bytes: { type: "integer", minimum: 256, maximum: 65536, description: "Output cap in bytes (default 8000)." },
-              buffer: { type: "string", description: "Write the full output here (--omni-buffer)." },
-            },
-            required: ["tool_id"],
-            additionalProperties: false,
-          },
-          async ({ tool_id, args = [], project, max_bytes = CAP, buffer }) => {
-            const argv = ["invoke", String(tool_id)];
-            if (project) argv.push("--omni-project", String(project));
-            argv.push("--omni-max-bytes", String(max_bytes));
-            if (buffer) argv.push("--omni-buffer", String(buffer));
-            argv.push("--", ...args.map(String));
-            const r = await run(argv, { timeout: 300_000 });
-            const body = r.code === 0 ? r.stdout : `omnicli invoke failed (rc ${r.code}):\n${r.stderr || r.stdout}`;
-            return { content: cap(body, max_bytes) };
-          },
-        ),
-      );
 
       editor.add(
         def(
@@ -305,7 +239,7 @@ export default {
       void logRoute({ ...row, decision: "deny" });
       throw new Error(
         "Denied by omnicli-route: reading skill directories to find a tool is the bypass this gate exists to stop. " +
-          "Call omnicli_search(\"intent\") first (inside execute: tools.omnicli.search({ query })); after one catalogue call, direct reads are allowed. " +
+          "Call omnicli_exec with a search/spec plan first (inside execute: tools.omnicli.exec({ script })); after one catalogue call, direct reads are allowed. " +
           `To work on the skills repo from a project outside it, create ${EXEMPT_MARKER}.`,
       );
     });

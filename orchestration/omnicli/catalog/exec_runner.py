@@ -29,6 +29,11 @@ PY_LANGS = {"py", "python"}
 # the workspace at its host path (that collided with /tmp/omnicli and leaked
 # all of host /tmp into strict mode); the host bytes arrive via a bind here.
 GUEST_WORK = "/tmp/omnicli/work"
+# Strict mode masks $HOME, and the canonical skills collection is reached
+# through a symlink that resolves into $HOME. Bind the resolved tree here so a
+# plan can read skill guidance without the host path leaking into the sandbox.
+SKILLS_MOUNT = "/tmp/omnicli/skills"
+SKILLS_LINK = "/run/media/rodri/AI/skills"
 DEPRECATION = """❌ Python plans are retired in favor of JavaScript Code Mode.
 
   Python : omnicli exec plan.py      ← no longer supported
@@ -151,6 +156,49 @@ def _guest_path(path: Path, work: Path) -> str:
     return str(Path(GUEST_WORK) / rel)
 
 
+def _canonical_skills_root() -> Path | None:
+    """Resolve the skills symlink to its real tree (which lives under $HOME).
+
+    `Path.resolve()` follows the `$HOME`-pointing symlink before strict mode
+    masks `$HOME`, so the resulting path can be bound read-only into the
+    sandbox. Returns None when the collection is absent.
+    """
+    try:
+        root = Path(SKILLS_LINK).resolve()
+    except (OSError, RuntimeError):
+        return None
+    return root if root.is_dir() else None
+
+
+def _write_skills_manifest(dest: Path, skills_root: Path, guest_root: str) -> int:
+    """Write the local, generated skills index consumed by `omnicli_skills`.
+
+    Reuses the registry's discovery so zero-tool skills and sidelined dirs are
+    included exactly as they are elsewhere. No network and no bridge call: the
+    file is written in the parent and handed to the VM through the sandbox.
+    """
+    from catalog import registry as registry_mod
+
+    entries = []
+    for spec in registry_mod.load_all_skills(include_sidelined=True).values():
+        raw = spec.get("path")
+        if not raw:
+            continue  # virtual skills have no directory to read from
+        try:
+            rel = Path(raw).resolve().relative_to(skills_root).as_posix()
+        except (ValueError, OSError):
+            continue  # not inside the canonical tree we are exposing
+        entries.append({
+            "name": spec.get("name") or Path(raw).name,
+            "description": spec.get("description") or "",
+            "dir": rel,
+        })
+    entries.sort(key=lambda item: item["name"])
+    manifest = {"root": guest_root, "skills": entries}
+    dest.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    return len(entries)
+
+
 def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
                sandbox: str, script_path: Path, mem_limit: int | None, timeout: float):
     """The bwrap argv plus the bridge and runtime its teardown owns."""
@@ -159,6 +207,8 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
             "--dev", "/dev", "--proc", "/proc", "--dir", "/tmp/omnicli",
             "--ro-bind", str(node_real), "/tmp/omnicli/node",
             "--ro-bind", str(vm_runner), "/tmp/omnicli/vm_runner.mjs",
+            "--ro-bind", str(vm_runner.with_name("skill_fs.mjs")),
+            "/tmp/omnicli/skill_fs.mjs",
             "--ro-bind", str(bindings_dir), "/tmp/omnicli/bindings"]
     if sandbox == "write":
         # Without this the child's `HOME` is the workspace, so `builder.connect()`
@@ -187,6 +237,12 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
                  "--bind", str(runtime), "/tmp/omnicli/bridge",
                  "--setenv", "OMNICLI_BRIDGE", "/tmp/omnicli/bridge/bridge.sock",
                  "--setenv", "OMNICLI_BIN", "/tmp/omnicli/bin/omnicli"]
+        # bwrap resolves bind sources from the host before masking $HOME, so
+        # the resolved (real) skills tree is reachable even though its path
+        # lives under the tmpfs-masked home directory.
+        skills_root = _canonical_skills_root()
+        if skills_root is not None:
+            base += ["--ro-bind", str(skills_root), SKILLS_MOUNT]
     heap = [f"--max-old-space-size={mem_limit}"] if mem_limit is not None else []
     cmd = base + ["--dir", GUEST_WORK,
                   "--bind", str(work), GUEST_WORK,
@@ -263,6 +319,20 @@ def run(script: str | None = None, code: str | None = None,
     state_file.write_text(
         json.dumps(_load_state(state_path), ensure_ascii=False), encoding="utf-8")
 
+    skills_manifest = work / ".omnicli_skills.json"
+    skills_manifest.unlink(missing_ok=True)
+    skills_root = _canonical_skills_root()
+    if skills_root is not None:
+        try:
+            # Strict mode binds the resolved tree at SKILLS_MOUNT; every other
+            # mode still sees the collection at its real (resolved) path.
+            guest_root = SKILLS_MOUNT if sandbox == "strict" else str(skills_root)
+            _write_skills_manifest(skills_manifest, skills_root, guest_root)
+        except Exception:
+            # The skills window is best-effort: never fail an unrelated plan
+            # because the collection could not be indexed.
+            skills_manifest.unlink(missing_ok=True)
+
     env = os.environ.copy()
     env.update({
         "OMNICLI_BIN": shutil.which("omnicli") or str(Path(sys.argv[0]).resolve()),
@@ -275,6 +345,13 @@ def run(script: str | None = None, code: str | None = None,
         # explicitly via --setenv in _sandboxed().
         "OMNICLI_SANDBOX": sandbox,
     })
+    if skills_manifest.is_file():
+        # Sandboxed modes see the workspace at GUEST_WORK; pass that guest path
+        # so the vm runner can open the manifest without a host escape.
+        env["OMNICLI_SKILLS_MANIFEST"] = (
+            str(skills_manifest) if sandbox == "none"
+            else _guest_path(skills_manifest, work)
+        )
 
     heap = [f"--max-old-space-size={mem_limit}"] if mem_limit is not None else []
     cmd = [str(node_real), "--experimental-vm-modules",
@@ -315,6 +392,7 @@ def run(script: str | None = None, code: str | None = None,
         if is_inline and script_path.is_file():
             script_path.unlink(missing_ok=True)
         state_file.unlink(missing_ok=True)
+        skills_manifest.unlink(missing_ok=True)
         if serving is not None:
             serving.__exit__()
         if runtime is not None:

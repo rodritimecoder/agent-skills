@@ -169,7 +169,7 @@ def emit(payload: dict, ok: bool) -> None:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Deterministic Guard Hooks (Kem Glitch Architecture)")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Deterministic Guard Hooks (Kem Glitch Architecture)")
     sub = p.add_subparsers(dest="cmd")
 
     chk_p = sub.add_parser("check", help="Check command or file action against deterministic guardrails")

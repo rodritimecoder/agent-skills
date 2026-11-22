@@ -181,6 +181,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog="check_components",
         description="Check rendered component behaviour, overlap, clipping, keyboard, viewports, latency, and contrast.",
+        epilog='Exit codes: 0 pass, 1 fail, 2 usage error, 3 runtime/dependency unavailable.',
     )
     parser.add_argument("targets", nargs="+", help="HTML file(s), directory, or http(s) URL(s)")
     parser.add_argument("--viewports", default=DEFAULT_VIEWPORTS, help="Comma-separated WxH viewports")

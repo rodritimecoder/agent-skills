@@ -118,7 +118,7 @@ def run_server(port: int = PORT, host: str = "127.0.0.1"):
         server.server_close()
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', )
     p.add_argument("--port", type=int, default=PORT, metavar="PORT")
     args = p.parse_args()
     run_server(args.port)

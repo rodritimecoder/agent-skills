@@ -763,7 +763,7 @@ def render_table(rows: List[Dict[str, Any]], profile: Optional[Tuple[int, int, i
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="OpenCode Go roster, limits and tier roles")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="OpenCode Go roster, limits and tier roles")
     parser.add_argument("--tier", type=int, choices=[1, 2, 3], help="1=frontier judges, 2=flash builders, 3=specialists")
     parser.add_argument("--role", choices=ROLES, help="Filter by operational role")
     parser.add_argument("--free", action="store_true", help="Only models with no monthly dollar limit")

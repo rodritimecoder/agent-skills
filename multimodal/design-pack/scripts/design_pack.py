@@ -262,7 +262,7 @@ def cmd_check(args) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="design-pack", description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(prog="design-pack", description=__doc__.splitlines()[0], epilog='Exit codes: 0 pass, 1 fail, 2 usage error, 3 runtime/dependency unavailable.')
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("verify", help="check files against a look's tokens")

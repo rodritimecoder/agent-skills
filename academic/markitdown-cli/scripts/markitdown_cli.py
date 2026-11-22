@@ -480,7 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="markitdown_cli.py",
         description="Convert documents to Markdown with MarkItDown.",
-        epilog="OCR uses a local OpenAI-compatible vision endpoint; see --ocr.",
+        epilog="OCR uses a local OpenAI-compatible vision endpoint; see --ocr. Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.",
     )
     p.add_argument("inputs", nargs="*", help="input file(s) or directory(ies)")
     p.add_argument("-i", "--input", dest="input_file", help="input file, or '-' for stdin")

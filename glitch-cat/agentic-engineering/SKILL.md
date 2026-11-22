@@ -21,6 +21,16 @@ A production engineering pipeline implementing **Kem's (Glitch Cat Club) 7-Step 
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/judge.py` — judge.py — The Fresh-Context Unbiased Judge (Kem's Step 4).
+- `scripts/kanban.py` — kanban.py — Target-Local File-Based Kanban Board Engine.
+- `scripts/listener.py` — listener.py — The Event Listener & Autonomous Task Dispatcher (Kem's Step 3).
+- `scripts/splitter.py` — splitter.py — The Task Splitter & Sandbox Allocator (Kem's Step 5 & 6).
+
 ## 🏛️ The 7-Step Architecture
 
 ```

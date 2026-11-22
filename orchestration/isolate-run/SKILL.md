@@ -19,6 +19,13 @@ A cheap inner sandbox for JavaScript. The outer boundary is still
 `subagent-spaces` (Podman) or `gh-action-subagent` (GitHub VM) — this skill covers
 the case where the untrusted thing is *JS itself* and a container is overkill.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/isolate_run.py` — isolate-run — capability-gated Deno (V8 isolate) sandbox for untrusted JS/TS.
+
 ## Why an isolate, and what it cannot do
 
 A V8 isolate is a separate JS heap inside one process. It gives ~10–20 ms cold

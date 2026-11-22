@@ -146,7 +146,7 @@ def generate_aligned_notes(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Marry course PDF slides/questions with Zoom lecture transcripts.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Marry course PDF slides/questions with Zoom lecture transcripts.")
     parser.add_argument("--pdf-md", type=Path, required=True, help="Path to markdown converted from course PDF")
     parser.add_argument("--transcript", type=Path, required=True, help="Path to Zoom transcript markdown (_transcript.md)")
     parser.add_argument("--out-md", type=Path, required=True, help="Path for generated timestamped markdown guide")

@@ -49,6 +49,7 @@ def field(front, name):
 def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print("Usage: index.py FOLDER [FOLDER ...] [flags] ...")
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
         sys.exit(0)
     if len(sys.argv) < 2:
         sys.exit(__doc__)

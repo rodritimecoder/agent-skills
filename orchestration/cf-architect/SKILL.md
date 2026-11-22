@@ -17,6 +17,13 @@ allowed-tools: "Bash(cf-architect:*) Bash(cf:*) Bash(npm:*) Read"
 
 # Cloudflare Architect (`cf-architect`)
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/cf_architect.py` — Cloudflare capability probe, free-tier budget math, and CLI remedies.
+
 ## The Capability Law
 
 **Never design against an assumed account.** Plans differ, services gate

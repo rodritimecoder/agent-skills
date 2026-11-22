@@ -472,7 +472,7 @@ def cmd_doctor(json_mode: bool = False, fields=None, limit=None) -> int:
     return 0 if online else 1
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="decision-model: h2o-lightning-4b Decision & Visual Grounding Client")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="decision-model: h2o-lightning-4b Decision & Visual Grounding Client")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     b_p = sub.add_parser("bool", help="Binary decision")

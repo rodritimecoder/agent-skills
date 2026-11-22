@@ -95,7 +95,7 @@ def take_screenshot_and_snapshot(target_url, output_dir="./artifacts", name="sna
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Verify webpage via Chrome DevTools Protocol")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Verify webpage via Chrome DevTools Protocol")
     parser.add_argument("--url", required=True, help="URL to navigate to and verify")
     parser.add_argument("--out", default="./artifacts", help="Output directory for screenshots/logs")
     parser.add_argument("--name", default="verify", help="Base name for screenshot output")

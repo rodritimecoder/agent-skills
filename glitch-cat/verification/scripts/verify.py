@@ -783,11 +783,11 @@ from verify_control import (
 
 
 def build_parser() -> argparse.ArgumentParser:
-    common = argparse.ArgumentParser(add_help=False)
+    common = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', add_help=False)
     common.add_argument("--port", type=int, default=9222, metavar="PORT")
     common.add_argument("--json", action="store_true")
 
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="verify.py",
         description="Hands and eyes: prove the app works instead of saying it does.",
         parents=[common],

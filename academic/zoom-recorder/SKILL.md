@@ -7,7 +7,7 @@ description: >
   passcode-protected links, and unwraps Mimecast and SafeLinks wrappers. Use when the user
   asks to transcribe a Zoom lecture or meeting, download a Zoom recording, get the transcript
   or VTT out of one, or extract the slides from a class recording. This is the skill
-  for a Zoom *link*; files already on disk are video-miner.
+  for a Zoom *link*; files already on disk are mined by the vault's `vault_mine.py`.
 
 compatibility: "Requires network access to Zoom cloud recordings, and ffmpeg for keyframe extraction."
 allowed-tools: "Bash(zoom-recorder:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"
@@ -21,6 +21,14 @@ file. Transcripts come back as Markdown with timestamps and speaker tags;
 slides come back as keyframe images, ready for the `ocr-cli` skill to read.
 
 ---
+
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/align_pdf_transcript.py` — align_pdf_transcript.py - Marry subject PDF lecture/tutorial markdown with Zoom video transcript.
+- `scripts/zoom_download.py` — zoom_download.py - Download transcripts, audio, and keyframes from Zoom cloud recordings.
 
 ## 🏛️ What It Does
 

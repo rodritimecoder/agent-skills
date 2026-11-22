@@ -222,7 +222,7 @@ def run_judge(
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="agentic-judge", description="Fresh-Context Unbiased Judge (Kem's Step 4)")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', prog="agentic-judge", description="Fresh-Context Unbiased Judge (Kem's Step 4)")
     parser.add_argument("card_id", help="Card ID to evaluate (e.g. CARD-001)")
     parser.add_argument("target", nargs="?", default=".", help="Target project directory")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Judge model tier (default: flash)")

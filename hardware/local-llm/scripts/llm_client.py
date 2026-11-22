@@ -362,7 +362,7 @@ def emit(res: str, args) -> None:
 
 
 def main():
-    p = argparse.ArgumentParser(description="local-llm — local LLM client (:8080)")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="local-llm — local LLM client (:8080)")
     sub = p.add_subparsers(dest="cmd")
 
     # chat

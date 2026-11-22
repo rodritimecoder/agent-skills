@@ -61,7 +61,7 @@ def listen_loop(kanban_dir: Path, interval: int = 5, once: bool = False, worker_
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="agentic-listener", description="The Event Listener & Auto-Dispatcher")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', prog="agentic-listener", description="The Event Listener & Auto-Dispatcher")
     parser.add_argument("target", nargs="?", default=".", help="Target project directory")
     parser.add_argument("--once", action="store_true", help="Run single poll pass and exit")
     parser.add_argument("--interval", type=int, default=5, metavar="N", help="Polling interval in seconds")

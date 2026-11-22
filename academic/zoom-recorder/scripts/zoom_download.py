@@ -522,7 +522,7 @@ class ZoomRecorderClient:
         print("[+] Keyframe extraction complete.")
 
 def main():
-    parser = argparse.ArgumentParser(description="Download Zoom recording transcripts and keyframes without full video downloads.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Download Zoom recording transcripts and keyframes without full video downloads.")
     parser.add_argument("--url", required=True, help="Zoom recording URL (utsmeet.zoom.us/rec/share/... or /rec/play/...)")
     parser.add_argument("--passcode", "-p", default="", help="Recording passcode if protected")
     parser.add_argument("--out-dir", "-o", default=".", help="Output directory for saved files")

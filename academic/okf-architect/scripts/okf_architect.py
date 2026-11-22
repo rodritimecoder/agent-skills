@@ -1739,7 +1739,7 @@ def normalize_bundle(bundle_root: Path, dry_run: bool = False) -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="okf-architect: Open Knowledge Format (OKF v0.2) architect & validator")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="okf-architect: Open Knowledge Format (OKF v0.2) architect & validator")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     p_audit = subparsers.add_parser("validate", aliases=["audit"], help="Validate an OKF bundle against spec v0.2")

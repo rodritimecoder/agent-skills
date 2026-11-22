@@ -29,6 +29,13 @@ allowed-tools: "Bash(academic-icm:*) Bash(canvas-cli:*) Bash(python3:*) Read"
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/academic_icm.py` — academic_icm.py — Academic ICM Pipeline Orchestrator.
+
 ## 🏛️ Integrated Academic Modules & Commands
 
 `academic-icm` serves as the single late-binding hub for all university academic workflows:

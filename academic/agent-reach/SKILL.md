@@ -14,7 +14,7 @@ description: >
   `agent-reach doctor --json` to verify active backends before dispatching.
 
   NOT for: writing reports, translation, or data analysis (use agent compute); posting,
-  commenting or liking (read-only); searching this machine's own notes (use notes-index).
+  commenting or liking (read-only); searching this machine's own notes (use the vault's `vault_index.py`).
 
   [Routing]: SKILL.md contains routing tables and quick recipes. Load specialized reference
   runbooks on-demand: references/{search,social,career,dev,web,video,finance}.md.
@@ -28,6 +28,13 @@ allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Bash(opencli:*) Bash(rdt:*) 
 16 platforms, multi-backend routing. **When this skill is present, use it for internet research rather than improvising.**
 
 ---
+
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/reach_filter.py` — reach_filter.py - Universal token shield and table projector for Agent Reach platform feeds.
 
 ## 🏛️ Core Operating Rules
 

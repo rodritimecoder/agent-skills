@@ -861,6 +861,10 @@ def discover_tools(skill: dict[str, Any]) -> list[dict[str, Any]]:
             "kind": "script",
             "summary": summary,
             "path": str(script),
+            # The runtime cwd for this tool. Recorded on the discovery row so
+            # invoke.py can run the script from its own skill root instead of
+            # the directory omnicli itself was launched from.
+            "skill_dir": str(skill_dir),
             "argv": argv,
             "contract": {},
             "parent": None,
@@ -874,6 +878,7 @@ def discover_tools(skill: dict[str, Any]) -> list[dict[str, Any]]:
             "kind": "cli",
             "summary": skill.get("description", ""),
             "path": shim,
+            "skill_dir": str(skill_dir),
             "argv": [shim],
             "contract": {},
             "parent": None,
@@ -906,6 +911,9 @@ def endpoint_tools(skill_dir: Path | None = None) -> list[dict[str, Any]]:
             "kind": "endpoint",
             "summary": meta["summary"],
             "path": None,
+            # Virtual endpoints have no directory of their own; the backing
+            # script lives under the resolved skills root when one is known.
+            "skill_dir": str(skill_dir) if skill_dir is not None else None,
             "argv": argv,
             "contract": contract,
             "parent": None,

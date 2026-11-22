@@ -72,6 +72,7 @@ usage() {
   echo "  status                 # Show the declared surface and live serve state"
   echo "  reset-tunnels          # Tear down all serve and funnel tunnels"
   echo "  send-file <file> <tgt> # Transfer file to peer via tailscale file cp"
+  echo 'Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.'
 }
 
 # --------------------------------------------------------------------------- #

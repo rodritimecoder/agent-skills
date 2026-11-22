@@ -88,7 +88,7 @@ For this pipeline, fan the "extract 6-8 cues" / "tag topics" / "summarize tutori
 
 ## 6. Stage 3 — Structuring (ICM + Kem playbook, OKF v0.2)
 
-Replace `CURRICULUM_TREE.md` with **OKF v0.2** (`okf-architect`) for curriculum/knowledge architecture. Heavy Kem/Glitch Cat incorporation: state-compactor, cgate, guard-hooks, jev-decision, eval-pipeline (step-level gates), semantic-cache, graph-memory (hybrid RAG), notes-index.
+Replace `CURRICULUM_TREE.md` with **OKF v0.2** (`okf-architect`) for curriculum/knowledge architecture. Heavy Kem/Glitch Cat incorporation: state-compactor, cgate, guard-hooks, jev-decision, eval-pipeline (step-level gates), semantic-cache, graph-memory (hybrid RAG).
 
 **Layout (agreed, single source of truth — `SKILL.md` mirrors this exactly):** numbered folders per course, one home per fact, links over copies.
 
@@ -181,7 +181,7 @@ Exit codes gate CI. "Always run the control."
 
 1. **Graph view:** minimal constellation view (Canvas-aligned) + node settings panel. Drop extra cosmos/semantic-web/sunburst views. Constellation is the spine; digestion feeds it.
 2. **CURRICULUM_TREE.md:** fully gone. OKF v0.2 (`okf-architect`) handles curriculum/knowledge architecture.
-3. **Kem/Glitch Cat:** heavy incorporation (state-compactor, cgate, guard-hooks, jev-decision, eval-pipeline, semantic-cache, graph-memory, notes-index).
+3. **Kem/Glitch Cat:** heavy incorporation (state-compactor, cgate, guard-hooks, jev-decision, eval-pipeline, semantic-cache, graph-memory).
 4. **Digestion:** smart, classifier-gated — only download relevant note stuff; skip admin/fluff/dupes before writing to disk.
 5. **Local model:** Qwen3.6-35B-A3B on :8080 (per `ports.py list`). All "27B" references are corrected to 35B.
 

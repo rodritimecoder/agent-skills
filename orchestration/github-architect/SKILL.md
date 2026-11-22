@@ -21,6 +21,15 @@ are **strictly private** by default.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/git_sync.py` — git_sync.py - Disciplined 6-Stage Git Branch Synchronization Engine.
+- `scripts/github_architect.py` — github_architect.py — Automated GitHub Repository Scaffolding, Auditing, Fleet Syncing & Multi-Machine Bootstrapping.
+- `scripts/publication_guard.py` — publication_guard.py — Pre-publication safety gate for public skill bundles.
+
 ## 🏛️ The Git-Sync Protocol
 
 | Stage | What it does | What it prevents |

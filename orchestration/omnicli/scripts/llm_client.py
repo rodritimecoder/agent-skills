@@ -179,7 +179,7 @@ def start_server():
     print("           Run `llm-cli doctor` to monitor readiness.")
 
 def main():
-    p = argparse.ArgumentParser(description="llm-cli — Local Qwen3.6-35B Genesis Client")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="llm-cli — Local Qwen3.6-35B Genesis Client")
     sub = p.add_subparsers(dest="cmd")
 
     chat_p = sub.add_parser("chat", help="Send a prompt to local Genesis 35B (:8080)")

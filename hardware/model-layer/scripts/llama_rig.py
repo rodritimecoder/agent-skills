@@ -756,7 +756,7 @@ def cmd_omni_schema() -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="GPU VRAM & Port Switcher with llama-swap")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="GPU VRAM & Port Switcher with llama-swap")
     parser.add_argument("--json", action="store_true",
                         help="Emit structured JSON (tool schema when no subcommand is given)")
     parser.add_argument("--omni-schema", action="store_true",

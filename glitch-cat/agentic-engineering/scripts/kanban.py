@@ -194,7 +194,7 @@ def move_card(card_id: str, target_col: str, target_dir: Path = None) -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="agentic-kanban", description="File-Based Kanban Board Engine")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', prog="agentic-kanban", description="File-Based Kanban Board Engine")
     sub = parser.add_subparsers(dest="action", required=True)
 
     # init

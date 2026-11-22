@@ -274,7 +274,7 @@ def _render_compare(report: dict, diff: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         description="Preview and safely apply Ed workspace snapshots to a Git repository."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

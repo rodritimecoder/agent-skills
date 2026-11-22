@@ -38,7 +38,7 @@ def build_flags(profile, allow_path, allow_host, mem):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__)
     ap.add_argument("--profile", choices=["pure", "read", "net"], default="pure")
     ap.add_argument("--allow-path", help="exact path readable in 'read' profile")
     ap.add_argument("--allow-host", help="exact host[:port] reachable in 'net' profile")

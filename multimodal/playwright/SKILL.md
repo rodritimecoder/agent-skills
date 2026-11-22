@@ -17,6 +17,13 @@ allowed-tools: "Bash(playwright-rs:*) Bash(fast-cdp:*) Bash(playwright:*) Bash(p
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/desktop_cdp.py` — Headed Chromium with a CDP port, visible on the user's desktop.
+
 ## Browser backend
 
 The CLI is powered directly by official Microsoft [`playwright`](https://playwright.dev) (v1.64+) over CDP. It provides instant execution with zero compilation overhead, native `locator` actionability, AI-mode ARIA snapshots, and `getByRef` element targeting.

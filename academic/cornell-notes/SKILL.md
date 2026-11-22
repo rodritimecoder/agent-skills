@@ -23,6 +23,14 @@ intermediate JSON, and a deterministic local script renders the HTML.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/format_notes.py` — Format structured JSON into print-ready Cornell Notes HTML & Anki flashcards.
+- `scripts/srs_review.py` — srs_review.py - Spaced Repetition (SM-2) engine for Cornell Notes.
+
 ## 🏛️ The Pipeline
 
 | Stage | What you do | What it produces |

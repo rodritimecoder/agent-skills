@@ -592,7 +592,7 @@ def run_models():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NVIDIA NIM Multi-Agent & Multimodal Gateway (Uber Protocol)")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="NVIDIA NIM Multi-Agent & Multimodal Gateway (Uber Protocol)")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # 1. agent subcommand

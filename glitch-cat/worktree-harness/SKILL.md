@@ -19,6 +19,13 @@ Kem (Glitch Cat Club) and Anthropic's parallel subagent compiler workflows.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/harness.py` — harness.py — Multi-Agent Git Worktree Orchestration & Quality Gate Harness.
+
 ## 🏛️ The 6 Core Invariants
 
 1. **Git Worktree Isolation**: Never let multiple subagents write to the same disk directory concurrently. Each worker runs in its own isolated worktree (`.harness/runs/<run_id>/worktrees/<worker>/`) on a dedicated branch.

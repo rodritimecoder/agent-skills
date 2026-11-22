@@ -22,6 +22,13 @@ re-execs itself, so plain `python3` is all you need.
 
 ---
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/markitdown_cli.py` — markitdown-cli - convert documents to Markdown via Microsoft's MarkItDown.
+
 ## 🏛️ Supported Inputs
 
 | Category | Extensions |

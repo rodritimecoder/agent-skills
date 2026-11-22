@@ -78,6 +78,10 @@ def _bootstrap() -> None:
 
 
 if __name__ == "__main__":
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("usage: ocr.py FILE [-o OUT] [--pages N] [--dpi N] [--workers N] [--endpoint URL] [--tree] [--doctor] [--server-cmd]")
+        print('Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.')
+        sys.exit(0)
     _bootstrap()
 
 import argparse  # noqa: E402
@@ -92,7 +96,7 @@ ENGINES = {
         "name": "LightOnOCR-3-0.8B",
         "port": 8082,
         "default_model_dir": "/run/media/rodri/AI/models/prithivMLmods/LightOnOCR-3-0.8B-GGUF",
-        "description": "Ultra-fast document and video slide OCR (thinking variant). Best for video-miner.",
+        "description": "Ultra-fast document and video slide OCR (thinking variant). Best for mining video slides into the vault.",
     }
 }
 
@@ -310,7 +314,7 @@ def cmd_server_cmd(ns) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
         prog="ocr.py",
         description="OCR PDFs, slides, and images with local vision models (LightOnOCR-3-0.8B / SmolDocling / CrispEmbed).",
     )

@@ -45,7 +45,7 @@ Harness truth: `catalog/harness.py` now emits the install block and verifies a
   in `execute.before` reached the model as `SPIKE_DENIED`.
 - Integration, standalone project outside the skills repo:
   - `tools.omnicli.search({query:"transcribe a zoom lecture"})` returned the
-    real BM25 result for `video-miner`;
+    a real BM25 result for a video-mining intent;
   - `read` of `orchestration/omnicli/SKILL.md` without a prior catalogue call
     was denied with the gate message.
 - Live T3 Code catalog after the symlink: `omnicli (4 tools)` with

@@ -79,10 +79,10 @@ This matrix details how every skill in the **Glitch Cat Suite** hooks into each 
 
 ## 🔍 3. Retrieval & Memory Skills
 
-### `notes-index`
-*SQLite FTS5 ranked search over Markdown notes + fingerprint refresh + verbatim cite verification.*
-- **Universal across all harnesses:** Replaces greedy `grep` and massive prompt loading with `notes-index search "..." --cite`.
-- **T3 Code:** Agent queries `notes-index` via bash instead of reading dozens of files.
+### vault `vault_index.py` (vault-owned, not a skill)
+*SQLite FTS5 ranked search over Markdown notes + verbatim cite verification, owned by the vault repo.*
+- **Universal across all harnesses:** Replaces greedy `grep` and massive prompt loading with `vault_index.py search --folder .../creator-vault "..."`.
+- **T3 Code:** Agent queries the vault index via bash instead of reading dozens of files.
 - **Gemini / Antigravity:** Runs inside `run_command`; returns line-accurate verified citations.
 - **OpenCode:** Standard retrieval tool for local docs and project notes.
 - **Claude Code:** Configured in `CLAUDE.md` as the mandatory search tool over notes.

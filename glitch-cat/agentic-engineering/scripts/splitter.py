@@ -56,7 +56,7 @@ def print_split_plan(plan: dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="agentic-splitter", description="The Splitter & Sandbox Allocator")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', prog="agentic-splitter", description="The Splitter & Sandbox Allocator")
     parser.add_argument("title", help="High-level task to split")
     parser.add_argument("--subtasks", help="Comma-separated subtasks")
     parser.add_argument("--json", action="store_true", help="Output plan as JSON")

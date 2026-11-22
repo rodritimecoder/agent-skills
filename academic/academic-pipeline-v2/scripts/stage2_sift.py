@@ -276,7 +276,7 @@ if __name__ == "__main__":  # pragma: no cover
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Stage 2 sift: classify and clean ingested material.")
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Stage 2 sift: classify and clean ingested material.")
     parser.add_argument("workspace", nargs="?", default="workspace", metavar="DIR",
                         help="ICM workspace root (default: workspace)")
     parser.add_argument("--dry-run", action="store_true", help="report what would be sifted")

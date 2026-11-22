@@ -99,7 +99,7 @@ def export_benchmark(out_path: str):
     print(f"[harvest] Exported {len(bench)} evaluation cases to {out_path}")
 
 def main():
-    p = argparse.ArgumentParser(description="Eval Router Harvesting & Continuous Calibration")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Eval Router Harvesting & Continuous Calibration")
     p.add_argument("--train", action="store_true", help="Re-calibrate classifier weights from logged evaluations")
     p.add_argument("--export", metavar="FILE", help="Export evaluation benchmark dataset to JSON")
     args = p.parse_args()

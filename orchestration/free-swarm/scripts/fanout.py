@@ -120,7 +120,7 @@ def probe(workers: list[Worker], timeout: int) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("prompt", nargs="?", help="task sent verbatim to every worker")
     parser.add_argument("--models", help="comma-separated short names (glm,minimax,flint); default all")
     parser.add_argument("--out", type=Path, help="directory for answers (default /tmp/opencode/free-swarm/<time>)")

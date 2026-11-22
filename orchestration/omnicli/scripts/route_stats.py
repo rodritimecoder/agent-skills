@@ -77,7 +77,7 @@ def summarise(rows: list[dict]) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description=__doc__)
     parser.add_argument("--log", type=Path, default=DEFAULT_LOG)
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)

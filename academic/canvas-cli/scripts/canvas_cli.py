@@ -621,7 +621,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="canvas_cli.py",
         description="Canvas LMS CLI - High Performance Deterministic LMS Gateway",
-        epilog="Default output is JSON. Use --table, --project, or --out to shield context tokens.",
+        epilog="Default output is JSON. Use --table, --project, or --out to shield context tokens. Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.",
     )
     parser.add_argument("--format", "-f", choices=["json", "table", "ids"], default="json", help="Output format")
     parser.add_argument("--table", "-t", action="store_true", help="Shorthand for --format table")

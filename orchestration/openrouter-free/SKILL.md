@@ -20,6 +20,13 @@ allowed-tools: "Bash(openrouter-free:*) Bash(python3:*) Read Write"
 
 Use this skill to delegate self-contained coding loops, multi-command bash workflows, calibrated decisions, vector embeddings, and speech synthesis to verified zero-cost endpoints without exhausting primary frontier token quotas.
 
+## Available scripts
+
+Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
+for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
+
+- `scripts/or_agent.py` — OpenRouter Free Multimodal & Subagent CLI (Uber Protocol).
+
 ## Verified Free Endpoint Catalog
 - **Note-Taking & Synthesis**: `dots-studio/dots-3-note-preview:free` (Reasoning note synthesis)
 - **Agentic Reasoning & Chat**: `thinkingmachines/inkling:free` (Thinking Machines agentic free tier)

@@ -196,7 +196,7 @@ def plan_partition(target_dir: str, lanes_count: Optional[int] = None):
     print("=" * 60 + "\n")
 
 def main():
-    p = argparse.ArgumentParser(description="Parallel Test Lane — AI Blast Radius Containment")
+    p = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="Parallel Test Lane — AI Blast Radius Containment")
     p.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
     sub = p.add_subparsers(dest="subcommand", required=True)
 
