@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "description": "Multi-step eval tasks for the filesystem-skill-discovery feature. Each task is one realistic workflow: discover a tool by intent, fetch that skill's tool rows, filter them in memory, compose a bounded projection, and emit it. The three evaluation arms (shelf reads, sequential gateway calls, one code-exec plan) run every task on these identical inputs. This is a NEW eval set and is independent of the committed golden/fresh/paraphrase routing sets and their gate floors.",
+  "pipeline": {
+    "discover": "omnicli search(intent) -> top-scoring skill",
+    "fetch": "all tool rows belonging to the discovered skill (id + summary)",
+    "filter": "keep rows whose summary matches 'grep' as a case-insensitive regex",
+    "compose": "de-duplicate matched ids, sort lexically, take the first 3",
+    "emit": "bounded result: {\"skill\": <discovered skill>, \"matched\": <int>, \"ids\": [<<=3 ids>]}"
+  },
+  "expected_result_note": "Expected results are a snapshot of the omnicli catalog at authoring time. They are ground truth for correctness comparison, not computed at run time. Regenerate them deliberately if the catalog changes.",
+  "tasks": [
+    {
+      "id": "ms-01",
+      "intent": "transcribe recorded audio",
+      "expected_skill": "audiocpp",
+      "grep": "asr|transcribe|speech",
+      "expected_result": {
+        "skill": "audiocpp",
+        "matched": 5,
+        "ids": ["audiocpp/cli", "audiocpp/scripts/audiocpp_cli", "audiocpp/scripts/audiocpp_cli:asr"]
+      }
+    },
+    {
+      "id": "ms-02",
+      "intent": "download zoom cloud recording transcript",
+      "expected_skill": "zoom-recorder",
+      "grep": "transcript|download|recording",
+      "expected_result": {
+        "skill": "zoom-recorder",
+        "matched": 4,
+        "ids": ["zoom-recorder/cli", "zoom-recorder/examples/canvas_zoom_pipeline", "zoom-recorder/scripts/align_pdf_transcript"]
+      }
+    },
+    {
+      "id": "ms-03",
+      "intent": "canvas-cli list courses modules assignments grades",
+      "expected_skill": "canvas-cli",
+      "grep": "course|assignment|grade",
+      "expected_result": {
+        "skill": "canvas-cli",
+        "matched": 9,
+        "ids": ["canvas-cli/cli", "canvas-cli/scripts/canvas_cli:assignments", "canvas-cli/scripts/canvas_cli:courses"]
+      }
+    },
+    {
+      "id": "ms-04",
+      "intent": "notes-index fts5 search creator vault notes",
+      "expected_skill": "notes-index",
+      "grep": "search|fts|index",
+      "expected_result": {
+        "skill": "notes-index",
+        "matched": 4,
+        "ids": ["notes-index/cli", "notes-index/notes_index", "notes-index/notes_index:init"]
+      }
+    },
+    {
+      "id": "ms-05",
+      "intent": "jev-decision typed bool choice score primitive",
+      "expected_skill": "decision-model",
+      "grep": "decid|bool|choice|score",
+      "expected_result": {
+        "skill": "decision-model",
+        "matched": 3,
+        "ids": ["decision-model/cli", "decision-model/scripts/decision_model:choice", "decision-model/scripts/decision_model:score"]
+      }
+    },
+    {
+      "id": "ms-06",
+      "intent": "graph-memory index search recall graph",
+      "expected_skill": "graph-memory",
+      "grep": "graph|recall|index",
+      "expected_result": {
+        "skill": "graph-memory",
+        "matched": 11,
+        "ids": ["graph-memory/cli", "graph-memory/digest/headless_run", "graph-memory/graph/recall"]
+      }
+    },
+    {
+      "id": "ms-07",
+      "intent": "ocr an image to text",
+      "expected_skill": "ocr",
+      "grep": "ocr|image|text",
+      "expected_result": {
+        "skill": "ocr",
+        "matched": 6,
+        "ids": ["ocr/cli", "ocr/ocr:doc", "ocr/ocr:doctor"]
+      }
+    },
+    {
+      "id": "ms-08",
+      "intent": "mine knowledge from a video reel",
+      "expected_skill": "video-miner",
+      "grep": "video|reel|transcribe",
+      "expected_result": {
+        "skill": "video-miner",
+        "matched": 9,
+        "ids": ["video-miner/cli", "video-miner/scripts/vault_mine", "video-miner/scripts/vault_mine:add"]
+      }
+    }
+  ]
+}
