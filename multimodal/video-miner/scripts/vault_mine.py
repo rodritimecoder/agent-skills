@@ -338,20 +338,28 @@ def parse_vtt_to_transcript(vtt_file: Path) -> str:
     return render_transcript(parse_vtt_blocks(vtt_file))
 
 
-_TRANSCRIPT_BLOCK_RE = re.compile(r"^\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*\s*(.*?)\s*$")
+_TRANSCRIPT_BLOCK_RE = re.compile(
+    r"^\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\](?:\s+([^*:\]]+))?:?\*\*\s*(.*?)\s*$"
+)
 
 
 def parse_transcript_blocks(transcript_text: str) -> List[tuple]:
-    """Return ``[(timestamp, verbatim_text)]`` from a ``**[mm:ss]** text`` transcript."""
+    """Return ``[(timestamp, verbatim_text, speaker_or_None)]`` blocks.
+
+    Accepts both the plain ``**[mm:ss]** text`` form and the diarized
+    ``**[mm:ss] Name:** text`` form emitted by :func:`render_transcript` when
+    speaker turns are supplied. The speaker label is stripped out of the
+    quote so the verbatim text stays clean.
+    """
     blocks: List[tuple] = []
     for line in (transcript_text or "").splitlines():
         m = _TRANSCRIPT_BLOCK_RE.match(line.strip())
         if not m:
             continue
-        ts, text = m.group(1), m.group(2).strip()
+        ts, speaker, text = m.group(1), m.group(2), m.group(3).strip()
         if not text or text.startswith("_"):
             continue
-        blocks.append((ts, text))
+        blocks.append((ts, text, speaker))
     return blocks
 
 
@@ -413,15 +421,19 @@ def derive_kem_notes_content(transcript_text: str) -> tuple[List[str], List[str]
     else:
         picked = blocks
 
-    prov_rows = [
-        f"| {_claim_label(text)} | \"{_excerpt(text)}\" | {ts} |"
-        for ts, text in picked
-    ]
+    prov_rows = []
+    for ts, text, speaker in picked:
+        label = _claim_label(text)
+        if speaker:
+            label = f"{speaker} / {label}"
+        prov_rows.append(f"| {label} | \"{_excerpt(text)}\" | {ts} |")
     synthesis_lines = [
         "_Extractive synthesis of the transcript (deterministic; verbatim timestamps)._",
         "",
     ]
-    synthesis_lines += [f"- **[{ts}]** {_excerpt(text, 220)}" for ts, text in picked]
+    synthesis_lines += [
+        f"- **[{ts}]** {_excerpt(text, 220)}" for ts, text, _speaker in picked
+    ]
     return prov_rows, synthesis_lines
 
 
@@ -1071,8 +1083,10 @@ def main() -> int:
                             "use this when the creator mangles technical terms)")
     p_add.add_argument("--max-res", type=int, metavar="P",
                        help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
-    p_add.add_argument("--diarize", action="store_true",
-                       help="label speakers with Nemotron 3 diarization (one extra pass over the recording)")
+    p_add.add_argument("--diarize", action="store_true", default=True,
+                       help="label speakers with Nemotron 3 diarization (default: on; one extra pass over the recording)")
+    p_add.add_argument("--no-diarize", action="store_false", dest="diarize",
+                       help="disable speaker diarization (diarization is on by default)")
     p_add.add_argument("--speaker-names", metavar="A,B",
                        help="names for speakers in arrival order (speaker_0=A); implies --diarize")
 
@@ -1105,8 +1119,10 @@ def main() -> int:
                        help="transcribe locally even when a subtitle track exists")
     p_kem.add_argument("--max-res", type=int, metavar="P",
                        help="download resolution cap in lines (default: 1080; also VIDEOMINE_MAX_RES)")
-    p_kem.add_argument("--diarize", action="store_true",
-                       help="label speakers with Nemotron 3 diarization (one extra pass over the recording)")
+    p_kem.add_argument("--diarize", action="store_true", default=True,
+                       help="label speakers with Nemotron 3 diarization (default: on; one extra pass over the recording)")
+    p_kem.add_argument("--no-diarize", action="store_false", dest="diarize",
+                       help="disable speaker diarization (diarization is on by default)")
     p_kem.add_argument("--speaker-names", metavar="A,B",
                        help="names for speakers in arrival order (speaker_0=A); implies --diarize")
 

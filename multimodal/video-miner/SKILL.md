@@ -201,20 +201,27 @@ own default is `nemotron`, which returns text without them, so the stage would
 collapse into one untimestamped blob. Reach for `nemotron` when the audio is
 long and the words are ordinary.
 
-### Speaker labels (`--diarize`)
+### Speaker labels (ON by default in the vault pipeline; `--no-diarize` to skip)
 
 Diarization is one extra pass over the same recording with Nemotron 3, and it
-needs no server:
+needs no server. In the **vault pipeline it is ON BY DEFAULT** — `vault-mine
+add`, `vault-mine kem` and the `vault-kem-reel` one-liner label who said what with
+no extra flag; pass `--no-diarize` to skip that pass. The 6-stage ICM pipeline
+still opts in with `--diarize`:
 
 ```bash
+# Vault: labels are already on — --no-diarize is the opt-out
+vault-mine add "https://www.youtube.com/watch?v=..." --creator kem_glitch
+vault-mine add "https://..." --no-diarize
+vault-mine kem "https://..." --speaker-names Kem,Chase
+
 # ICM pipeline: labels land in 02_audio_asr/transcript.md and transcript.json
 python3 $CLI run ./my_video_run --diarize
 python3 $CLI run ./my_video_run --speaker-names Kem,Chase
-
-# Vault: same flags on `add` / `kem`
-vault-mine add "https://www.youtube.com/watch?v=..." --creator kem_glitch --diarize
-vault-mine add ./panel.mp4 --creator kem_glitch --speaker-names Kem,Chase,Vince
 ```
+
+Transcript-derived kem notes parse both labelled (`**[mm:ss] Name:** text`) and
+unlabelled (`**[mm:ss]** text`) lines, so diarization no longer degrades notes.
 
 Measured: 0.8 s for 2 minutes of audio, 0.8 s for a 16 s two-voice clip that it
 split into 4/4 turns. A transcript paragraph breaks on a speaker change, so the
@@ -261,8 +268,9 @@ vault-mine add "https://..." --model nemotron
 # Cap the download lower when the screen text is big:
 vault-mine add "https://..." --max-res 720
 
-# Label who said what (interviews, panels, two-person podcasts):
-vault-mine add "https://..." --diarize
+# Speaker labels are ON by default (interviews, panels, two-person podcasts);
+# opt out with --no-diarize when you don't need them:
+vault-mine add "https://..." --no-diarize
 vault-mine add "https://..." --speaker-names Kem,Chase
 
 # Import an existing mined ICM workspace into the vault:
