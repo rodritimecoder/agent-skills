@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import nim_client
 from nim_client import (
     DEFAULT_BASE_URL,
     DEFAULT_CHAT_MODEL,
@@ -19,6 +20,26 @@ from nim_client import (
     resolve_api_keys,
     resolve_base_url,
 )
+
+
+def _seed_manifest():
+    """Offline fixture mirroring the corrected seed: 20 active, 13 candidates, 8 retired."""
+    active = [f"active/model-{i:02d}" for i in range(20)]
+    candidates = [f"candidate/model-{i:02d}" for i in range(13)]
+    retired = [
+        {"id": f"retired/model-{i:02d}", "role": "chat", "reason": "delisted"}
+        for i in range(8)
+    ]
+    manifest = {
+        "roles": {"chat": active[:11], "embed": active[11:], "decide": []},
+        "candidates": candidates,
+        "retired": retired,
+        "models": {},
+    }
+    # Live catalog holds the 20 active ids plus the 13 candidate ids only;
+    # retired entries are delisted history and are no longer live.
+    live = [{"id": mid} for mid in (active + candidates)]
+    return manifest, live
 
 
 class TestNimClient(unittest.TestCase):
@@ -68,6 +89,48 @@ class TestNimClient(unittest.TestCase):
         client = NimClient(api_key="nvapi-mock-123")
         res = client.chat_completion([{"role": "user", "content": "Which is larger, 9.11 or 9.8?"}])
         self.assertEqual(res["choices"][0]["message"]["content"], "9.8 is larger than 9.11.")
+
+
+class TestCatalogSummary(unittest.TestCase):
+    """Offline coverage for drift accounting; no credentials or network needed."""
+
+    def _summary(self, manifest, live=None, fetch_error=None):
+        fake_catalog = MagicMock()
+        if fetch_error is not None:
+            fake_catalog.fetch_catalog.side_effect = fetch_error
+        else:
+            fake_catalog.fetch_catalog.return_value = live
+        with patch.object(nim_client, "load_catalog_manifest", return_value=manifest):
+            with patch.object(nim_client, "nim_catalog", fake_catalog):
+                return nim_client.catalog_summary()
+
+    def test_candidates_and_retired_are_not_drift(self):
+        manifest, live = _seed_manifest()
+        result = self._summary(manifest, live)
+        self.assertEqual(result["drift"], 0)
+        self.assertEqual(result["retired_count"], 8)
+        self.assertEqual(result["degraded_roles"], ["decide"])
+        self.assertNotIn("note", result)
+
+    def test_new_live_id_counts_as_drift(self):
+        manifest, live = _seed_manifest()
+        live = live + [{"id": "org/brand-new-model"}]
+        result = self._summary(manifest, live)
+        self.assertEqual(result["drift"], 1)
+        self.assertEqual(result["retired_count"], 8)
+
+    def test_unreachable_live_catalog_gives_no_drift(self):
+        manifest, _ = _seed_manifest()
+        result = self._summary(manifest, fetch_error=OSError("offline"))
+        self.assertIsNone(result["drift"])
+        self.assertIn("live catalog unreachable", result["note"])
+        self.assertEqual(result["retired_count"], 8)
+
+    def test_missing_manifest_gives_no_drift(self):
+        with patch.object(nim_client, "load_catalog_manifest", return_value=None):
+            result = nim_client.catalog_summary()
+        self.assertIsNone(result["drift"])
+        self.assertEqual(result["note"], "manifest unavailable")
 
 
 if __name__ == "__main__":

@@ -202,15 +202,52 @@ print(completion.choices[0].message.content)
 
 ---
 
-## 📋 Verified Popular Models
+## 📋 Verified Popular Models — last-verified snapshot (2026-11-23)
 
-| Model ID | Name | Type | Notes |
-| :--- | :--- | :--- | :--- |
-| `z-ai/glm-5.3-flash` | GLM 5.3 Flash | Chat / Reasoning | Ultra-fast default, subagent tool execution |
-| `z-ai/glm-5.3` | GLM 5.3 | Heavy Reasoning | Deep mathematical & logical reasoning |
-| `deepseek-ai/deepseek-r1` | DeepSeek R1 | Reasoning | Open reasoning flagship |
-| `deepseek-ai/deepseek-v3` | DeepSeek V3 | Chat | High-throughput general instruction |
-| `meta/llama-3.3-70b-instruct` | Llama 3.3 70B | Chat | General coding & architectural analysis |
-| `nvidia/llama-3.1-nemotron-70b-instruct`| Nemotron 70B | Chat | Precision agentic workflows |
-| `qwen/qwen2.5-coder-32b-instruct` | Qwen 2.5 Coder | Code | Specialized coding & refactoring |
-| `nvidia/llama-nemotron-embed-vl-1b-v2` | Nemotron Embed | Embed | 2048-dimensional passage/query vectors |
+> Snapshot only — not a live guarantee. Confirm availability with
+> `nim catalog --check`. Ids marked **STALE** were absent from the live catalog
+> on 2026-11-23 and are recorded in `catalog.json` → `retired`; do not assume
+> they are still available or free.
+
+| Model ID | Name | Type | Catalog status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `z-ai/glm-5.3-flash` | GLM 5.3 Flash | Chat / Reasoning | live | Ultra-fast default, subagent tool execution |
+| `z-ai/glm-5.3` | GLM 5.3 | Heavy Reasoning | **STALE** (delisted) | Deep mathematical & logical reasoning |
+| `deepseek-ai/deepseek-r1` | DeepSeek R1 | Reasoning | **STALE** (delisted) | Open reasoning flagship |
+| `deepseek-ai/deepseek-v3` | DeepSeek V3 | Chat | **STALE** (delisted) | High-throughput general instruction |
+| `meta/llama-3.3-70b-instruct` | Llama 3.3 70B | Chat | **STALE** (delisted) | General coding & architectural analysis |
+| `nvidia/llama-3.1-nemotron-70b-instruct`| Nemotron 70B | Chat | **STALE** (delisted) | Precision agentic workflows |
+| `qwen/qwen2.5-coder-32b-instruct` | Qwen 2.5 Coder | Code | **STALE** (delisted) | Specialized coding & refactoring |
+| `nvidia/llama-nemotron-embed-vl-1b-v2` | Nemotron Embed | Embed | **STALE** (delisted) | 2048-dimensional passage/query vectors |
+
+## 🔄 Catalog reconciliation
+
+The live NVIDIA `/v1/models` endpoint is keyless and returns only `id`, `object`,
+`created`, and `owned_by` — no pricing, context, modality, or capability data.
+Eligibility therefore means **present in the live catalog only**; never claim a
+model is free. Active ids, their roles, and retirement history live in
+`catalog.json`. Override that path with `NIM_CATALOG_PATH`.
+
+On use, check for drift first — read-only, no quota spent:
+
+```bash
+python3 scripts/nim_client.py catalog --check
+```
+
+Show any reported drift (added / removed / reactivated ids) to the user. Apply
+changes **only after user approval**:
+
+```bash
+python3 scripts/nim_client.py catalog --apply
+```
+
+Probing is strictly opt-in: it requires `NVIDIA_API_KEY` and spends quota, so
+never run it implicitly:
+
+```bash
+python3 scripts/nim_client.py catalog --probe
+```
+
+`catalog --json` emits structured data to stdout; diagnostics go to stderr.
+Exit codes: 0 = no drift / success, 1 = drift or runtime error, 2 = invalid
+arguments (usage error).
