@@ -10,7 +10,7 @@ description: >
   Xueqiu, GitHub, RSS, and web articles via Jina Reader.
 
   Features deterministic token shielding and table projection via reach_filter.py (CLI and
-  Python Code Mode API for omnicli). Zero config for 6 public channels. Run
+  a programmatic Python API). Zero config for 6 public channels. Run
   `agent-reach doctor --json` to verify active backends before dispatching.
 
   NOT for: writing reports, translation, or data analysis (use agent compute); posting,
@@ -99,8 +99,8 @@ opencli xiaohongshu search "query" -f json | python3 $FILTER xhs -p title,author
 curl -s "https://www.v2ex.com/api/topics/hot.json" | python3 $FILTER v2ex -o /tmp/v2ex_hot.json -n 10
 ```
 
-### Omnicli Code Mode (`omnicli exec` Python API)
-Inside `omnicli exec` sandboxes, invoke `reach_filter.filter_data` directly as Python code:
+### Omnicli Code Mode (`omnicli exec` Python API) — RETIRED
+Python plans in `omnicli exec` are retired (exit 2); `exec` runs JavaScript plans only. The Python API below is for direct/programmatic use and is NOT callable inside `omnicli exec`.
 ```python
 import sys
 sys.path.insert(0, "scripts")
