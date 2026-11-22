@@ -1,23 +1,23 @@
 ---
 name: omnicli
-description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via one `omnicli exec plan.mjs`, (2) tool discovery by writing that one plan to list/read the generated contract tree with `contract_fs.mjs` `ls`/`read` — never call a search tool, (3) executing CLI tools with token shielding and field projection (`omnicli invoke <tool> --omni-project`), and (4) local inference (`omnicli llm|ocr|decide|asr`). Port facts live in CONTEXT.md."
+description: "Unified tool execution gateway and JavaScript Code Mode runner. MUST USE for: (1) multi-step automation in a single turn via one `omnicli exec plan.mjs`, (2) tool discovery by writing that one plan to list/read skills with `lsSkills`/`readSkill`/`readResource` and get a tool's exact input schema with `describe(toolId)` — never call a search tool, (3) executing CLI tools with token shielding and field projection (`omnicli invoke <tool> --omni-project`), and (4) local inference (`omnicli llm|ocr|decide|asr`). Port facts live in CONTEXT.md."
 allowed-tools: "Bash(omnicli:*) Read"
 ---
 
 # `omnicli` — The Uber OmniCLI
 
 One gateway, one tool path, one catalog. Write **one JavaScript `omnicli exec`
-plan** to list and read the generated contract tree, invoke the tool you find,
-and emit one bounded result — nothing else enters the context window.
+plan** to discover skills, read the one tool's exact schema, invoke it, and
+emit one bounded result — nothing else enters the context window.
 
-The contract tree is the discovery surface: `contracts/INDEX.md` plus one
-generated markdown file per enabled tool. Inside a plan, the sandbox-only
-`catalog/contract_fs.mjs` helper reads it at three detail levels (`name`,
-`name+description`, `full`) with `ls()` / `read()`. There is no ranking step, no
-model in the loop, and no discovery tool call: the tree *is* the index. It is a
-derived artifact of the same catalog rows that power `describe`; regenerate it
-with `python3 catalog/contract_tree.py` after any catalog change (`--check`
-verifies it byte-for-byte).
+Discovery is the read-only skills window: `lsSkills()` / `readSkill(name)` /
+`readResource(name, rel)` from the synthetic `omnicli_skills` module give the
+L1/L2/L3 Agent Skills ladder (name + description, full `SKILL.md`, one shelf
+file). There is no ranking step, no model in the loop, and no discovery tool
+call: the plan reads local files. The tool's exact input schema comes from
+`describe(toolId)` in `omnicli_tools` — the same contract the CLI shows — so no
+generated artifact is needed. See [skill-discovery.md](references/skill-discovery.md)
+for the ladder and the end-to-end proof.
 
 File routing and machine-local facts: [CONTEXT.md](CONTEXT.md). Port/model facts stay in the root [CONTEXT.md](../../CONTEXT.md) — never duplicated here.
 Doc-drift gate: `python3 tests/doc_drift_check.py --json` proves the tool surface and docs agree (exit 0 clean, 1 drift).
@@ -39,33 +39,45 @@ for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
 
 ## ⚡ The one-tool path
 
-### 1. List and read the contract tree — discovery
+### 1. Discover the skill and read the tool schema — all in the plan
 
-`contracts/` is a generated, committed tree: `INDEX.md` + `contracts/<skill>/<tool>.md`.
-Inside one plan, import the sandbox-only helper and walk it — no ranking, no
-model, no discovery tool:
+The read-only `omnicli_skills` window exposes the Agent Skills ladder as three
+helpers. Load only the level the step needs, then stop:
+
+| Level | Helper | Returns |
+| :--- | :--- | :--- |
+| L1 | `lsSkills()` | `[{ name, description }, …]` for every installed skill |
+| L2 | `readSkill(name)` | the complete `SKILL.md` body, path-confined |
+| L3 | `readResource(name, rel)` | one `references/`/`assets/`/`scripts/` file by relative path |
+
+Inside one plan, pick the skill by description, read only what the step needs,
+then ask `describe(toolId)` for the exact input schema of the tool you will call:
 
 ```js
-import { ls, read } from "<file://…/orchestration/omnicli/catalog/contract_fs.mjs>";
+import { lsSkills, readSkill, readResource } from "omnicli_skills";
+import { describe } from "omnicli_tools";
 
-const skills = ls();                       // root: skill directories
-const files  = ls("guard-hooks");          // one skill: tool filenames
-const rel    = "guard-hooks/" + files.find((n) => n === "scripts_guard_check");
-
-const name   = read(rel, "name");              // "guard-hooks/scripts/guard:check"
-const brief  = read(rel, "name+description");  // { name, description }
-const full   = read(rel, "full");              // { name, description, inputSchema, example, raw }
+const entry = lsSkills().find((s) => s.name === "guard-hooks");
+if (!entry) throw new Error("skill not installed");
+const body = readSkill("guard-hooks");                 // L2, only when needed
+const ref = readResource("guard-hooks", "SKILL.md");   // L3, one file by rel path
+const toolId = "guard-hooks/scripts/guard_check";
+const { contract } = await describe(toolId);           // exact input schema
+if (!contract.inputSchema) throw new Error("no input schema");
 ```
 
-The three detail levels are `name`, `name+description`, `full`. The helper
-confines every path to `contracts/` and refuses files without the generated
-marker; it uses only `node:fs` / `node:path` / `node:url` inside the VM. A
-worked, asserted example lives in `tests/exec_only_flow.py`: one exec plan,
-three detail levels, one tool invocation, zero discovery-tool calls.
+Window reads are local filesystem reads — no ranking call, no bridge round-trip,
+no network. `describe(toolId)` returns the same contract as `omnicli describe
+<tool_id> --json` (its `contract.inputSchema` is the authoritative schema) and
+runs inside the plan, so the payload never enters the context. The helpers are
+also globals (`lsSkills`, `readSkill`, `readResource`) for non-module plans;
+`readResource` rejects absolute paths, `..`, and symlinks outside the skill root.
+A worked, asserted example lives in `tests/skills_bridge_flow.py`: one strict
+exec plan, three skill levels, one tool invocation, zero search calls.
 
-Skills are **never modified**; the catalog and its derived tree are read-only
-at run time. Newly discovered tools start disabled until opened via the policy
-gate:
+Skills are **never modified**; the read-only skills window and the catalog are
+read-only at run time. Newly discovered tools start disabled until opened via the
+policy gate:
 
 ```bash
 omnicli policy            # view enabled/disabled state + audit log
@@ -75,7 +87,8 @@ omnicli disable <tool_id>
 
 `omnicli describe <tool_id|skill>` and `omnicli spec --stubs` remain available
 for a human reading one contract or a typed signature, but an agent workflow
-reads the tree in the plan so intermediate payloads never enter the context.
+calls `describe(toolId)` in the plan so intermediate payloads never enter the
+context.
 
 ### 2. `omnicli invoke <tool_id> [args]` — run the discovered tool, bounded
 
@@ -103,44 +116,45 @@ split explicitly):
 ## ⚡ One plan, one turn — `omnicli exec`
 
 For multi-step workflows (≥2 calls or intermediate parsing), write **one**
-JavaScript plan inside `node:vm` + `bwrap` that discovers via the contract tree,
-invokes the discovered tool, and emits one bounded result. Intermediate payloads
-stay in JS variables, never in the context window. (Python plans are retired;
-`.py` / `--lang py` exits 2.)
+JavaScript plan inside `node:vm` + `bwrap` that discovers skills via the read-only
+skills window, reads the one tool's exact schema with `describe()`, invokes it,
+and emits one bounded result. Intermediate payloads stay in JS variables, never
+in the context window. (Python plans are retired; `.py` / `--lang py` exits 2.)
 
 ```bash
-python3 catalog/contract_tree.py --check                       # tree is current
 omnicli bindings                                               # writes omnicli_tools.mjs + .d.ts
-omnicli exec plan.mjs --sandbox write                          # tree reads + invoke + result
+omnicli exec plan.mjs --sandbox write                          # skills window + describe + invoke + result
 omnicli exec plan.mjs --quiet                                  # print only the result
 ```
 
 ```js
-import { invoke, result } from "omnicli_tools";
-import { ls, read } from "<file://…/catalog/contract_fs.mjs>";  // static import: fully evaluated
+import { describe, invoke, result } from "omnicli_tools";
+import { lsSkills, readSkill, readResource } from "omnicli_skills";
 
-const file = ls("guard-hooks").find((n) => n === "scripts_guard_check");
-const rel = "guard-hooks/" + file;
-const name = read(rel, "name");               // detail level: name
-const brief = read(rel, "name+description");  // detail level: name+description
-const full = read(rel, "full");               // detail level: full (schema + example)
-const out = await invoke(name, ["echo hello"]);  // the one real tool call
+const entry = lsSkills().find((s) => s.name === "guard-hooks"); // L1
+const body = readSkill("guard-hooks");                           // L2
+const ref = readResource("guard-hooks", "SKILL.md");            // L3
+const toolId = "guard-hooks/scripts/guard_check";
+const { contract } = await describe(toolId);                     // exact input schema
+if (!contract.inputSchema) throw new Error("no input schema");
+const out = await invoke(toolId, ["echo hello"]);                // the one real tool call
 
 result({
   ok: out.exit_code === 0,
-  tool: name,
-  proof: "contract-tree",
-  data: { levels: ["name", "name+description", "full"],
-          description: brief.description.slice(0, 120),
-          hasSchema: Boolean(full.inputSchema),
+  tool: toolId,
+  proof: "one-plan-discovery",
+  data: { description: entry.description.slice(0, 120),
+          bodyBytes: body.length, refBytes: ref.length,
+          hasSchema: Boolean(contract.inputSchema),
           exitCode: out.exit_code },
 });
 ```
 
-- **Contract-tree discovery:** `ls()` / `read()` from `catalog/contract_fs.mjs`
-  are the discovery surface — no discovery-tool call, no ranking, no model in
-  the loop. `tests/exec_only_flow.py` proves it end to end: one exec plan, three
-  detail levels, one invocation, and a trace assertion of zero discovery calls.
+- **Skills-window discovery:** `lsSkills()` / `readSkill()` / `readResource()`
+  from `omnicli_skills` plus `describe(toolId)` for the schema are the discovery
+  surface — no discovery-tool call, no ranking, no model in the loop.
+  `tests/skills_bridge_flow.py` proves it end to end: one strict exec plan,
+  three skill levels, one invocation, and a trace assertion of zero search calls.
 - **Zero boilerplate:** `spec`, `describe`, `invoke`, `output`, `parallel`, `emitResult` / `result`, `getState`, `emitState`, and every catalogued tool (`tool({ ... })`) are available inside the VM; imports match `omnicli_tools.d.ts` for editors.
 - **Session state:** `getState()` / `emitState(value)` read and replace one JSON object persisted across `omnicli exec --session ID` runs (default: the trace session identity).
 - **Pre-flight validation:** Every tool call validates its options object against `inputSchema` (extracted from Python `argparse`, Node `node:util` `parseArgs`, `--omni-schema`, or `--help`) and throws `TypeError` before dispatch on unknown/missing/mistyped args.
@@ -151,7 +165,7 @@ result({
 Architecture, full SDK API and authoring guidelines:
 - [references/skill-stack-architecture.md](references/skill-stack-architecture.md) (how agentskills.io, ICM's `AGENTS.md`/`CONTEXT.md`, and omnicli compose into one progressive-disclosure ladder)
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
-- [examples/recipes.mjs](examples/recipes.mjs) (five canonical recipes: contract-tree discovery → contract → project, in-memory `spec()`, `parallel()` fan-out, a caught typed-validation error, and session state)
+- [examples/recipes.mjs](examples/recipes.mjs) (five canonical recipes: discovery → schema → projection, in-memory `spec()`, `parallel()` fan-out, a caught typed-validation error, and session state)
 - [harnesses/code-mode-showcase.html](harnesses/code-mode-showcase.html) (self-contained visual walkthrough of the three native tools, plan surface, and strict boundary)
 - [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `tests/verify_agent_skills.py`)
 
@@ -169,9 +183,9 @@ omnicli mcp --http --port 8790    # Streamable HTTP on 127.0.0.1:8790
 
 | Tool | Does |
 |---|---|
-| `omni_search` | legacy intent-lookup compatibility surface; `depth: "contract"` returns a contract in one call. Agent workflows should prefer `omni_exec` + `contract_fs.mjs` instead. |
+| `omni_search` | legacy intent-lookup compatibility surface; `depth: "contract"` returns a contract in one call. Agent workflows should prefer `omni_exec` with `omnicli_skills` + `describe()` instead. |
 | `omni_invoke` | run one tool, bounded + projected |
-| `omni_exec` | one JavaScript Code Mode plan that reads the contract tree and emits one bounded result (preferred discovery path) |
+| `omni_exec` | one JavaScript Code Mode plan that discovers skills, reads the tool schema with `describe()`, and emits one bounded result (preferred discovery path) |
 
 `omni_exec` is the agent discovery path: it runs the same plan as the CLI with
 `--sandbox strict` by default and is **OFF unless `OMNICLI_MCP_ALLOW_EXEC=1`**;
@@ -206,6 +220,6 @@ omnicli usage --since 24h --json       # per-harness telemetry from ~/.local/sha
 
 ```bash
 omnicli status            # ports, catalog freshness, retrieval tier
-omnicli index --rebuild   # rebuild catalog.db + re-extract contracts
+omnicli index --rebuild   # rebuild catalog.db + tool schemas
 omnicli eval              # golden routing evaluation (61 cases)
 ```

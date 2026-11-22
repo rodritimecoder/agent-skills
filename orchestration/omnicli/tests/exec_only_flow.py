@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Prove the one-tool contract-tree flow with one real `omnicli exec` plan.
+"""Prove the one-tool describe flow with one real `omnicli exec` plan.
 
-The plan discovers a tool by listing and reading the generated ``contracts/``
-tree (detail levels: name, name+description, full), invokes that tool, and ends
-with a bounded ``result()`` / emitResult. Discovery uses no ranking service and
-no discovery tool: the tree is the index and ``contract_fs.mjs`` ``ls`` / ``read``
-are the whole discovery surface.
+The plan gets a tool's exact schema from ``describe(toolId)`` at runtime — no
+generated contract tree and no filesystem reads — invokes that tool with a raw
+argv array, and ends with a bounded ``result()`` / emitResult. Discovery uses
+no ranking service and no discovery tool: the catalog is the index and
+``describe()`` supplies the one schema on demand.
 
 This driver runs the plan against an isolated catalog copy and HOME so shared
 state (bindings, traces, session state, catalog) is untouched, then proves from
@@ -28,20 +28,15 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
-REPO = SKILL.parent.parent
 OMNICLI = SKILL / "omnicli.py"
-CONTRACT_FS = SKILL / "catalog" / "contract_fs.mjs"
-CONTRACTS = REPO / "contracts"
 
 sys.path.insert(0, str(SKILL))
 from catalog import builder  # noqa: E402
 
-TARGET_SKILL = "guard-hooks"          # deterministic, offline skill
-TARGET_FILE = "scripts_guard_check"  # contracts/<skill>/<file>.md
-TARGET_TOOL = "guard-hooks/scripts/guard:check"
+TARGET_TOOL = "guard-hooks/scripts/guard:check"  # deterministic, offline tool
 CHECK_COMMAND = "echo hello"
-DETAILS = ["name", "name+description", "full"]
 BOUND = 120
+PROOF = "describe-schema"
 
 
 class FlowFailure(AssertionError):
@@ -88,62 +83,57 @@ def isolate_catalog(tmp: Path) -> Path:
 
 
 def plan_source() -> str:
-    """One plan: tree discovery at three detail levels -> invoke -> result."""
-    # Static import: the VM runner links and evaluates static dependencies,
-    # so the sandbox-only contract_fs helper is ready before the plan runs.
-    contract_fs_url = CONTRACT_FS.resolve().as_uri()
-    return f'''import {{ invoke, result }} from "omnicli_tools";
-import {{ ls, read }} from "{contract_fs_url}";
+    """One plan: describe(toolId) -> raw-argv invoke -> one bounded result."""
+    return f'''import {{ describe, invoke, result }} from "omnicli_tools";
 
-// Discovery reads the generated contract tree only. No ranking, no discovery
-// tool call: the filesystem tree is the index and ls/read are the whole surface.
-const DETAILS = {json.dumps(DETAILS)};
-const SKILL_DIR = {json.dumps(TARGET_SKILL)};
-const FILE = {json.dumps(TARGET_FILE)};
+const TOOL = {json.dumps(TARGET_TOOL)};
 const COMMAND = {json.dumps(CHECK_COMMAND)};
 const BOUND = {BOUND};
 
-const skills = ls();                       // detail level: tree root
-const files = ls(SKILL_DIR);               // one skill's tool files
-const file = files.find((n) => n === FILE);
-if (!file) throw new Error("contract missing in tree: " + SKILL_DIR + "/" + FILE);
-const rel = SKILL_DIR + "/" + file;
+// The tool schema comes from describe() at runtime: one exact contract, no
+// ranking call, no discovery tool, and no generated filesystem contract tree.
+const schema = await describe(TOOL);
+if (!schema || schema.id !== TOOL) throw new Error("describe returned wrong tool: " + (schema && schema.id));
+const contract = schema.contract || {{}};
+if (!contract.inputSchema) throw new Error("describe returned no input schema");
 
-const name = read(rel, DETAILS[0]);              // "name"
-const brief = read(rel, DETAILS[1]);             // "name+description"
-const full = read(rel, DETAILS[2]);              // "full"
-if (name !== brief.name || name !== full.name) throw new Error("name mismatch across detail levels");
-
-const envelope = await invoke(name, [COMMAND]);  // the one real tool call
+// Exactly one catalogued tool call, with a raw argv array.
+const envelope = await invoke(TOOL, [COMMAND]);
 const output = String(envelope.output || "").slice(0, BOUND);
 
 result({{
-  ok: envelope.exit_code === 0 && Boolean(full.inputSchema),
-  tool: name,
-  proof: "contract-tree",
+  ok: envelope.exit_code === 0 && Boolean(contract.inputSchema),
+  tool: TOOL,
+  proof: {json.dumps(PROOF)},
   data: {{
-    skillsListed: skills.length,
-    detailLevels: DETAILS,
-    discovered: name,
-    description: String(brief.description || "").slice(0, BOUND),
-    hasSchema: Boolean(full.inputSchema),
-    example: String(full.example || "").slice(0, BOUND),
+    described: schema.id,
+    summary: String(schema.summary || "").slice(0, BOUND),
+    hasSchema: Boolean(contract.inputSchema),
+    usage: String(contract.usage || "").slice(0, BOUND),
     exitCode: envelope.exit_code,
     output,
-    ids: [name].slice(0, 3),
   }},
 }});
 '''
+
+
+def static_proof(source: str) -> None:
+    """Prove, in the plan source, that no ranking call is possible."""
+    _require(re.search(r"\bsearch\s*\(", source) is None,
+             "plan source contains a search call")
+    _require(source.count("await describe(") == 1,
+             "plan must make exactly one describe call")
+    _require(source.count("await invoke(") == 1,
+             "plan must make exactly one invoke call")
+    _require(source.count("result({") == 1,
+             "plan must emit exactly one result")
 
 
 def run_plan(tmp: Path, db: Path) -> tuple[dict, str]:
     plan = tmp / "plan.mjs"
     source = plan_source()
     plan.write_text(source, encoding="utf-8")
-
-    # Static proof: the plan never names the discovery tool as a call.
-    _require(re.search(r"\bsearch\s*\(", source) is None,
-             "plan source contains a search call")
+    static_proof(source)
 
     # Use the installed `omnicli` launcher (host-visible inside the sandbox).
     # Its catalog is the isolated copy via OMNICLI_DB; HOME is isolated too.
@@ -153,12 +143,10 @@ def run_plan(tmp: Path, db: Path) -> tuple[dict, str]:
     env["OMNICLI_DB"] = str(db)
     env["OMNICLI_SESSION"] = "exec-only-flow-test"
     env["OMNICLI_USER_TRACE"] = str(tmp / "trace.jsonl")
-    env["OMNICLI_CONTRACT_FS"] = str(CONTRACT_FS)
-    env["OMNICLI_CONTRACTS_ROOT"] = str(CONTRACTS)
 
     proc = subprocess.run(
         [sys.executable, str(OMNICLI), "exec", str(plan), "--json",
-         "--workspace", str(tmp), "--sandbox", "write", "--max-calls", "10"],
+         "--workspace", str(tmp), "--sandbox", "strict", "--max-calls", "10"],
         capture_output=True, text=True, timeout=300, cwd=str(tmp), env=env,
     )
     try:
@@ -172,25 +160,23 @@ def run_plan(tmp: Path, db: Path) -> tuple[dict, str]:
 def assert_flow(report: dict, tmp: Path) -> dict:
     _require(report.get("exit_code") == 0,
              f"exec failed: {str(report.get('stderr'))[-600:]}")
+    _require(report.get("sandbox") == "strict", "plan did not run in strict sandbox")
     result = report.get("result")
     _require(isinstance(result, dict), "no bounded emitResult recorded")
     _require(result.get("ok") is True, f"result not ok: {result}")
     _require(result.get("tool") == TARGET_TOOL,
              f"wrong discovered tool: {result.get('tool')}")
-    _require(result.get("proof") == "contract-tree", "wrong proof marker")
+    _require(result.get("proof") == PROOF, "wrong proof marker")
 
     data = result.get("data") or {}
-    _require(data.get("detailLevels") == DETAILS,
-             f"detail levels not all exercised: {data.get('detailLevels')}")
-    _require(data.get("discovered") == TARGET_TOOL, "discovered name mismatch")
-    _require(data.get("hasSchema") is True, "full contract had no input schema")
+    _require(data.get("described") == TARGET_TOOL, "described tool mismatch")
+    _require(data.get("hasSchema") is True, "describe returned no input schema")
     _require(data.get("exitCode") == 0, f"invocation failed: {data.get('exitCode')}")
-    for key in ("description", "example", "output"):
+    for key in ("summary", "usage", "output"):
         _require(len(str(data.get(key, ""))) <= BOUND, f"{key} is not bounded")
-    _require(len(data.get("ids") or []) <= 3, "ids are not bounded")
 
-    # Dynamic proof: parse the exec trace written by the bindings. One call,
-    # and its verb is invoke — never the discovery tool.
+    # Dynamic proof: the trace records every real tool call. Zero ranking
+    # calls, exactly one describe() and one invoke(), both for the target tool.
     trace = tmp / ".omnicli_trace.jsonl"
     _require(trace.is_file(), "no exec trace recorded")
     rows = [json.loads(line) for line in trace.read_text(
@@ -199,16 +185,27 @@ def assert_flow(report: dict, tmp: Path) -> dict:
     search_calls = [row for row in calls if row.get("call") == "search"]
     _require(len(search_calls) == 0,
              f"discovery-tool calls found in trace: {search_calls[:3]}")
-    _require(len(calls) == 1 and calls[0].get("call") == "invoke",
+    describes = [row for row in calls if row.get("call") == "describe"]
+    _require(len(describes) == 1 and describes[0].get("tool") == TARGET_TOOL,
+             f"expected exactly one describe call, got: "
+             f"{[(r.get('call'), r.get('tool')) for r in calls]}")
+    invokes = [row for row in calls if row.get("call") == "invoke"]
+    _require(len(invokes) == 1 and invokes[0].get("tool") == TARGET_TOOL,
              f"expected exactly one invoke call, got: "
+             f"{[(r.get('call'), r.get('tool')) for r in calls]}")
+    _require(len(calls) == 2,
+             f"expected describe + invoke calls only, got: "
              f"{[row.get('call') for row in calls]}")
     _require(report.get("tool_calls") == len(calls),
              "report tool_calls disagrees with trace")
+    _require(report.get("bridge_denied") == [],
+             f"bridge denied calls: {report.get('bridge_denied')}")
 
     record = {
-        "flow": "exec-only-contract-tree",
+        "flow": "exec-only-describe-schema",
         "assertion": "zero-search-calls",
         "search_calls": len(search_calls),
+        "describe_calls": len(describes),
         "tool_calls": len(calls),
         "tool_call_verbs": [row.get("call") for row in calls],
         "passed": True,
@@ -220,15 +217,14 @@ def assert_flow(report: dict, tmp: Path) -> dict:
 
 def main() -> int:
     try:
-        _require(CONTRACT_FS.is_file(), f"missing {CONTRACT_FS}")
-        _require((CONTRACTS / "INDEX.md").is_file(),
-                 f"contract tree missing: {CONTRACTS / 'INDEX.md'}")
+        _require(OMNICLI.is_file(), f"missing {OMNICLI}")
         with tempfile.TemporaryDirectory(prefix="omnicli-exec-only-") as name:
             tmp = Path(name)
             db = isolate_catalog(tmp)
             report, _ = run_plan(tmp, db)
             record = assert_flow(report, tmp)
-        print(f"PASS — one exec plan, {record['tool_calls']} invoke call, "
+        print(f"PASS — one exec plan, describe schema, "
+              f"{record['tool_calls']} tool calls (1 describe + 1 invoke), "
               f"{record['search_calls']} search calls; "
               f"zero-search-call assertion recorded: PASS")
         print("assertion record: " + json.dumps(record, sort_keys=True))
