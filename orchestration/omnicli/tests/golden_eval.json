@@ -75,17 +75,17 @@
     },
     {
       "query": "read the text out of a screenshot",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "drift"
     },
     {
       "query": "extract text from a scanned document",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "prose"
     },

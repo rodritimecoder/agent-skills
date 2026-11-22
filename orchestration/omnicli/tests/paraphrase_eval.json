@@ -176,9 +176,9 @@
     },
     {
       "query": "i thinking of dropping navidc lighton ocr is better",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "harvested"
     },
@@ -313,16 +313,16 @@
       "top1": "decision-model",
       "expect": [
         "decision-model",
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "authored",
       "evidence_note": "Successor label after archival (jev-decision -> decision-model/model-layer; kem-dev-loop -> kem-thought); successor is in top-3"
     },
     {
       "query": "read the text out of this screenshot for me",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "authored"
     },

@@ -18,7 +18,7 @@
 ## Reading the slides
 
 `--keyframes` writes the detected slide changes to `<slug>_slides/*.png`. OCR is
-not part of this skill; hand the frames to the `ocr` skill, which owns the
+not part of this skill; hand the frames to the `ocr-cli` skill, which owns the
 models and the servers:
 
 ```bash

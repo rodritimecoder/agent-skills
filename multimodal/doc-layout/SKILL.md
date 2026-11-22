@@ -163,7 +163,7 @@ therefore required rather than defaulted:
 |---|---|---|
 | `:8082` | LightOnOCR-3-0.8B (`llama-server`) | yes — OpenAI-compatible |
 | ad-hoc | MiniCPM-OCR + DSpark (`llama-server`) | yes — pass its port |
-| `:8084` | CrispEmbed (PP-OCRv6) | no — not OpenAI-compatible; use the `ocr` skill |
+| `:8084` | CrispEmbed (PP-OCRv6) | no — not OpenAI-compatible; use the `ocr-cli` skill |
 | `:8080` | primary LLM | no — text-only |
 
 ## Notes

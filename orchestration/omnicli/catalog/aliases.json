@@ -364,7 +364,7 @@
       "inference"
     ]
   },
-  "ocr": {
+  "ocr-cli": {
     "aliases": [
       "read text in image",
       "screenshot text",

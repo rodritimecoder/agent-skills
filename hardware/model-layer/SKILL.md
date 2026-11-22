@@ -109,7 +109,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `audio` | `:8081` | `local-audio-audiocpp` | `run-audiocpp.sh` | nemotron-asr | — | audiocpp, video-miner |
 | `decision` | `:8083` | `local-decide` | `h2o.sh` | h2o-lightning-4b (Q4_K_M + mmproj F16) | — | jev-decision, decision-model, frontend-uat, eval-router |
 | `decision-aux` | `:8089` | `local-decide-aux` | `imajev-decider.sh` | Imajev-4B (Q4_K_M + mmproj f16) | `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf`<br>`models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf` | jev-decision |
-| `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr, video-miner, doc-layout, canvas-cli |
+| `ocr` | `:8082` | `local-ocr` | `lighton-ocr.sh` | LightOnOCR-3-0.8B (Q4_K_M + mmproj q8_0) | `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf`<br>`models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf` | ocr-cli, video-miner, doc-layout, canvas-cli |
 | `embed` | `:8084` | `local-embed-bge` | `bge-small.sh` | bge-small-en-v1.5 (f16) | `models/unsloth/bge-small-en-v1.5-GGUF/bge-small-en-v1.5-f16.gguf` | graph-memory, semantic-cache |
 | `rerank` | `:8086` | `local-rerank-bge` | `bge-reranker-v2-m3.sh` | bge-reranker-v2-m3 (Q4_K_M) | `models/sabafallah/bge-reranker-v2-m3-Q4_K_M-GGUF/bge-reranker-v2-m3-q4_k_m.gguf` | — |
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
@@ -167,7 +167,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 - **Start:** `lighton-ocr.sh` (volume `sh/`; in-repo copy `launchers/lighton-ocr.sh`)
 - **Health:** `curl -s http://127.0.0.1:8082/health`
 - **API:** `/v1/chat/completions`
-- **Owner:** `ocr` · **Used by:** ocr, video-miner, doc-layout, canvas-cli
+- **Owner:** `ocr-cli` · **Used by:** ocr-cli, video-miner, doc-layout, canvas-cli
 - **Weights:** `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.Q4_K_M.gguf` · `models/prithivMLmods/LightOnOCR-3-0.8B-GGUF/LightOnOCR-3-0.8B.mmproj-q8_0.gguf`
 - **Quirks:** thinking variant — OCR output arrives in reasoning_content.
 

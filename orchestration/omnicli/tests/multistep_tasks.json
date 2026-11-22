@@ -79,12 +79,12 @@
     {
       "id": "ms-07",
       "intent": "ocr an image to text",
-      "expected_skill": "ocr",
+      "expected_skill": "ocr-cli",
       "grep": "ocr|image|text",
       "expected_result": {
-        "skill": "ocr",
+        "skill": "ocr-cli",
         "matched": 6,
-        "ids": ["ocr/cli", "ocr/ocr:doc", "ocr/ocr:doctor"]
+        "ids": ["ocr-cli/cli", "ocr-cli/ocr:doc", "ocr-cli/ocr:doctor"]
       }
     },
     {

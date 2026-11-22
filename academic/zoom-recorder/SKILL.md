@@ -18,7 +18,7 @@ allowed-tools: "Bash(zoom-recorder:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"
 Downloads Zoom cloud recordings (`/rec/play/…` and `/rec/share/…`) focused
 on **transcripts and presentation keyframes**, never the hour-long video
 file. Transcripts come back as Markdown with timestamps and speaker tags;
-slides come back as keyframe images, ready for the `ocr` skill to read.
+slides come back as keyframe images, ready for the `ocr-cli` skill to read.
 
 ---
 
@@ -43,7 +43,7 @@ ZR="scripts"
 # 1. Download a Markdown transcript
 python3 $ZR/zoom_download.py --url "<recording-url>" --passcode "<pwd>" --out-dir ./transcripts --format md
 
-# 2. Extract slide keyframes, then read them with the ocr skill
+# 2. Extract slide keyframes, then read them with the ocr-cli skill
 python3 $ZR/zoom_download.py --url "<recording-url>" --passcode "<pwd>" --keyframes -o ./slides
 for f in ./slides/*_slides/*.png; do ocr "$f" -o "${f%.png}.md"; done
 

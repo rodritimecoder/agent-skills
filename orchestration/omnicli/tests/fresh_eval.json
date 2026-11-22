@@ -71,9 +71,9 @@
     },
     {
       "query": "no lighton 3 can do it you have to prompt it 'grounding' so its in grounding mode try again then it should work better for like images and tables and such",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "harvested-fresh",
       "evidence": [
@@ -83,9 +83,9 @@
     },
     {
       "query": "nice lighton ocr better cool, can you in the sh specifiy for the prompt to have 'grounding'",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "harvested-fresh",
       "evidence": [
@@ -161,15 +161,15 @@
     },
     {
       "query": "im pretty sure it works with vulkan gpu",
-      "top1": "ocr",
+      "top1": "ocr-cli",
       "expect": [
-        "ocr"
+        "ocr-cli"
       ],
       "kind": "harvester-noise",
       "evidence": [
         "vulkan"
       ],
-      "evidence_note": "Context-free fragment: 'it' has no antecedent. Vulkan is documented by both ocr (multimodal/ocr/SKILL.md compatibility: 'Requires an AMD Radeon RX 9060 XT GPU with Vulkan and the LightOnOCR-3-0.8B server on :8082') and model-layer (CONTEXT.md:9 dual RX 9060 XT Vulkan host; launchers/AGENTS.md :8080 Vulkan dual-GPU split; model-layer SKILL.md owns GPU/server/weights docs). BM25's model-layer is a defensible owner of Vulkan server docs, but the fragment alone cannot pick a single skill, so this is not a clean single-label routing case."
+      "evidence_note": "Context-free fragment: 'it' has no antecedent. Vulkan is documented by both ocr-cli (multimodal/ocr-cli/SKILL.md compatibility: 'Requires an AMD Radeon RX 9060 XT GPU with Vulkan and the LightOnOCR-3-0.8B server on :8082') and model-layer (CONTEXT.md:9 dual RX 9060 XT Vulkan host; launchers/AGENTS.md :8080 Vulkan dual-GPU split; model-layer SKILL.md owns GPU/server/weights docs). BM25's model-layer is a defensible owner of Vulkan server docs, but the fragment alone cannot pick a single skill, so this is not a clean single-label routing case."
     },
     {
       "query": "lets fix the transcription mode so it auto works with lighton 0.8b? howd you do it?",
@@ -276,7 +276,7 @@
       "evidence": [
         "speed"
       ],
-      "evidence_note": "decision-model SKILL.md:157: 'Why it was retired: ... an 8192-token ubatch (-ub 8192 -b 8192), consuming ~8.2 GB VRAM and spilling ~7.9 GB into GTT system RAM'; CONTEXT.md:114 repeats the -ub 8192 / -b 8192 + GTT system RAM cause; SKILL.md:123 documents its no-KV-cache behavior. The exact 'ub 8192' + 'ram' + 'kv' facts live in decision-model docs, not ocr."
+      "evidence_note": "decision-model SKILL.md:157: 'Why it was retired: ... an 8192-token ubatch (-ub 8192 -b 8192), consuming ~8.2 GB VRAM and spilling ~7.9 GB into GTT system RAM'; CONTEXT.md:114 repeats the -ub 8192 / -b 8192 + GTT system RAM cause; SKILL.md:123 documents its no-KV-cache behavior. The exact 'ub 8192' + 'ram' + 'kv' facts live in decision-model docs, not ocr-cli."
     },
     {
       "query": "ngl pipeline is cool but im thinking that lego block modular thing would be better",
