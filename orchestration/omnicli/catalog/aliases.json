@@ -714,30 +714,20 @@
     ],
     "tags": []
   },
-  "gws-docs": {
+  "gws-cli": {
     "aliases": [
       "read google doc",
       "google doc contents",
       "docs batchupdate",
       "create blank doc",
       "gws docs get",
-      "inspect doc formatting"
-    ],
-    "tags": []
-  },
-  "gws-docs-write": {
-    "aliases": [
+      "inspect doc formatting",
       "append to doc",
       "add paragraph to doc",
       "append text google docs",
       "write to doc",
       "insert text end of doc",
-      "gws docs write"
-    ],
-    "tags": []
-  },
-  "gws-drive": {
-    "aliases": [
+      "gws docs write",
       "google drive files",
       "find file in drive",
       "upload to drive",
@@ -746,12 +736,7 @@
       "list shared drives",
       "move file drive",
       "export doc to pdf",
-      "gws drive files"
-    ],
-    "tags": []
-  },
-  "gws-shared": {
-    "aliases": [
+      "gws drive files",
       "gws auth login",
       "google workspace cli setup",
       "gws credentials",
@@ -759,7 +744,13 @@
       "gws output format",
       "service account google"
     ],
-    "tags": []
+    "tags": [
+      "google",
+      "workspace",
+      "docs",
+      "drive",
+      "cli"
+    ]
   },
   "leanrea": {
     "aliases": [
