@@ -1,0 +1,604 @@
+{
+  "candidates": [
+    "heygen/heygen-avatar-6-turbo",
+    "heygen/heygen-avatar-6",
+    "bytedance/seedance-2.5-flash",
+    "recraft/recraft-v4.1-flash-v2",
+    "recraft/recraft-v4.1-flash-v2:free",
+    "tencent/hy-world-2.1-panorama",
+    "bytedance-seed/seedream-5-5",
+    "tbc/mischief-1",
+    "sourceful/riverflow-v2.6-pro",
+    "qwen/qwen-image-2.1-turbo",
+    "qwen/qwen-image-2.1-pro",
+    "krea/k3-edit",
+    "black-forest-labs/flux-3-image-klein",
+    "x-ai/grok-imagine-video-1.5-lite",
+    "tencent/hy-image-v3.5-preview",
+    "bytedance-seed/seedream-5-0-flash",
+    "black-forest-labs/flux-3-image",
+    "heygen/heygen-video-1",
+    "recraft/recraft-v4.1-flash",
+    "black-forest-labs/flux-video-edit",
+    "minimax/hailuo-3-max",
+    "alibaba/wan-3.0-prime",
+    "meta/muse-image",
+    "recraft/recraft-v4-styles-pro",
+    "recraft/recraft-v4-styles-vector",
+    "recraft/recraft-v4-styles-pro-vector",
+    "recraft/recraft-v4-styles",
+    "alibaba/wan-3.0",
+    "heygen/avatar-iv",
+    "black-forest-labs/flux-video-upscale",
+    "bytedance-seed/seedream-5-0-lite",
+    "bytedance-seed/seedream-5-0-pro",
+    "bytedance/seedance-2.0-mini",
+    "x-ai/grok-imagine-image-2.0",
+    "bytedance/seedance-2.5",
+    "qwen/qwen-image-3",
+    "qwen/qwen-image-3-pro",
+    "black-forest-labs/flux-3-video",
+    "minimax/hailuo-3",
+    "runway/aleph-2",
+    "runway/gen-4.5",
+    "krea/krea-2-large",
+    "krea/krea-2-medium",
+    "krea/krea-2-medium-turbo",
+    "x-ai/grok-imagine-video-1.5",
+    "alibaba/happyhorse-1.1",
+    "alibaba/happyhorse-1.0",
+    "sourceful/riverflow-v2.5-pro",
+    "sourceful/riverflow-v2.5-fast",
+    "x-ai/grok-imagine-video",
+    "recraft/recraft-v4.1-pro-vector",
+    "recraft/recraft-v4.1-vector",
+    "recraft/recraft-v4.1-utility-pro",
+    "recraft/recraft-v4.1-utility",
+    "recraft/recraft-v4.1-pro",
+    "recraft/recraft-v4.1",
+    "recraft/recraft-v4-pro-vector",
+    "recraft/recraft-v4-vector",
+    "recraft/recraft-v4-pro",
+    "recraft/recraft-v4",
+    "recraft/recraft-v3",
+    "google/veo-3.1-fast",
+    "google/veo-3.1-lite",
+    "minimax/hailuo-2.3",
+    "bytedance/seedance-2.0",
+    "bytedance/seedance-2.0-fast",
+    "google/veo-3.1",
+    "sourceful/riverflow-v2-pro",
+    "sourceful/riverflow-v2-fast",
+    "black-forest-labs/flux.2-klein-4b",
+    "bytedance-seed/seedream-4.5",
+    "black-forest-labs/flux.2-max",
+    "black-forest-labs/flux.2-flex",
+    "black-forest-labs/flux.2-pro"
+  ],
+  "models": {
+    "baidu/ernie-5.5-flash-preview:free": {
+      "context_length": 1024000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Baidu: ERNIE-5.5-Flash-Preview (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "cohere/rerank-4-fast": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Cohere: Rerank 4 Fast",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "cohere/rerank-4-pro": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Cohere: Rerank 4 Pro",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "cohere/rerank-5-fast": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Cohere: Rerank 5 Fast",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "cohere/rerank-5-pro": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Cohere: Rerank 5 Pro",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "cohere/rerank-v3.5": {
+      "context_length": 4096,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Cohere: Rerank v3.5",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "fish-audio/s2.1-pro-free:free": {
+      "context_length": 0,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Fish Audio: S2.1 Pro Free (free)",
+      "output_modalities": [
+        "speech"
+      ],
+      "role": "tts"
+    },
+    "google/gemma-4-26b-a4b-it:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "image",
+        "text",
+        "video"
+      ],
+      "name": "Google: Gemma 4 26B A4B  (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "google/gemma-4-31b-it:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "image",
+        "text",
+        "video"
+      ],
+      "name": "Google: Gemma 4 31B (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "google/lyria-3-clip-preview": {
+      "context_length": 1048576,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Google: Lyria 3 Clip Preview",
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "role": "tts"
+    },
+    "google/lyria-3-pro-preview": {
+      "context_length": 1048576,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Google: Lyria 3 Pro Preview",
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "role": "tts"
+    },
+    "heygen/heygen-voice-1-turbo:free": {
+      "context_length": 0,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "HeyGen: HeyGen Voice Turbo (free)",
+      "output_modalities": [
+        "speech"
+      ],
+      "role": "tts"
+    },
+    "inclusionai/ling-3.2-flash:free": {
+      "context_length": 1048576,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "inclusionAI: Ling 3.2 Flash (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "liquid/lfm-3-1.7b:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "LiquidAI: LFM3-1.7B (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "mongodb/rerank-2.5": {
+      "context_length": 32000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "VoyageAI by MongoDB: rerank-2.5",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "mongodb/rerank-2.5-lite": {
+      "context_length": 32000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "VoyageAI by MongoDB: rerank-2.5-lite",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "mongodb/rerank-3": {
+      "context_length": 32000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "VoyageAI by MongoDB: rerank-3",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "mongodb/rerank-3-lite": {
+      "context_length": 32000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "VoyageAI by MongoDB: rerank-3-lite",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "nvidia/nemotron-3-embed-1b:free": {
+      "context_length": 4096,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "NVIDIA: Nemotron 3 Embed 1B (free)",
+      "output_modalities": [
+        "embeddings"
+      ],
+      "role": "embed"
+    },
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+      "context_length": 256000,
+      "input_modalities": [
+        "text",
+        "audio",
+        "image",
+        "video"
+      ],
+      "name": "NVIDIA: Nemotron 3 Nano Omni (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "context_length": 1000000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "NVIDIA: Nemotron 3 Ultra (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "nvidia/nemotron-3.5-embed-1b:free": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "NVIDIA: Nemotron 3.5 Embed 1B (free)",
+      "output_modalities": [
+        "embeddings"
+      ],
+      "role": "embed"
+    },
+    "nvidia/nemotron-3.5-embed-8b:free": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "NVIDIA: Nemotron 3.5 Embed 8B (free)",
+      "output_modalities": [
+        "embeddings"
+      ],
+      "role": "embed"
+    },
+    "nvidia/nemotron-3.5-lightning:free": {
+      "context_length": 1000000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "NVIDIA: Nemotron 3.5 Lightning (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "nvidia/nemotron-3.5-rerank-8b:free": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "NVIDIA: Nemotron 3.5 Rerank 8B (free)",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "nvidia/nemotron-3.5-super-vl:free": {
+      "context_length": 1000000,
+      "input_modalities": [
+        "text",
+        "image",
+        "video"
+      ],
+      "name": "NVIDIA: Nemotron 3.5 Super VL (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "openrouter/free": {
+      "context_length": 200000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Free Models Router",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "parallel/decisions-fast": {
+      "context_length": 32000,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Parallel: Decisions Fast",
+      "output_modalities": [
+        "decisions"
+      ],
+      "role": "decide"
+    },
+    "particle-ai/particle-1:free": {
+      "context_length": 1048576,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Particle AI: Particle-1 (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "perplexity/pplx-decider-flash-v1.3:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Perplexity: Decider Flash V1.3 (free)",
+      "output_modalities": [
+        "decisions"
+      ],
+      "role": "decide"
+    },
+    "perplexity/pplx-decider-v1.3:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "name": "Perplexity: Decider V1.3 (free)",
+      "output_modalities": [
+        "decisions"
+      ],
+      "role": "decide"
+    },
+    "qwen/qwen3-reranker-0.6b": {
+      "context_length": 32768,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Qwen3 Reranker 0.6B",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "qwen/qwen3-reranker-8b": {
+      "context_length": 40960,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Qwen3 Reranker 8B",
+      "output_modalities": [
+        "rerank"
+      ],
+      "role": "rerank"
+    },
+    "recursive/flint-v1.0:free": {
+      "context_length": 262144,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Recursive: Flint (free)",
+      "output_modalities": [
+        "text"
+      ],
+      "role": "chat"
+    },
+    "respan/span-01-lite": {
+      "context_length": 0,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Respan: Span-01 Lite",
+      "output_modalities": [
+        "decisions"
+      ],
+      "role": "decide"
+    },
+    "respan/span-01-lite:free": {
+      "context_length": 0,
+      "input_modalities": [
+        "text"
+      ],
+      "name": "Respan: Span-01 Lite (free)",
+      "output_modalities": [
+        "decisions"
+      ],
+      "role": "decide"
+    }
+  },
+  "retired": [
+    {
+      "id": "baseten/elephant-1:free",
+      "reason": "delisted",
+      "role": "decide",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "baseten/mammoth-1:free",
+      "reason": "delisted",
+      "role": "decide",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "inception/mercury-decide:free",
+      "reason": "delisted",
+      "role": "decide",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "liquid/lfm-2.5-embedding-350m:free",
+      "reason": "delisted",
+      "role": "embed",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+      "reason": "delisted",
+      "role": "embed",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "nvidia/llama-nemotron-rerank-vl-1b-v2:free",
+      "reason": "delisted",
+      "role": "rerank",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "dots-studio/dots-3-note-preview:free",
+      "reason": "delisted",
+      "role": "chat",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "thinkingmachines/inkling:free",
+      "reason": "delisted",
+      "role": "chat",
+      "since": "2026-11-23"
+    },
+    {
+      "id": "qwen/qwen-2.5-coder-32b-instruct:free",
+      "reason": "delisted",
+      "role": "chat",
+      "since": "2026-11-23"
+    }
+  ],
+  "roles": {
+    "chat": [
+      "inclusionai/ling-3.2-flash:free",
+      "baidu/ernie-5.5-flash-preview:free",
+      "liquid/lfm-3-1.7b:free",
+      "particle-ai/particle-1:free",
+      "recursive/flint-v1.0:free",
+      "nvidia/nemotron-3.5-super-vl:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "google/gemma-4-31b-it:free",
+      "openrouter/free"
+    ],
+    "decide": [
+      "perplexity/pplx-decider-flash-v1.3:free",
+      "perplexity/pplx-decider-v1.3:free",
+      "parallel/decisions-fast",
+      "respan/span-01-lite",
+      "respan/span-01-lite:free"
+    ],
+    "embed": [
+      "nvidia/nemotron-3.5-embed-1b:free",
+      "nvidia/nemotron-3.5-embed-8b:free",
+      "nvidia/nemotron-3-embed-1b:free"
+    ],
+    "rerank": [
+      "cohere/rerank-5-fast",
+      "cohere/rerank-5-pro",
+      "nvidia/nemotron-3.5-rerank-8b:free",
+      "mongodb/rerank-3-lite",
+      "mongodb/rerank-3",
+      "qwen/qwen3-reranker-0.6b",
+      "qwen/qwen3-reranker-8b",
+      "mongodb/rerank-2.5-lite",
+      "mongodb/rerank-2.5",
+      "cohere/rerank-4-pro",
+      "cohere/rerank-4-fast",
+      "cohere/rerank-v3.5"
+    ],
+    "tts": [
+      "heygen/heygen-voice-1-turbo:free",
+      "fish-audio/s2.1-pro-free:free",
+      "google/lyria-3-pro-preview",
+      "google/lyria-3-clip-preview"
+    ]
+  },
+  "schema_version": 1,
+  "source": "https://openrouter.ai/api/v1/models?output_modalities=all",
+  "updated_at": "2026-11-23"
+}

@@ -27,18 +27,52 @@ for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
 
 - `scripts/or_agent.py` — OpenRouter Free Multimodal & Subagent CLI (Uber Protocol).
 
-## Verified Free Endpoint Catalog
-- **Note-Taking & Synthesis**: `dots-studio/dots-3-note-preview:free` (Reasoning note synthesis)
-- **Agentic Reasoning & Chat**: `thinkingmachines/inkling:free` (Thinking Machines agentic free tier)
-- **Reasoning (with reasoning_details)**: `recursive/flint-v1.0:free` (Recursive Flint)
-- **Reasoning & Code (Heavy)**: `nvidia/nemotron-3-ultra-550b-a55b:free`
-- **Fast Subagent Coding**: `nvidia/nemotron-3.5-lightning:free`
-- **General Free Router**: `openrouter/free`
-- **Calibrated Decisions (JEV)**: `baseten/mammoth-1:free` (27B, heavy/complex), `baseten/elephant-1:free` (9B, fast/simple), `respan/span-01-lite:free` (lite, noul-only), `inception/mercury-decide:free`
-- **Vector Embeddings**: `liquid/lfm-2.5-embedding-350m:free` & `nvidia/llama-nemotron-embed-vl-1b-v2:free`
-- **Neural Reranking**: `nvidia/llama-nemotron-rerank-vl-1b-v2:free`
-- **TTS Speech Audio**: `fish-audio/s2.1-pro-free:free`
+## Verified Free Endpoint Catalog (last-verified snapshot — 2026-11-23)
+
+> **Snapshot only — not the live source of truth.** Free ids churn without notice; reconcile
+> with `catalog --check` before relying on this list (see Catalog reconciliation below).
+> Capabilities marked **[RETIRED]** were delisted upstream and are preserved with reasons in
+> `catalog.json`'s `retired` array — never assume they are available. This snapshot was taken
+> from the **full catalog** (`output_modalities=all`): 739 models / 110 zero-cost — 12 chat,
+> 5 decide, 3 embed, 12 rerank, 4 TTS, plus 74 unclassified free candidates.
+
+- **Reasoning (with reasoning_details)**: `recursive/flint-v1.0:free` (Recursive Flint) — still live
+- **Reasoning & Code (Heavy)**: `nvidia/nemotron-3-ultra-550b-a55b:free` — still live
+- **Fast Subagent Coding**: `nvidia/nemotron-3.5-lightning:free` — still live
+- **General Free Router**: `openrouter/free` — still live
+- **Calibrated Decisions (JEV)** — live: `respan/span-01-lite:free` (lite, noul-only), `respan/span-01-lite`, `perplexity/pplx-decider-flash-v1.3:free`, `perplexity/pplx-decider-v1.3:free`, `parallel/decisions-fast`. **[RETIRED — delisted 2026-11-23]**: `baseten/mammoth-1:free`, `baseten/elephant-1:free`, `inception/mercury-decide:free`.
+- **Vector Embeddings** — live: `nvidia/nemotron-3.5-embed-1b:free`, `nvidia/nemotron-3.5-embed-8b:free`, `nvidia/nemotron-3-embed-1b:free`. **[RETIRED — delisted 2026-11-23]**: `liquid/lfm-2.5-embedding-350m:free`, `nvidia/llama-nemotron-embed-vl-1b-v2:free`.
+- **Neural Reranking** — live: `cohere/rerank-5-fast`, `cohere/rerank-5-pro`, `nvidia/nemotron-3.5-rerank-8b:free`, `mongodb/rerank-3-lite`, `mongodb/rerank-3`, `qwen/qwen3-reranker-0.6b`, `qwen/qwen3-reranker-8b`, `mongodb/rerank-2.5-lite`, `mongodb/rerank-2.5`, `cohere/rerank-4-pro`, `cohere/rerank-4-fast`, `cohere/rerank-v3.5`. **[RETIRED — delisted 2026-11-23]**: `nvidia/llama-nemotron-rerank-vl-1b-v2:free`.
+- **TTS Speech Audio** — live: `fish-audio/s2.1-pro-free:free`, `heygen/heygen-voice-1-turbo:free`, `google/lyria-3-pro-preview`, `google/lyria-3-clip-preview`. (The Lyria previews carry audio output in the full-catalog view; treat as live but verify.)
+- **Retired note-taking / agentic chat**: `dots-studio/dots-3-note-preview:free`, `thinkingmachines/inkling:free` — **[RETIRED — delisted 2026-11-23]**.
 - **Automatic Fallback**: Local Homelab -> Free High-Reasoning -> Dynamic Free -> Google AI Studio (`gemini-3.5-flash-lite` / `gemini-2.0-flash`)
+
+## Catalog reconciliation
+
+OpenRouter's free tier changes without notice, so the catalog is a living manifest
+(`catalog.json`, alongside `scripts/`). The list above is only the last-verified snapshot; the
+manifest is authoritative for the dynamic OpenRouter cascade: homelab (fixed) → manifest roles
+(chat / decide / embed / rerank / tts) → Gemini (fixed).
+
+**On every use of this skill, reconcile first** (read-only, spends no quota):
+
+```bash
+python3 scripts/or_agent.py catalog --check
+```
+
+- `--check` is read-only and exits non-zero on drift (new free models, delisted ids, or role
+  changes). If it reports drift, **show the full report to the user** and do not mutate the
+  manifest silently.
+- Run `python3 scripts/or_agent.py catalog --apply` **only after the user approves** that
+  report. `--apply` writes the manifest only: it adds healthy free models into their roles and
+  moves dead ids to `retired` with a reason (`delisted` | `priced` | `probe_failed`), never
+  hard-deleting history.
+- `python3 scripts/or_agent.py catalog --probe` is **opt-in and spends inference quota** (it
+  makes live calls to probe endpoint health). Run it only with explicit approval and
+  `OPENROUTER_API_KEY` set; the catalog fetch itself is public.
+- `CATALOG_PATH` overrides the manifest location for every `catalog` subcommand.
+- `--json` emits the report as structured data; `--fixture <path>` forces offline catalog data
+  for tests.
 
 ## Prerequisites
 - `OPENROUTER_API_KEY`: Required (`sk-or-v1-...`).

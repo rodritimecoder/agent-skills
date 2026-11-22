@@ -43,55 +43,87 @@ def _load_env_fallbacks():
 _load_env_fallbacks()
 
 
-CHAT_CASCADE = [
-    {
-        "provider": "homelab",
-        "model": "agent-coder",
-        "url": os.environ.get("HOMELAB_LITELLM_URL", "").rstrip("/") + "/chat/completions",
-        "env_key": "HOMELAB_LITELLM_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "dots-studio/dots-3-note-preview:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "thinkingmachines/inkling:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "nvidia/nemotron-3.5-lightning:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "recursive/flint-v1.0:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "qwen/qwen-2.5-coder-32b-instruct:free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "provider": "openrouter",
-        "model": "openrouter/free",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "env_key": "OPENROUTER_API_KEY",
-    },
+# --- Catalog-backed cascade loaders -----------------------------------------
+# The free endpoint set drifts constantly. The six cascades that used to be
+# hardcoded below are now thin loaders over catalog.json (override its location
+# with CATALOG_PATH). Homelab and Gemini stay fixed, non-free tiers.
+_SCRIPT_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+try:
+    import catalog_sync as _catalog_sync
+except ImportError:
+    _catalog_sync = None
+    sys.stderr.write(
+        "[openrouter-free] warning: catalog_sync.py unavailable; using embedded bootstrap catalog\n"
+    )
+
+_DEFAULT_CATALOG_PATH = Path(_SCRIPT_DIR).parent / "catalog.json"
+_ROLES = ("chat", "decide", "embed", "rerank", "tts")
+
+# Last verified 2026-11-23: the only zero-cost ids still present on OpenRouter.
+# Non-chat roles have no surviving free endpoints, so their bootstrap lists are
+# empty and those roles degrade to the chat/Gemini cascade until reconciled.
+_BOOTSTRAP_FREE_IDS = [
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "recursive/flint-v1.0:free",
+    "openrouter/free",
+]
+
+
+def _bootstrap_manifest():
+    return {
+        "schema_version": 1,
+        "source": "https://openrouter.ai/api/v1/models",
+        "updated_at": "",
+        "roles": {
+            role: (list(_BOOTSTRAP_FREE_IDS) if role == "chat" else []) for role in _ROLES
+        },
+        "models": {},
+        "candidates": [],
+        "retired": [],
+    }
+
+
+def _manifest_path():
+    return Path(os.environ.get("CATALOG_PATH") or _DEFAULT_CATALOG_PATH)
+
+
+def load_catalog_manifest():
+    """Return the active manifest, or the embedded bootstrap when unavailable."""
+    path = _manifest_path()
+    if _catalog_sync is not None and path.is_file():
+        try:
+            manifest = _catalog_sync.load_manifest(str(path))
+            if isinstance(manifest, dict) and isinstance(manifest.get("roles"), dict):
+                return manifest
+        except Exception as e:
+            sys.stderr.write(
+                f"[openrouter-free] warning: cannot load catalog {path}: {e}; using bootstrap\n"
+            )
+    return _bootstrap_manifest()
+
+
+def _active_model_ids(role):
+    """Ids active for a role, excluding anything already retired."""
+    manifest = load_catalog_manifest()
+    ids = (manifest.get("roles") or {}).get(role) or []
+    retired = {
+        r.get("id") for r in (manifest.get("retired") or []) if isinstance(r, dict)
+    }
+    return [mid for mid in ids if mid not in retired]
+
+
+# Fixed tiers: unchanged by catalog reconciliation.
+_HOMELAB_CHAT_TARGET = {
+    "provider": "homelab",
+    "model": "agent-coder",
+    "url": os.environ.get("HOMELAB_LITELLM_URL", "").rstrip("/") + "/chat/completions",
+    "env_key": "HOMELAB_LITELLM_KEY",
+}
+_GEMINI_CHAT_TARGETS = [
     {
         "provider": "gemini",
         "model": "gemini-3.5-flash-lite",
@@ -111,60 +143,86 @@ CHAT_CASCADE = [
         "env_key": "GEMINI_API_KEY",
     },
 ]
+_OR_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# JEV models speak OpenRouter's /api/alpha/decisions endpoint (typed noul/choice/score/box).
-JEV_DECISION_MODELS = [
-    "baseten/mammoth-1:free",   # 27B - heavier reasoning, complex multi-question decisions
-    "baseten/elephant-1:free",  # 9B  - fast, simple decisions
-    "respan/span-01-lite:free", # lite JEV decision model
-    "inception/mercury-decide:free",
-]
+
+def _dedupe(seq):
+    seen = set()
+    out = []
+    for item in seq:
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
+
+
+def chat_cascade():
+    """CHAT_CASCADE loader: homelab fixed + manifest free chat + gemini fixed."""
+    free = [
+        {
+            "provider": "openrouter",
+            "model": mid,
+            "url": _OR_CHAT_URL,
+            "env_key": "OPENROUTER_API_KEY",
+        }
+        for mid in _active_model_ids("chat")
+    ]
+    return [_HOMELAB_CHAT_TARGET] + free + list(_GEMINI_CHAT_TARGETS)
+
+
+def jev_decision_models():
+    """JEV_DECISION_MODELS loader: ids on OpenRouter's /api/alpha/decisions."""
+    return list(_active_model_ids("decide"))
+
+
+def decide_cascade():
+    """DECIDE_CASCADE loader: JEV decide ids, then free chat as graceful fallback."""
+    return _dedupe(_active_model_ids("decide") + _active_model_ids("chat"))
+
+
+def embed_cascade():
+    """EMBED_CASCADE loader."""
+    return list(_active_model_ids("embed"))
+
+
+def rerank_cascade():
+    """RERANK_CASCADE loader."""
+    return list(_active_model_ids("rerank"))
+
+
+def tts_cascade():
+    """TTS_CASCADE loader."""
+    return list(_active_model_ids("tts"))
+
 
 def _is_jev_model(model: str) -> bool:
+    """True only for ids still active in the manifest's JEV decide role.
+
+    A retired/decided-away id is no longer JEV, so callers drop to the chat/Gemini
+    cascade instead of probing a dead alpha endpoint.
+    """
     m = (model or "").lower()
-    return (
-        "mammoth" in m
-        or "elephant" in m
-        or "respan" in m
-        or "span-01" in m
-        or "inception" in m
-        or "decide" in m
-        or m in {x.lower() for x in JEV_DECISION_MODELS}
-    )
+    return bool(m) and m in {x.lower() for x in jev_decision_models()}
 
 
 def _jev_cascade_for(query: str, options: list = None) -> list:
-    # Optimise routing: fast 9B for simple/binary, 27B for richer multi-option decisions.
+    """Order active JEV ids: heavier first for multi-option, lite/noul first otherwise."""
+    active = jev_decision_models()
+    if not active:
+        return []
     if options:
-        # Respan is noul-only, so exclude it for choice decisions.
-        if len(options) >= 3:
-            return ["baseten/mammoth-1:free", "baseten/elephant-1:free", "inception/mercury-decide:free"]
-        return ["baseten/elephant-1:free", "baseten/mammoth-1:free", "inception/mercury-decide:free"]
-    # Binary/no-options: noul-capable models first (respan is lite & fast).
-    return ["respan/span-01-lite:free", "baseten/elephant-1:free", "baseten/mammoth-1:free", "inception/mercury-decide:free"]
+        heavier = [m for m in active if "mammoth" in m.lower()]
+        lighter = [m for m in active if "elephant" in m.lower()]
+        rest = [m for m in active if m not in heavier and m not in lighter]
+        first, second = (heavier, lighter) if len(options) >= 3 else (lighter, heavier)
+        return _dedupe(first + second + rest)
+    # No options: noul-capable ids (respan/span-01) first, they are lite and fast.
+    noul = [
+        m for m in active
+        if "respan" in m.lower() or "span-01" in m.lower()
+    ]
+    return _dedupe(noul + [m for m in active if m not in noul])
 
-
-DECIDE_CASCADE = [
-    "baseten/elephant-1:free",
-    "baseten/mammoth-1:free",
-    "respan/span-01-lite:free",
-    "inception/mercury-decide:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "openrouter/free",
-]
-
-EMBED_CASCADE = [
-    "liquid/lfm-2.5-embedding-350m:free",
-    "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-]
-
-RERANK_CASCADE = [
-    "nvidia/llama-nemotron-rerank-vl-1b-v2:free",
-]
-
-TTS_CASCADE = [
-    "fish-audio/s2.1-pro-free:free",
-]
 
 TOOLS = [
     {
@@ -249,7 +307,7 @@ def _http_post_json(url: str, payload: dict, api_key: str, timeout: int = 90) ->
 
 
 def call_llm_with_cascade(messages: list, preferred_model: str = None, enable_tools: bool = False):
-    cascade = [c for c in CHAT_CASCADE if c["url"] != "/chat/completions"]
+    cascade = [c for c in chat_cascade() if c["url"] != "/chat/completions"]
     if preferred_model:
         if "gemini" in preferred_model.lower():
             cascade.insert(
@@ -565,23 +623,22 @@ def run_decide(query: str, options: list = None, preferred_model: str = None,
             sys.stderr.write("[openrouter-free decide] %s error: %s\n" % (model, str(e)[:200]))
             continue
 
-    # Chat fallback (non-JEV or all JEV endpoints exhausted).
-    chat_model = preferred_model if (preferred_model and not _is_jev_model(preferred_model)) else "nvidia/nemotron-3.5-lightning:free"
+    # Chat fallback (non-JEV or all JEV endpoints exhausted): walk the manifest
+    # chat cascade and let it degrade through homelab -> free chat -> Gemini.
     prompt_text = query
     if options:
         opts_formatted = "\n".join("- %s" % o for o in options)
         prompt_text = "%s\n\nSelect strictly one of these options:\n%s" % (query, opts_formatted)
 
-    payload = {
-        "model": chat_model,
-        "messages": [
+    chat_pref = preferred_model if (preferred_model and not _is_jev_model(preferred_model)) else None
+    msg, chat_model = call_llm_with_cascade(
+        [
             {"role": "system", "content": "You are a calibrated zero-shot decision router. Give your verdict with confidence score."},
             {"role": "user", "content": prompt_text},
         ],
-        "temperature": 0.0,
-    }
-    data = _http_post_json("https://openrouter.ai/api/v1/chat/completions", payload, api_key, timeout=45)
-    content = data["choices"][0]["message"].get("content", "")
+        preferred_model=chat_pref,
+    )
+    content = msg.get("content", "") or ""
     verdict, confidence = _normalize_verdict(content, options)
     return {
         "status": "success",
@@ -604,7 +661,16 @@ def run_batched_embeddings(inputs: list, preferred_model: str = None, out_json: 
         else:
             resolved_texts.append(item)
 
-    models = ([preferred_model] if preferred_model else []) + [m for m in EMBED_CASCADE if m != preferred_model]
+    models = ([preferred_model] if preferred_model else []) + [m for m in embed_cascade() if m != preferred_model]
+    if not models:
+        # Role retired: no endpoint to probe. Degrade cleanly to the chat/Gemini
+        # cascade instead of hammering dead ids and crashing.
+        return {
+            "status": "degraded",
+            "reason": "embed role retired: no active free endpoints in catalog; use the chat/Gemini cascade",
+            "count": 0,
+            "saved_to": out_json,
+        }
     last_err = None
     for model in models:
         payload = {
@@ -646,7 +712,15 @@ def run_tts(text: str, out_path: str = "output.mp3", preferred_model: str = None
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY is required for TTS.")
 
-    models = ([preferred_model] if preferred_model else []) + [m for m in TTS_CASCADE if m != preferred_model]
+    models = ([preferred_model] if preferred_model else []) + [m for m in tts_cascade() if m != preferred_model]
+    if not models:
+        # Role retired: degrade cleanly rather than probing dead speech ids.
+        return {
+            "status": "degraded",
+            "reason": "tts role retired: no active free endpoints in catalog; use the chat/Gemini cascade",
+            "saved_path": out_path,
+            "bytes": 0,
+        }
     last_err = None
     for model in models:
         try:
@@ -707,6 +781,26 @@ def run_multi_pipeline(chat_prompt: str = None, embed_inputs: list = None, tts_t
             summary["tts"] = {"status": "error", "error": str(e)}
 
     return summary
+
+
+def _compute_catalog_drift(manifest):
+    """Return (drift, note) for ACTUAL catalog drift, never retired history.
+
+    A public GET via catalog_sync.fetch_catalog() is diffed against ``manifest``
+    with build_plan(); only that report's ``drift`` counts. Retired history
+    entries and degraded roles are diagnostic state, not drift. No chat,
+    completion, or inference call is made here. When catalog_sync is
+    unavailable or the public fetch fails (offline), drift is None with a
+    short note.
+    """
+    if _catalog_sync is None:
+        return None, "catalog_sync unavailable; drift not evaluated offline"
+    try:
+        catalog = _catalog_sync.fetch_catalog()
+        plan = _catalog_sync.build_plan(manifest, catalog)
+        return bool(plan["report"]["drift"]), None
+    except Exception as e:
+        return None, f"catalog fetch failed (offline); drift not evaluated ({type(e).__name__})"
 
 
 def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
@@ -786,6 +880,24 @@ def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
 
     status_str = "HEALTHY" if auth_ok else "UNHEALTHY"
 
+    # Local-only catalog status: no extra network calls beyond the auth probe above.
+    manifest = load_catalog_manifest()
+    catalog_retired = manifest.get("retired") or []
+    degraded_roles = [role for role in _ROLES if not _active_model_ids(role)]
+    catalog_loaded = _catalog_sync is not None and _manifest_path().is_file()
+    drift, drift_note = _compute_catalog_drift(manifest)
+    catalog_info = {
+        "source": manifest.get("source"),
+        "updated_at": manifest.get("updated_at") or None,
+        "loaded_from": "manifest" if catalog_loaded else "bootstrap",
+        "path": str(_manifest_path()),
+        "degraded_roles": degraded_roles,
+        "retired_count": len(catalog_retired),
+        "drift": drift,
+    }
+    if drift_note:
+        catalog_info["drift_note"] = drift_note
+
     report = {
         "status": status_str,
         "credentials": {
@@ -811,6 +923,7 @@ def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
             "rate_limit": auth_info.get("rate_limit", {}),
         },
         "local_homelab_fallbacks": local_services,
+        "catalog": catalog_info,
         "live_probe": live_results if live_probe else "omitted (use --live to probe)",
     }
 
@@ -847,7 +960,25 @@ def run_doctor(as_json: bool = False, live_probe: bool = False) -> int:
     return 0 if auth_ok else 1
 
 
-def main():
+def _catalog_subcommand(argv):
+    """Delegate `catalog ...` to catalog_sync, forwarding every remaining token."""
+    if _catalog_sync is None:
+        if "--help" in argv or "-h" in argv:
+            print("usage: or_agent.py catalog [--check|--apply|--probe] [--fixture PATH] [--json]")
+            print("\nReconcile openrouter-free catalog.json. Requires catalog_sync.py for full operation.")
+            return 0
+        sys.stderr.write("[openrouter-free] error: catalog_sync.py unavailable; cannot reconcile catalog\n")
+        return 1
+    return _catalog_sync.main(argv)
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "catalog":
+        sys.exit(_catalog_subcommand(argv[1:]))
+    if len(argv) >= 2 and argv[0] == "--json" and argv[1] == "catalog":
+        sys.exit(_catalog_subcommand(["--json"] + argv[2:]))
+
     parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.', description="OpenRouter Free Multimodal & Subagent CLI (Uber Protocol)")
     parser.add_argument("--json", action="store_true", dest="global_json",
                         help="machine-readable output for every command")
@@ -905,7 +1036,7 @@ def main():
     p_doc.add_argument("--json", action="store_true", help="Output health report as JSON")
     p_doc.add_argument("--live", action="store_true", help="Run live inference probe to verified free endpoints")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     args.json = getattr(args, "json", False) or args.global_json
 
     try:

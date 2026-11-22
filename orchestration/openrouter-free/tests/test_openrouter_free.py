@@ -123,5 +123,114 @@ class TestVerdictNormalization(unittest.TestCase):
         self.assertEqual(self.norm("Needs Review", ["needs review", "ok"])[0], "needs review")
 
 
+class TestCatalogDrift(unittest.TestCase):
+    """Offline pins for the doctor --json catalog.drift contract.
+
+    A retired *history* entry (or a degraded role) is diagnostic state, not
+    catalog drift. Only a fresh public catalog fetch diffed by build_plan may
+    set drift=true. When the fetch is unavailable, drift must be null.
+    """
+
+    class _FakeCatalogSync:
+        """Minimal catalog_sync stand-in: public GET + build_plan, no network."""
+
+        def __init__(self, catalog=None, report=None, fetch_exc=None):
+            self._catalog = [] if catalog is None else catalog
+            self._report = report or {"drift": False, "added": [], "retired": [], "reactivated": []}
+            self._fetch_exc = fetch_exc
+            self.plan_args = None
+
+        def fetch_catalog(self, *args, **kwargs):
+            if self._fetch_exc is not None:
+                raise self._fetch_exc
+            return self._catalog
+
+        def build_plan(self, manifest, catalog):
+            self.plan_args = (manifest, catalog)
+            return {"manifest": manifest, "report": dict(self._report)}
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+
+        path = Path(__file__).resolve().parent.parent / "scripts" / "or_agent.py"
+        spec = importlib.util.spec_from_file_location("or_agent_drift_under_test", path)
+        cls.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.mod)
+
+    @staticmethod
+    def _manifest_with_history(n=9):
+        return {
+            "source": "https://openrouter.ai/api/v1/models",
+            "updated_at": "2026-11-23T00:00:00Z",
+            "roles": {role: [] for role in ("chat", "decide", "embed", "rerank", "tts")},
+            "models": {},
+            "retired": [
+                {"id": f"dead/model-{i}:free", "reason": "delisted"} for i in range(n)
+            ],
+        }
+
+    def _doctor_catalog(self, fake_sync, manifest):
+        """Run run_doctor(as_json=True) fully offline; return its catalog field."""
+        import contextlib
+        import io
+        import os
+        from unittest import mock
+
+        originals = (
+            self.mod._catalog_sync,
+            self.mod.load_catalog_manifest,
+            self.mod.check_tcp_port,
+        )
+        self.mod._catalog_sync = fake_sync
+        self.mod.load_catalog_manifest = lambda: manifest
+        self.mod.check_tcp_port = lambda host, port, timeout=0.5: False
+        buf = io.StringIO()
+        try:
+            with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "", "GEMINI_API_KEY": ""}):
+                with contextlib.redirect_stdout(buf):
+                    self.mod.run_doctor(as_json=True)
+        finally:
+            (
+                self.mod._catalog_sync,
+                self.mod.load_catalog_manifest,
+                self.mod.check_tcp_port,
+            ) = originals
+        return json.loads(buf.getvalue())["catalog"]
+
+    def test_retired_history_alone_does_not_produce_drift_true(self):
+        """Nine retired entries + degraded roles must not flip drift to true."""
+        fake = self._FakeCatalogSync(report={"drift": False})
+        manifest = self._manifest_with_history(9)
+        catalog = self._doctor_catalog(fake, manifest)
+
+        self.assertEqual(catalog["retired_count"], 9)
+        self.assertTrue(catalog["degraded_roles"])
+        self.assertIs(catalog["drift"], False)
+        self.assertNotIn("drift_note", catalog)
+        self.assertIsNotNone(fake.plan_args)  # drift came from build_plan, not history
+        self.assertEqual(len(fake.plan_args[0]["retired"]), 9)
+
+    def test_fabricated_drift_report_propagates_as_true(self):
+        """A genuine build_plan drift report must surface as drift=true."""
+        fake = self._FakeCatalogSync(report={"drift": True, "added": ["free/new:free"]})
+        catalog = self._doctor_catalog(fake, self._manifest_with_history())
+        self.assertIs(catalog["drift"], True)
+        self.assertNotIn("drift_note", catalog)
+
+    def test_offline_or_unavailable_yields_null_drift(self):
+        """No catalog_sync, or a failed public fetch, yields drift=null + note."""
+        missing = self._doctor_catalog(None, self._manifest_with_history())
+        self.assertIsNone(missing["drift"])
+        self.assertIsInstance(missing.get("drift_note"), str)
+        self.assertTrue(missing["drift_note"])
+
+        offline = self._FakeCatalogSync(fetch_exc=OSError("network unreachable"))
+        failed = self._doctor_catalog(offline, self._manifest_with_history())
+        self.assertIsNone(failed["drift"])
+        self.assertIsInstance(failed.get("drift_note"), str)
+        self.assertTrue(failed["drift_note"])
+
+
 if __name__ == "__main__":
     unittest.main()
