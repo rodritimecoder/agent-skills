@@ -119,7 +119,8 @@ Two rules keep this table honest:
    cheap, so use them more readily for same-file work. They do not change the
    security boundary: a worktree still shares host, network and credentials.
    Untrusted or host-mutating work still goes to `subagent-spaces` (Podman) or
-   a VM. See `../apiv-loop/SKILL.md` → Triggered escalation.
+   a VM. The portable method lives in `../apiv-loop/SKILL.md`; T3 tool bindings
+   live in `../apiv-loop/references/t3-code-adapter.md`.
 
 ## 🚫 T3 Anti-Patterns to Avoid
 
