@@ -58,7 +58,7 @@ metadata:
 1. **Use imperative phrasing:** Frame as an instruction to the agent (`"Use this skill when..."`, `"MUST USE for:"`) rather than passive third-person (`"This skill does..."`).
 2. **Focus on user intent, not internal mechanics:** Match how users phrase their goal ("pull lecture recordings", "verify UI layout") rather than internal module names.
 3. **Cover implicit & adjacent triggers:** Call out cases where the user doesn't name the format/tool directly (`"even if they don't explicitly mention 'CSV' or 'analysis'"`).
-4. **Prevent keyword overfitting (`omnicli eval` discipline):**
+4. **Prevent keyword overfitting (`hard gate holdouts` discipline):**
    - Split trigger evals into ~60% train / ~40% validation (`golden_eval.json` vs `paraphrase_eval.json`).
    - Add realistic **should-trigger** prompts (formal, casual, typos, implicit domain) and hard **should-not-trigger** near-neighbors.
    - Audit curated aliases against eval queries with `python3 tests/overfit_check.py` so proper nouns live in `catalog/aliases.json` instead of polluting descriptions.

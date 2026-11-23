@@ -23,8 +23,8 @@ Antigravity enforces Kem's Law: *"A skill is instructions the model may ignore; 
 
 `orchestration/omnicli/hooks/agy_omnicli_hook.py` wires into `~/.gemini/config/hooks.json` under `"omnicli-route"`:
 
-1. **`PreInvocation` Hook:** Injects `[omnicli route]` into the prompt context, directing the agent to use `omnicli search` / `exec` instead of manual discovery.
-2. **`PreToolUse` Gate:** Automatically intercepts `view_file` and shell read commands (`cat`, `grep`, `rg`, `find`, etc.) targeting `~/src/my-agent-skills/**`. If an unprimed agent attempts to read skill directories directly without calling `omnicli search`, the hook rejects the call with `{"decision": "deny"}`.
+1. **`PreInvocation` Hook:** Injects `[omnicli route]` into the prompt context, directing the agent to use `omnicli exec (filesystem discovery)` / `exec` instead of manual discovery.
+2. **`PreToolUse` Gate:** Automatically intercepts `view_file` and shell read commands (`cat`, `grep`, `rg`, `find`, etc.) targeting `~/src/my-agent-skills/**`. If an unprimed agent attempts to read skill directories directly without calling `omnicli exec (filesystem discovery)`, the hook rejects the call with `{"decision": "deny"}`.
 3. **Observability:** Logs all allows, denials, and exemptions to `~/.local/share/omnicli/route.jsonl`.
 
 ```json
@@ -142,7 +142,7 @@ When dispatching parallel workers with `invoke_subagent`, equip subagents with `
       "TypeName": "self",
       "Role": "Audio Transcription Worker",
       "Workspace": "branch",
-      "Prompt": "Run `omnicli search 'transcribe audio'` to locate audio.cpp tooling, then transcribe input.wav with `omnicli invoke`."
+      "Prompt": "Run `omnicli exec (filesystem discovery) 'transcribe audio'` to locate audio.cpp tooling, then transcribe input.wav with `omnicli invoke`."
     }
   ]
 }

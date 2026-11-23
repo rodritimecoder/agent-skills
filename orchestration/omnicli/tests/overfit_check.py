@@ -1,38 +1,49 @@
-"""Detect alias overfitting.
+"""Detect alias overfitting against each skill's own documentation.
 
-An alias that is a verbatim echo of a golden-eval query makes the evaluation
-meaningless: the router is being handed the answer key. This script finds
-every alias that overlaps an eval query, so the alias set can be reduced to
-*natural domain synonyms* — the words a user would actually type — and the
-reported accuracy can be trusted.
+A multiword alias that cannot be derived from the skill's own description or
+SKILL.md body is a query echo: it was copied from a distinctive user query
+into the alias set instead of being drawn from the vocabulary the skill
+actually documents. This is a HARD pre-push gate leg — it must be able to
+fail, and it does not depend on any evaluation set.
 
 Usage:
     python3 tests/overfit_check.py
+    OMNICLI_ALIASES_FILE=/tmp/aliases.json python3 tests/overfit_check.py
+
+Exit codes:
+    0  no non-derivable multiword aliases (clean)
+    1  at least one non-derivable multiword alias (QUERY ECHO / overfitting)
+    2  fatal: aliases unreadable, invalid, or skill discovery failed
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-from catalog import builder  # noqa: E402
+from catalog import registry  # noqa: E402
 
-GOLDEN = HERE / "golden_eval.json"
 ALIASES = HERE.parent / "catalog" / "aliases.json"
+ALIASES_ENV = "OMNICLI_ALIASES_FILE"
+
+
+def aliases_path() -> Path:
+    """The overrides exist for tests; they never skip or loosen the check."""
+    override = os.environ.get(ALIASES_ENV)
+    return Path(override) if override else ALIASES
 
 
 def normalise(s: str) -> str:
     return " ".join(s.lower().replace("-", " ").split())
 
 
-def skill_corpus(skill: str) -> str:
-    """The skill's own documentation, lowercased."""
-    from catalog import registry
-    skills = registry.load_all_skills()
+def skill_corpus(skill: str, skills: dict) -> str:
+    """The skill's own documentation — description + SKILL.md body, lowercased."""
     s = skills.get(skill)
     if not s:
         return ""
@@ -46,21 +57,41 @@ def skill_corpus(skill: str) -> str:
     return normalise(" ".join(parts))
 
 
-def main() -> None:
-    from catalog import registry
+def is_derivable(alias: str, corpus: str) -> bool:
+    """True when the alias can be built from the skill's own documentation.
 
-    cases = json.loads(GOLDEN.read_text(encoding="utf-8"))["cases"]
-    aliases = json.loads(ALIASES.read_text(encoding="utf-8"))
-    # Only indexed skills can hand out an answer key. An archived skill's
-    # aliases never reach the FTS table, so counting them as overfitting is a
-    # false positive that hides the real ones.
-    indexed = set(registry.load_all_skills())
+    Either the whole phrase appears verbatim, or every content word (length
+    > 3) appears in the docs — the vocabulary may be non-contiguous, e.g.
+    "merge conflicts" ~ "automated merge conflict arbitration".
+    """
+    na = normalise(alias)
+    if na and na in corpus:
+        return True
+    content = [w for w in na.split() if len(w) > 3]
+    return len(content) >= 2 and all(w in corpus for w in content)
 
-    queries = [(c["query"], normalise(c["query"])) for c in cases]
+
+def main() -> int:
+    try:
+        aliases = json.loads(aliases_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"overfit_check: cannot load aliases: {exc}", file=sys.stderr)
+        return 2
+
+    try:
+        skills = registry.load_all_skills()
+    except Exception as exc:
+        print(f"overfit_check: cannot load skills: {exc}", file=sys.stderr)
+        return 2
+
+    # Only indexed skills can put an alias into the index. An archived skill's
+    # aliases never reach it, so counting them as overfitting is a false
+    # positive that hides the real ones.
+    indexed = set(skills)
     corpora: dict[str, str] = {}
 
-    derived = []   # echo of a query, but the words come from the skill's own docs
-    overfit = []   # echo of a query, and NOT derivable from the skill's docs
+    derived = []   # multiword alias whose words come from the skill's own docs
+    overfit = []   # multiword alias NOT derivable from the skill's own docs
     skipped = []   # aliases belonging to a skill the catalog does not index
 
     for skill, cfg in aliases.items():
@@ -68,62 +99,38 @@ def main() -> None:
             skipped.extend((skill, a) for a in cfg.get("aliases", []))
             continue
         if skill not in corpora:
-            corpora[skill] = skill_corpus(skill)
+            corpora[skill] = skill_corpus(skill, skills)
         corpus = corpora[skill]
         for alias in cfg.get("aliases", []):
-            na = normalise(alias)
-            words = na.split()
+            words = normalise(alias).split()
             if len(words) < 2:
                 # A single domain word ("audio", "canvas", "transcribe") is
                 # the skill's own vocabulary, not an answer key. Only
-                # multi-word phrases can smuggle a distinctive query
-                # fragment into the index.
+                # multiword phrases can smuggle a distinctive fragment in.
                 continue
-            for raw_q, nq in queries:
-                echo = na and (na in nq or nq in na)
-                if not echo:
-                    for i in range(len(words) - 4):
-                        if " ".join(words[i:i + 5]) in nq:
-                            echo = True
-                            break
-                if not echo:
-                    continue
-                # A two-word alias that happens to appear in a query is not
-                # an answer key: "force push", "rm rf", "drop table" and
-                # "out loud" are all legitimate domain terms. Containment
-                # only counts from three words up; shorter overlaps are
-                # left to the 5-gram check, which needs five.
-                if len(words) < 3 and na in nq:
-                    continue
-                # Derivable? Either the alias phrase appears verbatim in the
-                # skill's own documentation, or at least two of its content
-                # words do (the vocabulary may be non-contiguous, e.g.
-                # "merge conflicts" ~ "automated merge conflict arbitration").
-                content = [w for w in words if len(w) > 3]
-                if na and na in corpus:
-                    derived.append((skill, alias, raw_q))
-                elif len(content) >= 2 and all(w in corpus for w in content):
-                    derived.append((skill, alias, raw_q))
-                else:
-                    overfit.append((skill, alias, raw_q))
-                break
+            if is_derivable(alias, corpus):
+                derived.append((skill, alias))
+            else:
+                overfit.append((skill, alias))
 
     print(f"aliases checked : {sum(len(c.get('aliases', [])) for c in aliases.values())}")
-    print(f"eval queries    : {len(cases)}")
     if skipped:
-        skills = sorted({s for s, _ in skipped})
-        print(f"not indexed     : {len(skipped)} aliases on {', '.join(skills)} "
-              f"(sidelined; cannot echo an answer key)")
+        skill_names = sorted({s for s, _ in skipped})
+        print(f"not indexed     : {len(skipped)} aliases on {', '.join(skill_names)} "
+              f"(sidelined; cannot reach the index)")
     print(f"\nDERIVED from the skill's own docs (legitimate): {len(derived)}")
-    for skill, alias, q in derived:
-        print(f"  ✅ {skill:<22} {alias!r}")
-    print(f"\nQUERY ECHOES (overfitting — the answer key): {len(overfit)}")
-    for skill, alias, q in overfit:
-        print(f"  ⚠️  {skill:<22} alias={alias!r}")
-        print(f"      echo of: {q!r}")
+    for skill, alias in derived:
+        print(f"  OK {skill:<22} {alias!r}")
+    print(f"\nQUERY ECHOES (non-derivable multiword aliases): {len(overfit)}")
+    for skill, alias in overfit:
+        print(f"  !! {skill:<22} {alias!r}")
     print()
-    return 0 if not overfit else 1
+    return 1 if overfit else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as exc:  # fatal: do not claim a verdict we cannot measure
+        print(f"overfit_check: internal error: {exc}", file=sys.stderr)
+        sys.exit(2)

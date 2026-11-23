@@ -4,13 +4,13 @@ omnicli — the Uber OmniCLI: one late-binding gateway to every local tool.
 
 One gateway, two surfaces over one catalog:
 
-  CLI        omnicli search | describe | invoke | status
+  CLI        omnicli describe | invoke | status
   Code Mode  omnicli exec plan.mjs  (typed JS SDK, sandboxed node:vm, one turn)
 
-The catalog is a BM25 (SQLite FTS5) index over the full body of every skill,
-with hand-curated aliases in a separately weighted column. An agent discovers
-a tool by *intent*, then pulls exactly one tool's contract, then invokes it
-with a bounded response. Nothing else ever enters the context window.
+Agents discover tools through exec-only filesystem discovery (lsSkills /
+readSkill / readResource + describe), then pull exactly one tool's contract
+and invoke it with a bounded response. Nothing else ever enters the context
+window.
 
 Native local inference (llm / ocr / decide / asr) is available as first-class
 tools, and as a direct subcommand for interactive use.
@@ -53,12 +53,11 @@ try:
     from catalog import bridge as bridge_mod
     from catalog import exec_runner as exec_runner_mod
     from catalog import harness as harness_mod
-    from catalog import resolve as resolve_mod
-    from catalog import builder, health, invoke, policy, registry, search, vectors  # noqa: E402
+    from catalog import builder, health, invoke, policy, registry  # noqa: E402
 except ImportError:  # pragma: no cover - degraded install
     aliases_mod = bindings_mod = bridge_mod = argspec_mod = harness_mod = None
     exec_runner_mod = None
-    builder = registry = search = health = invoke = policy = None  # type: ignore
+    builder = registry = health = invoke = policy = None  # type: ignore
 
 # The response cap. An agent must never be able to pull an unbounded payload
 # into its context window, even by forgetting the flags. The implementation
@@ -150,10 +149,10 @@ def _load_trace(path: Path) -> list:
 
 
 def cmd_usage(trace=None, since="7d", as_json=False, limit=10):
-    """Who calls omnicli, what they call, and whether a search goes anywhere."""
+    """Who calls omnicli, what they call, and whether calls lead anywhere."""
     path = Path(trace).expanduser() if trace else _user_trace_path()
     if not path.is_file():
-        sys.exit(f"❌ Error: no trace at {path}. Make one with `omnicli search`, or pass --trace.")
+        sys.exit(f"❌ Error: no trace at {path}. Pass --trace.")
 
     cutoff = _parse_since(since)
     calls = []
@@ -339,80 +338,6 @@ def parse_invoke_args(argv: list[str]) -> tuple[str | None, dict, list[str]]:
     return tool_id, opts, tool_args
 
 
-# `do` is parsed manually for the same two reasons as `invoke`: REMAINDER
-# would swallow the intent, and tool flags collide with gateway flags. The
-# split here is stricter — the intent is ONE token, and tool arguments only
-# ever arrive after `--`. Anything else is a malformed call, refused rather
-# than guessed at, because "the third word was probably a filename" is how a
-# correct refusal turns into a wrong execution.
-
-DO_VALUE_FLAGS = {
-    **INVOKE_VALUE_FLAGS,
-    "--skill": "skill",
-    "--tool": "tool",
-    "--margin": "margin",
-}
-DO_BOOL_FLAGS = {
-    "--dry-run": "dry_run",
-    "--omni-json": "json",
-}
-
-
-def parse_do_args(argv: list[str]) -> tuple[str | None, dict, list[str]]:
-    """Split `do` arguments into (intent, gateway options, tool args)."""
-    opts: dict[str, Any] = {
-        "buffer": None, "project": None, "jq": None, "grep": None,
-        "max_bytes": DEFAULT_MAX_BYTES, "json": False, "timeout": 300.0,
-        "skill": None, "tool": None, "margin": None, "dry_run": False,
-    }
-    intent: str | None = None
-    tool_args: list[str] = []
-    i = 0
-    while i < len(argv):
-        a = argv[i]
-        if a == "--":
-            tool_args.extend(argv[i + 1:])
-            break
-        if a in DO_VALUE_FLAGS:
-            key = DO_VALUE_FLAGS[a]
-            if i + 1 >= len(argv):
-                sys.exit(f"❌ Error: {a} needs a value.")
-            val = argv[i + 1]
-            if key in ("max_bytes", "timeout"):
-                try:
-                    opts[key] = int(val) if key == "max_bytes" else float(val)
-                except ValueError:
-                    sys.exit(f"❌ Error: {a} expects a number, got {val!r}.")
-            elif key == "margin":
-                try:
-                    opts[key] = float(val)
-                except ValueError:
-                    sys.exit(f"❌ Error: {a} expects a number, got {val!r}.")
-            else:
-                opts[key] = val
-            i += 2
-            continue
-        if a in DO_BOOL_FLAGS:
-            opts[DO_BOOL_FLAGS[a]] = True
-            i += 1
-            continue
-        if a.startswith("--omni-"):
-            print(f"⚠️  omnicli: unknown gateway flag {a!r} ignored "
-                  f"(known: {', '.join(sorted(DO_VALUE_FLAGS))})",
-                  file=sys.stderr)
-            i += 1
-            continue
-        if intent is None and not a.startswith("-"):
-            intent = a
-            i += 1
-            continue
-        if intent is not None and not a.startswith("-"):
-            sys.exit(f"❌ Error: `omnicli do` takes ONE intent token; got {a!r} after "
-                     f"{intent!r}. Quote the intent as a single argument and pass "
-                     f"tool arguments after `--`.")
-        sys.exit(f"❌ Error: `omnicli do` does not accept flag {a!r} before the "
-                 f"intent. Gateway flags: {', '.join(sorted(DO_VALUE_FLAGS))}.")
-    return intent, opts, tool_args
 
 
 # --------------------------------------------------------------------------
@@ -425,7 +350,6 @@ def cmd_status(as_json: bool = False):
     results = probe["services"]
 
     catalog_info = {}
-    tier = "unavailable"
     if builder is not None:
         try:
             con = builder.connect()
@@ -438,12 +362,6 @@ def cmd_status(as_json: bool = False):
                 "rebuilt": built.get("rebuilt"),
                 "db": str(builder.db_path()),
             }
-            vstatus = vectors.status(con)
-            catalog_info["vectors"] = vstatus
-            if vstatus.get("vectors"):
-                tier = "bm25"
-            else:
-                tier = "bm25 (no vectors)"
         except Exception as exc:  # pragma: no cover
             catalog_info = {"error": str(exc)}
 
@@ -451,7 +369,6 @@ def cmd_status(as_json: bool = False):
         "tailscale_address": ts_addr,
         "services": results,
         "catalog": catalog_info,
-        "retrieval_tier": tier,
     }
 
     if as_json:
@@ -472,7 +389,6 @@ def cmd_status(as_json: bool = False):
     if catalog_info.get("skills") is not None:
         print(f"   📇 Catalog : {catalog_info['skills']} skills · {catalog_info['tools']} tools · "
               f"{catalog_info['docs']} docs")
-        print(f"   🔎 Retrieval tier: {tier}")
         print(f"   💾 Index   : {catalog_info.get('db')}")
     print("   💡 Tip: `tailscale-ops sync` reconciles the tailnet surface to ports.json.")
     print()
@@ -587,222 +503,6 @@ def cmd_harness(subaction: str = "list", target: str | None = None, as_json: boo
         sys.exit(f"❌ Error: unknown harness action {subaction!r}. Use: list, detect, info, config, verify.")
 
 
-# --------------------------------------------------------------------------
-# search
-# --------------------------------------------------------------------------
-
-def _search_contract(con, res, as_json: bool, section: str, doc: str):
-    """At ``--depth contract``, return what ``describe`` returns for the top hit.
-
-    The tool is resolved from the top-ranked result's winning chunk (its title
-    is the tool id for script chunks), falling back to that skill's primary
-    script tool. Contract construction is delegated to the same helpers
-    ``cmd_describe`` uses, so the two surfaces cannot drift.
-    """
-    results = res.get("results") or []
-    if not results:
-        if as_json:
-            print(json.dumps({"depth": "contract", "error": "no match",
-                              "note": res.get("note", "")}, indent=2, ensure_ascii=False))
-        else:
-            print(f"\n🔍 No match for: {res.get('query')!r} (no contract to read).\n")
-        return
-
-    top = results[0]
-    chunks = top.get("chunks") or []
-    top_chunk = chunks[0] if chunks else {}
-    target = top_chunk.get("title") if top_chunk.get("kind") in ("script", "tool") else None
-    if target and not con.execute("SELECT 1 FROM tools WHERE id = ?", (target,)).fetchone():
-        target = None
-    if not target:
-        skill = top.get("skill")
-        cands = con.execute(
-            "SELECT id FROM tools WHERE skill = ? AND kind = 'script' ORDER BY id LIMIT 1",
-            (skill,),
-        ).fetchall()
-        target = cands[0]["id"] if cands else skill
-
-    row = con.execute("SELECT * FROM tools WHERE id = ?", (target,)).fetchone()
-    if row is None:
-        # No script tool for this skill: fall back to its own describe (body,
-        # section or document), reusing the existing helper verbatim.
-        return _describe_skill(con, target, section, as_json, doc)
-
-    payload = _build_tool_contract(con, row)
-    if as_json:
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
-        return
-    skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
-    about = skill["description"] if skill and skill["description"] else ""
-    _print_tool_contract(payload, about)
-
-
-_EMBED_AUTOSTART_TIMEOUT = 120.0   # hard cap on `llama-rig ensure 8084 --json`
-_EMBED_REBUILD_TIMEOUT = 300.0     # bounded wait for one `omnicli index --rebuild`
-
-# A non-zero exit OR one of these `status` values means the slot is not ready.
-_EMBED_BAD_STATUS = {"timeout", "failed", "error", "offline", "stopped",
-                     "unavailable", "not_ready", "not-ready"}
-
-
-def _ensure_embed_slot(con):
-    """Bring :8084 (bge-small) up so a search never silently drops to BM25.
-
-    Delegates the probe/start/wait to model-layer's `llama-rig ensure 8084
-    --json` primitive; omnicli no longer polls health itself. The slot is left
-    warm — `llama-rig down 8084` is the manual way to reclaim the VRAM. Every
-    failure degrades to the existing BM25 path; a search must never crash
-    because a model server could not start.
-    """
-    if os.environ.get("OMNICLI_NO_AUTOSTART") == "1":
-        return con
-    if search is None:
-        return con
-
-    manual = "llama-rig up local-embed-bge  (alias of :8084)"
-    shown = "llama-rig ensure 8084"
-    rig = shutil.which("llama-rig")
-    if not rig:
-        print(f"⚠️  [omnicli] dense leg offline and llama-rig not on PATH — "
-              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
-        return con
-
-    # One upstream call owns health-polling, start and bounded wait. The
-    # subprocess timeout is only a hard cap on the whole call.
-    cmd = [rig, "ensure", "8084", "--json"]
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True,
-                             timeout=_EMBED_AUTOSTART_TIMEOUT)
-    except subprocess.TimeoutExpired:
-        print(f"⚠️  [omnicli] `{shown}` timed out after {_EMBED_AUTOSTART_TIMEOUT:.0f}s — "
-              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
-        return con
-    except OSError as exc:
-        print(f"⚠️  [omnicli] `{shown}` could not run ({exc}) — "
-              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
-        return con
-
-    # Structured result feeds the audit line; malformed JSON keeps the fallback
-    # honest instead of assuming success.
-    info = {}
-    try:
-        parsed = json.loads(res.stdout)
-        if isinstance(parsed, dict):
-            info = parsed
-    except (ValueError, TypeError):
-        pass
-    started = info.get("started")
-    waited_ms = info.get("waited_ms")
-    status = info.get("status")
-    detail = ((res.stderr or res.stdout or "").strip().splitlines() or [""])[-1]
-
-    bad_status = status is not None and str(status).lower() in _EMBED_BAD_STATUS
-    if res.returncode != 0 or bad_status:
-        print(f"⚠️  [omnicli] `{shown}` failed (status={status}): {detail} — "
-              f"start :8084 with `{manual}`; staying on BM25", file=sys.stderr)
-        return con
-
-    # The cached probe predates the start; clear it so the next search sees the
-    # live endpoint instead of re-entering this path for the rest of its TTL.
-    if hasattr(search, "_PROBE"):
-        search._PROBE.update({"ok": True, "at": 0})
-
-    if started:
-        print(f"   [omnicli] auto-started dense leg: `{shown}` "
-              f"(waited_ms={waited_ms}, status={status}; "
-              f"left warm; `llama-rig down 8084` frees VRAM)", file=sys.stderr)
-
-    # An index built while dense was offline has zero stored vectors. Run one
-    # rebuild (never a loop); cmd_index does not re-enter search.
-    if vectors is not None and vectors.status(con).get("vectors", 0) == 0:
-        con.close()  # release any read lock so the rebuild can write
-        rebuilt = False
-        try:
-            rr = subprocess.run(
-                [sys.executable, str(SCRIPT_PATH), "index", "--rebuild"],
-                capture_output=True, text=True, timeout=_EMBED_REBUILD_TIMEOUT,
-            )
-            if rr.returncode == 0:
-                rebuilt = True
-            else:
-                detail = ((rr.stderr or rr.stdout or "").strip().splitlines() or [""])[-1]
-                print(f"⚠️  [omnicli] `omnicli index --rebuild` failed: {detail} — "
-                      f"rerun it manually; BM25 where vectors are missing",
-                      file=sys.stderr)
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            print(f"⚠️  [omnicli] `omnicli index --rebuild` failed ({exc}) — "
-                  f"rerun it manually; BM25 where vectors are missing", file=sys.stderr)
-        finally:
-            con = builder.connect()
-        if rebuilt:
-            print("   [omnicli] built missing vectors: `omnicli index --rebuild` (once)",
-                  file=sys.stderr)
-    return con
-
-
-def cmd_search(query: str, as_json: bool = False, limit: int = 6,
-               explain: bool = False, no_rerank: bool = False, rerank: str = "never",
-               chunks: bool = False, fusion: str = "never",
-               depth: str = "brief", section: str = "", doc: str = ""):
-    con = _require_catalog()
-    mode = "never" if no_rerank else rerank
-    # :8084 (dense leg) is only brought up when the caller explicitly opts into
-    # dense fusion. Default search stays pure BM25 and never spawns llama-rig.
-    if fusion in ("always", "auto"):
-        con = _ensure_embed_slot(con)
-    if mode == "always" and not search.embedding_available():
-        print("⚠️  [omnicli] --rerank always requested but the embedding endpoint "
-              "(:8084) is offline; staying on BM25", file=sys.stderr)
-    res = search.search(con, query, limit=limit, rerank_enabled=mode,
-                        fusion=fusion, explain=explain)
-
-    # --chunks is the legacy spelling of --depth chunks.
-    if chunks and depth == "brief":
-        depth = "chunks"
-
-    if depth == "contract":
-        return _search_contract(con, res, as_json, section, doc)
-
-    if as_json:
-        # Routing needs names and scores; the chunk archive is opt-in. The
-        # full shape is ~25 KB (~6.3k tokens) for ten results, which is more
-        # context than the skill being routed to.
-        if depth != "chunks":
-            res = dict(res)
-            res["results"] = search.compact(res["results"])
-            res["shape"] = "compact"
-        print(json.dumps(res, indent=2, ensure_ascii=False))
-        return
-
-    if not res["results"]:
-        print(f"\n🔍 No match for: {query!r}")
-        if res.get("note"):
-            print(f"   {res['note']}")
-        print("   Try a different phrasing, or `omnicli list` to browse the registry.\n")
-        return
-
-    print(f"\n🔍 [omnicli] intent: {query!r}   tier={res['tier']}   "
-          f"candidates={res['candidate_chunks']}\n")
-    for i, r in enumerate(res["results"], 1):
-        print(f"  {i}. {r['skill']}   score={r['score']:.2f}  "
-              f"lex={r['lexical_score']:.2f}  coord={r['coordination']:.2f}  "
-              f"chunks={r['coverage']}")
-        if explain:
-            print(f"       matched : {', '.join(r.get('matched_terms', []))}")
-            print(f"       top hit : [{r['chunks'][0]['kind']}] {r['chunks'][0]['title']}")
-            print(f"       {r['chunks'][0]['snippet'][:180]}")
-        else:
-            print(f"       {r['chunks'][0]['snippet'][:150]}")
-        top = r["chunks"][0]
-        if top.get("kind") == "doc":
-            rel = top["path"].split("/suites/")[-1]
-            print(f"       → omnicli describe {r['skill']} --doc \"{rel}\"")
-        else:
-            print(f"       → omnicli tools {r['skill']}")
-        print()
-    print("   Next: `omnicli describe <tool_id>` for one contract, "
-          "`omnicli invoke <tool_id> --args ...` to run it.\n")
-
 
 # --------------------------------------------------------------------------
 # registry
@@ -862,11 +562,11 @@ def cmd_tools(skill_name: str, as_json: bool = False):
 
 
 def _describe_doc(con, name: str, query: str, as_json: bool = False):
-    """Read one document the skill declared as part of its searchable body.
+    """Read one document the skill declared as part of its body.
 
     The query is matched loosely: an exact title, a path suffix, a path
-    fragment, or the file's stem. An agent that saw a snippet in a search
-    result should be able to name the document the way the result named it.
+    fragment, or the file's stem. An agent that saw a snippet should be able
+    to name the document the way the result named it.
     """
     q = query.strip().lower()
     rows = con.execute(
@@ -977,8 +677,7 @@ def _describe_skill(con, name: str, section_name: str, as_json: bool = False, do
 def _build_tool_contract(con, row):
     """Build the describe payload for one tool row.
 
-    Shared by ``cmd_describe`` and ``search --depth contract`` so both
-    surfaces return exactly the same contract shape for the same tool.
+    Used by ``cmd_describe`` to return one tool's exact input contract.
     """
     contract = json.loads(row["contract"] or "{}")
     skill = con.execute("SELECT * FROM skills WHERE name = ?", (row["skill"],)).fetchone()
@@ -1146,85 +845,6 @@ def cmd_invoke(tool_id: str, extra_args: list[str], out_path: str | None = None,
     sys.exit(run["exit_code"])
 
 # --------------------------------------------------------------------------
-# do — search, describe and invoke collapsed into one hop
-# --------------------------------------------------------------------------
-
-# Exit codes are part of the contract: a caller that only reads the status
-# must be able to tell "refused because ambiguous" from "refused because the
-# contract needs an argument". They are stable so scripts can branch on them.
-DO_EXIT = {
-    "ok": 0,
-    "no_match": 2,
-    "ambiguous": 3,
-    "missing_args": 4,
-    "no_tool": 5,
-}
-
-
-def cmd_do(intent: str, opts: dict, tool_args: list[str]):
-    con = _require_catalog()
-    decision = resolve_mod.resolve(
-        con, intent,
-        skill_hint=opts.get("skill"),
-        tool_hint=opts.get("tool"),
-        do_margin=opts.get("margin"),
-    )
-    status = decision.get("status", "no_match")
-
-    if status == "ok":
-        if opts.get("dry_run"):
-            # Resolve without executing: this is what the measurement harness
-            # calls, so a probe never runs a tool to learn where it would go.
-            print(json.dumps({
-                "status": "ok",
-                "skill": decision.get("skill"),
-                "tool": decision.get("tool"),
-                "argv": decision.get("argv"),
-                "supplied": tool_args,
-                "would_execute": True,
-            }, indent=2, ensure_ascii=False))
-            return
-        cmd_invoke(
-            decision["tool"], tool_args,
-            out_path=opts.get("buffer"), project_fields=opts.get("project"),
-            jq_expr=opts.get("jq"), grep=opts.get("grep"),
-            max_bytes=opts["max_bytes"], as_json=opts.get("json", False),
-            timeout=float(opts["timeout"]),
-        )
-        return
-
-    if opts.get("json"):
-        payload = {k: v for k, v in decision.items() if k != "contract"}
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
-    elif status == "missing_args":
-        # Loud by design: print the contract stub the caller needs to retry.
-        print(resolve_mod.stub_for(decision))
-    else:
-        reason = decision.get("reason") or status
-        level = decision.get("level")
-        # `no_tool` is a lookup miss, not a judgement call, so it does not get
-        # the "refusing to guess" framing or the narrowing advice — there is
-        # nothing to narrow toward.
-        if status == "no_tool":
-            print(f"❌ omnicli do: no tool — {reason}.")
-            print(f"   intent : {intent!r}")
-            print("   Browse: `omnicli list`  |  `omnicli tools <skill>`")
-        else:
-            gate = f"{status} ({level})" if level else status
-            print(f"❌ omnicli do: {gate} — refusing to guess.")
-            print(f"   intent : {intent!r}")
-            print(f"   reason : {reason}")
-            for i, cand in enumerate((decision.get("candidates") or [])[:4], 1):
-                name = cand.get("name", "?")
-                score = cand.get("score", 0.0)
-                print(f"   {i}. {name}   score={score}")
-            if status == "no_match":
-                print('   Try `omnicli search "<intent>"` to browse matches.')
-            else:
-                print('   Narrow the intent, or run `omnicli search "<intent>" --explain`.')
-    sys.exit(DO_EXIT.get(status, 2))
-
-# --------------------------------------------------------------------------
 # policy — discovery does not imply exposure
 # --------------------------------------------------------------------------
 
@@ -1382,11 +1002,11 @@ def cmd_alias(skill: str = None, aliases: str = None, tags: str = None,
 
 
 # --------------------------------------------------------------------------
-# index / eval
+# index
 # --------------------------------------------------------------------------
 
 def cmd_index(rebuild: bool = False, with_contracts: bool = True, as_json: bool = False,
-              check: bool = False, with_vectors: bool = True):
+              check: bool = False):
     con = builder.connect()
 
     if check:
@@ -1416,9 +1036,6 @@ def cmd_index(rebuild: bool = False, with_contracts: bool = True, as_json: bool 
 
     t0 = time.monotonic()
     summary = builder.ensure_built(con, rebuild=rebuild, with_contracts=with_contracts, progress=True)
-    if with_vectors:
-        from catalog import vectors as vectors_mod
-        summary["vectors"] = vectors_mod.ensure(con)
     elapsed = time.monotonic() - t0
     if as_json:
         summary["elapsed_seconds"] = round(elapsed, 3)
@@ -1429,117 +1046,8 @@ def cmd_index(rebuild: bool = False, with_contracts: bool = True, as_json: bool 
     detail = f" · {extracted} contracts extracted" if extracted else " · 0 contracts extracted (cached)"
     print(f"\n📇 Catalog {verb}: {summary['skills']} skills · {summary['tools']} tools · "
           f"{summary['docs']} docs{detail}")
-    v = summary.get("vectors") or {}
-    if v:
-        if v.get("error"):
-            print(f"   🧭 Dense leg: {v['error']} (BM25 only)")
-        else:
-            print(f"   🧭 Dense leg: {v.get('built', 0)} embedded · {v.get('dim', 0)}d "
-                  f"· {v.get('skipped', 0)} unchanged")
     print(f"   {builder.db_path()}")
     print(f"   {elapsed * 1000:.0f} ms\n")
-
-
-def cmd_eval(verbose: bool = False, as_json: bool = False, rerank: str = "never",
-             fusion: str = "never", eval_set: str = "golden"):
-    runner = SKILL_DIR / "tests" / "eval_runner.py"
-    if not runner.is_file():
-        sys.exit("❌ Error: tests/eval_runner.py not found next to omnicli.")
-    args = [sys.executable, str(runner), f"--rerank={rerank}",
-            f"--fusion={fusion}", f"--set={eval_set}"]
-    if verbose:
-        args.append("--verbose")
-    if as_json:
-        args.append("--json")
-    sys.exit(subprocess.run(args).returncode)
-
-
-def cmd_questions(skill_id: str | None = None, build: str | None = None,
-                  as_json: bool = False):
-    """Inspect the distilled-question snapshot, or curate a new one.
-
-    The snapshot is what the dense leg embeds as ``kind='question'`` rows. It is
-    opt-in: ``OMNICLI_QUESTIONS=1`` makes the index build them. Off by default
-    because this catalog's descriptions already carry the user's vocabulary and
-    the measured effect on routing was zero (see SKILL.md, "Distilled questions").
-    """
-    from catalog import questions, question_build, vectors
-
-    if build:
-        directory = Path(build)
-        if not directory.is_dir():
-            sys.exit(f"❌ Not a directory: {directory}")
-        res = question_build.from_dir(directory)
-        accepted = res["accepted"]
-        rejected = res["rejected"]
-        if res.get("error"):
-            print(f"⚠️  {res['error']}")
-        histogram: dict[str, int] = {}
-        for entry in rejected:
-            key = entry["reason"].split(" ")[0]
-            histogram[key] = histogram.get(key, 0) + 1
-        meta = {
-            "generator": f"batches in {directory.name}",
-            "proposed": sum(len(v) for v in accepted.values()) + len(rejected),
-            "accepted": sum(len(v) for v in accepted.values()),
-            "rejected": histogram,
-            "self_floor": questions.SELF_FLOOR,
-        }
-        path = questions.write_snapshot(accepted, meta=meta)
-        if as_json:
-            print(json.dumps({"snapshot": str(path), **meta,
-                              "rejected_detail": rejected}, indent=2, ensure_ascii=False))
-            return
-        print(f"\n📝 Snapshot: {path}")
-        print(f"   accepted {meta['accepted']} / {meta['proposed']} "
-              f"across {len(accepted)} skills")
-        if histogram:
-            print("   rejected : " + ", ".join(f"{k}={v}" for k, v in sorted(histogram.items())))
-        print("   enable   : OMNICLI_QUESTIONS=1 omnicli index\n")
-        return
-
-    snapshot = questions.load()
-    if not snapshot:
-        print("\n📝 No question snapshot loaded.")
-        print("   Build one:  omnicli questions --build <dir-of-batches>")
-        print("   Enable it : OMNICLI_QUESTIONS=1 omnicli index")
-        print("   Status    : the dense leg is description-only (the tuned default).\n")
-        return
-
-    if as_json:
-        print(json.dumps(
-            {"skills": len(snapshot),
-             "questions": sum(len(v) for v in snapshot.values()),
-             "enabled": bool(os.environ.get("OMNICLI_QUESTIONS") not in ("0", "false", "off")),
-             "entries": snapshot if skill_id else {}},
-            indent=2, ensure_ascii=False))
-        return
-
-    if skill_id:
-        entries = snapshot.get(skill_id)
-        if not entries:
-            sys.exit(f"❌ No questions for {skill_id!r}; `omnicli questions` lists which have them.")
-        from catalog import registry
-        meta = registry.load_all_skills().get(skill_id) or {}
-        source = " ".join((meta.get("description") or "").split())
-        print(f"\n❓ [{skill_id}] {len(entries)} distilled question(s)\n")
-        for i, entry in enumerate(entries, 1):
-            ok, reason = questions.gate(entry["question"], entry["quote"], source, skill_id)
-            flag = "✓" if ok else f"✗ {reason}"
-            print(f"  {i}. {entry['question']}")
-            print(f"     quote: \"{entry['quote']}\"  {flag}")
-        print()
-        return
-
-    total = sum(len(v) for v in snapshot.values())
-    enabled = questions.enabled()
-    print(f"\n❓ Question snapshot: {len(snapshot)} skills · {total} questions"
-          f" · {'ENABLED' if enabled else 'disabled (set OMNICLI_QUESTIONS=1)'}")
-    print(f"   {questions.SNAPSHOT_PATH}")
-    for name in sorted(snapshot):
-        print(f"     {name:<26} {len(snapshot[name])} questions")
-    print("\n   Inspect one : omnicli questions <skill>")
-    print("   Rebuild     : OMNICLI_QUESTIONS=1 omnicli index\n")
 
 
 # --------------------------------------------------------------------------
@@ -1845,14 +1353,6 @@ def main():
                     max_bytes=opts["max_bytes"], as_json=opts["json"],
                     timeout=float(opts["timeout"]),
                 )
-        if subcmd == "do":
-            # Parsed manually: see parse_do_args.
-            intent, do_opts, do_args = parse_do_args(sys.argv[2:])
-            if not intent:
-                sys.exit("❌ Error: `omnicli do` needs an intent. "
-                         'Example: omnicli do "transcribe this recording"')
-            with _traced("do", intent):
-                cmd_do(intent, do_opts, do_args)
         if subcmd == "llm":
             exec_internal_script("llm_client.py", sys.argv[2:])
         elif subcmd == "ocr":
@@ -1900,33 +1400,6 @@ def main():
     p.add_argument("args", nargs=argparse.REMAINDER)
 
     # --- catalog -----------------------------------------------------
-    p = sub.add_parser("do", help="One hop: intent -> runnable tool (search+describe+invoke)",
-                       add_help=False)
-    p.add_argument("args", nargs=argparse.REMAINDER)
-
-    p = sub.add_parser("search", help="Find tools by intent (BM25 over every skill body)")
-    p.add_argument("query", help="Natural-language intent")
-    p.add_argument("--json", action="store_true")
-    p.add_argument("--limit", type=int, default=6)
-    p.add_argument("--explain", action="store_true", help="Show matched terms and the winning chunk")
-    p.add_argument("--no-rerank", action="store_true", help="Skip the optional embedding re-ranker")
-    p.add_argument("--rerank", choices=["auto", "always", "never"], default="never",
-                   help="never=never re-rank (default); "
-                        "auto=only re-rank when the lexical ranking is unsure; "
-                        "always=re-rank every query")
-    p.add_argument("--fusion", choices=["auto", "always", "never"], default="never",
-                   help="never=lexical leg only (default); "
-                        "auto=fuse the dense leg only when BM25 is unsure; "
-                        "always=fuse on every query (best on unseen phrasing)")
-    p.add_argument("--chunks", action="store_true",
-                   help="With --json: include every matching chunk (default is the "
-                        "compact routing view: skill, score, why, top hit)")
-    p.add_argument("--depth", choices=["brief", "contract", "chunks"], default="brief",
-                   help="brief=compact routing view (default); contract=the top hit's "
-                        "tool contract (same shape as describe); chunks=full search body")
-    p.add_argument("--section", default="", help="With --depth contract on a skill top hit: section heading")
-    p.add_argument("--doc", default="", help="With --depth contract on a skill top hit: document path/title")
-
     p = sub.add_parser("list", help="List every skill in the registry")
     p.add_argument("--json", action="store_true")
     p.add_argument("--all", action="store_true", help="Include sidelined and archived skills")
@@ -1973,8 +1446,6 @@ def main():
     p.add_argument("--no-contracts", action="store_true", help="Skip --help contract extraction")
     p.add_argument("--check", action="store_true",
                    help="Report whether the index is fresh, without rebuilding")
-    p.add_argument("--no-vectors", action="store_true",
-                   help="Skip refreshing the dense-leg vectors (skill descriptions)")
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("alias", help="Read or write a skill's curated routing metadata")
@@ -1983,27 +1454,6 @@ def main():
     p.add_argument("--tags", default=None, help="Comma-separated tag list (replaces)")
     p.add_argument("--remove", action="store_true", help="Delete a skill's curated metadata")
     p.add_argument("--list", action="store_true", help="Show every skill's curated metadata")
-    p.add_argument("--json", action="store_true")
-
-    p = sub.add_parser("eval", help="Run the golden routing evaluation")
-    p.add_argument("--verbose", action="store_true")
-    p.add_argument("--json", action="store_true")
-    p.add_argument("--rerank", choices=["auto", "always", "never"], default="never",
-                   help="re-ranker mode used during the eval (default: never; the "
-                        "catalog's own default is auto)")
-    p.add_argument("--fusion", choices=["auto", "always", "never"], default="never",
-                   help="dense-leg fusion used during the eval (default: never)")
-    p.add_argument("--set", dest="eval_set", choices=["golden", "paraphrase", "fresh"],
-                   default="golden", help="golden=tuned routes, paraphrase=blind "
-                                          "user prompts harvested from this machine, "
-                                          "fresh=held-out evaluation set")
-
-    p = sub.add_parser("questions",
-                       help="Inspect or curate the distilled-question snapshot")
-    p.add_argument("skill", nargs="?", default=None,
-                   help="Show one skill's questions and their verbatim quotes")
-    p.add_argument("--build", default=None, metavar="DIR",
-                   help="Gate a directory of generated batch files into the snapshot")
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("spec", help="Query the catalog surface without loading it")
@@ -2063,10 +1513,10 @@ def main():
                    help=f"Hard cap on returned bytes (default {DEFAULT_MAX_BYTES})")
 
     p = sub.add_parser("status", aliases=["health"],
-                       help="Health of every local service, the catalog, and the retrieval tier")
+                       help="Health of every local service and the catalog")
     p.add_argument("--json", action="store_true")
 
-    p = sub.add_parser("usage", help="Telemetry: calls per harness, top tools, and search→action rate")
+    p = sub.add_parser("usage", help="Telemetry: calls per harness, top tools, and action rates")
     p.add_argument("--trace", default=None, help="Trace file (default: ~/.local/share/omnicli/trace.jsonl)")
     p.add_argument("--since", default="7d", help="30m, 24h, 7d, 2w or an ISO date (default 7d)")
     p.add_argument("--limit", type=int, default=10)
@@ -2108,12 +1558,6 @@ def main():
         fast_cdp = shutil.which("fast-cdp") or str(
             registry.resolve_skills_dir() / "hybrid-browser" / "scripts" / "fast-cdp")
         sys.exit(subprocess.run([fast_cdp] + args.args).returncode)
-    elif args.action == "search":
-        with _traced("search", " ".join(args.query) if isinstance(args.query, list) else str(args.query)):
-            cmd_search(args.query, as_json=args.json, limit=args.limit,
-                       explain=args.explain, no_rerank=args.no_rerank,
-                       rerank=args.rerank, chunks=args.chunks, fusion=args.fusion,
-                       depth=args.depth, section=args.section, doc=args.doc)
     elif args.action == "list":
         cmd_list(as_json=args.json, show_all=args.all)
     elif args.action == "tools":
@@ -2123,7 +1567,7 @@ def main():
             cmd_describe(args.tool_id, as_json=args.json, section=args.section, doc=args.doc)
     elif args.action == "index":
         cmd_index(rebuild=args.rebuild, with_contracts=not args.no_contracts,
-                  as_json=args.json, check=args.check, with_vectors=not args.no_vectors)
+                  as_json=args.json, check=args.check)
     elif args.action == "enable":
         cmd_gate(args.tool_id, True, as_json=args.json, all_tools=args.all)
     elif args.action == "disable":
@@ -2133,11 +1577,6 @@ def main():
     elif args.action == "alias":
         cmd_alias(skill=args.skill, aliases=args.aliases, tags=args.tags,
                   remove=args.remove, show_all=args.list, as_json=args.json)
-    elif args.action == "eval":
-        cmd_eval(verbose=args.verbose, as_json=args.json, rerank=args.rerank,
-                 fusion=args.fusion, eval_set=args.eval_set)
-    elif args.action == "questions":
-        cmd_questions(skill_id=args.skill, build=args.build, as_json=args.json)
     elif args.action == "bindings":
         cmd_bindings(out_dir=args.out, as_json=args.json, stubs=args.stubs,
                      skill=args.skill, grep=args.grep)

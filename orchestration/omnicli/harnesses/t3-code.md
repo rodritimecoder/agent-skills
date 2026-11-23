@@ -40,7 +40,7 @@ The plugin also:
 Still valid for one-shot commands and scripts outside the model loop:
 
 ```bash
-omnicli search "transcribe zoom lecture"
+omnicli exec (filesystem discovery) "transcribe zoom lecture"
 omnicli describe zoom-recorder/scripts/zoom_download
 omnicli invoke zoom-recorder/scripts/zoom_download \
   --omni-max-bytes 8000 --omni-project "status,transcript_path" \

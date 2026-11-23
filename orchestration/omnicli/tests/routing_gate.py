@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Hard pre-push regression gate for the omnicli routing catalog.
 
-Parses eval JSON counts; never trusts eval_runner's exit code (the council
-proved that leg can be green while a real regression passes). Writes one
-verdict line and a full artifact under ~/.local/share/omnicli/routing-gate/.
+Runs only the three offline proof legs and writes one verdict line plus a full
+artifact under ~/.local/share/omnicli/routing-gate/. A leg's exit code is the
+signal; no measurement outside these three legs can affect the result.
 
-Exit 0 = all legs green; exit 1 = any leg red (blocks the push).
+Exit 0 = all three hard legs green; exit 1 = any hard leg red; exit 2 = fatal
+(the measurement could not be completed, so no verdict is claimed).
+
+The decision itself lives in ``decide()``, a pure function over an injected
+report, so unit tests can prove every leg can go RED without touching the
+real catalog.
 """
 from __future__ import annotations
 
@@ -17,87 +22,122 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-RUNNER = Path(__file__).resolve().parent / "eval_runner.py"
+HERE = Path(__file__).resolve().parent
 OUT = Path.home() / ".local/share/omnicli/routing-gate"
 
-FLOORS = {
-    "golden": {"top1": 54, "top3": 54},       # still perfect; do not lower
-    # Re-baselined 2026-11-23 after the two deleted skills removed their mostly
-    # passing cases. These are the live scores: any regression below them fails.
-    "fresh": {"top1": 24, "top3": 27},        # 31 cases, incl. 3 harvester-noise; 24/28 answerable
-    "paraphrase": {"top1": 28},               # 34 cases
-}
+# Only these three offline proof legs decide the verdict.
+HARD_LEGS = ("exec_only_flow", "skills_bridge_flow", "doc_drift")
 
 
-def run_eval(name: str) -> dict:
+def run_script(name: str, script: str, *, args=(), json_result: bool = False, timeout: int = 600) -> dict:
+    """Run an offline proof/leg as a subprocess; exit 0 is mandatory."""
+    path = HERE / script
     r = subprocess.run(
-        [sys.executable, str(RUNNER), f"--set={name}", "--rerank=never", "--fusion=never", "--json"],
-        cwd=ROOT, capture_output=True, text=True, timeout=180,
+        [sys.executable, str(path), *args],
+        cwd=ROOT, capture_output=True, text=True, timeout=timeout,
     )
-    data = json.loads(r.stdout)
-    bm = data["bm25"]
-    answerable = [row for row in data.get("rows", []) if row.get("kind") != "harvester-noise"]
-    return {
-        "top1_raw": bm["top1_raw"],
-        "top3_raw": bm["top3_raw"],
-        "answerable_top1": sum(1 for row in answerable if row["pass_top1"]),
-        "answerable_total": len(answerable),
-        "runner_exit": r.returncode,  # recorded, never trusted
-    }
+    if json_result:
+        try:
+            payload = json.loads(r.stdout)
+            passed = bool(payload.get("ok")) and r.returncode == 0
+            detail = payload.get("ok")
+        except Exception:
+            passed, detail = False, "unparseable json"
+    else:
+        passed = r.returncode == 0
+        lines = r.stdout.strip().splitlines() or r.stderr.strip().splitlines()
+        detail = lines[-1] if lines else None
+    return {"pass": passed, "exit": r.returncode, "detail": detail}
+
+
+def decide(report: dict) -> list[str]:
+    """Pure gate decision: return human-readable failures ([] means green).
+
+    Only the three hard legs (``HARD_LEGS``) are evaluated. A missing,
+    malformed or non-passing hard leg is a failure. ``report`` may be a
+    fabricated dict injected by tests; only its ``legs`` mapping is read.
+    No I/O, no clock, no global state.
+    """
+    legs = report.get("legs", report)
+    failures: list[str] = []
+
+    def leg(name: str) -> dict:
+        value = legs.get(name, {})
+        return value if isinstance(value, dict) else {}
+
+    for name in HARD_LEGS:
+        leg_result = leg(name)
+        if not leg_result.get("pass", False):
+            reason = "missing" if not leg_result else "non-passing"
+            failures.append(
+                f"{name} leg failed ({reason}: exit={leg_result.get('exit')}, "
+                f"detail={leg_result.get('detail')})"
+            )
+
+    return failures
 
 
 def check() -> tuple[bool, dict]:
     report: dict = {"at": datetime.now(timezone.utc).isoformat(), "legs": {}}
-    ok = True
 
-    for name, floor in FLOORS.items():
-        m = run_eval(name)
-        report["legs"][name] = m
-        if m["top1_raw"] < floor["top1"]:
-            ok = False
-        if "top3" in floor and m["top3_raw"] < floor["top3"]:
-            ok = False
-        if name == "fresh" and (m["answerable_top1"] < 24 or m["answerable_total"] < 28):
-            ok = False
+    # The env vars below only point at an alternate script path for mutation
+    # tests; they never skip a leg.
+    report["legs"]["exec_only_flow"] = run_script(
+        "exec_only_flow", os.environ.get("ROUTING_GATE_EXEC_ONLY_FLOW") or "exec_only_flow.py"
+    )
+    report["legs"]["skills_bridge_flow"] = run_script(
+        "skills_bridge_flow", os.environ.get("ROUTING_GATE_SKILLS_BRIDGE_FLOW") or "skills_bridge_flow.py"
+    )
+    report["legs"]["doc_drift"] = run_script(
+        "doc_drift", os.environ.get("ROUTING_GATE_DOC_DRIFT_CHECK") or "doc_drift_check.py",
+        args=("--json",), json_result=True,
+    )
 
-    for label, path in (
-        ("overfit", ROOT / "orchestration/omnicli/tests/overfit_check.py"),
-        ("doc_drift", ROOT / "orchestration/omnicli/tests/doc_drift_check.py"),
-    ):
-        r = subprocess.run([sys.executable, str(path), "--json"] if label == "doc_drift" else [sys.executable, str(path)],
-                           cwd=ROOT, capture_output=True, text=True, timeout=120)
-        if label == "overfit":
-            passed = r.returncode == 0
-            detail = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else None
-        else:
-            try:
-                payload = json.loads(r.stdout)
-                passed = bool(payload.get("ok")) and r.returncode == 0
-                detail = payload.get("ok")
-            except Exception:
-                passed, detail = False, "unparseable json"
-        report["legs"][label] = {"pass": passed, "exit": r.returncode, "detail": detail}
-        ok = ok and passed
+    failures = decide(report)
+    report["failures"] = failures
+    report["pass"] = not failures
+    return report["pass"], report
 
-    report["pass"] = ok
-    return ok, report
+
+def _write_artifact(report: dict) -> Path:
+    OUT.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    path = OUT / f"{stamp}.json"
+    path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return path
+
+
+def _verdict(ok: bool, report: dict, artifact: Path) -> str:
+    legs = report.get("legs", {})
+    state = lambda n: "ok" if legs.get(n, {}).get("pass") else "FAIL"
+    return (
+        f"routing_gate: {'PASS' if ok else 'FAIL'} | "
+        f"exec_only_flow {state('exec_only_flow')} | "
+        f"skills_bridge_flow {state('skills_bridge_flow')} | "
+        f"doc_drift {state('doc_drift')} | "
+        f"artifact={artifact}"
+    )
 
 
 def main() -> int:
-    ok, report = check()
-    OUT.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    (OUT / f"{stamp}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    g = report["legs"]
-    print(
-        f"routing_gate: {'PASS' if ok else 'FAIL'} | "
-        f"golden {g['golden']['top1_raw']}/54 | fresh {g['fresh']['top1_raw']}/31 "
-        f"(answerable {g['fresh']['answerable_top1']}/{g['fresh']['answerable_total']}) | "
-        f"paraphrase {g['paraphrase']['top1_raw']}/34 | "
-        f"overfit {'ok' if g['overfit']['pass'] else 'FAIL'} | "
-        f"doc_drift {'ok' if g['doc_drift']['pass'] else 'FAIL'} | "
-        f"artifact={OUT / (stamp + '.json')}"
-    )
+    try:
+        ok, report = check()
+    except Exception as exc:  # fatal: do not claim a verdict we cannot measure
+        report = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "pass": False,
+            "fatal": f"{type(exc).__name__}: {exc}",
+            "legs": {},
+        }
+        artifact = _write_artifact(report)
+        print(f"routing_gate: FATAL | {report['fatal']} | artifact={artifact}")
+        return 2
+
+    artifact = _write_artifact(report)
+    print(_verdict(ok, report, artifact))
+    if not ok:
+        for failure in report.get("failures", []):
+            print(f"  - {failure}", file=sys.stderr)
     return 0 if ok else 1
 
 

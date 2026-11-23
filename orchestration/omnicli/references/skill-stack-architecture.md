@@ -14,7 +14,7 @@ This document is the architecture-level counterpart to [agent-skills-checklist.m
 
 | Tier | agentskills.io | ICM / workspace | omnicli runtime | Budget |
 | :--- | :--- | :--- | :--- | :--- |
-| Metadata | `name` + `description` frontmatter | L0 `AGENTS.md` — *where am I?* | `omnicli search` brief line | ~100 tok metadata; 300–800 tok L0 |
+| Metadata | `name` + `description` frontmatter | L0 `AGENTS.md` — *where am I?* | `omnicli exec (filesystem discovery)` brief line | ~100 tok metadata; 300–800 tok L0 |
 | Instructions | `SKILL.md` core workflow | L1 root / L2 stage `CONTEXT.md` — *where do I go / what do I do?* | `describe <skill> --section` | <5,000 tok / <500 lines |
 | Resources | `references/`, `assets/` | L3 `_shared/`, `references/` — *what rules apply?* | `invoke`, `--omni-buffer`, Code Mode variables | on demand |
 | State | output files | L4 `output/`, `check.md` — *what am I working with?* | `emitState` session JSON, `check.md` | varies |
@@ -59,7 +59,7 @@ The bounded-invoke loop is a runtime implementation of "load only what the step 
 
 | ICM move | omnicli call | What it keeps out of context |
 | :--- | :--- | :--- |
-| Read L0, route | `omnicli search "<intent>"` (brief) | the prompt shelf of every skill's full text |
+| Read L0, route | `omnicli exec (filesystem discovery) "<intent>"` (brief) | the prompt shelf of every skill's full text |
 | Read L2 contract | `omnicli describe <skill> --section "<heading>"` | the rest of `SKILL.md` |
 | Load L3/L4 selectively | `omnicli invoke ... --omni-project a,b` | unrequested fields and full stdout |
 | Run the step | `omnicli exec plan.mjs` | intermediate tool outputs |
@@ -129,7 +129,7 @@ and its outline items use `.heading` (not `.title`) — there is no `.sections` 
 Project those fields only; a projection built on `d.sections` / `s.title` would
 silently emit `undefined`.
 
-**Which face?** Use the CLI `omnicli search "<intent>"` for **one** exploratory
+**Which face?** Use the CLI `omnicli exec (filesystem discovery) "<intent>"` for **one** exploratory
 intent where you want to *see the ranking* and read the evidence before
 deciding. Use an `omnicli exec` plan for a **known batch**, or when search is a
 chain into `describe`/`invoke` whose results you filter and project in JS. Same
@@ -140,15 +140,15 @@ out of your prompt.
 
 ## 5. Capability retrieval is not content retrieval
 
-This is the boundary most likely to be misread. `omnicli search` retrieves **capabilities** — which skill or tool can do the job. It does not answer questions from your notes. Content retrieval is a different catalog with a different contract:
+This is the boundary most likely to be misread. `omnicli exec (filesystem discovery)` retrieves **capabilities** — which skill or tool can do the job. It does not answer questions from your notes. Content retrieval is a different catalog with a different contract:
 
 | Question | Correct mechanism | Why |
 | :--- | :--- | :--- |
-| "which tool transcribes audio?" | `omnicli search` | routing over capabilities |
+| "which tool transcribes audio?" | `omnicli exec (filesystem discovery)` | routing over capabilities |
 | "what did Kem say about knowledge graphs?" | `python3 /run/media/rodri/AI/creator-vault/vault_index.py search --folder .../creator-vault "knowledge graphs"` | FTS5 over note bodies |
 | "what superseded claim X?" | `graph-memory recall --hops 2` | k-hop entity traversal |
 
-Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. `omnicli search` is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.
+Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. `omnicli exec (filesystem discovery)` is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.
 
 > **Caveat — not every Kem figure is equally grounded.** The `0.97×` / `2.05×`
 > ICM-vs-NVK token multipliers and the `70% → 92.5%` citation-hook figures are
@@ -165,10 +165,10 @@ Both are catalogs, but over different things. Keep them distinct.
 
 One exception proves the rule: the router itself opts out of body indexing
 (`index_body: false` in `catalog/aliases.json`). Its documentation is full of
-example queries like `omnicli search "transcribe a zoom lecture recording"`;
+example queries like `omnicli exec (filesystem discovery) "transcribe a zoom lecture recording"`;
 indexed as routing text, the router would compete with the very skills it
 routes to. This reference is therefore reachable through the SKILL.md link and
-by path, not through `omnicli search`. That is deliberate, not a missing feature.
+by path, not through `omnicli exec (filesystem discovery)`. That is deliberate, not a missing feature.
 
 ---
 
@@ -208,7 +208,7 @@ shape.
 | :--- | :--- | :--- |
 | Evidence before invoke | Code Mode `search()` hit | Name `why`/`matched`/`top` in the plan and project them into `emitResult` before invoking. |
 | Actor / Step type / Proof | every plan call | Comment Actor, `D`/`P`/`H` and Proof above each call; emit a `proof` field per step. |
-| Negative controls | `omnicli eval` sets | Pair each positive routing case with a must-not-trigger prompt; require a failing gate. |
+| Negative controls | `hard gate holdouts` sets | Pair each positive routing case with a must-not-trigger prompt; require a failing gate. |
 | Fail → align | routing failure | Re-ask which skill owns the phrasing and re-plan; never add a one-off alias. |
 | Concealed holdouts | plan read scope | Keep expected results outside the plan; compare only at verify time. |
 | Factory vs product | aliases/descriptions vs per-run intents | Curate the factory across runs; never mutate it to fit one run. |
@@ -236,7 +236,7 @@ Nothing moves on without the proof its step declares.
 
 ### A gate that can fail
 
-`omnicli eval` ships golden and paraphrase sets, but neither declares an
+`hard gate holdouts` ships golden and paraphrase sets, but neither declares an
 explicit should-not-trigger negative control (grep finds "control" only in an
 unrelated browser note). A gate that cannot fail is not a gate: pair every
 positive routing case with a prompt that must NOT select the same skill, run

@@ -42,7 +42,7 @@ server to attach:
 ```
 
 - **Surface Discovery:** Any skill symlinked in `surface/` is discovered instantly by OpenCode's internal skill crawler.
-- **Code Mode:** That skill teaches `omnicli search` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.mjs`.
+- **Code Mode:** That skill teaches `omnicli exec (filesystem discovery)` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.mjs`.
 
 ---
 
@@ -53,7 +53,7 @@ OpenCode executes multi-command sequences in single turns. `omnicli` enables fai
 ```bash
 # Compound task execution
 set -e
-TOOL_ID=$(omnicli search "generate cornell notes from markdown" --json | jq -r '.results[0].top.id // .results[0].skill')
+TOOL_ID=$(omnicli exec (filesystem discovery) "generate cornell notes from markdown" --json | jq -r '.results[0].top.id // .results[0].skill')
 omnicli describe "$TOOL_ID" --section "Usage"
 omnicli invoke "$TOOL_ID" --omni-buffer /tmp/notes_step.json -- input.md
 python3 -c "import json; data=json.load(open('/tmp/notes_step.json')); print('Summary:', data.get('summary', 'done'))"
@@ -71,7 +71,6 @@ OpenCode routes sub-tasks directly to local inference ports without consuming ex
 | **Calibrated Decision / Gating** | `omnicli decide "<context>" "<q>"` | `:8083` | Jev / h2o-lightning-4b |
 | **Speech-to-Text (ASR)** | `omnicli asr transcribe <audio>` | `:8081` | audio.cpp / Nemotron-3.5 |
 | **Visual Document OCR** | `omnicli ocr <image_or_pdf>` | `:8082` | LightOnOCR-3-0.8B |
-| **Dense Retrieval Embeddings** | `omnicli search` (dense rerank leg) | `:8084` | bge-small-en-v1.5 |
 
 ---
 

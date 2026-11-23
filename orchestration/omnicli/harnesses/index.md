@@ -16,7 +16,7 @@
 | Feature / Primitive | T3 Code | Antigravity (`agy`) | OpenCode | Pi Agent | Boxxy Claw |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Primary Interaction Face** | Code Mode + CLI | JS Bindings + CLI | Code Mode + CLI | Direct CLI | Direct CLI + Sandbox |
-| **Discovery Protocol** | `await search(...)` / `omnicli search` | `await search(...)` via `omnicli exec` | `omnicli search` / `await search(...)` | `omnicli search` | `omnicli search` |
+| **Discovery Protocol** | `await skills() / describe()` / `omnicli exec (filesystem discovery)` | `await skills() / describe()` via `omnicli exec` | `omnicli exec (filesystem discovery)` / `await skills() / describe()` | `omnicli exec (filesystem discovery)` | `omnicli exec (filesystem discovery)` |
 | **Invocation Protocol** | `invoke()` / bash tool | `invoke()` in a `plan.mjs` | Compound bash / `omnicli invoke` | Direct bash / CLI | `omnicli invoke` / `exec` |
 | **Code Mode SDK** | `omnicli exec plan.mjs` | `omnicli exec plan.mjs` from `run_workflow` | `omnicli exec plan.mjs` | Script invocation | `omnicli exec --sandbox` |
 | **Output Capping** | Strict 8KB (`--omni-max-bytes`) | Strict 8KB / envelope `output` | Strict 8KB / `step_NN.json` | Strict 8KB cap | Strict 8KB cap |

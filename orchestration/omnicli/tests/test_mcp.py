@@ -1,5 +1,11 @@
 """Hermetic unit tests for the omnicli MCP face.
 
+The face exposes one tool, ``omni_exec`` (Code Mode). The legacy search and
+invoke meta-tools were retired with the BM25/dense stack; their work now
+happens as inner calls inside a plan. Listing is not authorization: calling
+``omni_exec`` still needs ``OMNICLI_MCP_ALLOW_EXEC=1`` (``--no-exec`` is an
+extra kill switch).
+
 Run:
     python3 tests/test_mcp.py
 """
@@ -70,12 +76,11 @@ class _AuditIsolated(unittest.TestCase):
 
 
 class TestDefinitions(unittest.TestCase):
-    def test_tools_list_returns_three_valid_tools(self):
+    def test_tools_list_returns_one_valid_tool(self):
         reply = mcp.dispatch({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
                              {"allow_exec": True})
         tools = reply["result"]["tools"]
-        self.assertEqual([t["name"] for t in tools],
-                         ["omni_search", "omni_invoke", "omni_exec"])
+        self.assertEqual([t["name"] for t in tools], ["omni_exec"])
         self.assertEqual(mcp.TOOLS, tools)
         for tool in tools:
             self.assertTrue(tool.get("title"))
@@ -85,45 +90,28 @@ class TestDefinitions(unittest.TestCase):
             self.assertIs(schema["additionalProperties"], False)
             self.assertIsInstance(schema["properties"], dict)
 
-        by_name = {t["name"]: t for t in tools}
-        search = by_name["omni_search"]["inputSchema"]
-        self.assertEqual(search["required"], ["query"])
-        self.assertEqual(search["properties"]["query"]["type"], "string")
-        self.assertEqual((search["properties"]["limit"]["minimum"],
-                          search["properties"]["limit"]["maximum"],
-                          search["properties"]["limit"]["default"]), (1, 20, 5))
-        self.assertEqual(search["properties"]["depth"]["enum"], ["brief", "contract", "chunks"])
-        self.assertEqual(search["properties"]["depth"]["default"], "brief")
-        self.assertEqual(search["properties"]["max_bytes"]["default"], 8000)
-
-        invoke = by_name["omni_invoke"]["inputSchema"]
-        self.assertEqual(invoke["required"], ["tool_id"])
-        self.assertEqual(invoke["properties"]["args"]["items"]["type"], "string")
-        self.assertEqual(invoke["properties"]["args"]["default"], [])
-        self.assertEqual(invoke["properties"]["timeout"]["type"], "number")
-        self.assertEqual(invoke["properties"]["timeout"]["default"], 300)
-
-        ex = by_name["omni_exec"]["inputSchema"]
+        ex = tools[0]["inputSchema"]
         self.assertEqual(ex["properties"]["sandbox"]["enum"], ["strict", "write", "none"])
         self.assertEqual(ex["properties"]["sandbox"]["default"], "strict")
         self.assertEqual(ex["properties"]["max_bytes"]["default"], 16000)
+        self.assertIn("script", ex["properties"])
+        self.assertIn("code", ex["properties"])
 
-    def test_descriptions_document_contract_depth_and_enable_gate(self):
-        by_name = {t["name"]: t for t in mcp.TOOLS}
-        search_desc = by_name["omni_search"]["description"].lower()
-        self.assertIn("contract", search_desc)
-        self.assertIn("no separate describe", search_desc)
-        self.assertIn("exposure", search_desc)
-        self.assertIn("enable", by_name["omni_invoke"]["description"].lower())
+    def test_description_documents_code_mode_and_opt_in(self):
+        tool = mcp.TOOLS[0]
+        self.assertIn("code mode", tool["title"].lower())
+        desc = tool["description"].lower()
+        self.assertIn("javascript plan", desc)
+        self.assertIn("omnicli_mcp_allow_exec", desc)
+        self.assertIn("--no-exec", desc)
 
-    def test_exec_opt_in_controls_listing(self):
+    def test_exec_is_listed_with_or_without_opt_in(self):
         hidden = mcp.dispatch({"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
                               {"allow_exec": False})
-        self.assertEqual([t["name"] for t in hidden["result"]["tools"]],
-                         ["omni_search", "omni_invoke"])
         shown = mcp.dispatch({"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
                              {"allow_exec": True})
-        self.assertEqual(len(shown["result"]["tools"]), 3)
+        self.assertEqual([t["name"] for t in hidden["result"]["tools"]], ["omni_exec"])
+        self.assertEqual([t["name"] for t in shown["result"]["tools"]], ["omni_exec"])
 
 
 class TestDispatch(_AuditIsolated):
@@ -169,54 +157,6 @@ class TestMetaTools(_AuditIsolated):
             {"jsonrpc": "2.0", "id": 7, "method": "tools/call",
              "params": {"name": name, "arguments": arguments}}, ctx or {})
 
-    def test_search_runs_one_cli_subprocess_without_rerank(self):
-        seen = {}
-
-        def fake(argv, timeout):
-            seen.update(argv=argv, timeout=timeout)
-            return {"exit_code": 0, "stdout": '{"results":[]}', "stderr": ""}
-
-        with mock.patch.object(mcp, "_run_cli", fake):
-            reply = self._call("omni_search", {"query": "transcribe audio", "limit": 3})
-        self.assertEqual(seen["argv"],
-                         ["search", "transcribe audio", "--json", "--depth", "brief",
-                          "--limit", "3", "--no-rerank"])
-        self.assertEqual(reply["result"]["content"][0]["text"], '{"results":[]}')
-        self.assertFalse(reply["result"]["isError"])
-
-    def test_depth_contract_and_section_doc_passed_through(self):
-        seen = {}
-
-        def fake(argv, timeout):
-            seen["argv"] = argv
-            return {"exit_code": 0, "stdout": "{}", "stderr": ""}
-
-        with mock.patch.object(mcp, "_run_cli", fake):
-            self._call("omni_search", {"query": "cornell notes", "depth": "contract",
-                                       "section": "token shield", "doc": "SKILL.md"})
-        self.assertEqual(seen["argv"], ["search", "cornell notes", "--json",
-                                        "--depth", "contract", "--limit", "5",
-                                        "--no-rerank", "--section", "token shield",
-                                        "--doc", "SKILL.md"])
-
-    def test_invoke_argv_projections_and_double_dash(self):
-        seen = {}
-
-        def fake(argv, timeout):
-            seen.update(argv=argv, timeout=timeout)
-            return {"exit_code": 0, "stdout": "{}", "stderr": ""}
-
-        with mock.patch.object(mcp, "_run_cli", fake):
-            self._call("omni_invoke", {
-                "tool_id": "foo/bar", "args": ["--x", "1"], "fields": ["a", "b"],
-                "jq": ".c", "grep": "ERR", "timeout": 5, "max_bytes": 123,
-            })
-        self.assertEqual(seen["argv"], ["invoke", "foo/bar", "--omni-json",
-                                        "--omni-max-bytes", "123", "--omni-project", "a,b",
-                                        "--omni-jq", ".c", "--omni-grep", "ERR",
-                                        "--", "--x", "1"])
-        self.assertEqual(seen["timeout"], 5.0)
-
     def test_exec_runs_js_plan_when_enabled(self):
         seen = {}
 
@@ -247,7 +187,8 @@ class TestMetaTools(_AuditIsolated):
             return {"exit_code": 0, "stdout": "X" * 9000, "stderr": ""}
 
         with mock.patch.object(mcp, "_run_cli", fake):
-            reply = self._call("omni_search", {"query": "x", "max_bytes": 64})
+            reply = self._call("omni_exec", {"script": "console.log(1)", "max_bytes": 64},
+                               {"allow_exec": True})
         result = reply["result"]
         self.assertTrue(result["isError"])
         text = result["content"][0]["text"]
@@ -262,28 +203,28 @@ class TestMetaTools(_AuditIsolated):
             return {"exit_code": 1, "stdout": "", "stderr": "omnicli: tool is disabled"}
 
         with mock.patch.object(mcp, "_run_cli", fake):
-            reply = self._call("omni_invoke", {"tool_id": "foo/bar", "args": ["--password", secret]})
+            reply = self._call("omni_exec", {"script": secret}, {"allow_exec": True})
         self.assertTrue(reply["result"]["isError"])
         self.assertIn("disabled", reply["result"]["content"][0]["text"])
         self.assertNotIn(secret, json.dumps(reply))
 
-    def test_audit_line_has_fields_and_no_args(self):
+    def test_audit_line_has_fields_and_no_target(self):
         def fake(argv, timeout):
             return {"exit_code": 0, "stdout": "{}", "stderr": ""}
 
         with mock.patch.object(mcp, "_run_cli", fake):
-            self._call("omni_invoke", {"tool_id": "foo/bar", "args": ["--token", "secret"]})
+            self._call("omni_exec", {"script": "console.log(1)"}, {"allow_exec": True})
         lines = (Path(self._tmp.name) / "mcp-audit.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertTrue(lines)
         entry = json.loads(lines[-1])
         for field in ("ts", "transport", "tool", "target", "ok", "bytes", "remote"):
             self.assertIn(field, entry)
-        self.assertEqual(entry["tool"], "omni_invoke")
-        self.assertEqual(entry["target"], "foo/bar")
+        self.assertEqual(entry["tool"], "omni_exec")
+        self.assertIsNone(entry["target"])
         self.assertEqual(entry["transport"], "stdio")
         self.assertIsNone(entry["remote"])
         self.assertNotIn("args", entry)
-        self.assertNotIn("secret", json.dumps(entry))
+        self.assertNotIn("script", entry)
 
 
 class TestHTTP(_AuditIsolated):
@@ -363,7 +304,7 @@ class TestHTTP(_AuditIsolated):
         payload = json.loads(body)
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["service"], "omnicli-mcp")
-        self.assertEqual(payload["tools"], ["omni_search", "omni_invoke"])
+        self.assertEqual(payload["tools"], ["omni_exec"])
 
     def test_health_requires_token(self):
         status, _, _ = self._req("GET", "/health")
@@ -421,28 +362,7 @@ class TestStdio(unittest.TestCase):
             by_id = {reply["id"]: reply for reply in self._read_lines(proc, 2)}
             self.assertEqual(by_id[1]["result"]["protocolVersion"], "2025-06-18")
             self.assertEqual([t["name"] for t in by_id[2]["result"]["tools"]],
-                             ["omni_search", "omni_invoke"])
-        finally:
-            self._shutdown(proc)
-
-    def test_live_search_depth_contract_smoke(self):
-        """One real narrow query through the stdio handshake; output stays bounded."""
-        proc = self._spawn()
-        try:
-            req = {"jsonrpc": "2.0", "id": 9, "method": "tools/call",
-                   "params": {"name": "omni_search", "arguments": {
-                       "query": "cornell notes", "depth": "contract", "limit": 3,
-                       "max_bytes": 12000}}}
-            proc.stdin.write(json.dumps(req) + "\n")
-            proc.stdin.flush()
-            reply = self._read_lines(proc, 1)[0]
-            result = reply["result"]
-            self.assertFalse(result.get("isError"), result["content"][0]["text"][:300])
-            text = result["content"][0]["text"]
-            self.assertLessEqual(len(text.encode("utf-8")), 12000)
-            contract = json.loads(text)
-            self.assertTrue(contract.get("contract"), contract)
-            self.assertIn("cornell", json.dumps(contract).lower())
+                             ["omni_exec"])
         finally:
             self._shutdown(proc)
 

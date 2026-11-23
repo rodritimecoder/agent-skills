@@ -15,7 +15,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-from catalog import builder, invoke, policy, registry, search, textutil  # noqa: E402
+from catalog import builder, invoke, policy, registry, textutil  # noqa: E402
 from omnicli import parse_invoke_args  # noqa: E402
 
 
@@ -346,68 +346,6 @@ class TestProjection(unittest.TestCase):
         self.assertIsNone(invoke.parse_fields(""))
 
 
-class TestRerankMode(unittest.TestCase):
-    def test_strings_map_to_the_tri_state(self):
-        self.assertIs(search.normalize_rerank("always"), True)
-        self.assertIs(search.normalize_rerank("never"), False)
-        self.assertEqual(search.normalize_rerank("auto"), "auto")
-        self.assertIs(search.normalize_rerank(True), True)
-        self.assertIs(search.normalize_rerank(False), False)
-        self.assertIs(search.normalize_rerank(None), False)
-
-    def test_always_actually_reranks(self):
-        """`--rerank always` used to behave like `never` (string vs True)."""
-        con = builder.connect()
-        builder.ensure_built(con, progress=False)
-        never = search.search(con, "transcribe a zoom lecture", limit=3,
-                              rerank_enabled="never", fusion="never")
-        always = search.search(con, "transcribe a zoom lecture", limit=3,
-                               rerank_enabled="always", fusion="never")
-        self.assertEqual(never["tier"], "bm25")
-        self.assertIn(always["tier"], ("bm25+rerank", "bm25"),
-                      "the re-ranker was not consulted")
-        if search.embedding_available():
-            self.assertEqual(always["tier"], "bm25+rerank")
-
-
-class TestFusionMode(unittest.TestCase):
-    """The dense leg is a second retrieval path, not a re-ranker."""
-
-    def test_strings_map_to_the_tri_state(self):
-        self.assertIs(search.normalize_fusion("always"), True)
-        self.assertIs(search.normalize_fusion("never"), False)
-        self.assertEqual(search.normalize_fusion("auto"), "auto")
-        self.assertIs(search.normalize_fusion(True), True)
-        self.assertIs(search.normalize_fusion(False), False)
-        self.assertEqual(search.normalize_fusion(None), "never")
-
-    def test_fusion_never_is_pure_lexical(self):
-        con = builder.connect()
-        builder.ensure_built(con, progress=False)
-        res = search.search(con, "transcribe a zoom lecture", limit=3,
-                            rerank_enabled="never", fusion="never")
-        self.assertEqual(res["tier"], "bm25")
-        self.assertFalse(res["dense"]["ran"])
-
-    def test_missing_endpoint_degrades_instead_of_failing(self):
-        """A dead :8084 must cost ranking quality, never the result set."""
-        from catalog import vectors
-
-        con = builder.connect()
-        builder.ensure_built(con, progress=False)
-        original = vectors.EMBEDDING_URL
-        vectors.EMBEDDING_URL = "http://127.0.0.1:9/v1/embeddings"
-        try:
-            res = search.search(con, "transcribe a zoom lecture", limit=3,
-                                rerank_enabled="never", fusion="always")
-        finally:
-            vectors.EMBEDDING_URL = original
-        self.assertTrue(res["results"], "the lexical leg must still answer")
-        self.assertFalse(res["dense"]["ran"])
-        self.assertEqual(res["tier"], "bm25")
-        self.assertTrue(any(x in (res["dense"]["reason"] or "") for x in ("unavailable", "no vectors")))
-
-
 class TestPolicyGate(unittest.TestCase):
     """Discovery does not imply exposure, and the decision is auditable."""
 
@@ -611,71 +549,6 @@ class TestContractCache(unittest.TestCase):
         contract = json.loads(row["contract"])
         self.assertGreaterEqual(len(contract.get("subcommands", [])), 5,
                                 "audiocpp_cli should expose its subcommands")
-
-
-class TestSearch(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.con = builder.connect()
-        builder.ensure_built(cls.con, progress=False)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.con.close()
-
-    def _top(self, query, n=1):
-        res = search.search(self.con, query, limit=n, rerank_enabled=False)
-        return [r["skill"] for r in res["results"]]
-
-    def test_alias_bridges_vocabulary_gap(self):
-        self.assertEqual(self._top("turn a recorded podcast into readable text"), ["audiocpp"])
-
-    def test_generic_metadoc_does_not_hijack(self):
-        top = self._top("turn a recorded podcast into readable text", n=3)
-        self.assertNotIn("icm-architect", top[:1])
-
-    def test_cjk_query_routes(self):
-        top = self._top("调研一下这个话题在网上的讨论", n=3)
-        self.assertIn("agent-reach", top)
-
-    def test_stopword_only_query(self):
-        res = search.search(self.con, "the a of", limit=3)
-        self.assertEqual(res["results"], [])
-
-    def test_empty_query(self):
-        res = search.search(self.con, "", limit=3)
-        self.assertEqual(res["results"], [])
-
-    def test_matches_are_ordered_by_score(self):
-        res = search.search(self.con, "code review before committing", limit=5)
-        scores = [r["score"] for r in res["results"]]
-        self.assertEqual(scores, sorted(scores, reverse=True))
-
-    def test_search_result_is_json_serialisable(self):
-        """`omnicli search --json` must not raise.
-
-        A working set left in the result dict (a set of matched tokens) made
-        the JSON encoder raise a TypeError, and nothing caught it: the
-        library tests only read individual fields.
-        """
-        res = search.search(self.con, "click a button on a web page", limit=3)
-        text = json.dumps(res)
-        self.assertIn("results", json.loads(text))
-
-    def test_compact_view_is_much_smaller_than_the_full_result(self):
-        """Routing needs names and scores; the chunk archive is opt-in."""
-        res = search.search(self.con, "transcribe a zoom lecture", limit=6,
-                            rerank_enabled=False)
-        full = len(json.dumps(res).encode())
-        compact = search.compact(res["results"])
-        small = len(json.dumps(compact).encode())
-        self.assertLess(small * 4, full,
-                        f"compact view is not compact: {small} vs {full} bytes")
-        self.assertEqual([c["skill"] for c in compact],
-                         [r["skill"] for r in res["results"]])
-        for item in compact:
-            self.assertIn("why", item)
-            self.assertIn("score", item)
 
 
 if __name__ == "__main__":

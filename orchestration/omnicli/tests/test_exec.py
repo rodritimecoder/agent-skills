@@ -283,7 +283,7 @@ class TestExec(unittest.TestCase):
     def test_inline_plan_uses_globals_without_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             report, proc = self._code(Path(tmp), """
-const rows = await search("audio transcription", 2);
+const rows = (await skills()).slice(0, 2);
 console.log(rows.map((row) => row.skill).join(","));
 """)
             self.assertEqual(proc.returncode, 0, report["stderr"])
@@ -297,9 +297,9 @@ console.log(rows.map((row) => row.skill).join(","));
         with tempfile.TemporaryDirectory() as tmp:
             plan = Path(tmp) / "plan.mjs"
             plan.write_text(
-                'import { search, emitResult } from "omnicli_tools";\n'
-                'const rows = await search("ocr", 1);\n'
-                "emitResult({ count: rows.length, first: rows[0] && rows[0].skill });\n",
+                'import { skills, emitResult } from "omnicli_tools";\n'
+                'const rows = (await skills()).slice(0, 1);\n'
+                "emitResult({ count: rows.length, first: rows[0] && (rows[0].skill || rows[0].name || rows[0]) });\n",
                 encoding="utf-8",
             )
             report, proc = self._exec(str(plan))
@@ -322,7 +322,7 @@ console.log(rows.map((row) => row.skill).join(","));
     def test_parallel_fan_out_trips_the_call_budget(self):
         with tempfile.TemporaryDirectory() as tmp:
             report, proc = self._code(Path(tmp), """
-const calls = Array.from({ length: 6 }, () => () => search("ocr", 1));
+const calls = Array.from({ length: 6 }, () => () => skills());
 const rows = await parallel(calls, 6);
 console.log("calls", rows.length);
 """, "--max-calls", "2")
@@ -334,7 +334,7 @@ console.log("calls", rows.length);
     def test_parallel_fan_out_succeeds_in_write_sandbox_empty_workspace(self):
         with tempfile.TemporaryDirectory() as tmp:
             report, proc = self._code(Path(tmp), """
-const calls = Array.from({ length: 10 }, () => () => search("ocr", 1));
+const calls = Array.from({ length: 10 }, () => () => skills());
 const rows = await parallel(calls, 8);
 emitResult({ count: rows.length, nonEmpty: rows.every((r) => Array.isArray(r) && r.length > 0) });
 """, "--sandbox", "write")
@@ -410,12 +410,12 @@ emitResult({ count: rows.length, nonEmpty: rows.every((r) => Array.isArray(r) &&
         # still runs under strict: $HOME is masked and search crosses the bridge.
         probe = """
 import fs from "node:fs";
-import { search } from "omnicli_tools";
+import { skills } from "omnicli_tools";
 
 try { fs.readFileSync(SENTINEL, "utf8"); console.log("home: readable"); }
 catch (err) { console.log("home: masked"); }
 
-console.log("search:", (await search("ocr", 1)).length);
+console.log("skills:", (await skills()).length);
 """
         with tempfile.TemporaryDirectory() as tmp:
             plan = Path(tmp) / "strict.mjs"
@@ -430,7 +430,7 @@ console.log("search:", (await search("ocr", 1)).length);
         # Equivalent non-strict (write) behaviour: the real $HOME is visible
         # and search still returns rows.
         self.assertIn("home: readable", readable["stdout"])
-        self.assertIn("search:", readable["stdout"])
+        self.assertIn("skills:", readable["stdout"])
 
         # Strict behaviour: bwrap masks $HOME and the tool call is routed over
         # the bridge (which is why bridge_calls is non-zero).
@@ -438,7 +438,7 @@ console.log("search:", (await search("ocr", 1)).length);
         self.assertEqual(report["sandbox"], "strict")
         self.assertIn("home: masked", report["stdout"])
         self.assertNotIn("home: readable", report["stdout"])
-        self.assertIn("search: 1", report["stdout"])
+        self.assertIn("skills:", report["stdout"])
         self.assertGreaterEqual(report["bridge_calls"], 1)
 
         # Slice 1 denies exec by refusing node:child_process at the import

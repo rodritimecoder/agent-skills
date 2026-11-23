@@ -22,7 +22,7 @@ In Pi Agent's interactive terminal loops, latency and context token consumption 
 
 ```bash
 # Natural-language search returns compact ranked candidates
-omnicli search "extract slides from zoom video"
+omnicli exec (filesystem discovery) "extract slides from zoom video"
 ```
 
 Output is cleanly formatted text (<350 tokens) rather than raw JSON schemas:

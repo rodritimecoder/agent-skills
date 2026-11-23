@@ -166,7 +166,7 @@ Architecture, full SDK API and authoring guidelines:
 - [references/skill-stack-architecture.md](references/skill-stack-architecture.md) (how agentskills.io, ICM's `AGENTS.md`/`CONTEXT.md`, and omnicli compose into one progressive-disclosure ladder)
 - [references/code-mode-sdk.md](references/code-mode-sdk.md) (API, sandbox modes, `--mem-limit`, examples in [examples/](examples/))
 - [examples/recipes.mjs](examples/recipes.mjs) (five canonical recipes: discovery → schema → projection, in-memory `spec()`, `parallel()` fan-out, a caught typed-validation error, and session state)
-- [harnesses/code-mode-showcase.html](harnesses/code-mode-showcase.html) (self-contained visual walkthrough of the three native tools, plan surface, and strict boundary)
+- [harnesses/code-mode-showcase.html](harnesses/code-mode-showcase.html) (self-contained visual walkthrough of the exec-only tool surface, plan surface, and strict boundary)
 - [references/agent-skills-checklist.md](references/agent-skills-checklist.md) (Agent Skills spec, Python/JS script contract, `tests/verify_agent_skills.py`)
 
 ---
@@ -183,9 +183,7 @@ omnicli mcp --http --port 8790    # Streamable HTTP on 127.0.0.1:8790
 
 | Tool | Does |
 |---|---|
-| `omni_search` | legacy intent-lookup compatibility surface; `depth: "contract"` returns a contract in one call. Agent workflows should prefer `omni_exec` with `omnicli_skills` + `describe()` instead. |
-| `omni_invoke` | run one tool, bounded + projected |
-| `omni_exec` | one JavaScript Code Mode plan that discovers skills, reads the tool schema with `describe()`, and emits one bounded result (preferred discovery path) |
+| `omni_exec` | one JavaScript Code Mode plan that discovers skills with `omnicli_skills`, reads the tool schema with `describe()`, invokes the tool, and emits one bounded result — the only MCP tool and the sole discovery path |
 
 `omni_exec` is the agent discovery path: it runs the same plan as the CLI with
 `--sandbox strict` by default and is **OFF unless `OMNICLI_MCP_ALLOW_EXEC=1`**;
@@ -219,7 +217,18 @@ omnicli usage --since 24h --json       # per-harness telemetry from ~/.local/sha
 `omnicli llm` · `ocr` · `decide` · `asr` map to `local/llm`, `local/ocr`, `local/decide`, `local/asr`. Ports, models and slot rules are in `CONTEXT.md` — not duplicated here.
 
 ```bash
-omnicli status            # ports, catalog freshness, retrieval tier
-omnicli index --rebuild   # rebuild catalog.db + tool schemas
-omnicli eval              # golden routing evaluation (61 cases)
+omnicli status            # ports, catalog freshness, service health
+omnicli index --rebuild   # rebuild the skill/tool index + tool schemas
 ```
+
+The routing gate has three hard legs — `exec_only_flow`, `skills_bridge_flow`,
+`doc_drift` — each with a real mutant that must turn it red:
+
+```bash
+python3 tests/routing_gate.py --json   # run all three legs
+python3 tests/discovery_mutant.py      # mutant for exec_only_flow
+python3 tests/leg_mutants.py           # mutants for the other two legs
+```
+
+`tests/overfit_check.py` remains a standalone diagnostic of the curated routing
+metadata, not a gate leg.
