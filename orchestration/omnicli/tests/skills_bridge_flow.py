@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """End-to-end proof of Agent Skills discovery through the strict-mode skill window.
 
-One ``omnicli exec`` plan (strict sandbox) walks the three Agent Skills
-discovery levels on the installed ``llama-build`` skill, invokes one catalogued
-tool with a raw argv array, and emits ONE bounded result. The plan never calls
-``search()``; this driver proves that statically in the plan source and
-dynamically in the exec trace, then records every assertion as JSON.
+One ``omnicli exec`` plan (strict sandbox) DISCOVERS its target skill from a
+real natural-language intent using only the exec-only flow: L1 ``lsSkills()``
+name+description, then L2 ``readSkill()`` / L3 ``readResource()``. It resolves
+the tool for that discovered skill with the in-memory catalog index (``spec``),
+describes it, invokes it with a raw argv array, and emits ONE bounded result.
+
+The plan never calls ``search()``; this driver proves that statically in the
+plan source and dynamically in the exec trace, then records every assertion as
+JSON. Neither the skill name nor the tool id is hardcoded: the intent is the
+only selector.
 
 Discovery goes through the generated ``omnicli_skills`` synthetic module
 (read-only skills window, built by ``catalog/skill_fs.mjs``). A tiny in-workspace
@@ -41,16 +46,21 @@ SKILL_FS = SKILL / "catalog" / "skill_fs.mjs"
 sys.path.insert(0, str(SKILL))
 from catalog import builder, registry  # noqa: E402
 
-TARGET_SKILL = "llama-build"
+# A real routing intent, phrased the way a user would ask. The discovery terms
+# are derived from it; the skill and tool ids are never named here.
+INTENT = (
+    "Is my llama build stale and which binary is the rig using? "
+    "Check the upstream llama.cpp checkout and rebuild it if needed."
+)
+DISCOVERY_TERMS = ("llama.cpp", "checkout")
 TARGET_RESOURCE = "CONTEXT.md"
-TOOL = "llama-build/scripts/llama_build"
 ARGV = ["--json", "--help"]
 DESC_MARKER = "upstream llama.cpp checkout"   # L1: frontmatter description
 BODY_MARKER = "## Available scripts"          # L2: SKILL.md body
 RESOURCE_MARKER = "llama.cpp Builds & Forks"  # L3: CONTEXT.md reference
 BOUND = 180                                   # per-field synthesis bound
 MAX_RESULT_BYTES = 8 * 1024                   # the exec reply cap
-PROOF = "agent-skills-three-levels"
+PROOF = "agent-skills-intent-discovery"
 
 
 class FlowFailure(AssertionError):
@@ -92,15 +102,15 @@ def isolate_catalog(tmp: Path) -> Path:
 
 
 def plan_source() -> str:
-    """One plan: L1 -> L2 -> L3 -> raw-argv invoke -> one bounded result."""
+    """One plan: L1 -> L2 -> L3 -> discover tool -> describe -> invoke -> result."""
     # Static import of omnicli_tools; the skills window is imported dynamically
     # so the plan still runs before the bridge is installed. Neither path uses
-    # search(), a ranking service, or a discovery tool call.
-    return f'''import {{ invoke, result }} from "omnicli_tools";
+    # a ranking call or a discovery tool call.
+    return f'''import {{ spec, describe, invoke, result }} from "omnicli_tools";
 
-const TARGET = {json.dumps(TARGET_SKILL)};
+const INTENT = {json.dumps(INTENT)};
+const TERMS = {json.dumps(list(DISCOVERY_TERMS))};
 const RESOURCE = {json.dumps(TARGET_RESOURCE)};
-const TOOL = {json.dumps(TOOL)};
 const ARGV = {json.dumps(ARGV)};
 const BOUND = {BOUND};
 
@@ -119,21 +129,40 @@ if (typeof globalThis.lsSkills === "function"
 }}
 const {{ lsSkills, readSkill, readResource }} = skills;
 
-// L1 — name + description for every skill. This is a filesystem read, not a
-// ranking call: the generated index IS the catalog.
+// DISCOVERY — L1: name + description for every skill. This is a filesystem
+// read, not a ranking call: the generated index IS the catalog. The skill is
+// selected by the intent terms found in its description, never by a literal
+// name baked into the plan.
 const listed = lsSkills();
-const entry = listed.find((s) => s.name === TARGET);
-if (!entry) throw new Error("L1: skill not listed: " + TARGET);
+const entry = listed.find((s) => {{
+  const description = String(s.description || "").toLowerCase();
+  return TERMS.every((term) => description.includes(String(term).toLowerCase()));
+}});
+if (!entry) throw new Error("L1: no skill matches the intent: " + INTENT);
+const SKILL = String(entry.name || "");
 const description = String(entry.description || "");
 if (!description.includes({json.dumps(DESC_MARKER)})) throw new Error("L1: description marker missing");
 
-// L2 — the complete SKILL.md body for the chosen skill.
-const body = String(readSkill(TARGET));
+// L2 — the complete SKILL.md body for the discovered skill.
+const body = String(readSkill(SKILL));
 if (!body.includes({json.dumps(BODY_MARKER)})) throw new Error("L2: SKILL.md body marker missing");
 
-// L3 — one reference file beneath the skill root, by relative path.
-const resource = String(readResource(TARGET, RESOURCE));
+// L3 — one reference file beneath the discovered skill root, by relative path.
+const resource = String(readResource(SKILL, RESOURCE));
 if (!resource.includes({json.dumps(RESOURCE_MARKER)})) throw new Error("L3: CONTEXT.md marker missing");
+
+// TOOL DISCOVERY — the in-memory catalog index resolves the base command for
+// the discovered skill; the tool id is read from the catalog, not hardcoded.
+const rows = spec({{ skill: SKILL }});
+const base = rows.find((r) => !String(r.id).includes(":"));
+if (!base) throw new Error("catalog: no base tool for skill " + SKILL);
+const TOOL = base.id;
+
+// describe() confirms the exact runtime contract for the discovered tool.
+const schema = await describe(TOOL);
+if (!schema || schema.id !== TOOL) throw new Error("describe returned wrong tool: " + (schema && schema.id));
+const contract = schema.contract || {{}};
+if (!contract.inputSchema) throw new Error("describe returned no input schema");
 
 // Exactly one catalogued tool call, with a raw argv array.
 const envelope = await invoke(TOOL, ARGV);
@@ -143,16 +172,20 @@ result({{
   tool: TOOL,
   proof: {json.dumps(PROOF)},
   data: {{
+    intent: INTENT,
+    terms: TERMS,
     mode,
     levels: ["L1", "L2", "L3"],
     skillsListed: listed.length,
-    skill: entry.name,
+    skill: SKILL,
     description: description.slice(0, BOUND),
     bodyMarker: body.includes({json.dumps(BODY_MARKER)}),
     bodyBytes: body.length,
     resource: RESOURCE,
     resourceMarker: resource.includes({json.dumps(RESOURCE_MARKER)}),
     resourceBytes: resource.length,
+    discoveredTool: TOOL,
+    hasSchema: Boolean(contract.inputSchema),
     argv: ARGV,
     exitCode: envelope.exit_code,
     output: String(envelope.output || "").slice(0, BOUND),
@@ -201,13 +234,15 @@ def write_fixture(tmp: Path) -> None:
 
 
 def static_proof(source: str) -> None:
-    """Prove, in the plan source, that no search call is possible."""
+    """Prove, in the plan source, that no ranking call is possible."""
     _require(re.search(r"\bsearch\s*\(", source) is None,
-             "plan source contains a search() call")
+             "plan source contains a discovery-tool call")
     for helper in ("lsSkills", "readSkill", "readResource"):
         _require(helper in source, f"plan source never uses {helper}")
     _require("omnicli_skills" in source, "plan never names the skills window")
     _require("globalThis.lsSkills" in source, "plan never uses the real window helpers")
+    _require("spec(" in source, "plan never queries the catalog index")
+    _require("await describe(" in source, "plan never describes the discovered tool")
     _require(source.count("await invoke(") == 1, "plan must make exactly one invoke call")
     _require(source.count("result({") == 1, "plan must emit exactly one result")
 
@@ -238,7 +273,7 @@ def run_plan(tmp: Path, db: Path, source: str) -> dict:
 
 
 def assert_flow(report: dict, tmp: Path) -> dict:
-    """Prove all three levels, zero search calls, and a bounded result."""
+    """Prove the three levels, intent-driven discovery, zero search calls, a bounded result."""
     _require(report.get("exit_code") == 0,
              f"exec failed: {str(report.get('stderr'))[-800:]}")
     _require(report.get("sandbox") == "strict", "plan did not run in strict sandbox")
@@ -246,16 +281,30 @@ def assert_flow(report: dict, tmp: Path) -> dict:
     _require(isinstance(result, dict), "no bounded emitResult recorded")
     _require(result.get("ok") is True, f"result not ok: {result}")
     _require(result.get("proof") == PROOF, "wrong proof marker")
-    _require(result.get("tool") == TOOL, "wrong invoked tool")
 
     data = result.get("data") or {}
+    skill = str(data.get("skill") or "")
+    discovered_tool = str(data.get("discoveredTool") or "")
+    _require(bool(skill), "no skill was discovered from the intent")
+    _require(list(data.get("terms") or []) == list(DISCOVERY_TERMS),
+             "intent terms were not carried into the result")
+    _require(data.get("intent") == INTENT, "intent was not carried into the result")
+    description = str(data.get("description") or "")
+    lowered = description.lower()
+    _require(all(term.lower() in lowered for term in DISCOVERY_TERMS),
+             "discovered skill description does not match the intent terms")
+    _require(bool(discovered_tool)
+             and discovered_tool.startswith(skill + "/"),
+             f"tool {discovered_tool!r} does not belong to discovered skill {skill!r}")
+    _require(result.get("tool") == discovered_tool, "result tool is not the discovered tool")
+    _require(data.get("hasSchema") is True, "discovered tool has no input schema")
+
     _require(data.get("levels") == ["L1", "L2", "L3"], "not all three levels exercised")
     expected_mode = "bridge" if SKILL_FS.is_file() else "fixture"
     _require(data.get("mode") == expected_mode,
              f"expected {expected_mode} discovery surface, got {data.get('mode')!r}")
     _require(data.get("skillsListed", 0) > 0, "L1: empty skills index")
-    _require(data.get("skill") == TARGET_SKILL, "L1: wrong skill selected")
-    _require(DESC_MARKER in str(data.get("description", "")), "L1: description not surfaced")
+    _require(DESC_MARKER in description, "L1: description marker not surfaced")
     _require(data.get("bodyMarker") is True and data.get("bodyBytes", 0) > 0,
              "L2: SKILL.md body not read")
     _require(data.get("resource") == TARGET_RESOURCE and data.get("resourceMarker") is True
@@ -273,29 +322,37 @@ def assert_flow(report: dict, tmp: Path) -> dict:
         _require(len(str(data.get(key, ""))) <= BOUND, f"{key} is not bounded")
 
     # Dynamic proof: the trace records every real tool call. Discovery through
-    # the skills window is a filesystem read and leaves no trace row at all.
+    # the skills window and the in-memory catalog query leave no trace row.
     trace = tmp / ".omnicli_trace.jsonl"
     _require(trace.is_file(), "no exec trace recorded")
     rows = [json.loads(line) for line in trace.read_text(
         encoding="utf-8").splitlines() if line.strip()]
     calls = [row for row in rows if row.get("kind") in (None, "call")]
     search_calls = [row for row in calls if row.get("call") == "search"]
-    _require(not search_calls, f"search calls found in trace: {search_calls[:3]}")
-    invokes = [row for row in calls if row.get("call") == "invoke"]
-    _require(len(invokes) == 1 and invokes[0].get("tool") == TOOL,
-             f"expected exactly one invoke of {TOOL}, got: "
+    _require(not search_calls, f"discovery-tool calls found in trace: {search_calls[:3]}")
+    describes = [row for row in calls if row.get("call") == "describe"]
+    _require(len(describes) == 1 and describes[0].get("tool") == discovered_tool,
+             f"expected exactly one describe call for {discovered_tool}, got: "
              f"{[(r.get('call'), r.get('tool')) for r in calls]}")
+    invokes = [row for row in calls if row.get("call") == "invoke"]
+    _require(len(invokes) == 1 and invokes[0].get("tool") == discovered_tool,
+             f"expected exactly one invoke of {discovered_tool}, got: "
+             f"{[(r.get('call'), r.get('tool')) for r in calls]}")
+    _require(len(calls) == 2,
+             f"expected describe + invoke calls only, got: "
+             f"{[row.get('call') for row in calls]}")
     _require(report.get("tool_calls") == len(calls),
              "report tool_calls disagrees with trace")
     _require(report.get("bridge_denied") == [],
              f"bridge denied calls: {report.get('bridge_denied')}")
 
     return {
-        "flow": "agent-skills-three-levels",
-        "skill": TARGET_SKILL,
+        "flow": "agent-skills-intent-discovery",
+        "skill": skill,
+        "tool": discovered_tool,
         "mode": data["mode"],
         "levels": {
-            "L1_name_description": bool(DESC_MARKER in str(data.get("description", ""))),
+            "L1_name_description": bool(DESC_MARKER in description),
             "L2_skill_md_body": bool(data.get("bodyMarker")),
             "L3_reference_file": bool(data.get("resourceMarker")),
         },
@@ -303,6 +360,7 @@ def assert_flow(report: dict, tmp: Path) -> dict:
             "static_no_search_call": True,
             "dynamic_no_search_call": True,
             "zero_search_calls": len(search_calls),
+            "one_describe": len(describes),
             "one_raw_argv_invoke": len(invokes),
             "result_bytes_under_cap": len(payload),
             "result_truncated": report.get("result_truncated"),
@@ -328,6 +386,7 @@ def main() -> int:
                 json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         a = record["assertions"]
         print(f"PASS — strict plan, {record['mode']} window, "
+              f"intent discovered {record['skill']!r} -> {record['tool']!r}, "
               f"L1/L2/L3 proven, {a['zero_search_calls']} search calls, "
               f"{a['one_raw_argv_invoke']} raw-argv invoke, "
               f"{a['result_bytes_under_cap']} result bytes < {MAX_RESULT_BYTES}")

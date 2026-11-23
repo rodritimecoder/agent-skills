@@ -1,8 +1,8 @@
 """Offline tests for the hard-leg-only routing gate contract.
 
-Only the three hard legs (exec_only_flow, skills_bridge_flow, doc_drift) decide
-the verdict: three passing hard legs => GREEN; any hard leg failing, missing or
-malformed => RED. ``overfit`` is not a gate leg (overfit_check.py stays a
+Only the four hard legs (exec_only_flow, skills_bridge_flow, doc_drift,
+skill_standard) decide the verdict: four passing hard legs => GREEN; any hard
+leg failing, missing or malformed => RED. ``overfit`` is not a gate leg (overfit_check.py stays a
 standalone diagnostic). Every decide() case here uses an injected report, so
 no test touches the real catalog, writes an artifact or spawns an eval. The one
 real-subprocess case proves a hard leg can go red end-to-end through the
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from tests import routing_gate as rg
 
-HARD_LEGS = ("exec_only_flow", "skills_bridge_flow", "doc_drift")
+HARD_LEGS = ("exec_only_flow", "skills_bridge_flow", "doc_drift", "skill_standard")
 
 
 def clean_leg(name: str) -> dict:
@@ -35,7 +35,7 @@ def clean_report() -> dict:
 
 
 class TestHardLegDecision(unittest.TestCase):
-    """decide() greens only on three passing hard legs; any broken leg is red."""
+    """decide() greens only on four passing hard legs; any broken leg is red."""
 
     def assert_red(self, report: dict, needle: str) -> list[str]:
         failures = rg.decide(report)
@@ -50,8 +50,8 @@ class TestHardLegDecision(unittest.TestCase):
         failures = rg.decide(report)
         self.assertEqual(failures, [], f"{label}: expected GREEN, got {failures}")
 
-    def test_three_hard_legs_pass_is_green(self):
-        self.assert_green(clean_report(), "three passing hard legs")
+    def test_four_hard_legs_pass_is_green(self):
+        self.assert_green(clean_report(), "four passing hard legs")
 
     def test_each_hard_leg_failure_is_red(self):
         for name in HARD_LEGS:
@@ -76,7 +76,7 @@ class TestHardLegDecision(unittest.TestCase):
                 report["legs"][name] = "not-a-result-dict"
                 self.assert_red(report, name)
 
-    def test_empty_legs_is_red_for_all_three(self):
+    def test_empty_legs_is_red_for_all_four(self):
         for report in ({"legs": {}}, {}):
             with self.subTest(report=report):
                 failures = rg.decide(report)
@@ -84,7 +84,7 @@ class TestHardLegDecision(unittest.TestCase):
                 for name in HARD_LEGS:
                     self.assertTrue(any(name in f for f in failures), failures)
 
-    def test_all_three_hard_legs_fail_together(self):
+    def test_all_four_hard_legs_fail_together(self):
         report = clean_report()
         for name in HARD_LEGS:
             report["legs"][name] = failed_leg(name)
@@ -115,7 +115,7 @@ class TestHardLegDecision(unittest.TestCase):
 class TestGateIsHardLegsOnly(unittest.TestCase):
     """Static contract: no eval/advisory machinery remains in the gate."""
 
-    def test_declared_hard_legs_are_exactly_the_three(self):
+    def test_declared_hard_legs_are_exactly_the_four(self):
         self.assertEqual(rg.HARD_LEGS, HARD_LEGS)
 
     def test_gate_source_has_no_eval_or_advisory_references(self):

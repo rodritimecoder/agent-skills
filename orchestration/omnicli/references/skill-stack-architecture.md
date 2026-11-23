@@ -8,13 +8,23 @@ Three systems describe the same ladder: the [Agent Skills specification](https:/
 
 This document is the architecture-level counterpart to [agent-skills-checklist.md](agent-skills-checklist.md), which covers authoring and verification mechanics. The one-paragraph version of this argument lives in [CONTEXT.md](../../../CONTEXT.md) ("Discovery is the harness's job, not a router's"); here is the long form.
 
+> **Scope — normative vs historical.** The routing contract taught here is
+> **exec-only**: one `omnicli exec` plan calls the `omnicli_tools` bindings
+> `lsSkills()`, `readSkill(name)`, `readResource(name, rel)` and
+> `describe(toolId)`, then invokes the chosen tool. There is no discovery
+> search binding and no BM25/dense retrieval leg in the live gate. Material
+> below that discusses BM25, dense vectors, `search()` results or the retired
+> "two faces" CLI is **HISTORICAL, NON-NORMATIVE BACKGROUND** — it explains
+> where the measurements came from and is retained for provenance only. Do not
+> use it to decide how an agent routes today.
+
 ---
 
 ## 1. One ladder, three encodings
 
 | Tier | agentskills.io | ICM / workspace | omnicli runtime | Budget |
 | :--- | :--- | :--- | :--- | :--- |
-| Metadata | `name` + `description` frontmatter | L0 `AGENTS.md` — *where am I?* | `omnicli exec (filesystem discovery)` brief line | ~100 tok metadata; 300–800 tok L0 |
+| Metadata | `name` + `description` frontmatter | L0 `AGENTS.md` — *where am I?* | `lsSkills()` brief catalogue line | ~100 tok metadata; 300–800 tok L0 |
 | Instructions | `SKILL.md` core workflow | L1 root / L2 stage `CONTEXT.md` — *where do I go / what do I do?* | `describe <skill> --section` | <5,000 tok / <500 lines |
 | Resources | `references/`, `assets/` | L3 `_shared/`, `references/` — *what rules apply?* | `invoke`, `--omni-buffer`, Code Mode variables | on demand |
 | State | output files | L4 `output/`, `check.md` — *what am I working with?* | `emitState` session JSON, `check.md` | varies |
@@ -31,6 +41,13 @@ Consequences that hold across all three encodings:
 ---
 
 ## 2. `description` is the L0 catalog of the skill world
+
+> **Historical, non-normative:** the BM25/dense "retrieval legs", the
+> `CHUNK_PENALTY_ALPHA` ranking bias and the top-1/top-3 figures in this section
+> describe the retired retrieval gate (see
+> [retrieval-architecture.md](retrieval-architecture.md)). They are kept for
+> provenance only; the live gate reads frontmatter via `lsSkills()` /
+> `readSkill(name)` and scores nothing.
 
 Every retrieval leg sees the frontmatter `description` — and essentially nothing else at selection time. BM25 indexes it as a `skill`-kind doc row; the dense leg embeds it. It is the direct analogue of a small `AGENTS.md`: the minimum text that answers *"where do I go for task X"* while storing no content.
 
@@ -53,16 +70,16 @@ Body length is a ranking bias: BM25 aggregates the best chunk per skill, so a 93
 
 ---
 
-## 3. `search` → `describe --section` → `invoke` is the ICM read-down
+## 3. `lsSkills`/`readSkill`/`readResource` → `describe` → `invoke` is the ICM read-down
 
-The bounded-invoke loop is a runtime implementation of "load only what the step needs":
+The bounded-invoke loop is a runtime implementation of "load only what the step needs", all inside one exec plan:
 
-| ICM move | omnicli call | What it keeps out of context |
+| ICM move | binding inside one `omnicli exec` plan | What it keeps out of context |
 | :--- | :--- | :--- |
-| Read L0, route | `omnicli exec (filesystem discovery) "<intent>"` (brief) | the prompt shelf of every skill's full text |
-| Read L2 contract | `omnicli describe <skill> --section "<heading>"` | the rest of `SKILL.md` |
-| Load L3/L4 selectively | `omnicli invoke ... --omni-project a,b` | unrequested fields and full stdout |
-| Run the step | `omnicli exec plan.mjs` | intermediate tool outputs |
+| Read L0, route | `lsSkills()` then `readSkill(name)` | the prompt shelf of every skill's full text |
+| Read L2 contract | `describe(toolId)` | the rest of `SKILL.md` |
+| Load L3/L4 selectively | `readResource(name, rel)` + the invoke binding's `project` | unrequested fields and full stdout |
+| Run the step | `emitResult()` / final `console.log()` | intermediate tool outputs |
 
 Measured 2026-11-14 across 59 skills ([retrieval-architecture.md](retrieval-architecture.md)):
 
@@ -71,7 +88,7 @@ Measured 2026-11-14 across 59 skills ([retrieval-architecture.md](retrieval-arch
 | selection phase | 10,827 tok | 1,274 tok | **88.2% smaller** |
 | to invoke one tool | 13,209 tok | 4,265 tok | **67.7% smaller** |
 
-The selection-phase number is paid on *every turn*, whether or not a tool is used. The second saving comes from the 8 KB cap. BM25 top-1 is 56/61 (91.8%) and top-3 is 61/61 on the golden set; on the paraphrase set BM25 alone is 21/39 top-1 (53.8%). The golden set shares this catalog's vocabulary — read it as a routing benchmark, not an answer-quality benchmark.
+The selection-phase number is paid on *every turn*, whether or not a tool is used. The second saving comes from the 8 KB cap. **Historical, non-normative:** BM25 top-1 was 56/61 (91.8%) and top-3 61/61 on the golden set; on the paraphrase set BM25 alone was 21/39 top-1 (53.8%). Those figures measure the retired retrieval gate, not the live exec-only flow; the golden set shares this catalog's vocabulary, so read them as a routing benchmark, not an answer-quality benchmark.
 
 This is **prevention, not compression**. A monolithic everything-prompt loads 30k–50k tokens and then summarizes them; omnicli never loads them. The reason is operational, not aesthetic: tool selection degrades as prompt shelves grow (the Databricks study measured 88% → 52.6% past ~30 skills).
 
@@ -102,53 +119,51 @@ socket). One failure rejects the batch as `parallel[<index>]: <message>`, so
 keep intents distinguishable.
 
 ```js
-import { search, parallel, emitResult } from "omnicli_tools";
+import { lsSkills, readSkill, parallel, emitResult } from "omnicli_tools";
 
-const INTENTS = [
-  "transcribe a zoom lecture",
-  "ocr a slide",
-  "route a calibrated decision",
+const NAMES = [
+  "local-llm",
+  "ocr",
+  "jev-decision",
 ];
 
-const hits = await parallel(INTENTS.map((intent) => () => search(intent, 2)));
-for (const [i, rows] of hits.entries()) {
-  const top = rows[0] ?? {};
-  console.log(`${INTENTS[i]} -> ${top.skill ?? "none"} (${top.score ?? 0})`);
+const docs = await parallel(NAMES.map((name) => () => readSkill(name)));
+for (const [i, doc] of docs.entries()) {
+  const description = doc?.frontmatter?.description ?? "none";
+  console.log(`${NAMES[i]} -> ${description}`);
 }
 emitResult({
-  intents: INTENTS.length,
-  hits: hits.map((rows, i) => ({ intent: INTENTS[i], top: rows[0]?.skill ?? null })),
+  skills: NAMES.length,
+  discovered: docs.map((doc, i) => ({ name: NAMES[i], path: doc?.path ?? null })),
 });
 ```
 
-`search(intent, 2)` returns ranked `SearchResult[]` rows with `.skill` and
-`.score`. Check `omnicli spec --stubs` for the typed surface rather than guessing
-result shapes. That matters when you chain into `describe`: a skill-level
-describe returns `{ skill, kind, path, frontmatter, body_tokens, outline, tools }`,
-and its outline items use `.heading` (not `.title`) — there is no `.sections` key.
-Project those fields only; a projection built on `d.sections` / `s.title` would
-silently emit `undefined`.
+`lsSkills()` returns the catalogue of skill names; `readSkill(name)` returns the
+skill's `{ skill, kind, path, frontmatter, body_tokens, outline, tools }` record.
+Check `omnicli spec --stubs` for the typed surface rather than guessing result
+shapes. Outline items use `.heading` (not `.title`) — there is no `.sections`
+key. Project those fields only; a projection built on `d.sections` / `s.title`
+would silently emit `undefined`.
 
-**Which face?** Use the CLI `omnicli exec (filesystem discovery) "<intent>"` for **one** exploratory
-intent where you want to *see the ranking* and read the evidence before
-deciding. Use an `omnicli exec` plan for a **known batch**, or when search is a
-chain into `describe`/`invoke` whose results you filter and project in JS. Same
-router, two faces: the CLI shows you the ranking; the plan keeps intermediates
-out of your prompt.
+**One face, one plan.** There is no separate discovery CLI: `lsSkills()` /
+`readSkill()` / `readResource()` / `describe()` and the invoke binding are all
+called inside the same `omnicli exec` plan. Use `lsSkills()` when the batch is
+not known yet, then `readSkill(name)` for the chosen skills, and keep all
+intermediates out of your prompt.
 
 ---
 
 ## 5. Capability retrieval is not content retrieval
 
-This is the boundary most likely to be misread. `omnicli exec (filesystem discovery)` retrieves **capabilities** — which skill or tool can do the job. It does not answer questions from your notes. Content retrieval is a different catalog with a different contract:
+This is the boundary most likely to be misread. An exec-only plan (`lsSkills()` / `readSkill()`) retrieves **capabilities** — which skill or tool can do the job. It does not answer questions from your notes. Content retrieval is a different catalog with a different contract:
 
 | Question | Correct mechanism | Why |
 | :--- | :--- | :--- |
-| "which tool transcribes audio?" | `omnicli exec (filesystem discovery)` | routing over capabilities |
+| "which tool transcribes audio?" | one `omnicli exec` plan: `lsSkills()` then `readSkill(name)` | routing over capabilities |
 | "what did Kem say about knowledge graphs?" | `python3 /run/media/rodri/AI/creator-vault/vault_index.py search --folder .../creator-vault "knowledge graphs"` | FTS5 over note bodies |
 | "what superseded claim X?" | `graph-memory recall --hops 2` | k-hop entity traversal |
 
-Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. `omnicli exec (filesystem discovery)` is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.
+Kem's benchmark reel (`creator-vault/kem_glitch/2026-10-30_karpathy_llm_wikis/notes.md`) is about the *content* column: wikis cost 2×–3.35× the tokens with mostly flat accuracy, organized folders + grep matched the best at 0.97×, and a one-line citation hook moved verified answers from 70% to 92.5%. The conclusion — *"a visualizer is not a retrieval mechanism"* — does not apply to omnicli's catalog. An exec-only plan is a router over tools, not a wiki over knowledge. Conflating the two either expects graph answers from a router or expects routing from a note index.
 
 > **Caveat — not every Kem figure is equally grounded.** The `0.97×` / `2.05×`
 > ICM-vs-NVK token multipliers and the `70% → 92.5%` citation-hook figures are
@@ -165,10 +180,10 @@ Both are catalogs, but over different things. Keep them distinct.
 
 One exception proves the rule: the router itself opts out of body indexing
 (`index_body: false` in `catalog/aliases.json`). Its documentation is full of
-example queries like `omnicli exec (filesystem discovery) "transcribe a zoom lecture recording"`;
-indexed as routing text, the router would compete with the very skills it
-routes to. This reference is therefore reachable through the SKILL.md link and
-by path, not through `omnicli exec (filesystem discovery)`. That is deliberate, not a missing feature.
+example queries like "transcribe a zoom lecture recording"; indexed as routing
+text, the router would compete with the very skills it routes to. This reference
+is therefore reachable through the SKILL.md link and by path, not through the
+catalogue bindings. That is deliberate, not a missing feature.
 
 ---
 
@@ -197,7 +212,7 @@ Then `sync-skills propagate` to refresh `surface/`, `~/.local/bin`, harnesses an
 
 ---
 
-## 7. Kem lenses on Code Mode and search
+## 7. Kem lenses on the exec-only plan
 
 Kem's ideas are about where judgment lives and how a run proves itself; they
 attach at the routing/plan boundary, not inside the gateway. None of them
@@ -206,7 +221,7 @@ shape.
 
 | Kem idea | omnicli seam | What to do |
 | :--- | :--- | :--- |
-| Evidence before invoke | Code Mode `search()` hit | Name `why`/`matched`/`top` in the plan and project them into `emitResult` before invoking. |
+| Evidence before invoke | captured `readSkill()` / `describe()` evidence | Name the skill, path and routing reason in the plan and project them into `emitResult` before invoking. |
 | Actor / Step type / Proof | every plan call | Comment Actor, `D`/`P`/`H` and Proof above each call; emit a `proof` field per step. |
 | Negative controls | `hard gate holdouts` sets | Pair each positive routing case with a must-not-trigger prompt; require a failing gate. |
 | Fail → align | routing failure | Re-ask which skill owns the phrasing and re-plan; never add a one-off alias. |
@@ -215,15 +230,16 @@ shape.
 
 ### Evidence before invoke
 
-A Code Mode `search()` hit has exactly these keys (verified live): `skill`,
-`score`, `matched`, `why`, `top`, `chunk_count`. Do not invoke on a hit until
-you have named `why`, `matched` and `top` in the plan and projected them into
-`emitResult` — that makes the routing decision auditable. Call this the citation
-hook: provenance enforcement is cheaper than knowledge synthesis. One drift to
-note, not fix here: `retrieval-architecture.md:46` claims every result names
-`found_by`, but the Code Mode result has no such key; rely on
-`why`/`matched`/`top` and treat `found_by` as stale doc text (do not edit that
-file). Do not re-state `70% → 92.5%` as verified — section 5 flags it OCR-backed.
+A `readSkill(name)` / `describe(toolId)` result gives you the skill name, `path`,
+`frontmatter` and `outline`. Do not invoke on a capability until you have named
+the chosen skill, its path and the routing reason in the plan and projected them
+into `emitResult` — that makes the routing decision auditable. Call this the
+citation hook: provenance enforcement is cheaper than knowledge synthesis.
+**Historical, non-normative:** the retired `search()` result once carried
+`skill`, `score`, `matched`, `why`, `top` and `chunk_count`; a stale claim in
+`retrieval-architecture.md:46` named `found_by`, which that result never had.
+That shape belongs to the retired retrieval gate — do not depend on it. Do not
+re-state `70% → 92.5%` as verified — section 5 flags it OCR-backed.
 
 ### Actor / Step type / Proof
 
@@ -259,16 +275,16 @@ expected result outside the plan's read scope and compare only at verify time.
 This is `icm-architect`'s agentic-factory holdouts shelf, applied to a plan
 rather than a workspace.
 
-What this does NOT mean: these are plan-time disciplines, not a new runtime layer — the gateway stays one catalog, two faces.
+What this does NOT mean: these are plan-time disciplines, not a new runtime layer — the catalogue stays exec-only, with one face.
 
 ---
 
 ## Read next
 
 - [agent-skills-checklist.md](agent-skills-checklist.md) — frontmatter rules, script contract, verification gates
-- [retrieval-architecture.md](retrieval-architecture.md) — BM25/dense fusion, benchmarks, provenance
+- [retrieval-architecture.md](retrieval-architecture.md) — historical, non-normative: retired BM25/dense fusion, benchmarks, provenance
 - [code-mode-sdk.md](code-mode-sdk.md) — the generated SDK, sandbox modes, `parallel`, state
-- [discovery_and_invoke.mjs](../examples/discovery_and_invoke.mjs) — search + spec in one plan
+- [discovery_and_invoke.mjs](../examples/discovery_and_invoke.mjs) — one-plan discovery + spec (historical example: uses the retired search binding)
 - [in_memory_filter.mjs](../examples/in_memory_filter.mjs) — project in JS, emit one result
 - [harnesses/index.md](../harnesses/index.md) — how the same contract maps onto each host harness
 - `icm-architect` skill — `references/core.md` for the five-layer hierarchy and contract format

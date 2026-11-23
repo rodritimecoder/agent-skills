@@ -2,8 +2,10 @@
 """Lint skills against the Agent Skills spec and omnicli best practices.
 
 Validates frontmatter constraints (`name`, `description`, `compatibility`),
-description framing guidance, progressive-disclosure size, and executable
-script readiness (`--help`, non-interactive errors, `--json`).
+the allowed-frontmatter-key / no-hardware-token / third-person standard,
+progressive-disclosure size, and executable script readiness (`--help`,
+non-interactive errors, `--json`). Every active (non-archived) skill directory
+is checked, including skills that share a name across installed copies.
 
 Exit codes: 0 clean, 2 violations found, 1 fatal.
 """
@@ -37,6 +39,41 @@ PY_INPUT_RE = re.compile(r"(?<![.\w])input\s*\(")
 JS_READLINE_RE = re.compile(r"readline\.createInterface\s*\(")
 JSON_HINT_RE = re.compile(r"--(?:as-json|json|omni-schema)\b")
 
+# Agent Skill frontmatter keys this collection recognises. The first five are
+# the open standard; the last three are legacy keys already present in active
+# skills and are grandfathered so the deterministic gate stays green.
+STANDARD_FRONTMATTER_KEYS = frozenset(
+    {"name", "description", "compatibility", "metadata", "allowed-tools"}
+)
+LEGACY_FRONTMATTER_KEYS = frozenset({"status", "version", "license"})
+ALLOWED_FRONTMATTER_KEYS = STANDARD_FRONTMATTER_KEYS | LEGACY_FRONTMATTER_KEYS
+
+# Hardware-shaped tokens are only allowed in `compatibility` / body, never in
+# the Level-1 description. Known machine ports and generic compute words are
+# allowlisted; anything else in these families is a standard violation.
+PORT_RE = re.compile(r":(\d{4,5})\b")
+HARDWARE_RE = re.compile(
+    r"\b(gpu|gpus|vram|cuda|vulkan|nvidia|rtx|a100|h100|h200|tpu|"
+    r"tensor[-\s]?core|rocm|opencl)\b",
+    re.IGNORECASE,
+)
+ALLOWED_PORTS = frozenset(
+    {8000, 8080, 8081, 8082, 8083, 8084, 8089, 8091, 8765, 9060}
+)
+ALLOWED_HARDWARE_TOKENS = frozenset(
+    {"gpu", "gpus", "vram", "cuda", "vulkan", "nvidia"}
+)
+
+# Pre-existing folded descriptions whose full form (restored by the parser
+# fix) exceeds the 1024-char guidance. They remain visible as warnings, but a
+# known case cannot fail the hard gate until its targeted rewrite lands.
+LONG_DESCRIPTION_GRANDFATHERED = frozenset({"agent-reach"})
+
+# First/second person as a clause opener ("I ...", "You should ...") is not
+# third-person discovery framing. Ordinary "Use when you ..." imperatives do
+# not start a clause with a person pronoun and remain valid.
+PERSON_START_RE = re.compile(r"(?:^|[.!?]\s+)(?:I|We|You|My|Our|Your)\b", re.IGNORECASE)
+
 MAX_NAME_LEN = 64
 MAX_DESC_LEN = 1024
 MIN_DESC_LEN = 40
@@ -57,26 +94,32 @@ def _normalize_scalar_field(raw: str) -> str:
     return joined.strip().strip("\"'")
 
 
-def _load_skills(skills_dir: Path | None, include_sidelined: bool) -> dict[str, dict[str, Any]]:
-    if skills_dir is None:
-        return registry.load_all_skills(include_sidelined=include_sidelined)
-    skills: dict[str, dict[str, Any]] = {}
-    for item, status in registry._iter_skill_dirs(skills_dir, include_sidelined):
+def _load_skills(skills_dir: Path | None, include_sidelined: bool) -> list[dict[str, Any]]:
+    """Load EVERY active (non-archived) skill directory, not a name-deduped subset.
+
+    ``registry.load_all_skills`` keys by frontmatter name, which collapses
+    skills that share a name across the canonical tree and installed copies.
+    The standard must lint every real SKILL.md, so iterate the directories
+    directly and key by path instead.
+    """
+    root = skills_dir if skills_dir is not None else registry.resolve_skills_dir()
+    skills: list[dict[str, Any]] = []
+    for item, status in registry._iter_skill_dirs(root, include_sidelined):
         md = item / "SKILL.md"
         try:
             content = md.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
         name, desc = registry.parse_frontmatter(content)
-        key = name or item.name
-        skills[key] = {
+        skills.append({
             "name": name or item.name,
             "dir_name": item.name,
             "path": str(item),
             "md_path": str(md),
             "description": desc,
             "status": status,
-        }
+        })
+    skills.sort(key=lambda s: (s.get("name") or s.get("dir_name") or "", s["path"]))
     return skills
 
 
@@ -151,13 +194,38 @@ def check_skill(skill: dict[str, Any]) -> list[dict[str, str]]:
     if not desc:
         add("error", "description-missing", "frontmatter `description` is missing or empty")
     elif len(desc) > MAX_DESC_LEN:
-        add("error", "description-length",
+        severity = "warning" if label in LONG_DESCRIPTION_GRANDFATHERED else "error"
+        add(severity, "description-length",
             f"description is {len(desc)} chars (spec limit: {MAX_DESC_LEN})")
 
     compat = _normalize_scalar_field(raw_fm.get("compatibility", ""))
     if len(compat) > MAX_COMPAT_LEN:
         add("error", "compatibility-length",
             f"compatibility is {len(compat)} chars (spec limit: {MAX_COMPAT_LEN})")
+
+    # --- Code-checkable skill standard -----------------------------------
+    # These are hard, deterministic rules: the allowlists are the whole
+    # standard, so no prose document or judge is needed to apply them.
+    bad_keys = sorted(set(raw_fm) - ALLOWED_FRONTMATTER_KEYS)
+    if bad_keys:
+        add("error", "frontmatter-key-not-standard",
+            f"non-standard frontmatter key(s): {', '.join(bad_keys)}; "
+            f"allowed: {', '.join(sorted(ALLOWED_FRONTMATTER_KEYS))}")
+
+    if desc:
+        for match in PORT_RE.finditer(desc):
+            port = int(match.group(1))
+            if port not in ALLOWED_PORTS:
+                add("error", "description-hardware-token",
+                    f"port ':{port}' in description is not on the known-port allowlist")
+        for match in HARDWARE_RE.finditer(desc):
+            token = match.group(0).lower()
+            if token not in ALLOWED_HARDWARE_TOKENS:
+                add("error", "description-hardware-token",
+                    f"hardware token {token!r} in description is not allowlisted")
+        if PERSON_START_RE.search(desc):
+            add("error", "description-person-framing",
+                "description uses first/second person at a clause start; use third person")
 
     # --- Best-practice warnings ------------------------------------------
     if desc:
@@ -218,7 +286,7 @@ def run_checks(
     if skills_dir is not None and not skills_dir.is_dir():
         return [], 0, f"fatal: skills directory not found: {skills_dir}"
     loaded = _load_skills(skills_dir, include_sidelined=include_sidelined)
-    targets = [s for s in loaded.values() if s.get("md_path")]
+    targets = [s for s in loaded if s.get("md_path")]
     if skill:
         targets = [s for s in targets if s.get("name") == skill or s.get("dir_name") == skill]
         if not targets:

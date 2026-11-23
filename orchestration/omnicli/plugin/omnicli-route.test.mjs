@@ -107,9 +107,9 @@ async function setup(project) {
   return ctx;
 }
 
-test("registers three codemode tools in the omnicli namespace", async () => {
+test("registers the single exec tool in the omnicli namespace", async () => {
   const ctx = await setup();
-  assert.deepEqual([...ctx._tools.keys()].sort(), ["exec", "invoke", "search"]);
+  assert.deepEqual([...ctx._tools.keys()].sort(), ["exec"]);
   assert.equal(ctx._namespace().name, "omnicli");
   for (const def of ctx._tools.values()) {
     assert.equal(def.options.namespace, "omnicli");
@@ -119,36 +119,8 @@ test("registers three codemode tools in the omnicli namespace", async () => {
   }
 });
 
-test("search maps argv and caps oversized output", async () => {
+test("exec builds the omnicli argv", async () => {
   const ctx = await setup();
-  const search = ctx._tools.get("search");
-  const small = await search.execute({ query: "zoom lecture", limit: 3 });
-  assert.match(small.content, /search zoom lecture --json --limit 3/);
-  assert.match(small.content, /"skill":"fixture"/);
-
-  const huge = await search.execute({ query: "huge" });
-  assert.ok(huge.content.length < 9000, `expected a cap, got ${huge.content.length}`);
-  assert.match(huge.content, /capped at 8000/);
-});
-
-test("search contract depth, invoke, and exec build the omnicli argv", async () => {
-  const ctx = await setup();
-  const contract = await ctx._tools.get("search").execute({
-    query: "zoom download",
-    depth: "contract",
-    section: "Usage",
-    doc: "SKILL.md",
-  });
-  assert.match(contract.content, /search zoom download --json --limit 5 --depth contract --section Usage --doc SKILL\.md/);
-
-  const invoke = await ctx._tools.get("invoke").execute({
-    tool_id: "local/decide",
-    args: ["--flag", "value"],
-    project: "answer,confidence",
-    max_bytes: 2048,
-  });
-  assert.match(invoke.content, /invoke local\/decide --omni-project answer,confidence --omni-max-bytes 2048 -- --flag value/);
-
   const exec = await ctx._tools.get("exec").execute({ script: "console.log('hi')", sandbox: "strict", max_calls: 7 });
   assert.match(exec.content, /exec .*plan-.*\.mjs --sandbox strict --max-calls 7 --json/);
 
@@ -166,7 +138,7 @@ test("denies skill-directory discovery until a catalogue call primes the session
     /Denied by omnicli-route/,
   );
 
-  await before({ tool: "omnicli_search", input: { query: "demo" }, sessionID: "s1" });
+  await before({ tool: "omnicli_exec", input: { query: "demo" }, sessionID: "s1" });
   await before({ tool: "read", input: { path: skillFile }, sessionID: "s1" });
 
   await assert.rejects(
@@ -202,7 +174,7 @@ test("leaves ordinary repo reads and code-mode calls alone", async () => {
   const before = ctx._hooks["execute.before"];
   await before({ tool: "read", input: { path: join(root, "project", "src/index.ts") }, sessionID: "s5" });
   await before({ tool: "grep", input: { path: join(root, "project") }, sessionID: "s5" });
-  await before({ tool: "execute", input: { code: "return await tools.omnicli.search({query:'x'})" }, sessionID: "s6" });
+  await before({ tool: "execute", input: { code: "return await tools.omnicli.exec({script:'return 1'})" }, sessionID: "s6" });
 });
 
 test("guards shell commands with a structured, actionable denial", async () => {
@@ -236,7 +208,7 @@ test("a command starting with a flag cannot slip past the guard via --", async (
 test("guard is unconditional: priming, marker and project location do not disarm it", async () => {
   const ctx = await setup(skills);
   const before = ctx._hooks["execute.before"];
-  await before({ tool: "omnicli_search", input: { query: "demo" }, sessionID: "g2" });
+  await before({ tool: "omnicli_exec", input: { query: "demo" }, sessionID: "g2" });
   await writeFile(join(skills, ".omnicli-route-exempt"), "", "utf8");
 
   await assert.rejects(
@@ -270,5 +242,5 @@ test("injects the routing block once", async () => {
   hook(event);
   assert.equal(event.system.length, 1);
   assert.match(event.system[0].text, /\[omnicli route\]/);
-  assert.match(event.system[0].text, /tools\.omnicli\.search/);
+  assert.match(event.system[0].text, /tools\.omnicli\.exec/);
 });

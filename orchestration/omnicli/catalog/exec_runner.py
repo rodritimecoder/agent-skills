@@ -180,7 +180,11 @@ def _write_skills_manifest(dest: Path, skills_root: Path, guest_root: str) -> in
     from catalog import registry as registry_mod
 
     entries = []
-    for spec in registry_mod.load_all_skills(include_sidelined=True).values():
+    # Only active skills belong in the discoverable window. Sidelined/archived
+    # skills are kept on disk but must not leak into routing: they carry stale
+    # or duplicate descriptions that compete with live skills (59 loaded vs
+    # 46 active). Active skills in every domain are still included.
+    for spec in registry_mod.load_all_skills(include_sidelined=False).values():
         raw = spec.get("path")
         if not raw:
             continue  # virtual skills have no directory to read from

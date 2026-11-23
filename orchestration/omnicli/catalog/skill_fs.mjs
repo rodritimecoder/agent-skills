@@ -19,6 +19,35 @@ import path from "node:path";
 
 const SKILL_MD = "SKILL.md";
 
+const TRIGGER_MAX = 120;
+
+/**
+ * One-line, <=120-char routing trigger derived from a description.
+ *
+ * Prefer the first "when-to-use" sentence — that is the line a router actually
+ * needs. Fall back to the first sentence. Both are collapsed to one line and
+ * capped on a word boundary so a brief card stays a single bounded token.
+ */
+function deriveTrigger(description) {
+  const text = String(description || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const sentences = text.match(/[^.!?]+(?:[.!?]+|$)/g) || [text];
+  const when = sentences.find((s) => /\buse (?:this skill )?when\b/i.test(s))
+    || sentences.find((s) => /\bwhen the user\b/i.test(s))
+    || sentences[0];
+  const line = when.replace(/\s+/g, " ").trim();
+  if (line.length <= TRIGGER_MAX) return line;
+  const cut = line.slice(0, TRIGGER_MAX - 1).trimEnd();
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + "…";
+}
+
+/** Domain is the top-level directory the skill lives under in the manifest. */
+function domainOf(dir) {
+  const parts = String(dir || "").split(/[\\/]/).filter(Boolean);
+  return parts.length > 1 ? parts[0] : "root";
+}
+
 /** Strictly lexical containment: no absolute paths, no `..`, no escape. */
 function within(base, rel) {
   const value = rel == null || rel === "" ? "." : String(rel);
@@ -64,10 +93,25 @@ export function createSkillFs(manifest) {
     return within(root, entry.dir);
   }
 
-  /** [{name, description}, ...] for every skill in the generated index. */
-  function lsSkills() {
-    return Array.from(skills.values(), ({ name, description }) => ({ name, description }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+  /**
+   * List the generated index.
+   *
+   * `lsSkills()` keeps the original full shape `[{name, description}, ...]`.
+   * `lsSkills({brief:true})` returns compact routing cards
+   * `[{name, domain, trigger}, ...]` — one line each, small enough to fit a
+   * single bounded result. No other input changes full-mode behaviour.
+   */
+  function lsSkills(options) {
+    const all = Array.from(skills.values());
+    all.sort((a, b) => a.name.localeCompare(b.name));
+    if (options && options.brief === true) {
+      return all.map(({ name, description, dir }) => ({
+        name,
+        domain: domainOf(dir),
+        trigger: deriveTrigger(description),
+      }));
+    }
+    return all.map(({ name, description }) => ({ name, description }));
   }
 
   /** The complete SKILL.md body for one skill. */

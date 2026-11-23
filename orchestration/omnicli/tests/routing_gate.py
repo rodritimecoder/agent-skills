@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Hard pre-push regression gate for the omnicli routing catalog.
 
-Runs only the three offline proof legs and writes one verdict line plus a full
+Runs only the four offline proof legs and writes one verdict line plus a full
 artifact under ~/.local/share/omnicli/routing-gate/. A leg's exit code is the
-signal; no measurement outside these three legs can affect the result.
+signal; no measurement outside these four legs can affect the result.
 
-Exit 0 = all three hard legs green; exit 1 = any hard leg red; exit 2 = fatal
+The four hard legs are ``exec_only_flow``, ``skills_bridge_flow``, ``doc_drift``
+and ``skill_standard`` (the existing Agent Skills linter). Every leg is a hard
+code check: no optional section and no retrieval scoring influences the result.
+
+Exit 0 = all four hard legs green; exit 1 = any hard leg red; exit 2 = fatal
 (the measurement could not be completed, so no verdict is claimed).
 
 The decision itself lives in ``decide()``, a pure function over an injected
@@ -25,11 +29,19 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 OUT = Path.home() / ".local/share/omnicli/routing-gate"
 
-# Only these three offline proof legs decide the verdict.
-HARD_LEGS = ("exec_only_flow", "skills_bridge_flow", "doc_drift")
+# Only these four offline proof legs decide the verdict.
+HARD_LEGS = ("exec_only_flow", "skills_bridge_flow", "doc_drift", "skill_standard")
 
 
-def run_script(name: str, script: str, *, args=(), json_result: bool = False, timeout: int = 600) -> dict:
+def run_script(
+    name: str,
+    script: str,
+    *,
+    args=(),
+    json_result: bool = False,
+    json_key: str = "ok",
+    timeout: int = 600,
+) -> dict:
     """Run an offline proof/leg as a subprocess; exit 0 is mandatory."""
     path = HERE / script
     r = subprocess.run(
@@ -39,8 +51,8 @@ def run_script(name: str, script: str, *, args=(), json_result: bool = False, ti
     if json_result:
         try:
             payload = json.loads(r.stdout)
-            passed = bool(payload.get("ok")) and r.returncode == 0
-            detail = payload.get("ok")
+            passed = bool(payload.get(json_key)) and r.returncode == 0
+            detail = payload.get(json_key)
         except Exception:
             passed, detail = False, "unparseable json"
     else:
@@ -53,7 +65,7 @@ def run_script(name: str, script: str, *, args=(), json_result: bool = False, ti
 def decide(report: dict) -> list[str]:
     """Pure gate decision: return human-readable failures ([] means green).
 
-    Only the three hard legs (``HARD_LEGS``) are evaluated. A missing,
+    Only the four hard legs (``HARD_LEGS``) are evaluated. A missing,
     malformed or non-passing hard leg is a failure. ``report`` may be a
     fabricated dict injected by tests; only its ``legs`` mapping is read.
     No I/O, no clock, no global state.
@@ -92,6 +104,10 @@ def check() -> tuple[bool, dict]:
         "doc_drift", os.environ.get("ROUTING_GATE_DOC_DRIFT_CHECK") or "doc_drift_check.py",
         args=("--json",), json_result=True,
     )
+    report["legs"]["skill_standard"] = run_script(
+        "skill_standard", os.environ.get("ROUTING_GATE_SKILL_STANDARD") or "verify_agent_skills.py",
+        args=("--json",), json_result=True, json_key="clean",
+    )
 
     failures = decide(report)
     report["failures"] = failures
@@ -115,6 +131,7 @@ def _verdict(ok: bool, report: dict, artifact: Path) -> str:
         f"exec_only_flow {state('exec_only_flow')} | "
         f"skills_bridge_flow {state('skills_bridge_flow')} | "
         f"doc_drift {state('doc_drift')} | "
+        f"skill_standard {state('skill_standard')} | "
         f"artifact={artifact}"
     )
 

@@ -7,7 +7,7 @@ Integrates with ~/.gemini/config/hooks.json under "omnicli-route":
     `injectSteps: [{"systemMessage": {"systemMessage": ...}}]`.
   - PreToolUse: Extracts agy camelCase `toolCall` payloads, primes sessions on
     `omnicli` CLI usage, and blocks raw reads/greps inside ~/src/my-agent-skills
-    until omnicli search/exec is called.
+    until one omnicli exec plan has primed the session.
   - Logs decisions to ~/.local/share/omnicli/route.jsonl for unified metrics across harnesses.
 """
 
@@ -27,14 +27,14 @@ ROUTE_LOG = Path(os.path.expanduser("~/.local/share/omnicli/route.jsonl"))
 PRIMED_DIR = Path(os.path.expanduser("~/.local/share/omnicli/primed_sessions"))
 
 ROUTING = (
-    "[omnicli route] The workstation tool catalogue is exposed via omnicli. "
+    "[omnicli route] The workstation tool catalogue is exposed as one exec-only surface. "
     "Use it; do not re-derive a tool's CLI from its source.\n"
-    "- omnicli search \"<intent>\" — find catalogued tools by intent.\n"
-    "- omnicli describe <tool_id> — read one tool's contract before calling it.\n"
-    "- omnicli invoke <tool_id> — run one catalogued tool; output is capped at 8 KB.\n"
-    "- omnicli exec -c '<js code>' or omnicli exec plan.mjs — run JS Code Mode in sandboxed node:vm with typed omnicli_tools bindings (omnicli spec --stubs for .d.ts).\n"
+    "- omnicli exec -c '<js code>' or omnicli exec plan.mjs — run one JS Code Mode plan in a "
+    "sandboxed node:vm with typed omnicli_tools bindings (omnicli spec --stubs for .d.ts).\n"
+    "  Inside that one plan: discover with lsSkills(), readSkill(name), readResource(name, rel) "
+    "and describe(toolId), then invoke the chosen tool binding — never a search tool.\n"
     "Rules: For multi-step exploration or data parsing (≥ 2 tool calls or parsing files/binaries), DO NOT probe incrementally with python3 -c / node -e / bash. Run a JS Code Mode script via omnicli exec in one turn.\n"
-    "Discover with search, never by viewing or grepping skill directories. "
+    "Discover with a single exec plan, never by viewing or grepping skill directories. "
     "Ordinary code and file work in the current repo still uses native tools."
 )
 
@@ -448,7 +448,8 @@ def handle_pre_tool_use(payload: dict) -> dict:
         "decision": "deny",
         "reason": (
             "Denied by agy-omnicli-route: reading skill directories to find a tool is the bypass this gate exists to stop. "
-            "Call 'omnicli search <intent>' first (or 'omnicli exec -c ...' for Code Mode); "
+            "Call 'omnicli exec -c ...' or 'omnicli exec plan.mjs' first: one plan discovers with "
+            "lsSkills/readSkill/readResource + describe and invokes the chosen binding — never a search tool; "
             "after one catalogue call, direct reads are allowed. "
             f"To work on the skills repo from a project outside it, create {EXEMPT_MARKER}."
         ),

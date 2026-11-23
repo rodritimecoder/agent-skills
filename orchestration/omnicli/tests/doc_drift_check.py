@@ -12,13 +12,16 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parent.parent
 REPO = SKILL.parent.parent
+# Overridable so a test can point the curated routing-doc scan at a temp tree
+# containing a mutant copy of a scanned document.
+DOC_ROOT = Path(os.environ.get("OMNICLI_DOC_DRIFT_ROOT", str(REPO)))
 NATIVE = {"exec"}
 MCP = {"omni_exec"}
-# The registered native surface is exec-only (NATIVE above). The retired
-# search/invoke names still exist as CLI verbs and as omnicli_tools bindings
-# inside an exec plan, and harness docs still name them historically. They are
-# known, not drift; the STALE guard below remains the stale-claim authority.
-KNOWN_METHODS = NATIVE | {"search", "invoke"}
+# The registered native surface is exec-only (NATIVE above). `invoke` survives
+# as a retired-but-known binding name inside historical plans; `search` was the
+# retired discovery verb and is NOT whitelisted. STALE_SEARCH below is the
+# authority for stale search-routing claims.
+KNOWN_METHODS = NATIVE | {"invoke"}
 
 STALE = (
     r"omnicli_describe",
@@ -32,11 +35,41 @@ STALE = (
     r"\b5\d{2}\+?\s+tools\b",
 )
 
+# Stale claims that teach an agent to route through the retired discovery verb.
+# Deliberately narrow: BM25/dense prose and generic `search()` mentions are
+# historical background in the reference docs, not routing instructions.
+STALE_SEARCH = (
+    r"\bomnicli\s+search\b",
+    r"`omnicli`\s+search\b",
+    r"call the omnicli_tools bindings \(search",
+    r"\bDiscover with search\b",
+    r"\bsearch/spec plan\b",
+    r"\bsearch\(\)/invoke\(\) inside the plan\b",
+    r"\bomnicli eval\b",
+    r"\bomnicli do\b",
+)
+
 
 def docs():
     files = [SKILL / "CONTEXT.md", SKILL / "SKILL.md", SKILL / "README.md"]
     files += sorted((SKILL / "harnesses").glob("*.md"))
     files += sorted(p for p in (SKILL / "references").glob("*.md")
+                    if not p.name.startswith("plan-"))
+    return [p for p in files if p.exists()]
+
+
+def search_routing_docs():
+    """Bounded, explicit set of files that teach the routing contract.
+
+    Hooks and the plugin inject instructions at runtime; root CONTEXT.md is the
+    machine-level routing doc; omnicli reference docs are the long-form contract.
+    plan-* docs are historical working notes and are excluded.
+    """
+    root = DOC_ROOT
+    files = [root / "CONTEXT.md"]
+    files += sorted((root / "orchestration" / "omnicli" / "hooks").glob("*.py"))
+    files += sorted((root / "orchestration" / "omnicli" / "plugin").glob("*.js"))
+    files += sorted(p for p in (root / "orchestration" / "omnicli" / "references").glob("*.md")
                     if not p.name.startswith("plan-"))
     return [p for p in files if p.exists()]
 
@@ -87,12 +120,27 @@ def doc_claims():
                 "no stale tool-count claims" if not hits else " | ".join(hits[:4]))
 
 
+def stale_search_routing():
+    hits = []
+    for path in search_routing_docs():
+        for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+            if any(re.search(p, line, re.I) for p in STALE_SEARCH):
+                hits.append(f"{path.name}:{n}: {line.strip()[:100]}")
+    return item("stale_search", not hits,
+                "no stale search-routing claims" if not hits else " | ".join(hits[:4]))
+
+
 def documented_commands(timeout):
     verbs = set()
     methods = set()
     for path in docs():
         text = path.read_text(errors="replace")
         verbs.update(re.findall(r"`omnicli\s+([a-z][a-z0-9_-]*)\b", text))
+    # Code-mode method names are validated against the authoritative routing
+    # docs only. Retired names in historical adapter docs are owned by that
+    # doc's slice, not by this gate.
+    for path in search_routing_docs():
+        text = path.read_text(errors="replace")
         methods.update(re.findall(r"`tools\.omnicli\.([a-z][a-z0-9_-]*)\b", text))
     try:
         p = subprocess.run(["omnicli", "--help"], capture_output=True, text=True,
@@ -122,7 +170,7 @@ def main(argv=None):
     ap.add_argument("--timeout", type=float, default=20.0)
     a = ap.parse_args(argv)
     checks = [native_tools(), mcp_face(a.timeout), doc_claims(),
-              documented_commands(a.timeout)]
+              stale_search_routing(), documented_commands(a.timeout)]
     ok = all(c["status"] == "PASS" for c in checks)
     if a.json:
         print(json.dumps({"ok": ok, "checks": checks}, indent=2))

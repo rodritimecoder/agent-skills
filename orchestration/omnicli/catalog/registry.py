@@ -120,6 +120,54 @@ def resolve_skills_dir() -> Path:
 
 _FRONT_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL | re.MULTILINE)
 
+# A description is either a block scalar (>, |, optionally with a chomping
+# indicator) or a single-line scalar. Match the whole line so the block reader
+# knows exactly where the indicator ends.
+_DESCRIPTION_RE = re.compile(
+    r"^description:[ \t]*(?P<indicator>[>|][-+]?)?[ \t]*(?P<inline>[^\n]*)$",
+    re.MULTILINE,
+)
+
+
+def _read_block_scalar(fm: str, start: int, indicator: str) -> str:
+    """Read a YAML folded (``>``) or literal (``|``) block to its end.
+
+    ``start`` is the offset immediately after the ``description:`` line. Every
+    indented line belongs to the block, *including blank lines inside it* —
+    those are the paragraph breaks that carry the ``NOT for:`` and ``Routing:``
+    triggers. The block ends at the first non-blank, non-indented line (the
+    next top-level key). A prior regex stopped at the first blank line and
+    silently truncated a third of the description.
+
+    Folded style joins runs of non-blank lines with a space and turns each
+    blank line into a single paragraph break; literal style keeps the newlines.
+    """
+    # split("\n")[1:] drops the empty remainder of the description line.
+    lines = fm[start:].split("\n")[1:]
+    block: list[str] = []
+    for line in lines:
+        if not line.strip():
+            block.append("")
+            continue
+        indent = len(line) - len(line.lstrip(" \t"))
+        if indent == 0:
+            break
+        block.append(line.strip())
+    # YAML's default (clip) chomping drops trailing blank lines.
+    while block and not block[-1]:
+        block.pop()
+    if indicator.startswith("|"):
+        return "\n".join(block)
+    folded: list[str] = []
+    for i, line in enumerate(block):
+        if line == "":
+            folded.append("\n")
+        elif i and block[i - 1] != "":
+            folded.append(" " + line)
+        else:
+            folded.append(line)
+    return "".join(folded)
+
 
 def parse_frontmatter(content: str) -> tuple[str, str]:
     """Return (name, description) from a SKILL.md's YAML frontmatter.
@@ -127,7 +175,8 @@ def parse_frontmatter(content: str) -> tuple[str, str]:
     Deliberately not a YAML parser: the frontmatter in this collection uses
     folded scalars, quoted strings and nested maps, and a full YAML loader
     would be a dependency we do not want in the control plane. We only need
-    two scalar fields, and the fallback is safe.
+    two scalar fields. The block reader is line-based so a folded or literal
+    scalar is consumed to the end of the block, blank lines included.
     """
     name = ""
     desc = ""
@@ -140,17 +189,13 @@ def parse_frontmatter(content: str) -> tuple[str, str]:
     if n:
         name = n.group(1).strip().strip("\"'")
 
-    # description may be a folded/literal block (>) or (|) or a quoted scalar
-    d = re.search(
-        r"^description:\s*(?:[>|][-+]?\s*\n((?:[ \t]+[^\n]*\n?)+))?([^\n]*)",
-        fm,
-        re.MULTILINE,
-    )
+    d = _DESCRIPTION_RE.search(fm)
     if d:
-        if d.group(1):
-            desc = " ".join(line.strip() for line in d.group(1).splitlines() if line.strip())
+        indicator = d.group("indicator")
+        if indicator:
+            desc = _read_block_scalar(fm, d.end(), indicator)
         else:
-            desc = d.group(2).strip()
+            desc = d.group("inline").strip()
     desc = desc.strip().strip("\"'")
     if desc.endswith("..."):
         desc = desc[:-3].rstrip()
