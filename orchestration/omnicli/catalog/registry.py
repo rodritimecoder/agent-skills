@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from . import schema_extract
+from . import invoke, schema_extract
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -40,6 +40,7 @@ CANDIDATE_SKILL_DIRS = [
     Path.home() / ".gemini" / "config" / "skills",
     Path.home() / ".config" / "opencode" / "skills",
     Path.home() / ".pi" / "agent" / "skills",
+    Path.home() / ".agents" / "skills",
     Path.cwd() / ".agents" / "skills",
 ]
 
@@ -51,7 +52,7 @@ SKIP_FILE_RE = re.compile(r"(^test_.*|.*_test|.*\.test)\.(py|js|mjs)$", re.IGNOR
 # Vendored bundles (a skill that embeds another skill's modules) are library
 # code, not a CLI surface. Indexing them would flood the tool registry with
 # internal helpers.
-SKIP_DIR_NAMES = {"modules", "tests"}
+SKIP_DIR_NAMES = {"modules", "tests", "examples"}
 # JS files in asset/template/example/plugin/doc folders are browser scripts,
 # fixtures, or harness plugins rather than standalone skill CLI tools.
 NON_TOOL_JS_DIRS = {"assets", "templates", "examples", "plugin", "references", "harnesses"}
@@ -116,6 +117,38 @@ def resolve_skills_dir() -> Path:
     if REPO_ROOT.is_dir():
         return REPO_ROOT
     return CANDIDATE_SKILL_DIRS[0]
+
+
+def resolve_skill_roots(
+    cwd: Path | None = None,
+    home: Path | None = None,
+) -> list[Path]:
+    """Return existing, deduplicated skill roots in precedence order.
+
+    Precedence (highest priority first):
+      1. ``(cwd or Path.cwd()) / ".agents" / "skills"`` (project-local)
+      2. ``(home or Path.home()) / ".agents" / "skills"`` (user-global)
+      3. ``resolve_skills_dir()`` (canonical workstation collection)
+    """
+    candidates = [
+        (cwd or Path.cwd()) / ".agents" / "skills",
+        (home or Path.home()) / ".agents" / "skills",
+        resolve_skills_dir(),
+    ]
+    roots: list[Path] = []
+    seen: set[Path] = set()
+    for cand in candidates:
+        try:
+            if not cand.is_dir():
+                continue
+            resolved = cand.resolve()
+        except (OSError, RuntimeError):
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        roots.append(cand)
+    return roots
 
 
 _FRONT_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL | re.MULTILINE)
@@ -310,28 +343,45 @@ def parse_bins(content: str) -> list[str]:
     return names
 
 
+def _real_dir(path: Path) -> Path:
+    try:
+        return path.resolve()
+    except OSError:
+        return path
+
+
 def _iter_skill_dirs(root: Path, include_sidelined: bool):
     if not root.is_dir():
         return
     seen: set[str] = set()
+    seen_real: set[Path] = set()
     for item in sorted(root.iterdir()):
         if not item.is_dir() or item.name.startswith(".") or item.name in SKIP_DIRS or item.name in {"surface"}:
             continue
         if (item / "SKILL.md").is_file():
+            real = _real_dir(item)
+            if real in seen_real:
+                continue
             if item.name in SIDELINED_DIRS:
                 if include_sidelined and item.name in ("glitch-cat", "archived"):
                     seen.add(item.name)
+                    seen_real.add(real)
                     yield item, item.name
             else:
                 seen.add(item.name)
+                seen_real.add(real)
                 yield item, "active"
             continue
         if item.name not in {"docs", "launchers", "site-packages", ".venv", "tests"}:
             for sub in sorted(item.iterdir()):
                 if sub.is_dir() and (sub / "SKILL.md").is_file() and sub.name not in seen:
+                    real = _real_dir(sub)
+                    if real in seen_real:
+                        continue
                     seen.add(sub.name)
                     sub_status = item.name if item.name in ("glitch-cat", "archived") else "active"
                     if sub_status == "active" or include_sidelined:
+                        seen_real.add(real)
                         yield sub, sub_status
     if include_sidelined:
         for sub in ("glitch-cat", "archived"):
@@ -340,33 +390,44 @@ def _iter_skill_dirs(root: Path, include_sidelined: bool):
                 continue
             for item in sorted(subdir.iterdir()):
                 if item.is_dir() and (item / "SKILL.md").is_file() and item.name not in seen:
+                    real = _real_dir(item)
+                    if real in seen_real:
+                        continue
                     seen.add(item.name)
+                    seen_real.add(real)
                     yield item, sub
 
 
-def load_all_skills(include_sidelined: bool = False) -> dict[str, dict[str, Any]]:
-    """Discover every skill and its metadata."""
-    root = resolve_skills_dir()
+def load_all_skills(
+    include_sidelined: bool = False,
+    roots: list[Path] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Discover every skill and its metadata across layered skill roots."""
+    active_roots = roots if roots is not None else resolve_skill_roots()
     skills: dict[str, dict[str, Any]] = {}
-    for item, status in _iter_skill_dirs(root, include_sidelined):
-        md = item / "SKILL.md"
-        try:
-            content = md.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        name, desc = parse_frontmatter(content)
-        name = name or item.name
-        shim = _resolve_shim(name, item.name, *parse_bins(content))
-        skills[name] = {
-            "name": name,
-            "dir_name": item.name,
-            "path": str(item),
-            "md_path": str(md),
-            "description": desc,
-            "doc_globs": parse_doc_globs(content),
-            "status": status,
-            "cli": shim,
-        }
+    for root in active_roots:
+        for item, status in _iter_skill_dirs(root, include_sidelined):
+            md = item / "SKILL.md"
+            try:
+                content = md.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            name, desc = parse_frontmatter(content)
+            name = name or item.name
+            if name in skills:
+                continue
+            shim = _resolve_shim(name, item.name, *parse_bins(content))
+            skills[name] = {
+                "name": name,
+                "dir_name": item.name,
+                "path": str(item),
+                "md_path": str(md),
+                "description": desc,
+                "doc_globs": parse_doc_globs(content),
+                "status": status,
+                "cli": shim,
+                "source_root": str(root),
+            }
     for name, spec in VIRTUAL_SKILLS.items():
         skills.setdefault(name, dict(spec))
     return skills
@@ -714,7 +775,17 @@ def extract_contract(path: Path, timeout: float = 12.0,
                 return sub
         return empty
 
-    interp = python or sys.executable
+    interp = python
+    if interp is None and path.suffix == ".py" and invoke.has_pep723_marker(path):
+        root = invoke.skill_root(path)
+        if root:
+            venv_py = Path(root) / ".venv" / "bin" / "python"
+            try:
+                if venv_py.is_file() and os.access(venv_py, os.X_OK):
+                    interp = str(venv_py)
+            except OSError:
+                pass
+    interp = interp or sys.executable
     schema: dict[str, Any] | None = None
     omni_schema: dict[str, Any] | None = None
     node_schema = False

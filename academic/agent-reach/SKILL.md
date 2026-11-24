@@ -2,22 +2,16 @@
 name: agent-reach
 
 description: >
-  Internet and social-media research router. Use this skill when the user asks you to find or
-  research anything about a topic online — even without saying "web search" — including tech
-  and community subjects such as Linux distributions, GPU and driver stacks, open-source
-  projects, products or public sentiment. Covers auth-walled sites, video transcripts and
-  structured feeds: Reddit, Twitter/X, LinkedIn, YouTube, Bilibili, Xiaohongshu, V2EX,
-  Xueqiu, GitHub, RSS, and web articles via Jina Reader.
-
-  Features deterministic token shielding and table projection via reach_filter.py (CLI and
-  a programmatic Python API). Zero config for 6 public channels. Run
-  `agent-reach doctor --json` to verify active backends before dispatching.
+  Internet and social-media research router. Use this skill when the user asks to find or
+  research anything online — even without saying "web search" — including tech and community
+  subjects such as Linux distributions, GPU and driver stacks, open-source projects, products,
+  or public sentiment. Covers auth-walled sites, video transcripts, and structured feeds:
+  Reddit, Twitter/X, LinkedIn, YouTube, Bilibili, Xiaohongshu, V2EX, Xueqiu, GitHub, RSS,
+  and web articles via Jina Reader (zero config for 6 public channels).
 
   NOT for: writing reports, translation, or data analysis (use agent compute); posting,
-  commenting or liking (read-only); searching this machine's own notes (use the vault's `vault_index.py`).
-
-  [Routing]: SKILL.md contains routing tables and quick recipes. Load specialized reference
-  runbooks on-demand: references/{search,social,career,dev,web,video,finance}.md.
+  commenting, or liking (read-only); searching this machine's own notes (use the vault's
+  `vault_index.py`).
 
 compatibility: "Requires network access. Multi-backend routing via OpenCLI, dedicated CLIs, or direct APIs."
 allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Bash(opencli:*) Bash(rdt:*) Bash(twitter:*) Read"
@@ -25,7 +19,11 @@ allowed-tools: "Bash(agent-reach:*) Bash(python3:*) Bash(opencli:*) Bash(rdt:*) 
 
 # Agent Reach — Internet Capability Router
 
-16 platforms, multi-backend routing. **When this skill is present, use it for internet research rather than improvising.**
+16 platforms, multi-backend routing (zero config for 6 public channels). **When this skill is present, use it for internet research rather than improvising.**
+
+- **Token shielding & table projection**: Deterministic field projection and table projection via `scripts/reach_filter.py` (CLI and programmatic Python API).
+- **Backend health check**: Run `agent-reach doctor --json` to verify active backends before dispatching.
+- **Routing**: This file contains routing tables and quick recipes; load specialized reference runbooks on-demand from `references/{search,social,career,dev,web,video,finance}.md`.
 
 ---
 

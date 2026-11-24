@@ -28,3 +28,37 @@
 {"kind":"done","call":"search","tool":"transcribe audio","ms":143,"rc":0,"harness":"t3-code","session":"ses_e0c6c3819ffeQsjsCY3BqMz1Oy","via":"exec"}
 {"kind":"done","call":"search","tool":"zoom recording","ms":157,"rc":0,"harness":"t3-code","session":"ses_e0c6c3819ffeQsjsCY3BqMz1Oy","via":"exec"}
 {"kind":"done","call":"search","tool":"ocr a slide","ms":161,"rc":0,"harness":"t3-code","session":"ses_e0c6c3819ffeQsjsCY3BqMz1Oy","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499897.583,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":140,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499897.724,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499897.724,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499897.724,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":150,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":150,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":151,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499897.875,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":130,"rc":2,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"describe","tool":"guard-hooks/scripts/guard:check","t":1795499898.591,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"describe","tool":"guard-hooks/scripts/guard:check","ms":110,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499898.701,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":139,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499918.782,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":139,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499918.921,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499918.921,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795499918.921,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":152,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":155,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":155,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795500077.79,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":126,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795500077.917,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795500077.917,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795500077.918,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":131,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":133,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":133,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"describe","tool":"guard-hooks/scripts/guard:check","t":1795500078.596,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"describe","tool":"guard-hooks/scripts/guard:check","ms":86,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"call","call":"invoke","tool":"guard-hooks/scripts/guard:check","t":1795500078.683,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}
+{"kind":"done","call":"invoke","tool":"guard-hooks/scripts/guard:check","ms":117,"rc":0,"harness":"t3-code","session":"ses_df6af808cffeLWh3fqcDXzw7Is","via":"exec"}

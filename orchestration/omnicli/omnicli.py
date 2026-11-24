@@ -1527,7 +1527,7 @@ def main():
     p.add_argument("target", nargs="?", default=None, help="Harness name (t3-code, agy, opencode, pi, boxxy)")
     p.add_argument("--json", action="store_true")
 
-    p = sub.add_parser("mcp", help="MCP face: 3 meta-tools over the catalog (stdio by default)")
+    p = sub.add_parser("mcp", help="MCP face: one omni_exec tool over the catalog (stdio by default)")
     p.add_argument("--http", action="store_true", help="serve Streamable HTTP on loopback instead of stdio")
     p.add_argument("--port", type=int, default=8790)
     p.add_argument("--host", default="127.0.0.1")

@@ -140,6 +140,44 @@ class TestGitSync(unittest.TestCase):
         self.assertIn("| Step   | Status  | Details         |", table)
         self.assertIn("| Branch | main    | origin/main     |", table)
 
+    def test_help_lists_subcommands(self):
+        proc = subprocess.run(
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"), "--help"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for sub in ("guarded-commit", "check-messages", "install-hook"):
+            self.assertIn(sub, proc.stdout)
+
+    def test_guarded_commit_help_lists_options(self):
+        proc = subprocess.run(
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"), "guarded-commit", "--help"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for opt in ("--repo", "--include", "--exclude", "--message", "--json"):
+            self.assertIn(opt, proc.stdout)
+
+    def test_bare_dry_run_json_works_without_subcommand(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        repo = tmp / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "-C", str(repo), "init", "-b", "main"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, capture_output=True)
+        (repo / "README.md").write_text("hi\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True)
+
+        proc = subprocess.run(
+            [sys.executable, str(HERE.parent / "scripts" / "git_sync.py"), "--dry-run", "--json"],
+            cwd=str(repo), capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload.get("status"), "clean")
+
 
 class TestStage2GuardRepo(unittest.TestCase):
     """Wave 1: stage2_guard must scan files relative to an explicit repo,

@@ -68,19 +68,22 @@ function within(base, rel) {
 /**
  * Build the skills API from a generated manifest.
  *
- * The manifest shape is `{ root, skills: [{ name, description, dir }, ...] }`,
- * where `dir` is relative to `root`. Nothing here opens a socket or spawns a
- * process; all reads go through node:fs against `root` only.
+ * The manifest shape is `{ root, skills: [{ name, description, dir, root? }, ...] }`,
+ * where `dir` is relative to `entry.root || manifest.root`. Nothing here opens
+ * a socket or spawns a process; all reads go through node:fs against those roots only.
  */
 export function createSkillFs(manifest) {
-  const root = path.resolve(String((manifest && manifest.root) || ""));
+  const rawRoot = String((manifest && manifest.root) || "");
+  const root = rawRoot ? path.resolve(rawRoot) : "";
   const skills = new Map();
   for (const entry of (manifest && manifest.skills) || []) {
     if (!entry || typeof entry.name !== "string" || !entry.name || !entry.dir) continue;
+    const entryRoot = entry.root ? path.resolve(String(entry.root)) : root;
     skills.set(entry.name, {
       name: entry.name,
       description: String(entry.description || ""),
       dir: String(entry.dir),
+      root: entryRoot,
     });
   }
 
@@ -90,7 +93,10 @@ export function createSkillFs(manifest) {
     if (!entry) {
       throw new Error(`omnicli_skills: unknown skill ${JSON.stringify(key)}`);
     }
-    return within(root, entry.dir);
+    if (!entry.root) {
+      throw new Error(`omnicli_skills: missing root for skill ${JSON.stringify(key)}`);
+    }
+    return within(entry.root, entry.dir);
   }
 
   /**
@@ -114,19 +120,13 @@ export function createSkillFs(manifest) {
     return all.map(({ name, description }) => ({ name, description }));
   }
 
-  /** The complete SKILL.md body for one skill. */
-  function readSkill(name) {
-    const target = path.join(skillBase(name), SKILL_MD);
-    return fs.readFileSync(target, "utf8");
-  }
-
-  /** A file beneath the skill root (references/, assets/, scripts/, ...). */
-  function readResource(name, rel) {
-    const base = skillBase(name);
+  function readConfined(base, rel, { checkDir = false } = {}) {
     const target = within(base, rel);
-    const stat = fs.statSync(target);
-    if (stat.isDirectory()) {
-      throw new Error(`omnicli_skills: ${String(rel)} is a directory, not a resource file`);
+    if (checkDir) {
+      const stat = fs.statSync(target);
+      if (stat.isDirectory()) {
+        throw new Error(`omnicli_skills: ${String(rel)} is a directory, not a resource file`);
+      }
     }
     // Symlinks inside a skill must not lead back out of its root either.
     let realBase = base;
@@ -142,6 +142,16 @@ export function createSkillFs(manifest) {
       throw new Error(`omnicli_skills: resource escapes the skill root: ${String(rel)}`);
     }
     return fs.readFileSync(target, "utf8");
+  }
+
+  /** The complete SKILL.md body for one skill. */
+  function readSkill(name) {
+    return readConfined(skillBase(name), SKILL_MD);
+  }
+
+  /** A file beneath the skill root (references/, assets/, scripts/, ...). */
+  function readResource(name, rel) {
+    return readConfined(skillBase(name), rel, { checkDir: true });
   }
 
   const api = { lsSkills, readSkill, readResource, skillsRoot: root };

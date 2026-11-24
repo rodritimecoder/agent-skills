@@ -1,7 +1,7 @@
 [
   {"query": "build this feature with align plan implement verify and parallel builders", "should_trigger": true, "kind": "prose"},
   {"query": "grill the brief first, then split work into non-overlapping slices", "should_trigger": true, "kind": "drift"},
-  {"query": "set up a flat shared board with board add/claim/check for my agents", "should_trigger": true, "kind": "path"},
+  {"query": "set up a flat shared board with board add/claim/check for my agents", "should_trigger": false, "kind": "path"},
   {"query": "my builder failed the check — re-align instead of patching", "should_trigger": true, "kind": "prose"},
   {"query": "intent driven build loop for the new routing feature", "should_trigger": true, "kind": "drift"},
   {"query": "verify like a user with a walkthrough before calling it done", "should_trigger": true, "kind": "drift"},

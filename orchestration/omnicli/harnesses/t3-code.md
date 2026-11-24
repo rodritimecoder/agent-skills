@@ -8,9 +8,12 @@ T3 Code has **no omnicli integration of its own** — its provider drivers are `
 
 ## ⚡ Three ways omnicli reaches a T3 session
 
-### Path 1 — Native tools (default; install once)
+### Path 1 — Native exec tool (default; install once)
 
-A global OpenCode plugin registers three catalogue verbs and injects the routing rule at every model call. Because T3 enumerates the OpenCode tool list, the verbs appear in T3, and because they are registered with `codemode: true`, they are also callable inside OpenCode's Code Mode as `tools.omnicli.*`.
+A global OpenCode plugin registers one catalogue verb and injects the routing
+rule at every model call. T3 enumerates the OpenCode tool list, so the verb
+appears as a native tool and is callable inside OpenCode Code Mode as
+`tools.omnicli.exec`.
 
 ```bash
 mkdir -p ~/.config/opencode/plugins
@@ -22,26 +25,22 @@ omnicli harness verify t3-code
 
 | Tool | What it does |
 |---|---|
-| `omnicli_search` / `tools.omnicli.search` | Rank catalogued tools by intent. Use **before** hand-writing a script or reading a skill. |
-| `omnicli_invoke` / `tools.omnicli.invoke` | Run one tool; 8 KB cap, optional `project` fields and `buffer`. |
-| `omnicli_exec` / `tools.omnicli.exec` | Run a JavaScript plan in one turn; `node:vm` under bubblewrap, 100-call budget, optional memory cap. |
+| `omnicli_exec` / `tools.omnicli.exec` | Run one JavaScript plan: call known tools directly, discover unknown skills only when needed, and return one bounded result. |
 
 The plugin also:
 
 - injects a short `[omnicli route]` block into the system instructions on each model call;
-- denies `read`/`grep`/`glob`/`list` (and read-only shell verbs) against `~/src/my-agent-skills/**` until the session has called `omnicli_search`/`omnicli_invoke`/`omnicli_exec` — the anti-pattern `AGENTS.md` names;
+- denies direct reads/greps against the skills tree until the session uses the exec path — the anti-pattern `AGENTS.md` names;
 - exempts a session whose project root is inside the skills repo, and honours `~/src/my-agent-skills/.omnicli-route-exempt` for maintenance from another project;
-- appends one JSON row per call to `~/.local/share/omnicli/route.jsonl`. Summarise it with `python3 scripts/route_stats.py` (bypass rate, denials, catalogue calls).
-
-**The collision to know:** inside OpenCode Code Mode, the bare `search()` helper indexes *tool names*. The catalogue search is `tools.omnicli.search`. The injected routing block says so; do not rename it.
+- appends one JSON row per call to `~/.local/share/omnicli/route.jsonl`.
 
 ### Path 2 — Direct CLI (`omnicli` on the shell)
 
-Still valid for one-shot commands and scripts outside the model loop:
+Use direct invocation when the tool ID is known:
 
 ```bash
-omnicli exec (filesystem discovery) "transcribe zoom lecture"
-omnicli describe zoom-recorder/scripts/zoom_download
+omnicli describe guard-hooks/scripts/guard:check
+omnicli invoke guard-hooks/scripts/guard:check -- 'echo hello' --json
 omnicli invoke zoom-recorder/scripts/zoom_download \
   --omni-max-bytes 8000 --omni-project "status,transcript_path" \
   -- --url "https://zoom.us/rec/..."
@@ -53,13 +52,13 @@ For multi-step plans and heavy parsing, run sandboxed JavaScript in one turn wit
 
 ```bash
 # Inline execution (the bindings are already globals)
-omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
+omnicli exec -c 'const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]); console.log(out.output)'
 
 # Piped stdin execution
 cat << 'EOF' | omnicli exec -
-import { search } from "omnicli_tools";
-const hits = await search("audio transcription", 3);
-console.log(hits);
+import { invoke } from "omnicli_tools";
+const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]);
+console.log(out.output);
 EOF
 
 # File execution
@@ -67,11 +66,13 @@ omnicli exec plan.mjs --sandbox write
 ```
 
 ```js
-import { search, zoom } from "omnicli_tools";
+import { invoke, result } from "omnicli_tools";
 
-const hits = await search("audio transcription", 3);
-const result = zoom({ url: "https://zoom.us/rec/share/abc", format: "md" });
-console.log(result.output.slice(0, 300));
+const out = await invoke(
+  "guard-hooks/scripts/guard:check",
+  ["echo hello", "--json"]
+);
+result({ ok: out.exit_code === 0, data: JSON.parse(out.output) });
 ```
 
 Scripts run through `node:vm` inside `bwrap`, against generated

@@ -97,7 +97,8 @@ Before accepting passing tests:
 Skills declare the **outcome**; this table binds it to a harness. Keep the
 outcome column portable: a skill says "isolate this edit", never
 "call `delegate_task`". Adding a binding here changes no trigger and no gate —
-the escalation ladder in `apiv-loop` stays the source of truth for *when*.
+`../apiv-loop/SKILL.md` stays the source of truth for *when* (parts 3–5), with
+tool bindings in `../apiv-loop/references/t3-code-adapter.md`.
 
 | Outcome (portable) | T3 Code binding | Portable fallback |
 | :--- | :--- | :--- |

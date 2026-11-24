@@ -1,20 +1,33 @@
 #!/usr/bin/env node
-// Example plan: find an audio transcription tool by intent, then inspect the
-// Zoom surface without loading either contract into the prompt.
+// Fallback example: use the read-only skills window only when the target tool
+// is not already known. No ranked search call is involved.
 //
-//   omnicli exec examples/discovery_and_invoke.mjs
+//   omnicli exec examples/discovery_and_invoke.mjs --quiet
 //
-import { search, spec } from "omnicli_tools";
+import { lsSkills, readSkill } from "omnicli_skills";
+import { describe, invoke, result } from "omnicli_tools";
 
-console.log("--- Searching for audio transcription tools ---");
-const results = await search("transcribe recorded audio", 3);
-for (const row of results) {
-  const score = Number(row.score ?? 0).toFixed(2);
-  console.log(`Skill: ${row.skill} (Score: ${score})`);
-}
+const skill = lsSkills().find((entry) => entry.name === "guard-hooks");
+if (!skill) throw new Error("guard-hooks is not installed");
 
-console.log("\n--- Inspecting Zoom specifications ---");
-for (const row of spec({ grep: "zoom", limit: 2 })) {
-  console.log(`Tool ID: ${row.id}`);
-  console.log(`Summary: ${row.summary}`);
-}
+const body = readSkill("guard-hooks");
+const toolId = "guard-hooks/scripts/guard:check";
+const { contract } = await describe(toolId);
+if (!contract.inputSchema) throw new Error("missing input schema");
+
+const envelope = await invoke(toolId, ["echo hello", "--json"]);
+const payload = JSON.parse(String(envelope.output || "{}"));
+
+result({
+  ok: envelope.exit_code === 0 && payload.allowed === true,
+  tool: toolId,
+  proof: "unknown-tool-discovery-fallback",
+  data: {
+    skill: skill.name,
+    bodyBytes: body.length,
+    hasSchema: Boolean(contract.inputSchema),
+    exitCode: envelope.exit_code,
+    allowed: payload.allowed,
+    reason: payload.reason,
+  },
+});

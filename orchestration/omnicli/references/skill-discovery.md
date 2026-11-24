@@ -1,7 +1,26 @@
-# Skill Discovery Through the Strict Window
+# Skill Discovery Fallback
+
+## When to use this window
+
+A harness that supports Agent Skills already preloads every skill's `name` and
+`description`, and loads the full `SKILL.md` when the skill becomes relevant.
+Code Mode's normal path is therefore to call a known tool directly:
+
+```js
+import { invoke, result } from "omnicli_tools";
+
+const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]);
+result({ ok: out.exit_code === 0, data: JSON.parse(out.output) });
+```
+
+Use `lsSkills()` / `readSkill()` / `readResource()` only when the tool is unknown
+or the plan needs a skill's guidance inside the strict sandbox. `describe()` is
+optional contract introspection, not a mandatory preflight step.
+
+## Why the window exists
 
 An `omnicli exec` plan in `strict` mode cannot see `$HOME` — that is the whole
-point of the sandbox. Yet a plan often needs a skill's own guidance before it
+point of the sandbox. Yet a plan sometimes needs a skill's own guidance before it
 calls one of that skill's tools. The **read-only skills window** closes that gap:
 `exec_runner.py` binds the resolved canonical skills tree at
 `/tmp/omnicli/skills` and hands a generated index to `vm_runner.mjs`, which
@@ -11,7 +30,7 @@ network.
 
 This is the filesystem form of the Agent Skills progressive-disclosure ladder.
 
-## The three levels
+## The fallback ladder
 
 | Level | Agent Skills spec | Helper | Returns |
 | :--- | :--- | :--- | :--- |

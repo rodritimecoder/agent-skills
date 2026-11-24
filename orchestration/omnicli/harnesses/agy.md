@@ -23,8 +23,8 @@ Antigravity enforces Kem's Law: *"A skill is instructions the model may ignore; 
 
 `orchestration/omnicli/hooks/agy_omnicli_hook.py` wires into `~/.gemini/config/hooks.json` under `"omnicli-route"`:
 
-1. **`PreInvocation` Hook:** Injects `[omnicli route]` into the prompt context, directing the agent to use `omnicli exec (filesystem discovery)` / `exec` instead of manual discovery.
-2. **`PreToolUse` Gate:** Automatically intercepts `view_file` and shell read commands (`cat`, `grep`, `rg`, `find`, etc.) targeting `~/src/my-agent-skills/**`. If an unprimed agent attempts to read skill directories directly without calling `omnicli exec (filesystem discovery)`, the hook rejects the call with `{"decision": "deny"}`.
+1. **`PreInvocation` Hook:** Injects `[omnicli route]` into the prompt context, directing the agent to call known tools directly and use one `omnicli exec` plan for multi-step work or unknown-tool discovery.
+2. **`PreToolUse` Gate:** Automatically intercepts `view_file` and shell read commands (`cat`, `grep`, `rg`, `find`, etc.) targeting `~/src/my-agent-skills/**`. If an unprimed agent attempts to read skill directories directly instead of using the omnicli path, the hook rejects the call with `{"decision": "deny"}`.
 3. **Observability:** Logs all allows, denials, and exemptions to `~/.local/share/omnicli/route.jsonl`.
 
 ```json
@@ -109,13 +109,13 @@ When an agent needs to perform multi-step data exploration, inspect binary forma
 
 ```bash
 # Inline execution (zero file staging overhead; globals need no import)
-omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
+omnicli exec -c 'const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]); console.log(out.output)'
 
 # Piped stdin execution
 cat << 'EOF' | omnicli exec -
-import { search } from "omnicli_tools";
-const results = await search("ocr text extraction", 3);
-console.log(results.map((r) => r.skill));
+import { invoke } from "omnicli_tools";
+const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]);
+console.log(out.output);
 EOF
 
 # File-based execution
@@ -123,9 +123,10 @@ omnicli exec plan.mjs --sandbox write
 ```
 
 Inside `omnicli exec`, `node:vm` runs the plan under bubblewrap, enforces
-`--max-calls` (default 100), and exposes `search`, `spec`, `describe`, `invoke`,
-`output`, `parallel`, `emitResult` and one async function per catalogued tool as
-globals. Optional `--mem-limit MiB` caps Node's heap
+`--max-calls` (default 100), and exposes `invoke`, `output`, `parallel`,
+`emitResult` and one async function per catalogued tool as globals. Use `spec()`
+or the read-only `omnicli_skills` window only when a tool is unknown; `describe()`
+is optional contract introspection. Optional `--mem-limit MiB` caps Node's heap
 (`--max-old-space-size`) and sets a floored `RLIMIT_AS` of `max(MiB, 2048)` MiB.
 Python plans are retired: `omnicli exec plan.py` exits 2 with the migration text.
 
@@ -142,7 +143,7 @@ When dispatching parallel workers with `invoke_subagent`, equip subagents with `
       "TypeName": "self",
       "Role": "Audio Transcription Worker",
       "Workspace": "branch",
-      "Prompt": "Run `omnicli exec (filesystem discovery) 'transcribe audio'` to locate audio.cpp tooling, then transcribe input.wav with `omnicli invoke`."
+      "Prompt": "Use the already-loaded audio skill guidance to choose the transcription tool, then run it with `omnicli invoke <tool_id> -- [args]`."
     }
   ]
 }

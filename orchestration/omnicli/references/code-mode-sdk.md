@@ -6,7 +6,7 @@ The `omnicli` architecture unifies two foundational production AI patterns:
 
 1. **Uber's MCP Gateway** ([Uber Engineering: Designing an MCP Gateway](https://www.uber.com/au/en/blog/designing-mcp-gateway/)):
    - **Late-Binding Discovery**: Instead of dumping hundreds of tool schemas into turn-0 model context (which triggers the Databricks tool-shadowing degradation), tools are catalogued out-of-band via AutoCrawler/builder into SQLite FTS5 + dense embeddings.
-   - **Bounded Meta-Tools** (the archived gateway shape): agents discover tools by intent (`search`), inspect single contracts on-demand (`describe`), invoke them with strict byte caps and field projections (`invoke`), and monitor service health (`status`).
+   - **Bounded Meta-Tools** (the archived gateway shape): agents once discovered tools by intent (`search`), inspected single contracts on-demand (`describe`), invoked them with strict byte caps and field projections (`invoke`), and monitored service health (`status`). The current surface keeps `describe` / `invoke` inside Code Mode and removes ranked search from the routing path.
 
 2. **Cloudflare's Code Mode** ([Cloudflare Blog: Code Mode — Execute Code to Invoke Tools Instead of LLM Function Calling](https://blog.cloudflare.com/code-mode/)):
    - **One Plan, One Turn**: Instead of multiple slow, token-expensive round-trips where intermediate tool outputs flood the prompt context, the agent generates executable code (JavaScript) that calls a generated SDK.
@@ -26,17 +26,20 @@ the 500 KB module.
 
 | Function | Signature | What it does |
 |---|---|---|
-| `search` | `search(intent, limit = 6)` → `Promise<SearchResult[]>` | Full-body BM25 + dense vector search across all registered skills; ranked candidates with scores, evidence and tool IDs. |
-| `skills` | `skills()` → `Promise<unknown>` | List every registered skill. |
-| `tools` | `tools[id](args)` → `Promise<InvokeEnvelope>` | Sleek Proxy over the generated typed functions (`TOOLS` is an alias). To enumerate a skill's tools, use `spec({ skill })` or `skills()`. |
-| `describe` | `describe(toolId)` → `Promise<object>` | Read one tool's usage contract, flags, parameters and help text. |
-| `spec` | `spec(grepOrFilter)` → `SpecRow[]` | Synchronous query over the in-memory spec table — no subprocess. |
-| `invoke` | `invoke(toolId, argsOrArgv?, opts?)` → `Promise<InvokeEnvelope>` | Execute any catalogued tool with output bounding and projection. |
+| `invoke` | `invoke(toolId, argsOrArgv?, opts?)` → `Promise<InvokeEnvelope>` | Execute any catalogued tool with output bounding and projection. This is the normal call path. |
 | `output` | `output(toolId, argsOrArgv?, opts?)` → `Promise<string>` | The same call, returning only `envelope.output`. |
+| `describe` | `describe(toolId)` → `Promise<object>` | Optional: read one tool's usage contract, flags, parameters and help text. |
+| `spec` | `spec(grepOrFilter)` → `SpecRow[]` | Synchronous query over the in-memory spec table when a tool ID is unknown. |
+| `skills` | `skills()` → `Promise<unknown>` | List every registered skill; fallback for broad discovery. |
+| `tools` | `tools[id](args)` → `Promise<InvokeEnvelope>` | Sleek Proxy over the generated typed functions (`TOOLS` is an alias). To enumerate a skill's tools, use `spec({ skill })` or `skills()`. |
 | `parallel` | `parallel(calls, limit = 8)` → `Promise<unknown[]>` | Fan out async thunks, keeping results in input order. |
 | `emitResult` | `emitResult(value)` | Hand one value back on its own channel (`emit_result` is an alias). |
 | `getState` | `getState()` → `Record<string, unknown>` | Read the session's JSON object (`{}` when unset). |
 | `emitState` | `emitState(value)` | Replace that object; it persists across runs sharing `--session ID`. |
+
+Known tool IDs need no discovery or schema round-trip. Use `spec()` or the
+read-only `omnicli_skills` window only when the target is unknown; use
+`describe()` only when the exact contract is unclear.
 
 `spec()` takes either a grep string or one filter object:
 
@@ -100,14 +103,14 @@ The VM exposes the whole module as globals, so an inline plan needs no import at
 all:
 
 ```bash
-omnicli exec -c 'const rows = await search("audio", 2); console.log(rows)'
+omnicli exec -c 'const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]); console.log(out.output)'
 ```
 
 A plan file can import explicitly, which is what the `.d.ts` types and an editor
 expect:
 
 ```js
-import { search, spec, zoom, emitResult } from "omnicli_tools";
+import { invoke, spec, zoom, emitResult } from "omnicli_tools";
 ```
 
 `vm_runner.mjs` links `omnicli_tools` (and `omnicli_tools.mjs`) to the same module
@@ -182,31 +185,47 @@ explicitly, so a capped allocation is not mistaken for a logic bug.
 
 ## 💡 Practical Examples
 
-### Example 1: Dynamic Discovery & Chained Execution
+### Example 1: Known tool, direct invocation
 
-[`examples/discovery_and_invoke.mjs`](../examples/discovery_and_invoke.mjs):
+The normal Code Mode path calls the tool directly. No skill listing, body read,
+or schema round-trip is required:
 
 ```js
-import { search, spec } from "omnicli_tools";
+import { invoke, result } from "omnicli_tools";
 
-const results = await search("transcribe recorded audio", 3);
-for (const row of results) {
-  console.log(`Skill: ${row.skill} (Score: ${Number(row.score ?? 0).toFixed(2)})`);
-}
+const out = await invoke(
+  "guard-hooks/scripts/guard:check",
+  ["echo hello", "--json"]
+);
+const payload = JSON.parse(String(out.output || "{}"));
 
-for (const row of spec({ grep: "zoom", limit: 2 })) {
-  console.log(`Tool ID: ${row.id}`);
-  console.log(`Summary: ${row.summary}`);
-}
+result({
+  ok: out.exit_code === 0 && payload.allowed === true,
+  data: payload,
+});
 ```
 
-Run via:
+### Example 2: Unknown tool, discovery fallback
 
-```bash
-omnicli exec examples/discovery_and_invoke.mjs
+[`examples/discovery_and_invoke.mjs`](../examples/discovery_and_invoke.mjs)
+uses the read-only skills window only because its target is not assumed:
+
+```js
+import { lsSkills, readSkill } from "omnicli_skills";
+import { invoke, result } from "omnicli_tools";
+
+const skill = lsSkills().find((s) => s.name === "guard-hooks");
+if (!skill) throw new Error("skill not installed");
+const body = readSkill("guard-hooks"); // only if guidance is needed
+
+const out = await invoke(
+  "guard-hooks/scripts/guard:check",
+  ["echo hello", "--json"]
+);
+result({ ok: out.exit_code === 0, data: JSON.parse(out.output) });
 ```
 
-### Example 2: In-Memory Filtering Without Context Flooding
+### Example 3: In-Memory Filtering Without Context Flooding
 
 [`examples/in_memory_filter.mjs`](../examples/in_memory_filter.mjs) collects
 every decision-related contract, collapses it per skill in JS memory, prints
@@ -231,10 +250,10 @@ emitResult({ count: rows.length, skills: [...bySkill.keys()] });
 lines.
 
 All five canonical flows are collected in
-[`examples/recipes.mjs`](../examples/recipes.mjs): discovery → contract →
-project, in-memory `spec()` dedupe, `parallel()` fan-out, a caught typed
-validation error, and session state. Every recipe runs under default `strict`
-with no network and exits 0.
+[`examples/recipes.mjs`](../examples/recipes.mjs): known-tool invocation,
+in-memory `spec()` dedupe, `parallel()` fan-out, a caught typed validation error,
+and session state. Every recipe runs under default `strict` with no network and
+exits 0.
 
 ---
 
@@ -248,42 +267,32 @@ remember, because there is nothing synchronous to twin.
 const parallel = (calls, limit = 8) => Promise<unknown[]>;
 ```
 
-`calls` is any iterable of async thunks (`() => search(...)`); `[fn, args]` pairs
+`calls` is any iterable of async thunks (`() => invoke(...)`); `[fn, args]` pairs
 and bare promises work too. At most `limit` calls are in flight, and results come
 back in input order even though they finish out of order. One failure rejects the
 batch with `parallel[<index>]: <message>`, so the failing call is named.
 
-### Example: ten independent lookups
+### Example: independent known-tool calls
 
 ```js
-import { search, parallel } from "omnicli_tools";
+import { invoke, parallel, result } from "omnicli_tools";
 
-const INTENTS = [
-  "transcribe audio", "ocr a slide", "search notes", "zoom recording",
-  "git worktree", "review a diff", "run tests", "summarize a paper",
-  "check model status", "convert pdf",
-];
+const commands = ["echo one", "echo two", "echo three"];
+const checks = await parallel(
+  commands.map((command) => () =>
+    invoke("guard-hooks/scripts/guard:check", [command, "--json"])
+  ),
+  3
+);
 
-const hits = await parallel(INTENTS.map((intent) => () => search(intent, 2)), 8);
-for (const [i, rows] of hits.entries()) {
-  const top = rows[0] ?? {};
-  console.log(`${INTENTS[i].padEnd(22)} ${String(top.score ?? 0).padStart(6)} ${top.skill ?? "none"}`);
-}
+result({
+  ok: checks.every((out) => out.exit_code === 0),
+  data: checks.map((out) => JSON.parse(out.output)),
+});
 ```
 
-Measured on this workstation (`--sandbox write`, three runs per cell, ten
-`search(intent, 2)` calls):
-
-| Shape | Wall clock |
-|---|---|
-| one `search()` | ~80 ms |
-| ten sequential | 1672–1710 ms |
-| `parallel(…, 8)` | 808–929 ms |
-| `parallel(…, 10)` | 805–893 ms |
-
-Fan-out roughly halves the wall clock rather than dividing it by eight: the cost
-is the CLI's own catalog work, not waiting on the network, so wider fan-out buys
-little past the point where the machine is saturated.
+Fan out only independent calls. Dependent work should stay sequential so one
+result can determine the next tool and arguments.
 
 ---
 
@@ -297,7 +306,7 @@ instead of running:
 
   Python : omnicli exec plan.py      ← no longer supported
   JS     : omnicli exec plan.mjs
-           omnicli exec -c 'const r = await search("intent")'
+           omnicli exec -c 'const out = await invoke("guard-hooks/scripts/guard:check", ["echo hello", "--json"]); console.log(out.output)'
            omnicli spec --stubs      ← the typed surface to write against
 ```
 

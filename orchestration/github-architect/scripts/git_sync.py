@@ -900,43 +900,14 @@ def cmd_install_hook(args) -> int:
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    if argv and argv[0] == "check-messages":
-        cp = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
-            prog="git-sync check-messages",
-            description="Fail if any outgoing commit has no description body",
-        )
-        cp.add_argument("--repo", default=".", help="Repository to inspect")
-        cp.add_argument("--upstream", help="Range start (default: @{upstream})")
-        cp.add_argument("--strict", action="store_true", help="Run the full user-facing message audit")
-        cp.add_argument("--json", action="store_true", help="Emit a JSON audit report")
-        cp.add_argument("--limit", type=int, default=20, help="Maximum commits to inspect (default: 20)")
-        return cmd_check_messages(cp.parse_args(argv[1:]))
-
-    if argv and argv[0] == "install-hook":
-        ip = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
-            prog="git-sync install-hook",
-            description="Install the pre-push description gate",
-        )
-        ip.add_argument("--repo", default=".", help="Repository to install into")
-        ip.add_argument("--force", action="store_true", help="Replace a foreign pre-push hook")
-        return cmd_install_hook(ip.parse_args(argv[1:]))
-
-    if argv and argv[0] == "guarded-commit":
-        gp = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
-            prog="git-sync guarded-commit",
-            description="Stage and commit only the files that pass the secret guard",
-        )
-        gp.add_argument("--repo", required=True, help="Repository to commit in")
-        gp.add_argument("-m", "--message", help="Commit message (default: derived from the staged diff)")
-        gp.add_argument("--exclude", action="append", default=[], help="rsync-style exclude pattern (repeatable)")
-        gp.add_argument("--include", action="append", default=[], help="only stage paths matching pattern/prefix (repeatable)")
-        gp.add_argument("--json", action="store_true")
-        gargs = gp.parse_args(argv[1:])
-        return cmd_guarded_commit(gargs)
-
-    parser = argparse.ArgumentParser(epilog='Exit codes: 0 success; 1 runtime/validation error; 2 invalid arguments (usage error); other non-zero values are script-specific.',
+    epilog = (
+        "Exit codes: 0 success; 1 runtime/validation error; "
+        "2 invalid arguments (usage error); other non-zero values are script-specific."
+    )
+    parser = argparse.ArgumentParser(
+        epilog=epilog,
         prog="git-sync",
-        description="Disciplined 6-Stage Git Branch Synchronization Engine (Look -> Guard -> Commit -> Gate -> Pull -> Push -> Report)"
+        description="Disciplined 6-Stage Git Branch Synchronization Engine (Look -> Guard -> Commit -> Gate -> Pull -> Push -> Report)",
     )
     parser.add_argument("-m", "--message", help="Commit message (default: auto conventional summary)")
     parser.add_argument("-y", "--yes", action="store_true", help="Auto-confirm push to protected default branches (main/master)")
@@ -947,7 +918,48 @@ def main(argv=None):
     parser.add_argument("--table", "-t", action="store_true", help="Emit receipt as Markdown table")
     parser.add_argument("--json", action="store_true", help="Emit receipt as JSON")
 
+    sub = parser.add_subparsers(dest="command", required=False)
+
+    cp = sub.add_parser(
+        "check-messages",
+        epilog=epilog,
+        help="Fail if any outgoing commit has no description body",
+        description="Fail if any outgoing commit has no description body",
+    )
+    cp.add_argument("--repo", default=".", help="Repository to inspect")
+    cp.add_argument("--upstream", help="Range start (default: @{upstream})")
+    cp.add_argument("--strict", action="store_true", help="Run the full user-facing message audit")
+    cp.add_argument("--json", action="store_true", help="Emit a JSON audit report")
+    cp.add_argument("--limit", type=int, default=20, help="Maximum commits to inspect (default: 20)")
+
+    ip = sub.add_parser(
+        "install-hook",
+        epilog=epilog,
+        help="Install the pre-push description gate",
+        description="Install the pre-push description gate",
+    )
+    ip.add_argument("--repo", default=".", help="Repository to install into")
+    ip.add_argument("--force", action="store_true", help="Replace a foreign pre-push hook")
+
+    gp = sub.add_parser(
+        "guarded-commit",
+        epilog=epilog,
+        help="Stage and commit only the files that pass the secret guard",
+        description="Stage and commit only the files that pass the secret guard",
+    )
+    gp.add_argument("--repo", required=True, help="Repository to commit in")
+    gp.add_argument("-m", "--message", help="Commit message (default: derived from the staged diff)")
+    gp.add_argument("--exclude", action="append", default=[], help="rsync-style exclude pattern (repeatable)")
+    gp.add_argument("--include", action="append", default=[], help="only stage paths matching pattern/prefix (repeatable)")
+    gp.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
+    if args.command == "check-messages":
+        return cmd_check_messages(args)
+    if args.command == "install-hook":
+        return cmd_install_hook(args)
+    if args.command == "guarded-commit":
+        return cmd_guarded_commit(args)
     # Stage 1: Look
     look_info = stage1_look()
     branch = look_info["branch"]

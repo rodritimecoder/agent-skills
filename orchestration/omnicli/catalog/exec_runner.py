@@ -33,6 +33,7 @@ GUEST_WORK = "/tmp/omnicli/work"
 # through a symlink that resolves into $HOME. Bind the resolved tree here so a
 # plan can read skill guidance without the host path leaking into the sandbox.
 SKILLS_MOUNT = "/tmp/omnicli/skills"
+SKILLS_EXTRA_MOUNT = "/tmp/omnicli/skills-extra"
 SKILLS_LINK = "/run/media/rodri/AI/skills"
 DEPRECATION = """❌ Python plans are retired in favor of JavaScript Code Mode.
 
@@ -170,32 +171,107 @@ def _canonical_skills_root() -> Path | None:
     return root if root.is_dir() else None
 
 
-def _write_skills_manifest(dest: Path, skills_root: Path, guest_root: str) -> int:
+def _resolve_extra_root(spec: dict, skill_path: Path) -> Path:
+    source_root = spec.get("source_root")
+    if source_root:
+        try:
+            return Path(source_root).resolve()
+        except OSError:
+            pass
+    return skill_path.parent
+
+
+def _collect_extra_roots(
+    skills: dict[str, dict],
+    skills_root: Path | None,
+) -> list[Path]:
+    """Return unique resolved extra roots outside `skills_root` with active skills."""
+    resolved_main = skills_root.resolve() if skills_root is not None else None
+    extra: list[Path] = []
+    seen: set[Path] = set()
+    for spec in skills.values():
+        raw = spec.get("path")
+        if not raw:
+            continue
+        try:
+            skill_path = Path(raw).resolve()
+        except OSError:
+            continue
+        if resolved_main is not None:
+            try:
+                skill_path.relative_to(resolved_main)
+                continue
+            except ValueError:
+                pass
+        host_root = _resolve_extra_root(spec, skill_path)
+        if host_root not in seen:
+            seen.add(host_root)
+            extra.append(host_root)
+    return extra
+
+
+def _write_skills_manifest(
+    dest: Path,
+    skills_root: Path | None,
+    guest_root: str,
+    extra_roots: list[tuple[Path, str]] | dict[Path, str] | None = None,
+    skills: dict[str, dict] | None = None,
+) -> int:
     """Write the local, generated skills index consumed by `omnicli_skills`.
 
-    Reuses the registry's discovery so zero-tool skills and sidelined dirs are
+    Reuses the registry's discovery so zero-tool skills and layered roots are
     included exactly as they are elsewhere. No network and no bridge call: the
     file is written in the parent and handed to the VM through the sandbox.
     """
     from catalog import registry as registry_mod
+
+    if skills is None:
+        skills = registry_mod.load_all_skills(include_sidelined=False)
+    resolved_main = skills_root.resolve() if skills_root is not None else None
+
+    if extra_roots is None:
+        extra_map = {
+            r: str(r) for r in _collect_extra_roots(skills, skills_root)
+        }
+    elif isinstance(extra_roots, dict):
+        extra_map = {k.resolve(): v for k, v in extra_roots.items()}
+    else:
+        extra_map = {k.resolve(): v for k, v in extra_roots}
 
     entries = []
     # Only active skills belong in the discoverable window. Sidelined/archived
     # skills are kept on disk but must not leak into routing: they carry stale
     # or duplicate descriptions that compete with live skills (59 loaded vs
     # 46 active). Active skills in every domain are still included.
-    for spec in registry_mod.load_all_skills(include_sidelined=False).values():
+    for spec in skills.values():
         raw = spec.get("path")
         if not raw:
             continue  # virtual skills have no directory to read from
         try:
-            rel = Path(raw).resolve().relative_to(skills_root).as_posix()
-        except (ValueError, OSError):
-            continue  # not inside the canonical tree we are exposing
+            skill_path = Path(raw).resolve()
+        except OSError:
+            continue
+        if resolved_main is not None:
+            try:
+                rel = skill_path.relative_to(resolved_main).as_posix()
+                entries.append({
+                    "name": spec.get("name") or Path(raw).name,
+                    "description": spec.get("description") or "",
+                    "dir": rel,
+                })
+                continue
+            except ValueError:
+                pass
+        host_root = _resolve_extra_root(spec, skill_path)
+        try:
+            rel = skill_path.relative_to(host_root).as_posix()
+        except ValueError:
+            continue
         entries.append({
             "name": spec.get("name") or Path(raw).name,
             "description": spec.get("description") or "",
             "dir": rel,
+            "root": extra_map.get(host_root, str(host_root)),
         })
     entries.sort(key=lambda item: item["name"])
     manifest = {"root": guest_root, "skills": entries}
@@ -204,7 +280,8 @@ def _write_skills_manifest(dest: Path, skills_root: Path, guest_root: str) -> in
 
 
 def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
-               sandbox: str, script_path: Path, mem_limit: int | None, timeout: float):
+               sandbox: str, script_path: Path, mem_limit: int | None, timeout: float,
+               extra_skills_roots: list[tuple[Path, str]] | None = None):
     """The bwrap argv plus the bridge and runtime its teardown owns."""
     base = ["bwrap", "--die-with-parent", "--unshare-pid", "--unshare-ipc",
             "--unshare-uts", "--ro-bind", "/", "/", "--tmpfs", "/tmp",
@@ -247,6 +324,10 @@ def _sandboxed(node_real: Path, vm_runner: Path, bindings_dir: Path, work: Path,
         skills_root = _canonical_skills_root()
         if skills_root is not None:
             base += ["--ro-bind", str(skills_root), SKILLS_MOUNT]
+        if extra_skills_roots:
+            base += ["--dir", SKILLS_EXTRA_MOUNT]
+            for host_root, guest_mount in extra_skills_roots:
+                base += ["--ro-bind", str(host_root), guest_mount]
     heap = [f"--max-old-space-size={mem_limit}"] if mem_limit is not None else []
     cmd = base + ["--dir", GUEST_WORK,
                   "--bind", str(work), GUEST_WORK,
@@ -326,16 +407,40 @@ def run(script: str | None = None, code: str | None = None,
     skills_manifest = work / ".omnicli_skills.json"
     skills_manifest.unlink(missing_ok=True)
     skills_root = _canonical_skills_root()
-    if skills_root is not None:
-        try:
+    extra_mounts: list[tuple[Path, str]] = []
+    try:
+        from catalog import registry as registry_mod
+
+        project_root = Path(workspace).resolve() if workspace else Path.cwd().resolve()
+        roots = registry_mod.resolve_skill_roots(cwd=project_root)
+        active_skills = registry_mod.load_all_skills(include_sidelined=False, roots=roots)
+        extra_roots = _collect_extra_roots(active_skills, skills_root)
+        if sandbox == "strict":
+            extra_mounts = [
+                (host_root, f"{SKILLS_EXTRA_MOUNT}/{idx}")
+                for idx, host_root in enumerate(extra_roots)
+            ]
+        else:
+            extra_mounts = [(host_root, str(host_root)) for host_root in extra_roots]
+        if skills_root is not None or extra_mounts:
             # Strict mode binds the resolved tree at SKILLS_MOUNT; every other
             # mode still sees the collection at its real (resolved) path.
-            guest_root = SKILLS_MOUNT if sandbox == "strict" else str(skills_root)
-            _write_skills_manifest(skills_manifest, skills_root, guest_root)
-        except Exception:
-            # The skills window is best-effort: never fail an unrelated plan
-            # because the collection could not be indexed.
-            skills_manifest.unlink(missing_ok=True)
+            guest_root = (
+                SKILLS_MOUNT if (sandbox == "strict" and skills_root is not None)
+                else (str(skills_root) if skills_root is not None else "")
+            )
+            _write_skills_manifest(
+                skills_manifest,
+                skills_root,
+                guest_root,
+                extra_roots=extra_mounts,
+                skills=active_skills,
+            )
+    except Exception:
+        # The skills window is best-effort: never fail an unrelated plan
+        # because the collection could not be indexed.
+        skills_manifest.unlink(missing_ok=True)
+        extra_mounts = []
 
     env = os.environ.copy()
     env.update({
@@ -375,7 +480,7 @@ def run(script: str | None = None, code: str | None = None,
             env[key] = _guest_path(path, work)
         cmd, serving, runtime, bridge_server = _sandboxed(
             node_real, vm_runner, bindings_dir, work, sandbox, script_path,
-            mem_limit, timeout)
+            mem_limit, timeout, extra_skills_roots=extra_mounts)
 
     started = time.time()
     if os.environ.get("OMNICLI_EXEC_DEBUG"):

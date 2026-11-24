@@ -18,21 +18,32 @@ Pi Agent operates with two primary mechanisms:
 
 In Pi Agent's interactive terminal loops, latency and context token consumption are the primary bottlenecks. `omnicli` eliminates both:
 
-### Fast Discovery (Sub-10ms)
+### Known tool — invoke directly
 
 ```bash
-# Natural-language search returns compact ranked candidates
-omnicli exec (filesystem discovery) "extract slides from zoom video"
+omnicli invoke guard-hooks/scripts/guard:check -- 'echo hello' --json
 ```
 
-Output is cleanly formatted text (<350 tokens) rather than raw JSON schemas:
+No discovery or schema round-trip is needed when the tool ID is already known.
 
-```
-🔍 [omnicli] intent: 'extract slides from zoom video'   tier=bm25(gated)
+### Unknown tool — discovery fallback
 
-  1. zoom-recorder   score=0.91  lex=34.25
-       Download transcripts, audio, and visual keyframe slides...
-       → omnicli tools zoom-recorder
+Use one `omnicli exec` plan with the read-only skills window only when the target
+is unclear:
+
+```js
+import { lsSkills, readSkill } from "omnicli_skills";
+import { invoke, result } from "omnicli_tools";
+
+const skill = lsSkills().find((entry) => entry.name === "guard-hooks");
+if (!skill) throw new Error("skill not installed");
+const body = readSkill("guard-hooks"); // only if guidance is needed
+
+const out = await invoke(
+  "guard-hooks/scripts/guard:check",
+  ["echo hello", "--json"]
+);
+result({ ok: out.exit_code === 0, data: JSON.parse(out.output) });
 ```
 
 ### Bounded Invocations

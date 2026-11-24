@@ -42,7 +42,7 @@ server to attach:
 ```
 
 - **Surface Discovery:** Any skill symlinked in `surface/` is discovered instantly by OpenCode's internal skill crawler.
-- **Code Mode:** That skill teaches `omnicli exec (filesystem discovery)` / `describe` / `invoke` / `exec`, which OpenCode reaches through its bash tool. Multi-step jobs go in one `omnicli exec plan.mjs`.
+- **Code Mode:** Call a known tool directly with `omnicli invoke`, or put multi-step work in one `omnicli exec plan.mjs`. Use `lsSkills` / `readSkill` only when the tool is unknown.
 
 ---
 
@@ -51,11 +51,10 @@ server to attach:
 OpenCode executes multi-command sequences in single turns. `omnicli` enables fail-fast pipeline compounding without polluting terminal context:
 
 ```bash
-# Compound task execution
+# Compound task execution with a known tool
 set -e
-TOOL_ID=$(omnicli exec (filesystem discovery) "generate cornell notes from markdown" --json | jq -r '.results[0].top.id // .results[0].skill')
-omnicli describe "$TOOL_ID" --section "Usage"
-omnicli invoke "$TOOL_ID" --omni-buffer /tmp/notes_step.json -- input.md
+TOOL_ID="academic-icm/scripts/academic_icm:cornell"
+omnicli invoke "$TOOL_ID" --omni-buffer /tmp/notes_step.json -- --json-file input.md
 python3 -c "import json; data=json.load(open('/tmp/notes_step.json')); print('Summary:', data.get('summary', 'done'))"
 ```
 

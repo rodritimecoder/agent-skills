@@ -57,9 +57,38 @@ HARDWARE_RE = re.compile(
     r"tensor[-\s]?core|rocm|opencl)\b",
     re.IGNORECASE,
 )
-ALLOWED_PORTS = frozenset(
-    {8000, 8080, 8081, 8082, 8083, 8084, 8089, 8091, 8765, 9060}
-)
+REPO_ROOT = SKILL_ROOT.parent.parent
+PORTS_MANIFEST = REPO_ROOT / "ports.json"
+
+
+def _declared_ports() -> set[int]:
+    """Ports declared in ports.json — the single source of truth for host ports.
+
+    Slots, infra, external references and the tailnet root/paths all count: a
+    skill description may name any port the manifest knows about. A second,
+    hardcoded allowlist would go stale the moment a new slot is registered.
+    """
+    ports: set[int] = set()
+    try:
+        data = json.loads(PORTS_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ports
+    for group in ("slots", "infra", "external"):
+        for item in data.get(group, []):
+            if isinstance(item.get("port"), int):
+                ports.add(item["port"])
+    tailscale = data.get("tailscale", {})
+    root = tailscale.get("root")
+    if isinstance(root, int):
+        ports.add(root)
+    for port in tailscale.get("paths", {}).values():
+        if isinstance(port, int):
+            ports.add(port)
+    return ports
+
+
+# 9060 is a GPU model number grandfathered from the original allowlist.
+ALLOWED_PORTS = frozenset({9060} | _declared_ports())
 ALLOWED_HARDWARE_TOKENS = frozenset(
     {"gpu", "gpus", "vram", "cuda", "vulkan", "nvidia"}
 )

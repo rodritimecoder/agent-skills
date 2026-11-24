@@ -33,7 +33,8 @@ const GUARD_BIN = process.env.GUARD_BIN || join(homedir(), ".local/bin/guard-hoo
 
 const ROUTING = `[omnicli route] The workstation tool catalogue is exposed as one native tool, omnicli_exec / tools.omnicli.exec. Use it; do not re-derive a tool's CLI from its source.
 - omnicli_exec / tools.omnicli.exec — run a JavaScript Code Mode plan (\`node:vm\` + \`omnicli_tools\`) for any catalogue work; use \`omnicli spec --stubs\` for \`.d.ts\` signatures.
-Rules: inside one plan, discover with the omnicli_tools bindings lsSkills(), readSkill(name), readResource(name, rel) and describe(toolId), then invoke the chosen tool binding; every inner call is checked against the enable/disable gate. Do not read or grep skill directories to find a tool, and never use a search binding. Ordinary code and file work in the current repo still uses the native tools.`;
+- Inside \`execute\`, pass the plan as a string: \`await tools.omnicli.exec({ script: \\\`const s = lsSkills(); result({ ok: true, data: s });\\\` })\` — do not call \`lsSkills()\` or import \`"omnicli_skills"\` directly in outer \`execute\`.
+Rules: inside one plan (\`script\`), discover with the omnicli_tools bindings lsSkills(), readSkill(name), readResource(name, rel) and describe(toolId), then invoke the chosen tool binding; every inner call is checked against the enable/disable gate. Do not read or grep skill directories to find a tool, and never use a search binding. Ordinary code and file work in the current repo still uses the native tools.`;
 
 const NATIVE_READ_TOOLS = new Set(["read", "grep", "glob", "list", "ls"]);
 const SHELL_TOOLS = new Set(["bash", "shell"]);
@@ -176,7 +177,7 @@ export default {
       editor.add(
         def(
           "exec",
-          "Run a JavaScript Code Mode plan over the catalogue in one turn (omnicli_tools globals / imports, console.log() only the synthesis, optional emitResult()).",
+          "Run a JavaScript Code Mode plan over the catalogue in one turn (inside execute: await tools.omnicli.exec({ script: `...` }); lsSkills()/omnicli_tools globals and imports live inside `script`, not outer execute; console.log() only the synthesis, optional result()).",
           {
             type: "object",
             properties: {

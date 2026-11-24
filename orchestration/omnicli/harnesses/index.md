@@ -16,7 +16,7 @@
 | Feature / Primitive | T3 Code | Antigravity (`agy`) | OpenCode | Pi Agent | Boxxy Claw |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Primary Interaction Face** | Code Mode + CLI | JS Bindings + CLI | Code Mode + CLI | Direct CLI | Direct CLI + Sandbox |
-| **Discovery Protocol** | `await skills() / describe()` / `omnicli exec (filesystem discovery)` | `await skills() / describe()` via `omnicli exec` | `omnicli exec (filesystem discovery)` / `await skills() / describe()` | `omnicli exec (filesystem discovery)` | `omnicli exec (filesystem discovery)` |
+| **Discovery Protocol** | Preloaded skill metadata; fallback `lsSkills` / `readSkill` via `omnicli exec` | Preloaded metadata; fallback `lsSkills` / `readSkill` | Preloaded metadata; fallback `lsSkills` / `readSkill` | Preloaded metadata; fallback `lsSkills` / `readSkill` | Preloaded metadata; fallback `lsSkills` / `readSkill` |
 | **Invocation Protocol** | `invoke()` / bash tool | `invoke()` in a `plan.mjs` | Compound bash / `omnicli invoke` | Direct bash / CLI | `omnicli invoke` / `exec` |
 | **Code Mode SDK** | `omnicli exec plan.mjs` | `omnicli exec plan.mjs` from `run_workflow` | `omnicli exec plan.mjs` | Script invocation | `omnicli exec --sandbox` |
 | **Output Capping** | Strict 8KB (`--omni-max-bytes`) | Strict 8KB / envelope `output` | Strict 8KB / `step_NN.json` | Strict 8KB cap | Strict 8KB cap |
@@ -71,4 +71,4 @@ omnicli harness verify
 - [**Pi Agent Guide**](pi.md) — Interactive terminal usage, rsync sync, tight token budgeting.
 - [**Boxxy Claw Guide**](boxxy.md) — Bubblewrap sandboxing, hot-reload sync, SQLite WAL safety.
 
-**Visual guides:** [Code Mode Showcase](code-mode-showcase.html) — self-contained walkthrough of the three native tools, plan globals, one-call patterns, paste-ready `spec --plan-header`, and the strict boundary · [Verification Report](verification_report.html) — first-party harness check matrix and evidence.
+**Visual guides:** [Code Mode Showcase](code-mode-showcase.html) — self-contained walkthrough of the exec tool, direct known-tool invocation, discovery fallback, plan globals, paste-ready `spec --plan-header`, and the strict boundary · [Verification Report](verification_report.html) — first-party harness check matrix and evidence.
