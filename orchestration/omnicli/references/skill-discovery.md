@@ -30,6 +30,13 @@ network.
 
 This is the filesystem form of the Agent Skills progressive-disclosure ladder.
 
+**Where the live shortlist lives.** `omnicli` bundles no search or embedding
+runtime of its own — routing is harness L1 metadata plus these filesystem reads.
+The optional shortlist that does rank (`hs-embed-1` vectors, FTS5, and
+`skill_expansions.json` doc2query) is owned by
+`glitch-cat/apiv-loop/scripts/skill_discovery.py` and is used by APIV only after
+Align sign-off. This window stays the fallback that needs no index.
+
 ## The fallback ladder
 
 | Level | Agent Skills spec | Helper | Returns |

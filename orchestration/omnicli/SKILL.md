@@ -23,6 +23,12 @@ When discovery is needed, the read-only `omnicli_skills` window provides
 is optional introspection for an unknown or unfamiliar contract. See
 [skill-discovery.md](references/skill-discovery.md) for the fallback ladder.
 
+`omnicli` itself holds no search or embedding runtime: routing is harness L1
+metadata plus those `omnicli_skills` Code Mode reads. The optional live
+shortlist — `hs-embed-1` vectors, FTS5, and `skill_expansions.json` doc2query —
+belongs to `glitch-cat/apiv-loop/scripts/skill_discovery.py` and is used by APIV
+only after Align sign-off.
+
 File routing and machine-local facts: [CONTEXT.md](CONTEXT.md). Port/model facts stay in the root [CONTEXT.md](../../CONTEXT.md) — never duplicated here.
 Doc-drift gate: `python3 tests/doc_drift_check.py --json` proves the tool surface and docs agree (exit 0 clean, 1 drift).
 

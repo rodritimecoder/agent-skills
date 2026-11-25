@@ -551,5 +551,27 @@ class TestContractCache(unittest.TestCase):
                                 "audiocpp_cli should expose its subcommands")
 
 
+class TestSchemaRetirement(unittest.TestCase):
+    """Schema 5 retires the vector table that was never populated."""
+
+    def test_build_drops_legacy_skill_vectors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            con = builder.connect(Path(tmp) / "test-catalog.db")
+            try:
+                con.execute(
+                    "CREATE TABLE skill_vectors (skill TEXT, kind TEXT, vec BLOB)")
+                con.execute("INSERT INTO skill_vectors VALUES ('omnicli', 'question', x'00')")
+
+                builder.build(con, progress=False)
+
+                tables = {r["name"] for r in
+                          con.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+                self.assertNotIn("skill_vectors", tables,
+                                 "build left the retired skill_vectors table behind")
+                self.assertIn("docs", tables, "build did not run against the temp catalog")
+            finally:
+                con.close()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

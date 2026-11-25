@@ -90,8 +90,9 @@ VIRTUAL_SKILLS = {
             "Local LLM and inference endpoints on this workstation: Genesis 35B "
             "coder for writing code (:8080), LightOnOCR document vision (:8082), "
             "calibrated decisions (:8083), Nemotron speech-to-text "
-            "(:8081), and the optional embedding server (:8084) used to re-rank "
-            "catalog search. Use for running a model locally, offline, or on device."
+            "(:8081), and local embedding (:8084) / reranking (:8086) endpoints "
+            "for RAG and memory services. Use for running a model locally, offline, "
+            "or on device."
         ),
         "status": "active",
         "cli": None,

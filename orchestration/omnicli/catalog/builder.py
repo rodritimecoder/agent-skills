@@ -36,7 +36,7 @@ SECTION_RE = re.compile(r"^#{1,4}\s+(.*)$", re.MULTILINE)
 
 # Bump when the FTS5 column layout changes; the catalog is a derived
 # artifact, so the cheapest correct response is to rebuild it.
-SCHEMA_VERSION = "4"
+SCHEMA_VERSION = "5"
 
 
 # --------------------------------------------------------------------------
@@ -399,6 +399,9 @@ def build(
     con.execute("DELETE FROM docs")
     con.execute("DELETE FROM tools")
     con.execute("DELETE FROM skills")
+    # Retired in schema 5: the vector table was never populated. Dropping it
+    # here retires the table in existing catalogs without a manual migration.
+    con.execute("DROP TABLE IF EXISTS skill_vectors")
 
     doc_rows: list[tuple] = []
     tool_rows: list[tuple] = []

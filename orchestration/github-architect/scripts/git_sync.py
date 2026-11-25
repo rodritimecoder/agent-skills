@@ -862,7 +862,7 @@ def cmd_check_messages(args) -> int:
 
 HOOK_TEMPLATE = """#!/usr/bin/env bash
 # Managed by github-architect. Refuses a commit with no description, and
-# blocks a routing regression on the skills repo. Reach audit is advisory.
+# blocks routing or sync regressions on the skills repo. Reach audit is advisory.
 repo="$(git rev-parse --show-toplevel)"
 python3 "{script}" check-messages --repo "$repo"
 rc=$?
@@ -872,6 +872,15 @@ if [ "$repo" = "{skills_repo}" ]; then
     python3 "$gate" || grc=$?
     grc=${{grc:-0}}
     [ "$rc" -eq 0 ] && rc=$grc
+  fi
+  sync_skills="{skills_repo}/sync_skills.sh"
+  if [ -f "$sync_skills" ]; then
+    bash "$sync_skills" verify || src=$?
+    src=${{src:-0}}
+    [ "$rc" -eq 0 ] && rc=$src
+    if [ "$src" -ne 0 ]; then
+      echo "❌ sync-skills verify failed: surface and harness copies disagree. Fix before pushing." >&2
+    fi
   fi
 fi
 audit="{audit}"

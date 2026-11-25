@@ -179,6 +179,91 @@ class TestGitSync(unittest.TestCase):
         self.assertEqual(payload.get("status"), "clean")
 
 
+class TestInstallHook(unittest.TestCase):
+    """install-hook: the skills repo also runs sync-skills verify before pushing."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.repo = self.tmp / "skills"
+        self.repo.mkdir()
+        subprocess.run(["git", "-C", str(self.repo), "init", "-b", "main"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.repo), "config", "user.email", "t@t"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.repo), "config", "user.name", "t"],
+                       check=True, capture_output=True)
+        (self.repo / "README.md").write_text("hi\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "README.md"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.repo), "commit", "-m", "chore: seed\n\nSeed for hook tests."],
+                       check=True, capture_output=True)
+
+    def _install(self, repo=None):
+        repo = repo or self.repo
+        args = MagicMock()
+        args.repo = str(repo)
+        args.force = True
+        # Pretend this checkout is the skills repo: cmd_install_hook derives
+        # skills_repo from parents[3] of its own module file.
+        fake_script = self.repo / "orchestration" / "github-architect" / "scripts" / "git_sync.py"
+        fake_script.parent.mkdir(parents=True, exist_ok=True)
+        fake_script.write_text("", encoding="utf-8")
+        with patch.object(git_sync, "__file__", str(fake_script)):
+            rc = git_sync.cmd_install_hook(args)
+        self.assertEqual(rc, 0)
+        return repo / ".git" / "hooks" / "pre-push"
+
+    def test_install_hook_renders_sync_skills_verify_for_the_skills_repo(self):
+        hook = self._install()
+        text = hook.read_text(encoding="utf-8")
+        self.assertIn(f'sync_skills="{self.repo}/sync_skills.sh"', text)
+        self.assertIn('bash "$sync_skills" verify', text)
+
+    def _build_hook(self, verify_rc):
+        script = self.tmp / "check_messages_stub.py"
+        script.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
+        gate = self.tmp / "gate.py"
+        gate.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
+        audit = self.tmp / "audit.py"
+        audit.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
+        (self.repo / "sync_skills.sh").write_text(
+            f"#!/usr/bin/env bash\nexit {verify_rc}\n", encoding="utf-8")
+        hook = self.repo / ".git" / "hooks" / "pre-push"
+        hook.parent.mkdir(parents=True, exist_ok=True)
+        hook.write_text(git_sync.HOOK_TEMPLATE.format(
+            script=script, skills_repo=self.repo, gate=gate, audit=audit))
+        hook.chmod(0o755)
+        return hook
+
+    def test_generated_hook_exits_nonzero_when_verify_fails(self):
+        hook = self._build_hook(verify_rc=1)
+        proc = subprocess.run(["bash", str(hook)], cwd=str(self.repo),
+                              capture_output=True, text=True)
+        self.assertNotEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+        self.assertIn("sync-skills verify failed", proc.stderr)
+
+    def test_generated_hook_exits_zero_when_every_gate_passes(self):
+        hook = self._build_hook(verify_rc=0)
+        proc = subprocess.run(["bash", str(hook)], cwd=str(self.repo),
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
+    def test_other_repo_skips_sync_skills_verify(self):
+        other = self.tmp / "other"
+        other.mkdir()
+        subprocess.run(["git", "-C", str(other), "init", "-b", "main"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(other), "config", "user.email", "t@t"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(other), "config", "user.name", "t"],
+                       check=True, capture_output=True)
+        hook = self._build_hook(verify_rc=1)
+        proc = subprocess.run(["bash", str(hook)], cwd=str(other),
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
+
 class TestStage2GuardRepo(unittest.TestCase):
     """Wave 1: stage2_guard must scan files relative to an explicit repo,
     not the process CWD, and must leave placeholder credentials alone."""
