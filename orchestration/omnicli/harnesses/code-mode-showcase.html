@@ -117,45 +117,45 @@
       <h1 class="title">omnicli Code Mode — one plan, one turn</h1>
       <span class="badge-pass">strict · no network</span>
     </div>
-    <div class="stats">live catalog · <b>53</b> skills · <b>3</b> native tools<br>
-      <b>3</b> native tools · <b>9</b> plan globals · <b>0</b> intermediates in context</div>
+    <div class="stats">live catalog · <b>1</b> native tool<br>
+      <b>1</b> native tool · core globals · <b>0</b> intermediates in context</div>
   </div>
 
   <div class="grid">
-    <div class="section-title">The three native tools — one flow</div>
+    <div class="section-title">One native tool — one plan, one turn</div>
     <div class="flow">
       <div class="card">
         <div class="card-header">
-          <span class="harness-name">🔎 omnicli_search</span>
-          <span class="harness-id">face A / plan</span>
+          <span class="harness-name">🧩 tools.omnicli.exec</span>
+          <span class="harness-id">the only native tool</span>
         </div>
-        <div class="tags"><span class="tag">intent → ranked hits</span><span class="tag">depth:contract</span></div>
+        <div class="tags"><span class="tag">codemode: true</span><span class="tag">required script</span><span class="tag">sandbox strict</span></div>
         <ul class="check-list">
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">invoke</span><span>Call a known tool directly; discover only when the target is unknown</span></li>
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">contract</span><span><code>depth:"contract"</code> returns the exact contract in one call</span></li>
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">bounded</span><span>skill, score, why, top hit — never the whole body</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">one call</span><span>One JavaScript plan runs in one turn</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">budget</span><span><code>max_calls</code> / <code>mem_limit</code> bound the run</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">route</span><span>Plugin injects the rule and gates skill-dir reads</span></li>
         </ul>
       </div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="card">
         <div class="card-header">
-          <span class="harness-name">⚡ omnicli_invoke</span>
-          <span class="harness-id">one-shot</span>
+          <span class="harness-name">⚡ tools[id]() / invoke()</span>
+          <span class="harness-id">inside the plan</span>
         </div>
-        <div class="tags"><span class="tag">--omni-project</span><span class="tag">--omni-max-bytes</span><span class="tag">--omni-buffer</span></div>
+        <div class="tags"><span class="tag">no round-trip</span><span class="tag">spec()</span><span class="tag">describe()</span></div>
         <ul class="check-list">
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">run</span><span>one catalogued tool, bounded response</span></li>
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">project</span><span>keep only named fields; head+tail cap</span></li>
-          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">gate</span><span>enable gate + append-only policy audit</span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">direct</span><span>Known tools called by id; discovery only with <code>spec()</code> / <code>skills()</code></span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">validated</span><span>One options object checked against <code>inputSchema</code></span></li>
+          <li class="check-item"><span class="check-icon">✓</span><span class="check-name">bounded</span><span>Output is capped before it reaches the model</span></li>
         </ul>
       </div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="card">
         <div class="card-header">
-          <span class="harness-name">🧩 omnicli_exec</span>
-          <span class="harness-id">one plan</span>
+          <span class="harness-name">🧾 result() / emitResult()</span>
+          <span class="harness-id">one synthesis</span>
         </div>
-        <div class="tags"><span class="tag">node:vm</span><span class="tag">bwrap</span><span class="tag purple">UDS bridge</span></div>
+        <div class="tags"><span class="tag">node:vm</span><span class="tag purple">UDS bridge</span><span class="tag warn">no network in strict</span></div>
         <ul class="check-list">
           <li class="check-item"><span class="check-icon">✓</span><span class="check-name">sandbox</span><span>strict default; one <code>plan.mjs</code></span></li>
           <li class="check-item"><span class="check-icon">✓</span><span class="check-name">bridge</span><span>every call crosses one UNIX socket</span></li>
@@ -171,12 +171,12 @@
         <span class="harness-id">omnicli_tools</span>
       </div>
       <p style="margin:0;font-size:12px;color:var(--text-muted)">
-        Nine globals, plus one generated async function per catalogued tool. One options object is
+        Core globals, plus one generated async function per catalogued tool. One options object is
         validated against <code>inputSchema</code> before dispatch — a typo throws <code>TypeError</code> at the call site.
       </p>
       <div class="tags">
-        <span class="tag">search</span><span class="tag">spec</span><span class="tag">describe</span><span class="tag">invoke</span><span class="tag">output</span>
-        <span class="tag">parallel</span><span class="tag">emitResult</span><span class="tag">getState</span><span class="tag">emitState</span>
+        <span class="tag">skills</span><span class="tag">spec</span><span class="tag">describe</span><span class="tag">invoke</span><span class="tag">output</span>
+        <span class="tag">tools</span><span class="tag">parallel</span><span class="tag">emitResult</span><span class="tag">getState</span><span class="tag">emitState</span>
       </div>
       <div class="card-header"><span class="copy" data-copy="globals">copy ⧉</span></div>
       <pre id="globals"><code><span class="c">// generated per tool; one-call shape</span>
@@ -209,9 +209,9 @@
         <span class="harness-id">from the SDK guide</span>
       </div>
       <div class="card-header"><span class="copy" data-copy="patterns">copy ⧉</span></div>
-      <pre id="patterns"><code><span class="k">const</span> rows = <span class="k">await</span> <span class="f">search</span>(<span class="s">"audio"</span>, <span class="n">2</span>);
+      <pre id="patterns"><code><span class="k">const</span> rows = <span class="k">await</span> <span class="f">skills</span>();
 <span class="k">const</span> contract = <span class="k">await</span> <span class="f">describe</span>(<span class="s">"zoom-recorder/scripts/zoom_download"</span>);
-<span class="k">await</span> <span class="f">parallel</span>(INTENTS.<span class="f">map</span>(i =&gt; () =&gt; <span class="f">search</span>(i, <span class="n">2</span>)), <span class="n">8</span>);
+<span class="k">await</span> <span class="f">parallel</span>(INTENTS.<span class="f">map</span>(i =&gt; () =&gt; <span class="f">spec</span>(i)), <span class="n">8</span>);
 <span class="f">emitResult</span>({ hits: hits.<span class="f">length</span> }); <span class="c">// project; never dump raw</span></code></pre>
     </div>
 
@@ -221,15 +221,14 @@
         <span class="harness-id">spec --stubs --plan-header</span>
       </div>
       <p style="margin:0;font-size:12px;color:var(--text-muted)">
-        <code>omnicli spec --grep zoom --stubs --plan-header</code> prepends a 5-line header above the
-        declare-function stubs. See <a href="../examples/recipes.mjs" style="color:var(--accent)">examples/recipes.mjs</a> for five runnable recipes.
+        <code>omnicli spec --grep zoom --stubs --plan-header</code> prepends a tool-id and typed-signature
+        header above the declare-function stubs. See <a href="../examples/recipes.mjs" style="color:var(--accent)">examples/recipes.mjs</a> for five runnable recipes.
       </p>
       <div class="card-header"><span class="copy" data-copy="header">copy ⧉</span></div>
-      <pre id="header"><code><span class="c">/* omnicli plan — omnicli exec &lt;file&gt;.mjs (strict, no network)
-   tool &lt;sig.id&gt; · skill &lt;sig.skill&gt; · fn &lt;sig.func&gt;
-   globals: search, spec, describe, invoke, output, parallel, emitResult, getState, emitState
-   import { search, spec, &lt;fn&gt;, emitResult } from "omnicli_tools";
-   paste the declare-function stubs below above your plan body */</span></code></pre>
+      <pre id="header"><code><span class="c">/* omnicli plan header — tool ids and typed signatures for this query.
+   skill(s): zoom-recorder · tool ids: zoom-recorder/scripts/zoom_download
+   declare function zoom_download(args: { url: string; format?: "md" } &amp; InvokeOptions): Promise&lt;InvokeEnvelope&gt;;
+ */</span></code></pre>
     </div>
 
     <div class="section-title">Security boundary</div>
