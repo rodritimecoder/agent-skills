@@ -80,7 +80,7 @@ Before declaring any UI or user-facing feature complete, run verification like a
 5. Close preview tab: `preview_close` before finishing the turn.
 6. Render the verification visual to the operator:
    ```python
-   # Call html_preview with verification_report.html, then html_render
+   # Render the verification visual with html_preview, then html_render
    ```
 
 ### 5. Always Run the Control & Mutate the Test

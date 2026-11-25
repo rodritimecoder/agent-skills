@@ -71,4 +71,4 @@ omnicli harness verify
 - [**Pi Agent Guide**](pi.md) — Interactive terminal usage, rsync sync, tight token budgeting.
 - [**Boxxy Claw Guide**](boxxy.md) — Bubblewrap sandboxing, hot-reload sync, SQLite WAL safety.
 
-**Visual guides:** [Code Mode Showcase](code-mode-showcase.html) — self-contained walkthrough of the exec tool, direct known-tool invocation, discovery fallback, plan globals, paste-ready `spec --plan-header`, and the strict boundary · [Verification Report](verification_report.html) — first-party harness check matrix and evidence.
+**Visual guide:** [Code Mode Showcase](code-mode-showcase.html) — self-contained walkthrough of the exec tool, direct known-tool invocation, discovery fallback, plan globals, paste-ready `spec --plan-header`, and the strict boundary.
