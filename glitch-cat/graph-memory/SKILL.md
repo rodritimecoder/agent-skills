@@ -83,11 +83,14 @@ graph-memory search "dynamic power" --table -p file,section,snippet -n 5
 # Buffer full text hits to disk with receipt preview:
 graph-memory search "cmos inverters" -o /tmp/hits.json
 
-# Rebuild the RAG index over notes corpus:
+# Rebuild the RAG index over the creator vault (the default corpus):
+graph-memory index
+
+# Index another corpus (the University notes, a repo's docs, ...):
 graph-memory index --corpus "/run/media/rodri/AI/University/notes"
 
 # Distil raw markdown notes into verified question-rule-quote triplets:
-graph-memory distil "/run/media/rodri/AI/University/notes" --limit 10
+graph-memory distil --limit 10
 ```
 
 ---

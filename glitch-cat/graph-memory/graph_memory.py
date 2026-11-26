@@ -15,12 +15,17 @@ GRAPH_DIR = SKILL_DIR / "graph"
 
 
 def _drive_root() -> Path:
-    """The AI volume root: $AI_ROOT, else the nearest ancestor holding models/."""
+    """The AI volume root: $AI_ROOT, else the nearest ancestor that is one.
+
+    A bare ``models/`` directory is not enough: ``/home/rodri/models`` exists
+    on this machine and used to hijack the root. The volume also owns ``sh/``
+    (launchers), so require both before accepting a parent.
+    """
     env = os.environ.get("AI_ROOT")
     if env:
         return Path(env).expanduser()
     for parent in Path(__file__).resolve().parents:
-        if (parent / "models").is_dir():
+        if (parent / "models").is_dir() and (parent / "sh").is_dir():
             return parent
     return Path("/run/media/rodri/AI")
 
@@ -28,7 +33,9 @@ def _drive_root() -> Path:
 DRIVE = _drive_root()
 # The notes corpus lives on the AI volume, next to models/, not inside the
 # skill. A harness copy has no volume above it, hence the env override.
-DEFAULT_CORPUS = os.environ.get("GRAPH_MEMORY_CORPUS", str(DRIVE / "University/notes"))
+# Default is the creator vault — the corpus this skill is actually used over.
+# University notes stay one flag away: --corpus "$DRIVE/University/notes".
+DEFAULT_CORPUS = os.environ.get("GRAPH_MEMORY_CORPUS", str(DRIVE / "creator-vault"))
 
 
 def main():

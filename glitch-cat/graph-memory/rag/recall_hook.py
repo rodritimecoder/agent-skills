@@ -21,10 +21,11 @@ DB = HERE / "rag.db"
 TOP = 5
 BUDGET = 1500  # characters of context in total
 PER_HIT = 280  # characters of chunk text per hit
-# Measured on ../corpus, bge-small 384d: in-vocabulary questions top out at
-# 0.693-0.777 cosine, questions the corpus cannot answer at 0.497-0.630. 0.66
-# sits between them. Dense similarity always returns a full list, so without a
-# floor this hook answers every prompt, however unrelated.
+# Cosine floor, bge-small 384d, measured twice:
+#   ../corpus (8 docs):   in-vocabulary 0.693-0.777, out-of-vocabulary 0.497-0.630
+#   creator-vault (2664): in-vocabulary 0.694-0.853, out-of-vocabulary 0.555-0.632
+# 0.66 sits in both gaps. Dense similarity always returns a full list, so
+# without a floor this hook answers every prompt, however unrelated.
 MEANING_FLOOR = 0.66
 
 
@@ -36,8 +37,17 @@ def hits(query):
     try:
         legs = {"keyword": keyword_leg(db, query)}
         meaning, _ = meaning_leg(db, query, floor=MEANING_FLOOR)
-        if meaning:
+        if meaning is None:
+            # dense leg unavailable: keyword-only, as the starter does
+            pass
+        elif meaning:
             legs["meaning"] = meaning
+        else:
+            # The dense leg ran and found nothing above the floor, so the
+            # prompt is outside what the notes cover. BM25 will still match a
+            # stray common word ("capital", "world", "car"), which is not
+            # memory; a prompt the notes cannot speak to gets no context.
+            return []
         ranked, _ = fuse(legs)
         out = []
         for rowid in ranked[:TOP]:

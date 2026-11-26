@@ -244,7 +244,9 @@ def fetch_hit(db, rowid, position, legs):
     first_non_empty = ""
     for l in text.splitlines():
         cl = l.strip().lstrip("#").strip()
-        if cl and not cl.startswith("source:"):
+        # `---` is a YAML fence, `source:` a distilled header: neither is content.
+        # An index built before body_lines() existed still has the fence in it.
+        if cl and cl != "---" and not cl.startswith("source:"):
             first_non_empty = cl
             break
     snippet = first_non_empty[:85] + "..." if len(first_non_empty) > 85 else first_non_empty

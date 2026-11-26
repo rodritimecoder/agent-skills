@@ -175,25 +175,47 @@ def sections(lines):
     return [(h, s, e) for h, s, e in out if any(l.strip() for l in lines[s:e])]
 
 
+FRONT_MATTER_FENCE = "---"
+
+
+def body_lines(lines):
+    """Drop a leading YAML front-matter block. Returns (body, offset).
+
+    The starter's modelled docs open with `type/title/entities/links`, which
+    `src/build_graph.py` reads as metadata. Indexed as text, that block becomes
+    the first chunk of every doc: a snippet of `---` and YAML keys. The graph
+    leg owns that metadata, so the meaning leg skips it.
+
+    `offset` is the number of dropped lines and is added back to every
+    start/end, because search.py slices the original file to show context.
+    """
+    if not lines or lines[0].strip() != FRONT_MATTER_FENCE:
+        return lines, 0
+    for i in range(1, len(lines)):
+        if lines[i].strip() == FRONT_MATTER_FENCE:
+            return lines[i + 1 :], i + 1
+    return lines, 0
+
+
 def chunk_file(path):
     """Yield (section, start_line, end_line, text) chunks packed to the budget."""
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines, offset = body_lines(path.read_text(encoding="utf-8").splitlines())
     packed = []
     for heading, s, e in sections(lines):
         text = "\n".join(lines[s:e]).strip()
         title = heading or path.stem
         if len(text) <= CHUNK_BUDGET:
-            packed.append((title, s + 1, e, text))
+            packed.append((title, s + 1 + offset, e + offset, text))
             continue
         # oversized section: split on line groups within the budget
         buf, buf_start = [], s
         for i in range(s, e):
             buf.append(lines[i])
             if sum(len(l) + 1 for l in buf) >= CHUNK_BUDGET:
-                packed.append((title, buf_start + 1, i + 1, "\n".join(buf).strip()))
+                packed.append((title, buf_start + 1 + offset, i + 1 + offset, "\n".join(buf).strip()))
                 buf, buf_start = [], i + 1
         if any(l.strip() for l in buf):
-            packed.append((title, buf_start + 1, e, "\n".join(buf).strip()))
+            packed.append((title, buf_start + 1 + offset, e + offset, "\n".join(buf).strip()))
     return packed
 
 
@@ -247,12 +269,21 @@ def main():
     args = ap.parse_args()
     corpus = Path(args.corpus)
 
+    # Check before touching rag.db. The schema drop below is unconditional, so a
+    # mistyped or missing corpus used to replace a working index with an empty
+    # one and print "nothing to index" after the fact.
+    files = note_files(corpus)
+    if not files:
+        sys.exit(
+            f"no markdown found under {corpus} — index left untouched\n"
+            f"pass a corpus with --corpus <folder>"
+        )
+
     db = sqlite3.connect(DB)
     db.executescript(SCHEMA)
     db.execute("INSERT INTO meta VALUES ('corpus', ?)", (str(corpus.resolve()),))
 
     docs = []  # (embed_text, row)
-    files = note_files(corpus)
     root = corpus.resolve()
     for path in files:
         # the relative path is the file's name in the index, so a note in a
@@ -330,7 +361,7 @@ def main():
     db.commit()
     db.close()
     n_distilled = len(distilled_files) - dropped
-    print(f"indexed {len(files)} files, {len(docs) - n_distilled} chunks, {n_distilled} distilled entries, {dropped} dropped")
+    print(f"indexed {len(files)} files under {root}, {len(docs) - n_distilled} chunks, {n_distilled} distilled entries, {dropped} dropped")
     print(model_line)
 
 
