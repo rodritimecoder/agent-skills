@@ -36,6 +36,10 @@ MODULE_API = {
     "parallel", "emitResult", "emit_result", "traceIdentity", "userTracePath",
     "TOOLS", "SIGNATURES", "SPEC", "TOOL_IDS", "OMNICLI", "json", "os",
     "subprocess", "Literal", "Any", "open", "print",
+    # The plan globals added after the first surface. `_function_name` lowercases
+    # before this check, so the lowercase spelling is the one that has to exist.
+    "models", "text", "store", "load", "exit", "result", "planresult", "getstate",
+    "emitstate", "emitresult", "traceidentity", "usertracepath", "rowfor",
 }
 # A generated function name has to be a legal identifier in both languages: a
 # tool called `delete` produced `export async function delete(...)`, which node

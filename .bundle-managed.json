@@ -35,7 +35,6 @@
     "multimodal/playwright",
     "orchestration/cf-architect",
     "orchestration/free-swarm",
-    "orchestration/gh-action-subagent",
     "orchestration/github-architect",
     "orchestration/isolate-run",
     "orchestration/omnicli",

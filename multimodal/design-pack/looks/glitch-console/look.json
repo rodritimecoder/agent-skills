@@ -1,0 +1,60 @@
+{
+  "name": "glitch-console",
+  "description": "Dark terminal with 16x10 pixel sprites, Fantasque Mono, and 30 fps stepped motion.",
+  "motion": {
+    "mode": "stepped",
+    "allow_keywords": ["none", "inherit", "initial", "unset", "revert", "linear"],
+    "allow_steps": true,
+    "allow_linear": true,
+    "curve_token_prefixes": [],
+    "duration_token_prefixes": ["--snap", "--hold-", "--step-", "--spawn-", "--scroll"]
+  },
+  "tokens": {
+    "font_prefixes": ["--font-"],
+    "size_prefixes": ["--fs-"],
+    "radius_prefixes": ["--r-"],
+    "allow_color_mix_with_vars": false
+  },
+  "sprites": {
+    "enabled": true,
+    "file": "sprites.js"
+  },
+  "check": {
+    "viewports": ["375x812", "480x320", "640x400", "768x1024", "800x600", "1280x800", "1440x900"],
+    "theme_variants": [],
+    "min_type_px": 10.0,
+    "min_contrast": 3.0,
+    "max_press_ms": 100.0,
+    "fallback_bg": [14, 17, 24],
+    "clip_selectors": [
+      ".win", ".win__path", ".line", ".chip", ".ctl", ".dial",
+      ".board", ".col", ".bot", ".keybar", ".progress-row",
+      ".term-input", ".grid__head"
+    ],
+    "group_selectors": [
+      ".stage", ".keybar", ".cols", ".row", ".dial-row",
+      ".pose-strip", ".grid", ".pack-links"
+    ],
+    "forbidden_selectors": [
+      ".win button", ".win input", ".win select", ".win textarea"
+    ],
+    "forbidden_reason": "forbidden web control {el} inside terminal .win",
+    "skip_contrast_selectors": [
+      "[aria-hidden=\"true\"]", ".is-disabled", "[disabled]",
+      "[aria-disabled=\"true\"]", ".comm-dot:not(.is-active)"
+    ],
+    "shortcut_selector": ".keybar .keybar__k",
+    "tab_stop_selectors": [
+      "a[href]", "button", "input", "select", "textarea",
+      "[tabindex]", "[role=\"switch\"]", "[role=\"tab\"]", ".ctl"
+    ],
+    "interactive_selectors": [
+      "a[href]", "button:not([disabled])", ".ctl:not(.is-disabled)"
+    ],
+    "text_selectors": [
+      "p", "span", "div", "a", "b", "figcaption",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "code", "button", "label", "li", "td", "th"
+    ]
+  }
+}

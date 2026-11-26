@@ -79,13 +79,19 @@ parallel-test-lane run --dir tests/ --out /tmp/test_report.json
 python3 scripts/mutate.py path/to/module.py --test "python3 -m unittest test_module" --json
 ```
 
-The helper applies small mutations one at a time — flips a comparison operator,
-bumps an integer literal, turns `and` into `or`, deletes a `raise`/`return`
-line — and reruns the test command after each, restoring the file in a
-`finally` block. A **killed** mutant makes the test command exit non-zero. A
+The helper applies small mutations one at a time — flips a comparison or
+`&&`/`||` operator, bumps an integer literal, turns `and` into `or`, deletes a
+`raise`/`return`/`throw` line — and reruns the test command after each, restoring
+the file in a `finally` block. Comment lines from Python, JS/TS, C-like, SQL, INI
+and HTML are skipped, so the helper is language-agnostic.
+
+**Exit codes:** a **killed** mutant makes the test command exit non-zero. A
 **survivor** means the tests still passed, so nothing exercised the mutated
-behaviour: the suite is weaker than it looks. Zero survivors means the test
-can fail.
+behaviour: the suite is weaker than it looks, and `mutate.py` exits **1**. It
+exits **0** only when every mutant died. An empty mutation plan exits **1** and
+`--limit < 1` is a usage error (**2**): a run with zero mutants never reports
+success. `--allow-survivors` restores the old reporting-only behaviour (exit 0)
+for exploratory runs.
 
 ---
 
@@ -105,3 +111,4 @@ parallel-test-lane run --dir tests/ --lanes 8
 - Tests marked serial run alone, in isolation, one at a time.
 - Output is buffered per lane; read the aggregated report, not interleaved streams.
 - A lane failure is a failure. Do not re-run until it passes.
+- A surviving mutant is a failure: `mutate.py` exits 1, and the worktree-harness `--mutate` gate fails.

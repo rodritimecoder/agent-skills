@@ -183,6 +183,9 @@ SUITES = {
 
 CORE_SUITES = ["ponytail", "pstack", "poteto", "thermonuclear", "unslop", "typescript", "no-comments", "verification"]
 
+FAIL_ON_CHOICES = ("none", "warning", "violation")
+DEFAULT_FAIL_ON = "warning"
+
 UNSLOP_PATTERNS = [
     (r"\b(crucial|delve|enduring|enhance|fostering|garner|interplay|intricate|pivotal|showcase|tapestry|testament|underscore|vibrant)\b", "AI Vocabulary Tell"),
     (r"\b(not just [^,\n]+, but)\b", "Not just X, but Y construction"),
@@ -496,7 +499,43 @@ def evaluate_suite(suite_id: str, target: str = None) -> dict:
     }
 
 
+def _result_statuses(data) -> list:
+    if not isinstance(data, dict):
+        return ["ERROR"]
+    if "status" in data:
+        return [data["status"]]
+    if "error" in data:
+        return ["ERROR"]
+    return [v.get("status", "ERROR") if isinstance(v, dict) else "ERROR" for v in data.values()]
+
+
+def exit_code_for(data, fail_on: str = DEFAULT_FAIL_ON) -> int:
+    """Map evaluated results to a process exit code.
+
+    ERROR always fails (2). VIOLATION fails at the violation or warning
+    threshold; WARNING fails only at the warning threshold; OK passes.
+    """
+    statuses = _result_statuses(data)
+    if "ERROR" in statuses:
+        return 2
+    if "VIOLATION" in statuses:
+        return 1 if fail_on in ("violation", "warning") else 0
+    if "WARNING" in statuses:
+        return 1 if fail_on == "warning" else 0
+    return 0
+
+
 def output_results(data: dict, out_path: str = None, project_fields: str = None, as_json: bool = False, title: str = None):
+    if isinstance(data, dict) and "error" in data and "status" not in data:
+        if out_path:
+            Path(out_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+            print(f"[Review Complete. Output buffered to {out_path}]")
+        elif as_json or project_fields:
+            print(json.dumps(data, indent=2))
+        else:
+            print(f"❌ {data['error']}", file=sys.stderr)
+        return
+
     if project_fields and isinstance(data, dict):
         fields = [f.strip() for f in project_fields.split(",")]
         if "suite_id" in data:
@@ -536,18 +575,18 @@ def output_results(data: dict, out_path: str = None, project_fields: str = None,
                 print(f"   {bullet}{check}")
 
 
-def cmd_all(target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False):
+def cmd_all(target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False, fail_on: str = DEFAULT_FAIL_ON):
     results = {}
     for s_k in CORE_SUITES:
         results[s_k] = evaluate_suite(s_k, target)
     output_results(results, out_path, project_fields, as_json, title="Review Across All Core Suites")
+    return exit_code_for(results, fail_on)
 
 
-def cmd_review(suite_id: str = None, target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False):
+def cmd_review(suite_id: str = None, target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False, fail_on: str = DEFAULT_FAIL_ON):
     # Handle default suite
     if not suite_id or suite_id == "all":
-        cmd_all(target=target, out_path=out_path, project_fields=project_fields, as_json=as_json)
-        return
+        return cmd_all(target=target, out_path=out_path, project_fields=project_fields, as_json=as_json, fail_on=fail_on)
 
     # Check if suite_id is actually a file or directory path
     if Path(suite_id).exists() and not normalize_suite_key(suite_id) in SUITES:
@@ -555,10 +594,14 @@ def cmd_review(suite_id: str = None, target: str = None, out_path: str = None, p
         suite_id = "ponytail"
 
     res = evaluate_suite(suite_id, target)
+    if "error" in res:
+        print(f"❌ {res['error']}", file=sys.stderr)
+        return 2
     output_results(res, out_path, project_fields, as_json)
+    return exit_code_for(res, fail_on)
 
 
-def cmd_audit(suite_id: str = None, target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False):
+def cmd_audit(suite_id: str = None, target: str = None, out_path: str = None, project_fields: str = None, as_json: bool = False, fail_on: str = DEFAULT_FAIL_ON):
     if not suite_id:
         suite_id = "ponytail-audit"
     elif suite_id in ["thermo", "thermonuclear"]:
@@ -567,7 +610,11 @@ def cmd_audit(suite_id: str = None, target: str = None, out_path: str = None, pr
         suite_id = "ponytail-debt"
 
     res = evaluate_suite(suite_id, target)
+    if "error" in res:
+        print(f"❌ {res['error']}", file=sys.stderr)
+        return 2
     output_results(res, out_path, project_fields, as_json)
+    return exit_code_for(res, fail_on)
 
 
 def main():
@@ -600,6 +647,7 @@ def main():
     p_review.add_argument("--out", default=None, help="Buffer raw review output to disk file")
     p_review.add_argument("--project", default=None, help="Comma-separated fields to project (e.g. 'status,checks')")
     p_review.add_argument("--json", action="store_true", help="Output results as JSON")
+    p_review.add_argument("--fail-on", choices=FAIL_ON_CHOICES, default=DEFAULT_FAIL_ON, help="Lowest finding that makes the run exit non-zero (default: warning)")
 
     # audit
     p_audit = sub.add_parser("audit", help="Run architectural, technical debt, or repo-wide audit")
@@ -608,6 +656,7 @@ def main():
     p_audit.add_argument("--out", default=None, help="Buffer raw audit output to disk file")
     p_audit.add_argument("--project", default=None, help="Comma-separated fields to project (e.g. 'status,checks')")
     p_audit.add_argument("--json", action="store_true", help="Output results as JSON")
+    p_audit.add_argument("--fail-on", choices=FAIL_ON_CHOICES, default=DEFAULT_FAIL_ON, help="Lowest finding that makes the run exit non-zero (default: warning)")
 
     # all
     p_all = sub.add_parser("all", help="Run all core review suites sequentially")
@@ -615,6 +664,7 @@ def main():
     p_all.add_argument("--out", default=None, help="Buffer output to disk file")
     p_all.add_argument("--project", default=None, help="Comma-separated fields to project (e.g. 'status,checks')")
     p_all.add_argument("--json", action="store_true", help="Output results as JSON")
+    p_all.add_argument("--fail-on", choices=FAIL_ON_CHOICES, default=DEFAULT_FAIL_ON, help="Lowest finding that makes the run exit non-zero (default: warning)")
 
     # backward-compatibility fallbacks
     p_order = sub.add_parser("order", help="Deprecated alias for review")
@@ -623,6 +673,7 @@ def main():
     p_order.add_argument("--out", default=None, help="Buffer output")
     p_order.add_argument("--project", default=None, help="Project fields")
     p_order.add_argument("--json", action="store_true", help="JSON output")
+    p_order.add_argument("--fail-on", choices=FAIL_ON_CHOICES, default=DEFAULT_FAIL_ON, help="Lowest finding that makes the run exit non-zero (default: warning)")
 
     p_menu = sub.add_parser("menu", help="Deprecated alias for list")
     p_menu.add_argument("--json", action="store_true", help="JSON output")
@@ -631,17 +682,21 @@ def main():
 
     if args.action in ["list", "suites", "menu"]:
         cmd_list(as_json=getattr(args, "json", False))
+        return 0
     elif args.action == "search":
         cmd_search(args.query, as_json=args.json)
+        return 0
     elif args.action == "inspect":
         cmd_inspect(args.suite)
+        return 0
     elif args.action in ["review", "order"]:
-        cmd_review(args.suite, args.target, out_path=args.out, project_fields=args.project, as_json=args.json)
+        return cmd_review(args.suite, args.target, out_path=args.out, project_fields=args.project, as_json=args.json, fail_on=args.fail_on)
     elif args.action == "audit":
-        cmd_audit(args.suite, args.target, out_path=args.out, project_fields=args.project, as_json=args.json)
+        return cmd_audit(args.suite, args.target, out_path=args.out, project_fields=args.project, as_json=args.json, fail_on=args.fail_on)
     elif args.action == "all":
-        cmd_all(args.target, out_path=args.out, project_fields=args.project, as_json=args.json)
+        return cmd_all(args.target, out_path=args.out, project_fields=args.project, as_json=args.json, fail_on=args.fail_on)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

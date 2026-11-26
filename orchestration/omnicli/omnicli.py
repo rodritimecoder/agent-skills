@@ -1098,6 +1098,16 @@ def cmd_spec(skill: str | None = None, grep: str | None = None, kind: str | None
     ).fetchall()
     all_sigs = argspec_mod.signatures(all_rows)
 
+    # Function names have to agree with the generated bindings, and those are
+    # built from enabled rows only. Naming over all rows lets a disabled tool
+    # take a live tool's name: with gemini-studio:decide disabled, `local/decide`
+    # is `decide` in the bindings but was `local_decide` here.
+    enabled_names = {sig.id: sig.func for sig in argspec_mod.signatures(
+        [row for row in all_rows if row["enabled"]])}
+    for row, sig in zip(all_rows, all_sigs):
+        if row["enabled"] and sig.id in enabled_names:
+            sig.func = enabled_names[sig.id]
+
     pattern = re.compile(grep, re.IGNORECASE) if grep else None
     pairs = []
     for row, sig in zip(all_rows, all_sigs):

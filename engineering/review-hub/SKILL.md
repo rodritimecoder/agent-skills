@@ -98,3 +98,21 @@ review-hub all
 review-hub all --json
 review-hub all --out /tmp/full-review.json
 ```
+
+---
+
+## Exit codes
+
+`review`, `order`, `audit` and `all` accept `--fail-on {none,warning,violation}`.
+The default is **`warning`**, so a run that prints findings also fails a gate.
+
+| Worst status | `--fail-on warning` (default) | `--fail-on violation` | `--fail-on none` |
+|---|---|---|---|
+| `OK` | 0 | 0 | 0 |
+| `WARNING` | 1 | 0 | 0 |
+| `VIOLATION` | 1 | 1 | 0 |
+| error (unknown suite, usage) | 2 | 2 | 2 |
+
+`--out` still writes the full report and `--json` still prints the same object;
+only the process exit code follows the status. Unknown suites print to stderr
+and exit 2 without a traceback.

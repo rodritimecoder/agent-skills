@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fail control m3 — deliberate M3E drift &amp; layout defects</title>
+<style>
+  @keyframes m3-bad-step {
+    from { transform: translateX(0); }
+    to { transform: translateX(2px); }
+  }
+  body {
+    margin: 0;
+    background: #fef7ff;
+    color: #1d1b20;
+    font-family: "Comic Sans MS", sans-serif;
+    font-size: 9px;
+  }
+  .m3-shell {
+    width: 960px;
+    padding: 16px;
+    border-radius: 13px;
+    background: #ff00ff;
+    box-shadow: 0 2px 6px rgba(255, 0, 255, 0.5);
+    transition: transform 200ms ease-in-out;
+  }
+  .m3-tint {
+    background: color-mix(in srgb, #ff00ff 20%, transparent);
+    animation: m3-bad-step 1s steps(2, start) infinite;
+    padding: 8px;
+  }
+  .m3-row {
+    display: flex;
+  }
+  .m3-chip {
+    flex-shrink: 0;
+    width: 120px;
+    height: 40px;
+    margin-right: -40px;
+    background: #ffffff;
+    color: #1d1b20;
+  }
+</style>
+</head>
+<body>
+<main class="m3-shell">
+  <div class="m3-tint">Stepped M3 defect</div>
+  <div class="m3-row">
+    <div class="m3-chip">Chip A</div>
+    <div class="m3-chip">Chip B</div>
+  </div>
+  <p style="color: #d900d9; background: #ff00ff;">Low contrast M3 text</p>
+  <button type="button" id="slow-m3-btn">Slow M3 Control</button>
+</main>
+<script>
+  document.getElementById("slow-m3-btn").addEventListener("click", () => {
+    const end = performance.now() + 140;
+    while (performance.now() < end) {}
+  });
+</script>
+</body>
+</html>

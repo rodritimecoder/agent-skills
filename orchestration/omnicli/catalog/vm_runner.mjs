@@ -176,6 +176,15 @@ async function dynamicImport(specifier, referencing) {
 const ESM_IMPORT = /^[ \t]*import[\s"']/m; // static import, never `import(` or `import.meta`
 const ESM_EXPORT = /^[ \t]*export[ \t]+(?:default|const|let|var|async|function|class|\{|\*)/m;
 
+// A top-level `return` is the plan's output, the same way `text()` is. Before
+// this, the awaited value was dropped and a plan that returned its answer
+// looked like a plan that printed nothing.
+function emit(value) {
+  if (value === undefined) return;
+  const body = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  process.stdout.write(body.endsWith("\n") ? body : body + "\n");
+}
+
 try {
   if (ESM_IMPORT.test(source) || ESM_EXPORT.test(source)) {
     const mod = new vm.SourceTextModule(source, {
@@ -193,13 +202,17 @@ try {
     await mod.evaluate();
   } else {
     const wrapped = '(async () => {\n"use strict";\n' + source + "\n})()";
-    await vm.runInContext(wrapped, context, {
+    emit(await vm.runInContext(wrapped, context, {
       filename: scriptPath,
       lineOffset: -2,
-    });
+    }));
   }
 } catch (err) {
-  const text = (err && (err.stack || err.message)) || String(err);
-  process.stderr.write(text.endsWith("\n") ? text : text + "\n");
-  process.exitCode = err && typeof err.exitCode === "number" ? err.exitCode : 1;
+  if (err && err.omnicliExit) {
+    // exit(): calls already made stay done, the run is a success.
+  } else {
+    const text = (err && (err.stack || err.message)) || String(err);
+    process.stderr.write(text.endsWith("\n") ? text : text + "\n");
+    process.exitCode = err && typeof err.exitCode === "number" ? err.exitCode : 1;
+  }
 }

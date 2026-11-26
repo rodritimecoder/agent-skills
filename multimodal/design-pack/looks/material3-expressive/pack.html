@@ -1,0 +1,1701 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>material3-expressive · design pack</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html.pack-theme-snap *,
+  html.pack-theme-snap *::before,
+  html.pack-theme-snap *::after {
+    transition: none !important;
+  }
+  .pack-page {
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+    min-height: 100vh;
+  }
+  .pack-main {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: var(--s-6) var(--s-5) var(--s-10);
+  }
+  @media (max-width: 600px) {
+    .pack-main {
+      padding: var(--s-4) var(--s-4) var(--s-9);
+    }
+  }
+
+  .pack-topbar {
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+    border-radius: var(--r-none);
+  }
+  .pack-hero {
+    border-radius: var(--r-2xl);
+    padding: var(--s-6);
+    gap: var(--s-4);
+  }
+  @media (max-width: 600px) {
+    .pack-hero {
+      padding: var(--s-4);
+      border-radius: var(--r-xl);
+    }
+  }
+  .pack-hero__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+  .pack-eyebrow {
+    color: var(--md-primary);
+    text-transform: uppercase;
+  }
+
+  .pack-sec {
+    margin-top: var(--s-9);
+  }
+  .pack-sec__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--s-3);
+    margin-bottom: var(--s-5);
+  }
+  .pack-sec__num {
+    color: var(--md-primary);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    padding: var(--s-1) var(--s-3);
+    border-radius: var(--r-full);
+  }
+  .pack-sec__note {
+    color: var(--md-on-surface-variant);
+    margin-left: auto;
+  }
+  @media (max-width: 600px) {
+    .pack-sec__note {
+      margin-left: 0;
+    }
+  }
+
+  .pack-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    min-width: 0;
+  }
+  .pack-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-4);
+  }
+  .pack-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--s-4);
+  }
+  .pack-grid-refs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: var(--s-4);
+  }
+  .pack-grid-pal {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(168px, 100%), 1fr));
+    gap: var(--s-3);
+  }
+  .pack-grid-cr {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
+    gap: var(--s-2);
+  }
+  @media (max-width: 960px) {
+    .pack-grid-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 720px) {
+    .pack-grid-2,
+    .pack-grid-4 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pack-card {
+    border-radius: var(--r-lg);
+    min-width: 0;
+    max-width: 100%;
+  }
+  .pack-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+  .pack-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-1) var(--s-3);
+    border-radius: var(--r-full);
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-size: var(--fs-label-md);
+    line-height: var(--lh-label-md);
+    font-weight: var(--fw-semibold);
+  }
+  .pack-badge--primary {
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+  }
+  .pack-badge--tertiary {
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+  }
+  .pack-badge--error {
+    background: var(--md-error-container);
+    color: var(--md-on-error-container);
+  }
+
+  .pack-ref-card {
+    padding: var(--s-3);
+    gap: var(--s-3);
+  }
+  .pack-ref-frame {
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-highest);
+    padding: var(--s-1);
+  }
+  .pack-ref-img {
+    display: block;
+    width: 100%;
+    height: 176px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: var(--r-sm);
+  }
+
+  .pack-code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-sm);
+    line-height: var(--lh-body-sm);
+    color: var(--md-primary);
+    overflow-wrap: anywhere;
+  }
+
+  .pack-never-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: var(--s-3);
+    list-style: none;
+  }
+  .pack-never-item {
+    background: var(--md-surface-container);
+    color: var(--md-on-surface);
+    border-left: var(--b-2) solid var(--md-error);
+    border-radius: var(--r-sm);
+    padding: var(--s-3);
+  }
+
+  .pack-prop-bar {
+    display: flex;
+    width: 100%;
+    height: var(--s-6);
+    border-radius: var(--r-full);
+    overflow: hidden;
+    border: var(--b-1) solid var(--md-outline-variant);
+  }
+  .pack-prop-seg--surface { flex: 72; background: var(--md-surface-container-highest); }
+  .pack-prop-seg--ink { flex: 14; background: var(--md-on-surface-variant); }
+  .pack-prop-seg--tonal { flex: 8; background: var(--md-primary-container); }
+  .pack-prop-seg--accent { flex: 6; background: var(--md-primary); }
+
+  .pack-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+  }
+  .pack-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .pack-swatch-dot {
+    display: inline-block;
+    width: var(--s-3);
+    height: var(--s-3);
+    border-radius: var(--r-full);
+    border: var(--b-1) solid var(--md-outline);
+    flex-shrink: 0;
+  }
+
+  .pack-type-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-2) 0;
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+    min-width: 0;
+  }
+  .pack-type-samples {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--s-4);
+    min-width: 0;
+    max-width: 100%;
+  }
+  .pack-type-meta {
+    color: var(--md-on-surface-variant);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    flex-shrink: 0;
+  }
+
+  .pack-theme-panel {
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+    border: var(--b-1) solid var(--md-outline-variant);
+    border-radius: var(--r-lg);
+    padding: var(--s-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    min-width: 0;
+  }
+  .pack-cr-card {
+    border-radius: var(--r-sm);
+    padding: var(--s-2) var(--s-3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    border: var(--b-1) solid var(--md-outline-variant);
+    min-width: 0;
+  }
+  .pack-cr-pair {
+    font-size: var(--fs-body-sm);
+    line-height: var(--lh-body-sm);
+    font-weight: var(--fw-medium);
+    min-width: 0;
+  }
+  .pack-cr-ratio {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-md);
+    line-height: var(--lh-label-md);
+    font-weight: var(--fw-bold);
+    flex-shrink: 0;
+  }
+
+  .pack-sw {
+    background: var(--md-surface-container-low);
+    color: var(--md-on-surface);
+    border-radius: var(--r-md);
+    border: var(--b-1) solid var(--md-outline-variant);
+    min-width: 0;
+  }
+  .pack-sw__chip {
+    height: var(--s-8);
+    border-radius: var(--r-md) var(--r-md) var(--r-none) var(--r-none);
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+  }
+  .pack-sw__meta {
+    padding: var(--s-2) var(--s-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+  }
+  .pack-sw__tok {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--md-on-surface);
+    overflow-wrap: anywhere;
+  }
+  .pack-sw__hex {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--md-on-surface-variant);
+  }
+
+  .pack-tier-pill {
+    border-radius: var(--r-md);
+    padding: var(--s-3);
+    border: var(--b-1) solid var(--md-outline-variant);
+    min-width: 0;
+  }
+
+  .pack-state-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-1);
+    min-width: 0;
+    max-width: 100%;
+  }
+  .pack-state-tag {
+    color: var(--md-on-surface-variant);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+  }
+
+  .pack-split-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-2);
+    max-width: 100%;
+  }
+  .pack-split-menu {
+    background: var(--md-surface-container);
+    color: var(--md-on-surface);
+    border-radius: var(--r-md);
+    box-shadow: var(--md-elev-2);
+    padding: var(--s-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 180px;
+    max-width: 100%;
+  }
+  .pack-split-menu[hidden] {
+    display: none;
+  }
+
+  .pack-loader-slot {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border-radius: var(--r-md);
+    background: var(--md-surface-container);
+  }
+  .pack-poly-svg {
+    width: var(--s-7);
+    height: var(--s-7);
+    display: block;
+    fill: currentcolor;
+    animation: pack-poly-morph var(--dur-spatial-slow) var(--ease-spatial-slow) infinite alternate;
+  }
+  @keyframes pack-poly-morph {
+    0% {
+      transform: scale(0.88) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.06) rotate(18deg);
+    }
+    100% {
+      transform: scale(0.96) rotate(45deg);
+    }
+  }
+  .pack-morph-demo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--s-2) var(--s-4);
+    min-height: var(--s-8);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    border-radius: var(--r-full);
+    transition:
+      border-radius var(--dur-spatial-fast) var(--ease-spatial-fast),
+      transform var(--dur-spatial-fast) var(--ease-spatial-fast);
+  }
+  .pack-morph-demo.is-morphed {
+    border-radius: var(--r-sm);
+    transform: scale(1.04);
+  }
+
+  /* Intentional anti-pattern styles ONLY inside [data-dont] specimens */
+  .pack-dont-box {
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+    border: var(--b-1) solid var(--md-outline);
+    border-radius: var(--r-xs);
+    padding: var(--s-3);
+  }
+  .pack-dont-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--s-8);
+    padding: 0 var(--s-4);
+    border: var(--b-1) solid var(--md-outline);
+    border-radius: var(--r-xs);
+    background: var(--md-surface-container);
+    color: var(--md-on-surface);
+    font-family: var(--font-plain);
+    font-size: var(--fs-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: var(--fw-regular);
+  }
+  .pack-dont-note {
+    color: var(--md-error);
+    font-size: var(--fs-body-sm);
+    line-height: var(--lh-body-sm);
+    font-weight: var(--fw-medium);
+  }
+
+  .pack-snip {
+    background: var(--md-surface-container-lowest);
+    color: var(--md-on-surface);
+    border: var(--b-1) solid var(--md-outline-variant);
+    border-radius: var(--r-md);
+    padding: var(--s-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-sm);
+    line-height: var(--lh-body-sm);
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .pack-inv-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+  }
+  .pack-inv-item {
+    background: var(--md-surface-container-high);
+    color: var(--md-on-surface);
+    border-radius: var(--r-full);
+    padding: var(--s-2) var(--s-4);
+    font-size: var(--fs-label-lg);
+    line-height: var(--lh-label-lg);
+  }
+  .pack-inv-item b {
+    color: var(--md-primary);
+  }
+
+  .pack-link-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-1) var(--s-3);
+    border-radius: var(--r-full);
+    background: var(--md-surface-container-high);
+    color: var(--md-primary);
+    font-size: var(--fs-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: var(--fw-medium);
+    text-decoration: none;
+    transition:
+      background-color var(--dur-effects-fast) var(--ease-effects-fast),
+      border-radius var(--dur-spatial-fast) var(--ease-spatial-fast);
+  }
+  .pack-link-pill:hover {
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    text-decoration: none;
+  }
+  .pack-link-pill:active {
+    border-radius: var(--r-sm);
+  }
+</style>
+</head>
+<body>
+<div class="pack-page">
+
+  <header class="m3-app-bar m3-app-bar--scrolled pack-topbar">
+    <span class="m3-app-bar__title">Material 3 Expressive</span>
+    <div class="m3-app-bar__actions">
+      <button type="button" class="m3-switch" id="theme-toggle" role="switch" aria-checked="false" aria-label="Toggle dark theme">
+        <span class="m3-switch__track"><span class="m3-switch__thumb"></span></span>
+        <span class="m3-switch__label" id="theme-toggle-label">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="pack-main">
+
+    <section class="m3-card m3-card--elevated pack-hero" aria-label="Material 3 Expressive overview">
+      <div class="pack-hero__top">
+        <span class="m3-label-lg pack-eyebrow">DESIGN PACK · BASELINE VIOLET #6750a4</span>
+        <span class="pack-badge pack-badge--primary">Light + Dark · 8 Primitives</span>
+      </div>
+      <h1 class="m3-display-sm is-emphasized">Tonal elevation &amp; spring-physics spatial feedback</h1>
+      <p class="m3-body-lg m3-supporting">
+        Official Material Design 3 Expressive specification using 5 tonal surface container tiers, state-layer ink mixes, 30 baseline/emphasized type roles, an 8-step shape ladder, and 6 spring-equivalent curves across Light and Dark schemes.
+      </p>
+      <div class="m3-pack-links" role="navigation" aria-label="Pack sections and example screens">
+        <a class="pack-link-pill" href="#zone-01">01 References</a>
+        <a class="pack-link-pill" href="#zone-02">02 Style Sheet</a>
+        <a class="pack-link-pill" href="#zone-03">03 Primitives</a>
+        <a class="pack-link-pill" href="#zone-03b">03b Do / Don't</a>
+        <a class="pack-link-pill" href="#zone-04">04 Blocks</a>
+        <a class="pack-link-pill" href="#zone-05">05 Snippets</a>
+        <a class="pack-link-pill" href="examples/workspace.html">examples/workspace.html</a>
+        <a class="pack-link-pill" href="examples/settings.html">examples/settings.html</a>
+        <a class="pack-link-pill" href="examples/motion.html">examples/motion.html</a>
+      </div>
+    </section>
+
+    <!-- ── ZONE 01 · REFERENCES & CANDIDATE COMPARISON ───────────────── -->
+    <section class="pack-sec" id="zone-01">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">01</span>
+        <h2 class="m3-headline-md is-emphasized">References &amp; Candidate Comparison</h2>
+        <span class="m3-body-md pack-sec__note">5 live M3 Expressive captures · 1280×800 HTTP 200</span>
+      </div>
+
+      <div class="pack-grid-refs">
+        <article class="m3-card m3-card--elevated pack-card pack-ref-card">
+          <div class="pack-card__head">
+            <span class="m3-title-sm is-emphasized">ref_01 · M3E Overview</span>
+            <span class="pack-badge">1280×800</span>
+          </div>
+          <div class="pack-ref-frame">
+            <img class="pack-ref-img" src="references/ref_01_m3e_overview.png" alt="Material 3 Expressive overview showing tonal navigation rail, XL rounded hero card, and segmented pill clusters">
+          </div>
+          <p class="m3-body-sm m3-supporting">
+            <b>What to copy:</b> Tonal shell &amp; expressive mosaic — soft tonal rail pill, XL rounded tonal hero card, segmented pill clusters (filled primary + tonal siblings), and side-by-side light/dark cards without grey borders.
+          </p>
+        </article>
+
+        <article class="m3-card m3-card--elevated pack-card pack-ref-card">
+          <div class="pack-card__head">
+            <span class="m3-title-sm is-emphasized">ref_02 · Spring Motion</span>
+            <span class="pack-badge">1280×800</span>
+          </div>
+          <div class="pack-ref-frame">
+            <img class="pack-ref-img" src="references/ref_02_m3e_motion.png" alt="Material 3 Expressive motion documentation showing spring physics framing">
+          </div>
+          <p class="m3-body-sm m3-supporting">
+            <b>What to copy:</b> Physics-driven motion framing — XL rounded tonal header card paired with kinetic spring illustration contrasting spatial overshoot elasticity against calm tonal chrome.
+          </p>
+        </article>
+
+        <article class="m3-card m3-card--elevated pack-card pack-ref-card">
+          <div class="pack-card__head">
+            <span class="m3-title-sm is-emphasized">ref_03 · Shape System</span>
+            <span class="pack-badge">1280×800</span>
+          </div>
+          <div class="pack-ref-frame">
+            <img class="pack-ref-img" src="references/ref_03_m3e_shape.png" alt="Material 3 Expressive shape overview showing continuous contour morphing">
+          </div>
+          <p class="m3-body-sm m3-supporting">
+            <b>What to copy:</b> Shape scale &amp; contour morphing — XL rounded tonal intro banner paired with fluid shape interpolation demonstrating expressive corner radii and organic morph targets.
+          </p>
+        </article>
+
+        <article class="m3-card m3-card--elevated pack-card pack-ref-card">
+          <div class="pack-card__head">
+            <span class="m3-title-sm is-emphasized">ref_04 · Buttons</span>
+            <span class="pack-badge">1280×800</span>
+          </div>
+          <div class="pack-ref-frame">
+            <img class="pack-ref-img" src="references/ref_04_m3e_buttons.png" alt="Material 3 Expressive buttons overview showing tonal hero banner and elevated frame">
+          </div>
+          <p class="m3-body-sm m3-supporting">
+            <b>What to copy:</b> Button hierarchy &amp; editorial spacing — tonal hero banner with compact pill chip above a clean elevated mobile frame with generous whitespace and display type.
+          </p>
+        </article>
+
+        <article class="m3-card m3-card--elevated pack-card pack-ref-card">
+          <div class="pack-card__head">
+            <span class="m3-title-sm is-emphasized">ref_05 · Floating Toolbars</span>
+            <span class="pack-badge">1280×800</span>
+          </div>
+          <div class="pack-ref-frame">
+            <img class="pack-ref-img" src="references/ref_05_m3e_toolbars.png" alt="Material 3 Expressive toolbars overview showing floating pill toolbar paired with tertiary FAB">
+          </div>
+          <p class="m3-body-sm m3-supporting">
+            <b>What to copy:</b> Floating toolbar + tertiary FAB pairing — detached vibrant pill toolbar (4 actions with elevated shadow) anchored beside a tertiary-container squircle FAB above a clean tonal surface.
+          </p>
+        </article>
+      </div>
+
+      <div class="pack-grid-2" style="margin-top: var(--s-5)">
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <span class="pack-badge pack-badge--primary">CHOSEN · Material 3 Expressive</span>
+            <span class="m3-label-md m3-supporting">Tonal ladder + spring morph</span>
+          </div>
+          <div class="m3-surface-high pack-tier-pill pack-stack">
+            <h3 class="m3-headline-sm is-emphasized">Release bundle ready</h3>
+            <p class="m3-body-md m3-supporting">
+              Stepped tonal containers separate layers without grey borders, while one split CTA leads tonal siblings.
+            </p>
+            <div class="m3-row">
+              <div class="pack-split-wrap">
+                <div class="m3-split-btn">
+                  <button type="button" class="m3-split-btn__lead" data-split-live="cand-chosen">Publish</button>
+                  <button type="button" class="m3-split-btn__trail" data-split-toggle="cand-menu" aria-expanded="false" aria-label="More publish options">
+                    <span class="m3-split-btn__chevron" aria-hidden="true">▾</span>
+                  </button>
+                </div>
+                <div class="pack-split-menu" id="cand-menu" hidden>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="cand-chosen">Publish now</button>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="cand-chosen">Stage draft</button>
+                </div>
+              </div>
+              <button type="button" class="m3-btn m3-btn--tonal" data-action-msg="cand-status" data-msg="Preview queued">Preview</button>
+              <span class="m3-label-md m3-supporting" id="cand-chosen">Ready</span>
+              <span class="m3-label-md m3-supporting" id="cand-status">Idle</span>
+            </div>
+            <div class="m3-row">
+              <div class="m3-toolbar m3-toolbar--vibrant" data-live-toolbar>
+                <button type="button" class="m3-toolbar__btn is-active" aria-pressed="true" aria-label="Edit layout">Edit</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false" aria-label="Tune motion">Tune</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false" aria-label="Share link">Share</button>
+              </div>
+              <button type="button" class="m3-fab m3-fab--vibrant" aria-label="Add expressive layer">+</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="m3-card m3-card--outlined pack-card" data-dont>
+          <div class="pack-card__head">
+            <span class="pack-badge pack-badge--error">AVOID · Generic Flat SaaS</span>
+            <span class="m3-label-md m3-supporting">Flat border chrome</span>
+          </div>
+          <div class="pack-dont-box pack-stack">
+            <p class="m3-body-lg">Release bundle ready</p>
+            <p class="m3-body-md">
+              Monoweight text and uniform 1px border boxes flatten hierarchy while competing filled CTAs fight for focus.
+            </p>
+            <div class="m3-row">
+              <span class="m3-btn m3-btn--filled" style="border-radius:var(--r-xs)">Publish</span>
+              <span class="m3-btn m3-btn--filled" style="border-radius:var(--r-xs)">Preview</span>
+              <span class="m3-btn m3-btn--filled" style="border-radius:var(--r-xs)">Cancel</span>
+            </div>
+            <p class="pack-dont-note">Rejected: flat border boxes erase tonal depth, and an all-primary button wall breaks 5-level emphasis.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── ZONE 02 · STYLE SHEET ───────────────────────────────────── -->
+    <section class="pack-sec" id="zone-02">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">02</span>
+        <h2 class="m3-headline-md is-emphasized">Style Sheet</h2>
+        <span class="m3-body-md pack-sec__note">Production constraint · 8-section spec · measured contrast</span>
+      </div>
+
+      <article class="m3-card m3-card--elevated pack-card" style="margin-bottom: var(--s-5)">
+        <div class="pack-card__head">
+          <h3 class="m3-title-lg is-emphasized">Production constraint: Tonal-surface elevation + spring-physics spatial feedback</h3>
+          <span class="pack-badge pack-badge--error">NEVER block · 7 bans</span>
+        </div>
+        <ul class="pack-never-list">
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> use unlayered raw hover hexes — state layers mix <code class="pack-code">--md-on-*</code> ink at 8% hover, 10% focus, 12% press.</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> box every card in 1px grey borders — stack the 5 tonal container tiers instead.</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> use pure black grounds or pure black shadows — Dark mode rests on <code class="pack-code">#141218</code> (<code class="pack-code">#0f0d13</code> lowest).</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> apply spatial overshoot to color or opacity — effects curves stay critically damped (0% overshoot).</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> use arbitrary easing keywords or stepped animations — use only the 6 declared spring tokens.</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> place multiple Filled CTAs or FABs in one screen region — preserve the 5-level emphasis ladder.</li>
+          <li class="pack-never-item m3-body-sm"><b>NEVER</b> use <code class="pack-code">--md-outline</code> or <code class="pack-code">--md-outline-variant</code> as readable body text ink.</li>
+        </ul>
+      </article>
+
+      <div class="pack-grid-4" style="margin-bottom: var(--s-5)">
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">1 · Idea</span>
+          <p class="m3-body-sm">Tonal surface elevation ladder (<code class="pack-code">lowest</code> to <code class="pack-code">highest</code>), ink state layers, and pill-to-square spring feedback across 8 closed primitives.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">2 · Voice</span>
+          <p class="m3-body-sm">Active sentence case mapped to real states: Loading <code class="pack-code">"Syncing…"</code> · Empty <code class="pack-code">"Nothing queued yet"</code> · Error <code class="pack-code">"Check connection — try again"</code> · Done <code class="pack-code">"Saved"</code> / <code class="pack-code">"Updated"</code>.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">3 · Mark</span>
+          <p class="m3-body-sm">Pill-to-square pressed button morph (<code class="pack-code">9999px</code> to <code class="pack-code">8px</code>/<code class="pack-code">12px</code>), shape-morphing SVG polygon loader, and tertiary squircle FAB beside floating toolbar.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">4 · Colour</span>
+          <p class="m3-body-sm">Proportional budget: <b>72%</b> surfaces, <b>14%</b> ink/outline, <b>8%</b> tonal containers, <b>6%</b> primary/tertiary/error accents across Light + Dark schemes.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">5 · Type</span>
+          <p class="m3-body-sm"><code class="pack-code">--font-brand</code> &amp; <code class="pack-code">--font-plain</code> across 15 Baseline + 15 Emphasized roles from <code class="pack-code">57px</code> Display Large to <code class="pack-code">11px</code> Label Small floor.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">6 · Layout</span>
+          <p class="m3-body-sm"><code class="pack-code">4px</code> spacing ladder (<code class="pack-code">4px–64px</code>), 5 tonal tiers, and 7 M3 viewports (<code class="pack-code">375×812</code> to <code class="pack-code">1440×900</code>) with zero overflow or clipping.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">7 · Imagery</span>
+          <p class="m3-body-sm">Inline SVG vector icons, inline SVG shape-morphing polygon loaders, and shape-clipped tonal media frames (<code class="pack-code">12px–28px</code>). Zero sprites.</p>
+        </article>
+        <article class="m3-card m3-card--filled pack-card">
+          <span class="m3-label-md pack-eyebrow">8 · Texture &amp; Motion</span>
+          <p class="m3-body-sm">8-step shape ladder (<code class="pack-code">4px</code>–<code class="pack-code">9999px</code>), ambient + key shadows, 3 Spatial overshoot springs (<code class="pack-code">350/500/650ms</code>) + 3 Effects springs (<code class="pack-code">150/200/300ms</code>).</p>
+        </article>
+      </div>
+
+      <article class="m3-card m3-card--elevated pack-card" style="margin-bottom: var(--s-5)">
+        <div class="pack-card__head">
+          <h3 class="m3-title-md is-emphasized">Colour by proportion · ink budget</h3>
+          <span class="m3-label-md m3-supporting">72% · 14% · 8% · 6%</span>
+        </div>
+        <div class="pack-prop-bar" role="img" aria-label="Ink proportion bar: 72% tonal surface, 14% ink and outline, 8% tonal container, 6% accent">
+          <span class="pack-prop-seg--surface" aria-hidden="true"></span>
+          <span class="pack-prop-seg--ink" aria-hidden="true"></span>
+          <span class="pack-prop-seg--tonal" aria-hidden="true"></span>
+          <span class="pack-prop-seg--accent" aria-hidden="true"></span>
+        </div>
+        <div class="pack-legend">
+          <span class="pack-legend__item m3-body-sm"><i class="pack-swatch-dot" style="background:var(--md-surface-container-highest)" aria-hidden="true"></i><b>72%</b> Tonal surface</span>
+          <span class="pack-legend__item m3-body-sm"><i class="pack-swatch-dot" style="background:var(--md-on-surface-variant)" aria-hidden="true"></i><b>14%</b> Ink &amp; outline</span>
+          <span class="pack-legend__item m3-body-sm"><i class="pack-swatch-dot" style="background:var(--md-primary-container)" aria-hidden="true"></i><b>8%</b> Tonal containers</span>
+          <span class="pack-legend__item m3-body-sm"><i class="pack-swatch-dot" style="background:var(--md-primary)" aria-hidden="true"></i><b>6%</b> Accent roles</span>
+        </div>
+      </article>
+
+      <article class="m3-card m3-card--elevated pack-card" style="margin-bottom: var(--s-5)">
+        <div class="pack-card__head">
+          <h3 class="m3-title-md is-emphasized">Type ladder · 15 roles (Baseline vs Emphasized)</h3>
+          <span class="m3-label-md m3-supporting">57px Display Large → 11px Label Small</span>
+        </div>
+        <div class="pack-stack">
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-display-lg">Scale</span><span class="m3-display-lg is-emphasized">Emph</span></div><span class="pack-type-meta">Display Lg · 57/64</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-display-md">Tonal</span><span class="m3-display-md is-emphasized">Spring</span></div><span class="pack-type-meta">Display Md · 45/52</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-display-sm">Surface</span><span class="m3-display-sm is-emphasized">Morph</span></div><span class="pack-type-meta">Display Sm · 36/44</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-headline-lg">Baseline</span><span class="m3-headline-lg is-emphasized">Emphasized</span></div><span class="pack-type-meta">Headline Lg · 32/40</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-headline-md">Shape steps</span><span class="m3-headline-md is-emphasized">Shape steps</span></div><span class="pack-type-meta">Headline Md · 28/36</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-headline-sm">Container tier</span><span class="m3-headline-sm is-emphasized">Container tier</span></div><span class="pack-type-meta">Headline Sm · 24/32</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-title-lg">Workspace header</span><span class="m3-title-lg is-emphasized">Workspace header</span></div><span class="pack-type-meta">Title Lg · 22/28</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-title-md">Toolbar group</span><span class="m3-title-md is-emphasized">Toolbar group</span></div><span class="pack-type-meta">Title Md · 16/24</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-title-sm">Preference row</span><span class="m3-title-sm is-emphasized">Preference row</span></div><span class="pack-type-meta">Title Sm · 14/20</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-body-lg">Long-form editorial copy</span><span class="m3-body-lg is-emphasized">Highlighted copy</span></div><span class="pack-type-meta">Body Lg · 16/24</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-body-md">Supporting description text</span><span class="m3-body-md is-emphasized">Key phrase</span></div><span class="pack-type-meta">Body Md · 14/20</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-body-sm">Metadata caption</span><span class="m3-body-sm is-emphasized">Strong caption</span></div><span class="pack-type-meta">Body Sm · 12/16</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-label-lg">Primary action</span><span class="m3-label-lg is-emphasized">Active pill</span></div><span class="pack-type-meta">Label Lg · 14/20</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-label-md">Filter tag</span><span class="m3-label-md is-emphasized">Active tag</span></div><span class="pack-type-meta">Label Md · 12/16</span></div>
+          <div class="pack-type-row"><div class="pack-type-samples"><span class="m3-label-sm">Micro floor</span><span class="m3-label-sm is-emphasized">11px floor</span></div><span class="pack-type-meta">Label Sm · 11/16</span></div>
+        </div>
+      </article>
+
+      <div class="pack-grid-2" style="margin-bottom: var(--s-5)">
+        <div class="pack-theme-panel" data-theme="light">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">Light WCAG 2.1 Contrast (measured)</h3>
+            <span class="pack-badge">Pinned Light</span>
+          </div>
+          <div class="pack-grid-cr">
+            <div class="pack-cr-card" style="background:var(--md-surface-container-lowest);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / lowest</span><span class="pack-cr-ratio">17.07:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / surface</span><span class="pack-cr-ratio">16.23:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / container</span><span class="pack-cr-ratio">14.85:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / highest</span><span class="pack-cr-ratio">13.17:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-on-surface-variant)"><span class="pack-cr-pair">variant / surface</span><span class="pack-cr-ratio">8.88:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-on-surface-variant)"><span class="pack-cr-pair">variant / highest</span><span class="pack-cr-ratio">7.21:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-primary);color:var(--md-on-primary)"><span class="pack-cr-pair">on-primary / primary</span><span class="pack-cr-ratio">6.44:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-primary)"><span class="pack-cr-pair">primary / surface</span><span class="pack-cr-ratio">6.12:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-primary)"><span class="pack-cr-pair">primary / highest</span><span class="pack-cr-ratio">4.97:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-primary-container);color:var(--md-on-primary-container)"><span class="pack-cr-pair">on-pri-cont / pri-cont</span><span class="pack-cr-ratio">13.32:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-secondary-container);color:var(--md-on-secondary-container)"><span class="pack-cr-pair">on-sec-cont / sec-cont</span><span class="pack-cr-ratio">13.24:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-tertiary-container);color:var(--md-on-tertiary-container)"><span class="pack-cr-pair">on-ter-cont / ter-cont</span><span class="pack-cr-ratio">13.18:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-error-container);color:var(--md-on-error-container)"><span class="pack-cr-pair">on-err-cont / err-cont</span><span class="pack-cr-ratio">12.77:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-inverse-surface);color:var(--md-inverse-on-surface)"><span class="pack-cr-pair">inv-on-surf / inv-surf</span><span class="pack-cr-ratio">11.65:1</span></div>
+            <div class="pack-cr-card" data-dont style="background:var(--md-surface);color:var(--md-outline)"><span class="pack-cr-pair">AVOID outline / surface</span><span class="pack-cr-ratio">4.33:1</span></div>
+            <div class="pack-cr-card" data-dont style="background:var(--md-surface);color:var(--md-outline-variant)"><span class="pack-cr-pair">AVOID outline-v / surf</span><span class="pack-cr-ratio">1.62:1</span></div>
+          </div>
+        </div>
+
+        <div class="pack-theme-panel" data-theme="dark">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">Dark WCAG 2.1 Contrast (measured)</h3>
+            <span class="pack-badge">Pinned Dark</span>
+          </div>
+          <div class="pack-grid-cr">
+            <div class="pack-cr-card" style="background:var(--md-surface-container-lowest);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / lowest</span><span class="pack-cr-ratio">14.90:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / surface</span><span class="pack-cr-ratio">14.35:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / container</span><span class="pack-cr-ratio">12.57:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-on-surface)"><span class="pack-cr-pair">on-surface / highest</span><span class="pack-cr-ratio">9.47:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-on-surface-variant)"><span class="pack-cr-pair">variant / surface</span><span class="pack-cr-ratio">10.91:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-on-surface-variant)"><span class="pack-cr-pair">variant / highest</span><span class="pack-cr-ratio">7.20:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-primary);color:var(--md-on-primary)"><span class="pack-cr-pair">on-primary / primary</span><span class="pack-cr-ratio">7.71:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface);color:var(--md-primary)"><span class="pack-cr-pair">primary / surface</span><span class="pack-cr-ratio">10.91:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-surface-container-highest);color:var(--md-primary)"><span class="pack-cr-pair">primary / highest</span><span class="pack-cr-ratio">7.20:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-primary-container);color:var(--md-on-primary-container)"><span class="pack-cr-pair">on-pri-cont / pri-cont</span><span class="pack-cr-ratio">7.23:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-secondary-container);color:var(--md-on-secondary-container)"><span class="pack-cr-pair">on-sec-cont / sec-cont</span><span class="pack-cr-ratio">7.19:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-tertiary-container);color:var(--md-on-tertiary-container)"><span class="pack-cr-pair">on-ter-cont / ter-cont</span><span class="pack-cr-ratio">7.20:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-error-container);color:var(--md-on-error-container)"><span class="pack-cr-pair">on-err-cont / err-cont</span><span class="pack-cr-ratio">7.17:1</span></div>
+            <div class="pack-cr-card" style="background:var(--md-inverse-surface);color:var(--md-inverse-on-surface)"><span class="pack-cr-pair">inv-on-surf / inv-surf</span><span class="pack-cr-ratio">10.17:1</span></div>
+            <div class="pack-cr-card" data-dont style="background:var(--md-surface-container-highest);color:var(--md-outline)"><span class="pack-cr-pair">AVOID outline / highest</span><span class="pack-cr-ratio">3.87:1</span></div>
+            <div class="pack-cr-card" data-dont style="background:var(--md-surface);color:var(--md-inverse-primary)"><span class="pack-cr-pair">AVOID light-pri / dark-surf</span><span class="pack-cr-ratio">2.89:1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pack-stack">
+        <div class="pack-theme-panel" data-theme="light">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">Light Core Palette Tokens</h3>
+            <span class="m3-label-md m3-supporting">tokens.css · [data-theme="light"]</span>
+          </div>
+          <div class="pack-grid-pal">
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-primary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-primary</span><span class="pack-sw__hex">#6750a4</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-primary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-primary</span><span class="pack-sw__hex">#ffffff</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-primary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-primary-container</span><span class="pack-sw__hex">#eaddff</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-primary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-primary-container</span><span class="pack-sw__hex">#21005d</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-secondary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-secondary</span><span class="pack-sw__hex">#625b71</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-secondary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-secondary-container</span><span class="pack-sw__hex">#e8def8</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-tertiary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-tertiary</span><span class="pack-sw__hex">#7d5260</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-tertiary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-tertiary-container</span><span class="pack-sw__hex">#ffd8e4</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-error)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-error</span><span class="pack-sw__hex">#b3261e</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-error-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-error-container</span><span class="pack-sw__hex">#f9dedc</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface</span><span class="pack-sw__hex">#fef7ff</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-low)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-low</span><span class="pack-sw__hex">#f7f2fa</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container</span><span class="pack-sw__hex">#f3edf7</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-high)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-high</span><span class="pack-sw__hex">#ece6f0</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-highest)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-highest</span><span class="pack-sw__hex">#e6e0e9</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-surface)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-surface</span><span class="pack-sw__hex">#1d1b20</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-surface-variant)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-surface-variant</span><span class="pack-sw__hex">#49454f</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-outline)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-outline</span><span class="pack-sw__hex">#79747e</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-outline-variant)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-outline-variant</span><span class="pack-sw__hex">#cac4d0</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-inverse-surface)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-inverse-surface</span><span class="pack-sw__hex">#322f35</span></div></div>
+          </div>
+        </div>
+
+        <div class="pack-theme-panel" data-theme="dark">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">Dark Core Palette Tokens</h3>
+            <span class="m3-label-md m3-supporting">tokens.css · [data-theme="dark"]</span>
+          </div>
+          <div class="pack-grid-pal">
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-primary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-primary</span><span class="pack-sw__hex">#d0bcff</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-primary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-primary</span><span class="pack-sw__hex">#381e72</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-primary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-primary-container</span><span class="pack-sw__hex">#4f378b</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-primary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-primary-container</span><span class="pack-sw__hex">#eaddff</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-secondary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-secondary</span><span class="pack-sw__hex">#ccc2dc</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-secondary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-secondary-container</span><span class="pack-sw__hex">#4a4458</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-tertiary)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-tertiary</span><span class="pack-sw__hex">#efb8c8</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-tertiary-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-tertiary-container</span><span class="pack-sw__hex">#633b48</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-error)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-error</span><span class="pack-sw__hex">#f2b8b5</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-error-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-error-container</span><span class="pack-sw__hex">#8c1d18</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-lowest)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-lowest</span><span class="pack-sw__hex">#0f0d13</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface</span><span class="pack-sw__hex">#141218</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-low)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-low</span><span class="pack-sw__hex">#1d1b20</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container</span><span class="pack-sw__hex">#211f26</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-high)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-high</span><span class="pack-sw__hex">#2b2930</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-surface-container-highest)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-surface-container-highest</span><span class="pack-sw__hex">#36343b</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-surface)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-surface</span><span class="pack-sw__hex">#e6e0e9</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-on-surface-variant)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-on-surface-variant</span><span class="pack-sw__hex">#cac4d0</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-outline)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-outline</span><span class="pack-sw__hex">#938f99</span></div></div>
+            <div class="pack-sw"><div class="pack-sw__chip" style="background:var(--md-outline-variant)"></div><div class="pack-sw__meta"><span class="pack-sw__tok">--md-outline-variant</span><span class="pack-sw__hex">#49454f</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ZONE 03 · COMPONENTS & MOTION (8 PRIMITIVES × 5 STATES) ── -->
+    <section class="pack-sec" id="zone-03">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">03</span>
+        <h2 class="m3-headline-md is-emphasized">Components &amp; Motion</h2>
+        <span class="m3-body-md pack-sec__note">8 closed primitives · rest · hover · focus · pressed · disabled</span>
+      </div>
+
+      <div class="pack-stack">
+
+        <!-- 1. Surface & Card -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">1 · Surface &amp; Card</h3>
+            <span class="m3-label-md m3-supporting">5 tonal tiers + 3 card variants + 5 states</span>
+          </div>
+          <div class="m3-grid">
+            <div class="m3-surface-lowest pack-tier-pill"><span class="m3-label-md is-emphasized">Lowest</span><p class="m3-body-sm m3-supporting">Base well / hero inlay</p></div>
+            <div class="m3-surface-low pack-tier-pill"><span class="m3-label-md is-emphasized">Low</span><p class="m3-body-sm m3-supporting">Elevated card ground</p></div>
+            <div class="m3-surface-default pack-tier-pill"><span class="m3-label-md is-emphasized">Default</span><p class="m3-body-sm m3-supporting">Nav bar &amp; panel</p></div>
+            <div class="m3-surface-high pack-tier-pill"><span class="m3-label-md is-emphasized">High</span><p class="m3-body-sm m3-supporting">Floating toolbar &amp; group</p></div>
+            <div class="m3-surface-highest pack-tier-pill"><span class="m3-label-md is-emphasized">Highest</span><p class="m3-body-sm m3-supporting">Filled card &amp; filled input</p></div>
+          </div>
+          <div class="m3-grid">
+            <div class="m3-card m3-card--filled"><span class="m3-title-sm is-emphasized">.m3-card--filled</span><p class="m3-body-sm m3-supporting">Tonal highest surface, elev-0</p></div>
+            <div class="m3-card m3-card--elevated"><span class="m3-title-sm is-emphasized">.m3-card--elevated</span><p class="m3-body-sm m3-supporting">Tonal low surface, elev-1</p></div>
+            <div class="m3-card m3-card--outlined"><span class="m3-title-sm is-emphasized">.m3-card--outlined</span><p class="m3-body-sm m3-supporting">Surface + hairline outline-variant</p></div>
+          </div>
+          <div class="m3-grid">
+            <div class="m3-card m3-card--elevated is-interactive"><span class="m3-label-md is-emphasized">rest</span><p class="m3-body-sm m3-supporting">elev-1 · 12px</p></div>
+            <div class="m3-card m3-card--elevated is-interactive is-hover"><span class="m3-label-md is-emphasized">.is-hover</span><p class="m3-body-sm m3-supporting">8% ink · elev-2</p></div>
+            <div class="m3-card m3-card--elevated is-interactive is-focus"><span class="m3-label-md is-emphasized">.is-focus</span><p class="m3-body-sm m3-supporting">10% ink · primary ring</p></div>
+            <div class="m3-card m3-card--elevated is-interactive is-pressed"><span class="m3-label-md is-emphasized">.is-pressed</span><p class="m3-body-sm m3-supporting">12% ink · 16px morph</p></div>
+            <div class="m3-card m3-card--elevated is-disabled" aria-disabled="true"><span class="m3-label-md is-emphasized">.is-disabled</span><p class="m3-body-sm">38% ink · non-interactive</p></div>
+          </div>
+        </article>
+
+        <!-- 2. Button -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">2 · Button</h3>
+            <span class="m3-label-md m3-supporting">4 variants × 5 states + XS / S / M / L pill-to-square morph</span>
+          </div>
+          <div class="pack-stack">
+            <div class="m3-row">
+              <span class="pack-state-tag">Filled</span>
+              <button type="button" class="m3-btn m3-btn--filled">Rest</button>
+              <button type="button" class="m3-btn m3-btn--filled is-hover">Hover</button>
+              <button type="button" class="m3-btn m3-btn--filled is-focus">Focus</button>
+              <button type="button" class="m3-btn m3-btn--filled is-pressed">Pressed</button>
+              <button type="button" class="m3-btn m3-btn--filled is-disabled" disabled>Disabled</button>
+            </div>
+            <div class="m3-row">
+              <span class="pack-state-tag">Tonal</span>
+              <button type="button" class="m3-btn m3-btn--tonal">Rest</button>
+              <button type="button" class="m3-btn m3-btn--tonal is-hover">Hover</button>
+              <button type="button" class="m3-btn m3-btn--tonal is-focus">Focus</button>
+              <button type="button" class="m3-btn m3-btn--tonal is-pressed">Pressed</button>
+              <button type="button" class="m3-btn m3-btn--tonal is-disabled" disabled>Disabled</button>
+            </div>
+            <div class="m3-row">
+              <span class="pack-state-tag">Outlined</span>
+              <button type="button" class="m3-btn m3-btn--outlined">Rest</button>
+              <button type="button" class="m3-btn m3-btn--outlined is-hover">Hover</button>
+              <button type="button" class="m3-btn m3-btn--outlined is-focus">Focus</button>
+              <button type="button" class="m3-btn m3-btn--outlined is-pressed">Pressed</button>
+              <button type="button" class="m3-btn m3-btn--outlined is-disabled" disabled>Disabled</button>
+            </div>
+            <div class="m3-row">
+              <span class="pack-state-tag">Text</span>
+              <button type="button" class="m3-btn m3-btn--text">Rest</button>
+              <button type="button" class="m3-btn m3-btn--text is-hover">Hover</button>
+              <button type="button" class="m3-btn m3-btn--text is-focus">Focus</button>
+              <button type="button" class="m3-btn m3-btn--text is-pressed">Pressed</button>
+              <button type="button" class="m3-btn m3-btn--text is-disabled" disabled>Disabled</button>
+            </div>
+            <div class="m3-row">
+              <span class="pack-state-tag">Scale + Morph</span>
+              <button type="button" class="m3-btn m3-btn--filled m3-btn--xs">XS</button>
+              <button type="button" class="m3-btn m3-btn--filled m3-btn--sm">S</button>
+              <button type="button" class="m3-btn m3-btn--tonal m3-btn--md">M</button>
+              <button type="button" class="m3-btn m3-btn--tonal m3-btn--md is-pressed">M Pressed</button>
+              <button type="button" class="m3-btn m3-btn--filled m3-btn--lg">LG</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3. Split Button & Connected Button Group -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">3 · Split Button &amp; Connected Button Group</h3>
+            <span class="m3-label-md m3-supporting">Live chevron menu + selectable segments across 5 states</span>
+          </div>
+          <div class="pack-stack">
+            <div class="m3-row">
+              <div class="pack-split-wrap">
+                <div class="m3-split-btn">
+                  <button type="button" class="m3-split-btn__lead" data-split-live="split-status">Deploy</button>
+                  <button type="button" class="m3-split-btn__trail" data-split-toggle="split-menu-1" aria-expanded="false" aria-label="Deployment targets">
+                    <span class="m3-split-btn__chevron" aria-hidden="true">▾</span>
+                  </button>
+                </div>
+                <div class="pack-split-menu" id="split-menu-1" hidden>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="split-status">Production</button>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="split-status">Staging</button>
+                </div>
+              </div>
+
+              <div class="m3-split-btn m3-split-btn--tonal">
+                <button type="button" class="m3-split-btn__lead is-hover">Hover</button>
+                <button type="button" class="m3-split-btn__trail is-hover" aria-label="Tonal split hover"><span class="m3-split-btn__chevron" aria-hidden="true">▾</span></button>
+              </div>
+              <div class="m3-split-btn m3-split-btn--outlined">
+                <button type="button" class="m3-split-btn__lead is-focus">Focus</button>
+                <button type="button" class="m3-split-btn__trail is-focus" aria-label="Outlined split focus"><span class="m3-split-btn__chevron" aria-hidden="true">▾</span></button>
+              </div>
+              <div class="m3-split-btn">
+                <button type="button" class="m3-split-btn__lead is-pressed">Pressed</button>
+                <button type="button" class="m3-split-btn__trail is-pressed" aria-label="Pressed split"><span class="m3-split-btn__chevron" aria-hidden="true">▾</span></button>
+              </div>
+              <div class="m3-split-btn">
+                <button type="button" class="m3-split-btn__lead is-disabled" disabled>Disabled</button>
+                <button type="button" class="m3-split-btn__trail is-disabled" disabled aria-label="Disabled split"><span class="m3-split-btn__chevron" aria-hidden="true">▾</span></button>
+              </div>
+              <span class="m3-label-md m3-supporting" id="split-status">Target: Production</span>
+            </div>
+
+            <div class="m3-row">
+              <div class="m3-btn-group" data-live-group role="group" aria-label="Live layout view selector">
+                <button type="button" class="m3-btn-group__item is-selected" aria-pressed="true">Grid</button>
+                <button type="button" class="m3-btn-group__item" aria-pressed="false">List</button>
+                <button type="button" class="m3-btn-group__item" aria-pressed="false">Split</button>
+              </div>
+              <div class="m3-btn-group" role="group" aria-label="Button group states">
+                <button type="button" class="m3-btn-group__item is-hover">Hover</button>
+                <button type="button" class="m3-btn-group__item is-focus">Focus</button>
+                <button type="button" class="m3-btn-group__item is-pressed">Pressed</button>
+                <button type="button" class="m3-btn-group__item is-disabled" disabled>Disabled</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4. FAB -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">4 · Floating Action Button (FAB)</h3>
+            <span class="m3-label-md m3-supporting">Standard, Vibrant, Extended across 5 states</span>
+          </div>
+          <div class="m3-row">
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab" aria-label="Add item">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+              </button>
+              <span class="pack-state-tag">rest</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab is-hover" aria-label="Hover FAB">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+              </button>
+              <span class="pack-state-tag">.is-hover</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab m3-fab--vibrant is-focus" aria-label="Focus vibrant FAB">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+              </button>
+              <span class="pack-state-tag">.vibrant .is-focus</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab m3-fab--vibrant is-pressed" aria-label="Pressed vibrant FAB">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+              </button>
+              <span class="pack-state-tag">.is-pressed (8px)</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab is-disabled" disabled aria-label="Disabled FAB">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+              </button>
+              <span class="pack-state-tag">disabled</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab m3-fab--extended">Compose</button>
+              <span class="pack-state-tag">.m3-fab--extended</span>
+            </div>
+            <div class="pack-state-cell">
+              <button type="button" class="m3-fab m3-fab--vibrant m3-fab--extended">New note</button>
+              <span class="pack-state-tag">.vibrant --extended</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5. Floating Toolbar -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">5 · Floating Toolbar</h3>
+            <span class="m3-label-md m3-supporting">Standard + Vibrant + 5 item states</span>
+          </div>
+          <div class="pack-stack">
+            <div class="m3-row">
+              <div class="m3-toolbar m3-toolbar--standard" data-live-toolbar>
+                <button type="button" class="m3-toolbar__btn is-active" aria-pressed="true">Crop</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false">Brush</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false">Type</button>
+                <button type="button" class="m3-toolbar__btn is-disabled" disabled>Lock</button>
+              </div>
+              <div class="m3-toolbar m3-toolbar--vibrant" data-live-toolbar>
+                <button type="button" class="m3-toolbar__btn is-active" aria-pressed="true">Pin</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false">Flip</button>
+                <button type="button" class="m3-toolbar__btn" aria-pressed="false">Mask</button>
+              </div>
+              <button type="button" class="m3-fab m3-fab--vibrant" aria-label="Toolbar primary add">+</button>
+            </div>
+            <div class="m3-row">
+              <div class="m3-toolbar m3-toolbar--standard">
+                <button type="button" class="m3-toolbar__btn">Rest</button>
+                <button type="button" class="m3-toolbar__btn is-hover">Hover</button>
+                <button type="button" class="m3-toolbar__btn is-focus">Focus</button>
+                <button type="button" class="m3-toolbar__btn is-pressed">Pressed</button>
+                <button type="button" class="m3-toolbar__btn is-active">Active</button>
+                <button type="button" class="m3-toolbar__btn is-disabled" disabled>Disabled</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6. Chip -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">6 · Chip</h3>
+            <span class="m3-label-md m3-supporting">Assist, Filter, Input across 5 states + live selection</span>
+          </div>
+          <div class="pack-stack">
+            <div class="m3-chip-row">
+              <button type="button" class="m3-chip m3-chip--assist" data-toggle-chip aria-pressed="false">Assist</button>
+              <button type="button" class="m3-chip m3-chip--filter is-selected" data-toggle-chip aria-pressed="true">Filter on</button>
+              <button type="button" class="m3-chip m3-chip--filter" data-toggle-chip aria-pressed="false">Filter off</button>
+              <button type="button" class="m3-chip m3-chip--input" data-toggle-chip aria-pressed="false">Input ×</button>
+            </div>
+            <div class="m3-chip-row">
+              <button type="button" class="m3-chip m3-chip--filter">Rest</button>
+              <button type="button" class="m3-chip m3-chip--filter is-hover">Hover</button>
+              <button type="button" class="m3-chip m3-chip--filter is-focus">Focus</button>
+              <button type="button" class="m3-chip m3-chip--filter is-pressed">Pressed</button>
+              <button type="button" class="m3-chip m3-chip--filter is-selected">Selected</button>
+              <button type="button" class="m3-chip m3-chip--filter is-disabled" disabled>Disabled</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 7. Text Field -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">7 · Text Field</h3>
+            <span class="m3-label-md m3-supporting">Outlined &amp; Filled · rest · hover · focus · error · disabled</span>
+          </div>
+          <div class="m3-grid">
+            <div class="m3-field m3-field--outlined">
+              <label class="m3-field__label" for="fld-out-rest">Outlined · rest</label>
+              <div class="m3-field__control"><input id="fld-out-rest" type="text" value="Baseline Violet"></div>
+              <span class="m3-field__supporting">Supporting helper text</span>
+            </div>
+            <div class="m3-field m3-field--outlined is-hover">
+              <label class="m3-field__label" for="fld-out-hover">Outlined · .is-hover</label>
+              <div class="m3-field__control"><input id="fld-out-hover" type="text" value="Hover border"></div>
+              <span class="m3-field__supporting">Ink outline on hover</span>
+            </div>
+            <div class="m3-field m3-field--outlined is-focus">
+              <label class="m3-field__label" for="fld-out-focus">Outlined · .is-focus</label>
+              <div class="m3-field__control"><input id="fld-out-focus" type="text" value="Active ring"></div>
+              <span class="m3-field__supporting">Primary 2px inset ring</span>
+            </div>
+            <div class="m3-field m3-field--outlined is-error">
+              <label class="m3-field__label" for="fld-out-err">Outlined · .is-error</label>
+              <div class="m3-field__control"><input id="fld-out-err" type="text" value="Offline token"></div>
+              <span class="m3-field__supporting">Check connection — try again</span>
+            </div>
+            <div class="m3-field m3-field--filled">
+              <label class="m3-field__label" for="fld-fill-rest">Filled · rest</label>
+              <div class="m3-field__control"><input id="fld-fill-rest" type="text" value="Surface highest"></div>
+              <span class="m3-field__supporting">Tonal filled ground</span>
+            </div>
+            <div class="m3-field m3-field--filled is-focus">
+              <label class="m3-field__label" for="fld-fill-focus">Filled · .is-focus</label>
+              <div class="m3-field__control"><input id="fld-fill-focus" type="text" value="Active underline"></div>
+              <span class="m3-field__supporting">Primary 2px bottom bar</span>
+            </div>
+            <div class="m3-field m3-field--filled is-pressed">
+              <label class="m3-field__label" for="fld-fill-press">Filled · .is-pressed</label>
+              <div class="m3-field__control"><input id="fld-fill-press" type="text" value="State layer 12%"></div>
+              <span class="m3-field__supporting">12% pressed state layer</span>
+            </div>
+            <div class="m3-field m3-field--filled is-error">
+              <label class="m3-field__label" for="fld-fill-err">Filled · .is-error</label>
+              <div class="m3-field__control"><input id="fld-fill-err" type="text" value="Invalid key"></div>
+              <span class="m3-field__supporting">Check connection — try again</span>
+            </div>
+            <div class="m3-field m3-field--filled is-disabled">
+              <label class="m3-field__label" for="fld-fill-dis">Filled · .is-disabled</label>
+              <div class="m3-field__control"><input id="fld-fill-dis" type="text" value="Locked field" disabled></div>
+              <span class="m3-field__supporting">38% ink · read only</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 8. Switch & Loading Indicator -->
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">8 · Switch, Polygon Loader &amp; 6 Spring Tokens</h3>
+            <span class="m3-label-md m3-supporting">Live aria-checked switches + morphing SVG polygon</span>
+          </div>
+          <div class="pack-stack">
+            <div class="m3-row">
+              <button type="button" class="m3-switch" role="switch" aria-checked="false" data-live-switch><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Live off</span></button>
+              <button type="button" class="m3-switch is-hover" role="switch" aria-checked="false" data-live-switch><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Hover</span></button>
+              <button type="button" class="m3-switch is-focus" role="switch" aria-checked="false" data-live-switch><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Focus</span></button>
+              <button type="button" class="m3-switch is-pressed" role="switch" aria-checked="false" data-live-switch><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Pressed</span></button>
+              <button type="button" class="m3-switch is-checked" role="switch" aria-checked="true" data-live-switch><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Checked</span></button>
+              <button type="button" class="m3-switch is-disabled" role="switch" aria-checked="true" aria-disabled="true" disabled><span class="m3-switch__track"><span class="m3-switch__thumb"></span></span><span class="m3-switch__label">Disabled</span></button>
+            </div>
+
+            <div class="m3-row">
+              <div class="pack-loader-slot">
+                <div class="m3-loader" role="status" aria-label="Syncing">
+                  <svg class="pack-poly-svg" viewBox="0 0 36 36" aria-hidden="true">
+                    <path d="M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z">
+                      <animate attributeName="d" dur="2400ms" repeatCount="indefinite"
+                        values="M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z;
+                                M18 2 C22 7 29 14 34 18 C29 22 22 29 18 34 C14 29 7 22 2 18 C7 14 14 7 18 2 Z;
+                                M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z;
+                                M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z" />
+                    </path>
+                  </svg>
+                </div>
+                <span class="m3-label-md">Syncing…</span>
+              </div>
+              <div class="pack-loader-slot">
+                <div class="m3-loader m3-loader--contained" role="status" aria-label="Contained loader">
+                  <svg class="pack-poly-svg" viewBox="0 0 36 36" aria-hidden="true">
+                    <path d="M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z">
+                      <animate attributeName="d" dur="2400ms" repeatCount="indefinite"
+                        values="M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z;
+                                M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z;
+                                M18 2 C22 7 29 14 34 18 C29 22 22 29 18 34 C14 29 7 22 2 18 C7 14 14 7 18 2 Z;
+                                M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z" />
+                    </path>
+                  </svg>
+                </div>
+                <span class="m3-label-md">Contained SVG</span>
+              </div>
+              <div class="pack-loader-slot">
+                <div class="m3-loader m3-loader--contained" aria-hidden="true">
+                  <span class="m3-loader__morph"></span>
+                </div>
+                <span class="m3-label-md">.m3-loader__morph</span>
+              </div>
+              <div class="pack-stack">
+                <div class="m3-row">
+                  <button type="button" class="m3-btn m3-btn--tonal" id="replay-morph-btn">Replay morph</button>
+                  <span class="pack-morph-demo m3-label-lg" id="morph-target">Pill → Squircle</span>
+                </div>
+                <p class="m3-body-sm m3-supporting">
+                  Spatial overshoot: <code class="pack-code">--ease-spatial-fast</code> (350ms), <code class="pack-code">--ease-spatial-default</code> (500ms), <code class="pack-code">--ease-spatial-slow</code> (650ms). Critically damped effects: <code class="pack-code">--ease-effects-fast/default/slow</code> (150/200/300ms).
+                </p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ── SECTION 03b · DRAWN DO / DON'T PAIRS ──────────────────────── -->
+    <section class="pack-sec" id="zone-03b">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">03b</span>
+        <h2 class="m3-headline-md is-emphasized">Do / Don't — Drawn Comparisons</h2>
+        <span class="m3-body-md pack-sec__note">Same subject side-by-side · structural rationale</span>
+      </div>
+
+      <div class="pack-stack">
+        <div class="pack-grid-2">
+          <article class="m3-card m3-card--elevated pack-card">
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--primary">DO · Tonal Surface Ladder</span>
+              <span class="m3-label-md m3-supporting">Step container values</span>
+            </div>
+            <div class="m3-surface-default pack-tier-pill pack-stack">
+              <span class="m3-title-sm is-emphasized">Outer surface container</span>
+              <div class="m3-surface-high pack-tier-pill" style="border-color:transparent">
+                <span class="m3-body-sm">Inner elevated group without heavy strokes</span>
+              </div>
+            </div>
+            <p class="m3-body-sm m3-supporting">Tonal value contrast defines hierarchy cleanly across Light and Dark without visual clutter.</p>
+          </article>
+
+          <article class="m3-card m3-card--outlined pack-card" data-dont>
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--error">DON'T · Grey Border Boxes</span>
+              <span class="m3-label-md m3-supporting">Flat wireframe cages</span>
+            </div>
+            <div class="pack-dont-box pack-stack">
+              <span class="m3-body-md">Outer bordered panel</span>
+              <div class="pack-dont-box"><span class="m3-body-sm">Nested 1px grey box at identical luminance</span></div>
+            </div>
+            <p class="pack-dont-note">Grey border boxes flatten elevation and turn dense dashboards into noisy wireframes.</p>
+          </article>
+        </div>
+
+        <div class="pack-grid-2">
+          <article class="m3-card m3-card--elevated pack-card">
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--primary">DO · Single Filled CTA + Tonal Siblings</span>
+              <span class="m3-label-md m3-supporting">Clear primary focus</span>
+            </div>
+            <div class="m3-row">
+              <button type="button" class="m3-btn m3-btn--filled">Publish</button>
+              <button type="button" class="m3-btn m3-btn--tonal">Preview</button>
+              <button type="button" class="m3-btn m3-btn--text">Cancel</button>
+            </div>
+            <p class="m3-body-sm m3-supporting">One Filled CTA anchors attention; Tonal and Text actions step gracefully downward.</p>
+          </article>
+
+          <article class="m3-card m3-card--outlined pack-card" data-dont>
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--error">DON'T · All-Primary Wall</span>
+              <span class="m3-label-md m3-supporting">Competing emphasis</span>
+            </div>
+            <div class="m3-row">
+              <span class="m3-btn m3-btn--filled">Publish</span>
+              <span class="m3-btn m3-btn--filled">Preview</span>
+              <span class="m3-btn m3-btn--filled">Cancel</span>
+            </div>
+            <p class="pack-dont-note">Three simultaneous Filled buttons erase priority and create decision paralysis.</p>
+          </article>
+        </div>
+
+        <div class="pack-grid-2">
+          <article class="m3-card m3-card--elevated pack-card">
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--primary">DO · State Layer + Pressed Shape Morph</span>
+              <span class="m3-label-md m3-supporting">9999px → 8px tactile snap</span>
+            </div>
+            <div class="m3-row">
+              <span class="m3-btn m3-btn--filled">Rest</span>
+              <span class="m3-btn m3-btn--filled is-hover">Hover 8%</span>
+              <span class="m3-btn m3-btn--filled is-pressed">Pressed 8px</span>
+            </div>
+            <p class="m3-body-sm m3-supporting">Ink state-layer mixes combine with fast-spatial corner morphing to confirm touch.</p>
+          </article>
+
+          <article class="m3-card m3-card--outlined pack-card" data-dont>
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--error">DON'T · Static Hover</span>
+              <span class="m3-label-md m3-supporting">No layer or corner feedback</span>
+            </div>
+            <div class="m3-row">
+              <span class="pack-dont-btn">Rest</span>
+              <span class="pack-dont-btn">Hover</span>
+              <span class="pack-dont-btn">Pressed</span>
+            </div>
+            <p class="pack-dont-note">Identical static rectangles deny tactile feedback and ignore M3E shape language.</p>
+          </article>
+        </div>
+
+        <div class="pack-grid-2">
+          <article class="m3-card m3-card--elevated pack-card">
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--primary">DO · Spatial Overshoot vs Damped Effects</span>
+              <span class="m3-label-md m3-supporting">Geometry bounces · color settles</span>
+            </div>
+            <div class="m3-grid">
+              <div class="m3-surface-high pack-tier-pill">
+                <span class="m3-label-md is-emphasized">Spatial (Overshoot)</span>
+                <p class="m3-body-sm m3-supporting">Shape, thumb slide, toolbar lift via <code class="pack-code">--ease-spatial-fast</code>.</p>
+              </div>
+              <div class="m3-surface-high pack-tier-pill">
+                <span class="m3-label-md is-emphasized">Effects (0% overshoot)</span>
+                <p class="m3-body-sm m3-supporting">Hover mix, fill fade, theme swap via <code class="pack-code">--ease-effects-fast</code>.</p>
+              </div>
+            </div>
+            <p class="m3-body-sm m3-supporting">Separating spring geometry from critically damped opacity prevents flickering color overshoot.</p>
+          </article>
+
+          <article class="m3-card m3-card--outlined pack-card" data-dont>
+            <div class="pack-card__head">
+              <span class="pack-badge pack-badge--error">DON'T · Overshoot on Effects</span>
+              <span class="m3-label-md m3-supporting">Unpaired spring curves</span>
+            </div>
+            <div class="pack-dont-box pack-stack">
+              <span class="m3-body-sm">Color &amp; opacity animated with 1.67 overshoot or generic easing.</span>
+              <p class="pack-dont-note">Bouncing opacity flashes above 1.0 or clips color transitions; un-declared easing drifts off-pack.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ZONE 04 · ASSEMBLED BLOCKS ──────────────────────────────── -->
+    <section class="pack-sec" id="zone-04">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">04</span>
+        <h2 class="m3-headline-md is-emphasized">Assembled Blocks</h2>
+        <span class="m3-body-md pack-sec__note">Two live mini-screens + standalone example pages</span>
+      </div>
+
+      <div class="pack-grid-2" style="margin-bottom: var(--s-5)">
+        <!-- Mini M3E Workspace Strip -->
+        <article class="m3-card m3-card--elevated pack-card" aria-label="Mini M3E workspace strip">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">Mini Workspace Strip</h3>
+            <span class="pack-badge pack-badge--tertiary" id="ws-status">Ready · Select tool</span>
+          </div>
+          <div class="m3-surface-high pack-tier-pill pack-stack">
+            <div class="m3-row" style="justify-content: space-between">
+              <div class="pack-split-wrap">
+                <div class="m3-split-btn">
+                  <button type="button" class="m3-split-btn__lead" data-split-live="ws-status">Export</button>
+                  <button type="button" class="m3-split-btn__trail" data-split-toggle="ws-split-menu" aria-expanded="false" aria-label="Export formats">
+                    <span class="m3-split-btn__chevron" aria-hidden="true">▾</span>
+                  </button>
+                </div>
+                <div class="pack-split-menu" id="ws-split-menu" hidden>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="ws-status">HTML snapshot</button>
+                  <button type="button" class="m3-btn m3-btn--text m3-btn--xs" data-split-pick="ws-status">Token JSON</button>
+                </div>
+              </div>
+              <button type="button" class="m3-btn m3-btn--tonal" data-action-msg="ws-status" data-msg="Syncing…">Sync</button>
+            </div>
+            <div class="m3-surface-lowest pack-tier-pill" style="border-color:transparent">
+              <span class="m3-title-sm is-emphasized">Canvas Note</span>
+              <p class="m3-body-sm m3-supporting">Tonal nesting separates canvas layers without border clutter.</p>
+            </div>
+          </div>
+          <div class="m3-row" style="justify-content: space-between">
+            <div class="m3-toolbar m3-toolbar--vibrant" data-live-toolbar data-status-target="ws-status">
+              <button type="button" class="m3-toolbar__btn is-active" aria-pressed="true">Select</button>
+              <button type="button" class="m3-toolbar__btn" aria-pressed="false">Shape</button>
+              <button type="button" class="m3-toolbar__btn" aria-pressed="false">Motion</button>
+            </div>
+            <button type="button" class="m3-fab m3-fab--vibrant" id="ws-fab-btn" aria-label="Add workspace node">+</button>
+          </div>
+        </article>
+
+        <!-- Mini Preferences Card -->
+        <article class="m3-card m3-card--elevated pack-card" aria-label="Mini M3E preferences card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-lg is-emphasized">Mini Preferences Card</h3>
+            <span class="pack-badge" id="pref-status">Saved</span>
+          </div>
+          <div class="pack-stack">
+            <button type="button" class="m3-switch" id="pref-theme-switch" role="switch" aria-checked="false">
+              <span class="m3-switch__track"><span class="m3-switch__thumb"></span></span>
+              <span class="m3-switch__label">Dark color scheme</span>
+            </button>
+            <button type="button" class="m3-switch is-checked" id="pref-spring-switch" role="switch" aria-checked="true" data-live-switch>
+              <span class="m3-switch__track"><span class="m3-switch__thumb"></span></span>
+              <span class="m3-switch__label">Expressive spatial springs</span>
+            </button>
+            <div class="m3-chip-row" aria-label="Active surface categories">
+              <button type="button" class="m3-chip m3-chip--filter is-selected" data-toggle-chip aria-pressed="true">Tonal</button>
+              <button type="button" class="m3-chip m3-chip--filter is-selected" data-toggle-chip aria-pressed="true">Motion</button>
+              <button type="button" class="m3-chip m3-chip--filter" data-toggle-chip aria-pressed="false">Density</button>
+            </div>
+            <div class="m3-snackbar">
+              <span id="pref-snack-msg">Preferences updated</span>
+              <button type="button" class="m3-snackbar__action" id="pref-undo-btn">Undo</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="m3-pack-links" role="navigation" aria-label="Full example pages">
+        <a class="pack-link-pill" href="examples/workspace.html">examples/workspace.html</a>
+        <a class="pack-link-pill" href="examples/settings.html">examples/settings.html</a>
+        <a class="pack-link-pill" href="examples/motion.html">examples/motion.html</a>
+      </div>
+    </section>
+
+    <!-- ── ZONE 05 · SNIPPETS, GATES & COUNTABLE INVENTORY ─────────── -->
+    <section class="pack-sec" id="zone-05">
+      <div class="pack-sec__head">
+        <span class="m3-label-md pack-sec__num">05</span>
+        <h2 class="m3-headline-md is-emphasized">Snippets, Gates &amp; Countable Inventory</h2>
+        <span class="m3-body-md pack-sec__note">Copy tokens verbatim · verify before handoff</span>
+      </div>
+
+      <div class="pack-grid-2" style="margin-bottom: var(--s-5)">
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">HTML · Expressive Card + Split CTA + Vibrant Toolbar</h3>
+          </div>
+          <pre class="pack-snip">&lt;link rel="stylesheet" href="tokens.css"&gt;
+
+&lt;section class="m3-card m3-card--elevated"&gt;
+  &lt;h2 class="m3-headline-sm is-emphasized"&gt;Workspace&lt;/h2&gt;
+  &lt;div class="m3-row"&gt;
+    &lt;div class="m3-split-btn"&gt;
+      &lt;button class="m3-split-btn__lead"&gt;Publish&lt;/button&gt;
+      &lt;button class="m3-split-btn__trail" aria-expanded="false"&gt;▾&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;button class="m3-btn m3-btn--tonal"&gt;Preview&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class="m3-row"&gt;
+    &lt;div class="m3-toolbar m3-toolbar--vibrant"&gt;
+      &lt;button class="m3-toolbar__btn is-active"&gt;Edit&lt;/button&gt;
+      &lt;button class="m3-toolbar__btn"&gt;Share&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;button class="m3-fab m3-fab--vibrant" aria-label="Add"&gt;+&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</pre>
+        </article>
+
+        <article class="m3-card m3-card--elevated pack-card">
+          <div class="pack-card__head">
+            <h3 class="m3-title-md is-emphasized">CSS + Verification Gates</h3>
+          </div>
+          <pre class="pack-snip">.surface-panel {
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border-radius: var(--r-lg);
+  transition:
+    border-radius var(--dur-spatial-fast) var(--ease-spatial-fast),
+    background-color var(--dur-effects-fast) var(--ease-effects-fast);
+}
+
+# Gates (0 fail / 0 warn / 0 issues):
+design-pack verify looks/material3-expressive/
+design-pack check  looks/material3-expressive/</pre>
+          <p class="m3-body-sm m3-supporting">
+            <code class="pack-code">verify</code> rejects undeclared hexes, functional colours, sizes, radii, fonts, or easing curves. <code class="pack-code">check</code> validates Light &amp; Dark across 7 M3 viewports for zero overflow, zero clipping, zero overlap, &gt;= 11px type, &gt;= 4.5:1 contrast, and &lt;= 100 ms press latency.
+          </p>
+        </article>
+      </div>
+
+      <div class="pack-inv-strip" aria-label="Countable design pack inventory">
+        <span class="pack-inv-item"><b>8</b> primitives</span>
+        <span class="pack-inv-item"><b>2</b> themes</span>
+        <span class="pack-inv-item"><b>5</b> tonal tiers</span>
+        <span class="pack-inv-item"><b>6</b> spring tokens</span>
+        <span class="pack-inv-item"><b>8</b> shape steps</span>
+        <span class="pack-inv-item"><b>7</b> viewports</span>
+        <span class="pack-inv-item"><b>&lt;= 100 ms</b> press latency</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    const headerToggle = document.getElementById("theme-toggle");
+    const headerLabel = document.getElementById("theme-toggle-label");
+    const prefThemeSwitch = document.getElementById("pref-theme-switch");
+
+    function syncThemeUI() {
+      const isDark = root.getAttribute("data-theme") === "dark";
+      if (headerToggle) {
+        headerToggle.setAttribute("aria-checked", String(isDark));
+        headerToggle.classList.toggle("is-checked", isDark);
+      }
+      if (headerLabel) {
+        headerLabel.textContent = isDark ? "Dark" : "Light";
+      }
+      if (prefThemeSwitch) {
+        prefThemeSwitch.setAttribute("aria-checked", String(isDark));
+        prefThemeSwitch.classList.toggle("is-checked", isDark);
+      }
+    }
+
+    function snapThemeColors() {
+      root.classList.add("pack-theme-snap");
+      void root.offsetHeight;
+      requestAnimationFrame(() => root.classList.remove("pack-theme-snap"));
+    }
+
+    function toggleTheme() {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      syncThemeUI();
+    }
+
+    if (headerToggle) headerToggle.addEventListener("click", toggleTheme);
+    if (prefThemeSwitch) prefThemeSwitch.addEventListener("click", toggleTheme);
+
+    new MutationObserver(() => {
+      snapThemeColors();
+      syncThemeUI();
+    }).observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    syncThemeUI();
+
+    document.querySelectorAll("[data-live-switch]").forEach((sw) => {
+      sw.addEventListener("click", () => {
+        const checked = sw.getAttribute("aria-checked") === "true";
+        const next = !checked;
+        sw.setAttribute("aria-checked", String(next));
+        sw.classList.toggle("is-checked", next);
+      });
+    });
+
+    document.querySelectorAll("[data-toggle-chip]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const selected = chip.classList.toggle("is-selected");
+        chip.setAttribute("aria-pressed", String(selected));
+      });
+    });
+
+    document.querySelectorAll("[data-live-group]").forEach((group) => {
+      const items = group.querySelectorAll(".m3-btn-group__item");
+      items.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          items.forEach((b) => {
+            b.classList.remove("is-selected");
+            b.setAttribute("aria-pressed", "false");
+          });
+          btn.classList.add("is-selected");
+          btn.setAttribute("aria-pressed", "true");
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-split-toggle]").forEach((trail) => {
+      trail.addEventListener("click", () => {
+        const menu = document.getElementById(trail.dataset.splitToggle);
+        if (!menu) return;
+        const expanded = trail.getAttribute("aria-expanded") === "true";
+        trail.setAttribute("aria-expanded", String(!expanded));
+        menu.hidden = expanded;
+      });
+    });
+
+    document.querySelectorAll("[data-split-pick]").forEach((item) => {
+      item.addEventListener("click", () => {
+        const target = document.getElementById(item.dataset.splitPick);
+        if (target) target.textContent = "Target: " + item.textContent;
+        const menu = item.closest(".pack-split-menu");
+        if (menu) {
+          menu.hidden = true;
+          const wrap = menu.closest(".pack-split-wrap");
+          const trail = wrap && wrap.querySelector("[data-split-toggle]");
+          if (trail) trail.setAttribute("aria-expanded", "false");
+        }
+      });
+    });
+
+    document.querySelectorAll("[data-split-live]").forEach((lead) => {
+      lead.addEventListener("click", () => {
+        const target = document.getElementById(lead.dataset.splitLive);
+        if (target) target.textContent = lead.textContent + " queued";
+      });
+    });
+
+    document.querySelectorAll("[data-live-toolbar]").forEach((bar) => {
+      const buttons = bar.querySelectorAll(".m3-toolbar__btn:not([disabled])");
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          buttons.forEach((b) => {
+            b.classList.remove("is-active");
+            b.setAttribute("aria-pressed", "false");
+          });
+          btn.classList.add("is-active");
+          btn.setAttribute("aria-pressed", "true");
+          const statusEl = bar.dataset.statusTarget
+            ? document.getElementById(bar.dataset.statusTarget)
+            : null;
+          if (statusEl) statusEl.textContent = "Tool: " + btn.textContent;
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-action-msg]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const el = document.getElementById(btn.dataset.actionMsg);
+        if (el) el.textContent = btn.dataset.msg || "Updated";
+      });
+    });
+
+    let wsCount = 0;
+    const wsFab = document.getElementById("ws-fab-btn");
+    const wsStatus = document.getElementById("ws-status");
+    if (wsFab && wsStatus) {
+      wsFab.addEventListener("click", () => {
+        wsCount += 1;
+        wsStatus.textContent = "Added node #" + wsCount;
+      });
+    }
+
+    const morphBtn = document.getElementById("replay-morph-btn");
+    const morphTarget = document.getElementById("morph-target");
+    if (morphBtn && morphTarget) {
+      morphBtn.addEventListener("click", () => {
+        morphTarget.classList.toggle("is-morphed");
+      });
+    }
+
+    const undoBtn = document.getElementById("pref-undo-btn");
+    const snackMsg = document.getElementById("pref-snack-msg");
+    if (undoBtn && snackMsg) {
+      undoBtn.addEventListener("click", () => {
+        snackMsg.textContent = "Restored defaults";
+      });
+    }
+  })();
+</script>
+</body>
+</html>

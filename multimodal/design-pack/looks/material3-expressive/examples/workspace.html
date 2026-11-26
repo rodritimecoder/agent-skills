@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>material3-expressive · workspace</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  [hidden] { display: none !important; }
+
+  /* Tonal card cascade restoration over tokens.css .m3-card base */
+  .m3-card.m3-surface-lowest { background: var(--md-surface-container-lowest); }
+  .m3-card.m3-surface-low { background: var(--md-surface-container-low); }
+  .m3-card.m3-surface-default,
+  .m3-card.m3-surface-container { background: var(--md-surface-container); }
+  .m3-card.m3-surface-high { background: var(--md-surface-container-high); }
+  .m3-card.m3-surface-highest { background: var(--md-surface-container-highest); }
+
+  .ws-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--md-surface);
+  }
+
+  .ws-rail {
+    display: none;
+    background: var(--md-surface-container-low);
+    border-right: var(--b-1) solid var(--md-outline-variant);
+  }
+
+  .ws-rail .m3-nav-item {
+    width: 100%;
+    padding: var(--s-1);
+  }
+
+  .ws-bar {
+    display: flex;
+    width: 100%;
+    margin-top: auto;
+    border-top: var(--b-1) solid var(--md-outline-variant);
+  }
+
+  .ws-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ws-topbar {
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+    transition: box-shadow var(--dur-effects-default) var(--ease-effects-default);
+  }
+
+  .ws-status-chip {
+    cursor: default;
+    color: var(--md-on-surface);
+    background: var(--md-surface-container-low);
+  }
+
+  .ws-content {
+    flex: 1;
+    width: min(1160px, 100%);
+    margin: 0 auto;
+    padding: var(--s-5) var(--s-4) var(--s-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+  }
+
+  .ws-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--s-4);
+  }
+
+  .ws-header__copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+  }
+
+  .ws-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+  }
+
+  .split-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .split-menu {
+    position: absolute;
+    top: calc(100% + var(--s-2));
+    right: 0;
+    z-index: 20;
+    min-width: 184px;
+    padding: var(--s-2);
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-high);
+    color: var(--md-on-surface);
+    box-shadow: var(--md-elev-2);
+    border: var(--b-1) solid var(--md-outline-variant);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+
+  .split-menu__item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--s-8);
+    padding: 0 var(--s-3);
+    border: none;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--md-on-surface);
+    font-family: var(--font-plain);
+    font-size: var(--fs-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: var(--fw-medium);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--dur-effects-fast) var(--ease-effects-fast);
+  }
+
+  .split-menu__item:hover {
+    background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+  }
+
+  .ws-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  }
+
+  .ws-stat-value {
+    font-family: var(--font-brand);
+    font-size: var(--fs-headline-lg);
+    line-height: var(--lh-headline-lg);
+    font-weight: var(--fw-semibold);
+    color: var(--md-primary);
+  }
+
+  .ws-tier-tag {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-sm);
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-family: var(--font-plain);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: var(--fw-medium);
+  }
+
+  .ws-master-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+    align-items: start;
+  }
+
+  .ws-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .ws-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .ws-list.is-compact {
+    gap: var(--s-1);
+  }
+
+  .ws-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-1);
+    width: 100%;
+    padding: var(--s-3) var(--s-4);
+    border: none;
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-low);
+    color: var(--md-on-surface);
+    font-family: var(--font-plain);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--dur-effects-fast) var(--ease-effects-fast),
+      border-radius var(--dur-spatial-fast) var(--ease-spatial-fast);
+  }
+
+  .ws-list.is-compact .ws-item {
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .ws-item:hover {
+    background: color-mix(in srgb, var(--md-on-surface) 8%, var(--md-surface-container-low));
+  }
+
+  .ws-item.is-selected {
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    border-radius: var(--r-lg);
+  }
+
+  .ws-item__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+  }
+
+  .ws-item__title {
+    font-size: var(--fs-title-sm);
+    line-height: var(--lh-title-sm);
+    font-weight: var(--fw-semibold);
+    color: inherit;
+  }
+
+  .ws-item__meta {
+    font-size: var(--fs-body-sm);
+    line-height: var(--lh-body-sm);
+    color: var(--md-on-surface-variant);
+  }
+
+  .ws-item.is-selected .ws-item__meta {
+    color: var(--md-on-secondary-container);
+  }
+
+  .ws-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-full);
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: var(--fw-medium);
+    white-space: nowrap;
+  }
+
+  .ws-badge--primary {
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+  }
+
+  .ws-detail-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+    gap: var(--s-3);
+  }
+
+  .ws-spec-box {
+    padding: var(--s-3);
+    border-radius: var(--r-sm);
+    background: var(--md-surface-container-low);
+    color: var(--md-on-surface);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+
+  .ws-spec-box__label {
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--md-on-surface-variant);
+  }
+
+  .ws-spec-box__val {
+    font-size: var(--fs-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: var(--fw-medium);
+    color: var(--md-on-surface);
+  }
+
+  .ws-action-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-3);
+    padding: var(--s-2) 0;
+  }
+
+  .ws-svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 840px) {
+    .ws-shell {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+    }
+
+    .ws-rail {
+      display: flex;
+      width: 96px;
+      padding: var(--s-4) var(--s-2);
+      position: sticky;
+      top: 0;
+      align-self: start;
+      min-height: 100vh;
+    }
+
+    .ws-bar {
+      display: none;
+    }
+
+    .ws-content {
+      padding: var(--s-6) var(--s-6) var(--s-8);
+    }
+
+    .ws-master-detail {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    }
+  }
+</style>
+</head>
+<body>
+<div class="ws-shell">
+  <nav class="m3-nav-rail ws-rail" aria-label="Workspace navigation">
+    <button type="button" class="m3-nav-item is-active" aria-current="page" data-nav="tasks">
+      <span class="m3-nav-item__indicator" aria-hidden="true">
+        <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+      </span>
+      <span class="m3-nav-item__label">Tasks</span>
+    </button>
+    <button type="button" class="m3-nav-item" data-nav="reviews">
+      <span class="m3-nav-item__indicator" aria-hidden="true">
+        <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+      <span class="m3-nav-item__label">Reviews</span>
+    </button>
+    <a class="m3-nav-item" href="motion.html">
+      <span class="m3-nav-item__indicator" aria-hidden="true">
+        <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17c3-9 6-9 8 0s5 9 8 0"/></svg>
+      </span>
+      <span class="m3-nav-item__label">Motion</span>
+    </a>
+    <a class="m3-nav-item" href="settings.html">
+      <span class="m3-nav-item__indicator" aria-hidden="true">
+        <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+      </span>
+      <span class="m3-nav-item__label">Settings</span>
+    </a>
+  </nav>
+
+  <div class="ws-main">
+    <header class="m3-app-bar ws-topbar">
+      <h1 class="m3-app-bar__title">Workspace</h1>
+      <div class="m3-app-bar__actions">
+        <span class="m3-chip m3-chip--assist ws-status-chip" id="ws-status" role="status" aria-live="polite">Synced</span>
+        <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs" id="theme-toggle" aria-pressed="false">Dark</button>
+      </div>
+    </header>
+
+    <main class="ws-content">
+      <section class="ws-header">
+        <div class="ws-header__copy">
+          <h2 class="m3-headline-sm is-emphasized">Active design queue</h2>
+          <p class="m3-body-md m3-supporting">Tonal surface tiers, connected filters, split actions, and a floating action strip.</p>
+        </div>
+        <nav class="m3-pack-links" aria-label="Example screens">
+          <a class="m3-btn m3-btn--text m3-btn--xs" href="motion.html">Motion specimen</a>
+          <a class="m3-btn m3-btn--text m3-btn--xs" href="settings.html">Preference studio</a>
+        </nav>
+      </section>
+
+      <section class="ws-controls" aria-label="Queue controls">
+        <div class="m3-btn-group" role="group" aria-label="Filter items">
+          <button type="button" class="m3-btn-group__item is-selected" aria-pressed="true" data-filter="all">All</button>
+          <button type="button" class="m3-btn-group__item" aria-pressed="false" data-filter="active">Active</button>
+          <button type="button" class="m3-btn-group__item" aria-pressed="false" data-filter="review">Review</button>
+        </div>
+
+        <div class="split-anchor">
+          <div class="m3-split-btn">
+            <button type="button" class="m3-split-btn__lead" id="split-lead">Publish</button>
+            <button type="button" class="m3-split-btn__trail" id="split-trail" aria-expanded="false" aria-haspopup="menu" aria-controls="split-menu" aria-label="More publish actions">
+              <span class="m3-split-btn__chevron" aria-hidden="true">
+                <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </span>
+            </button>
+          </div>
+          <div class="split-menu" id="split-menu" role="menu" hidden>
+            <button type="button" class="split-menu__item" role="menuitem" data-action="Synced">Mark synced</button>
+            <button type="button" class="split-menu__item" role="menuitem" data-action="In Review">Queue review</button>
+            <button type="button" class="split-menu__item" role="menuitem" data-action="Queued">Reset status</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="m3-grid ws-grid" aria-label="Workspace tiers">
+        <article class="m3-card m3-surface-low">
+          <span class="ws-tier-tag">Surface Low</span>
+          <div class="ws-stat-value" id="stat-total">4</div>
+          <h3 class="m3-title-md">Tracked deliverables</h3>
+          <p class="m3-body-sm m3-supporting">Baseline Violet tokens and tonal hierarchy.</p>
+        </article>
+        <article class="m3-card m3-surface-default">
+          <span class="ws-tier-tag">Surface Default</span>
+          <div class="ws-stat-value" id="stat-reviews">2</div>
+          <h3 class="m3-title-md">Open reviews</h3>
+          <p class="m3-body-sm m3-supporting">Pending layout and spring physics checks.</p>
+        </article>
+        <article class="m3-card m3-surface-high">
+          <span class="ws-tier-tag">Surface High</span>
+          <div class="ws-stat-value">4.5:1</div>
+          <h3 class="m3-title-md">Contrast floor</h3>
+          <p class="m3-body-sm m3-supporting">Verified across Light and Dark schemes.</p>
+        </article>
+      </section>
+
+      <section class="ws-master-detail" aria-label="Queue items and preview">
+        <article class="m3-card m3-surface-lowest">
+          <div class="ws-card-head">
+            <h3 class="m3-title-md">Queue items</h3>
+            <span class="m3-label-md m3-supporting" id="list-summary">4 visible</span>
+          </div>
+          <div class="ws-list" id="ws-list" role="listbox" aria-label="Design deliverables"></div>
+        </article>
+
+        <article class="m3-card m3-surface-highest" aria-live="polite">
+          <div class="ws-card-head">
+            <span class="ws-tier-tag">Surface Highest</span>
+            <span class="ws-badge ws-badge--primary" id="detail-status">Synced</span>
+          </div>
+          <h3 class="m3-title-lg" id="detail-title">Select an item</h3>
+          <p class="m3-body-md m3-supporting" id="detail-desc"></p>
+          <div class="ws-detail-specs">
+            <div class="ws-spec-box">
+              <span class="ws-spec-box__label">Owner</span>
+              <span class="ws-spec-box__val" id="detail-owner">-</span>
+            </div>
+            <div class="ws-spec-box">
+              <span class="ws-spec-box__label">Primary token</span>
+              <span class="ws-spec-box__val" id="detail-token">-</span>
+            </div>
+            <div class="ws-spec-box">
+              <span class="ws-spec-box__label">Pin state</span>
+              <span class="ws-spec-box__val" id="detail-pin">Standard</span>
+            </div>
+          </div>
+          <div class="m3-row">
+            <button type="button" class="m3-btn m3-btn--tonal" id="detail-sync">Sync now</button>
+            <button type="button" class="m3-btn m3-btn--outlined" id="detail-flag">Flag review</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="ws-action-strip" aria-label="Floating toolbar and add action">
+        <div class="m3-toolbar m3-toolbar--vibrant" role="toolbar" aria-label="Queue tools">
+          <button type="button" class="m3-toolbar__btn" id="tb-pin" aria-pressed="false" aria-label="Pin selected item" title="Pin selected">
+            <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+          </button>
+          <button type="button" class="m3-toolbar__btn" id="tb-review" aria-pressed="false" aria-label="Filter review items" title="Toggle review filter">
+            <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          <button type="button" class="m3-toolbar__btn" id="tb-compact" aria-pressed="false" aria-label="Toggle compact list" title="Compact list">
+            <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button type="button" class="m3-toolbar__btn" id="tb-sync" aria-label="Sync entire queue" title="Sync queue">
+            <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+
+        <button type="button" class="m3-fab m3-fab--vibrant" id="ws-fab" aria-label="Add deliverable">
+          <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </section>
+    </main>
+
+    <nav class="m3-nav-bar ws-bar" aria-label="Mobile navigation">
+      <button type="button" class="m3-nav-item is-active" aria-current="page" data-nav="tasks">
+        <span class="m3-nav-item__indicator" aria-hidden="true">
+          <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+        </span>
+        <span class="m3-nav-item__label">Tasks</span>
+      </button>
+      <button type="button" class="m3-nav-item" data-nav="reviews">
+        <span class="m3-nav-item__indicator" aria-hidden="true">
+          <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </span>
+        <span class="m3-nav-item__label">Reviews</span>
+      </button>
+      <a class="m3-nav-item" href="motion.html">
+        <span class="m3-nav-item__indicator" aria-hidden="true">
+          <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17c3-9 6-9 8 0s5 9 8 0"/></svg>
+        </span>
+        <span class="m3-nav-item__label">Motion</span>
+      </a>
+      <a class="m3-nav-item" href="settings.html">
+        <span class="m3-nav-item__indicator" aria-hidden="true">
+          <svg class="ws-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+        </span>
+        <span class="m3-nav-item__label">Settings</span>
+      </a>
+    </nav>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const themeToggle = document.getElementById("theme-toggle");
+    const statusChip = document.getElementById("ws-status");
+    const listEl = document.getElementById("ws-list");
+    const listSummary = document.getElementById("list-summary");
+    const statTotal = document.getElementById("stat-total");
+    const statReviews = document.getElementById("stat-reviews");
+    const detailTitle = document.getElementById("detail-title");
+    const detailStatus = document.getElementById("detail-status");
+    const detailDesc = document.getElementById("detail-desc");
+    const detailOwner = document.getElementById("detail-owner");
+    const detailToken = document.getElementById("detail-token");
+    const detailPin = document.getElementById("detail-pin");
+    const splitLead = document.getElementById("split-lead");
+    const splitTrail = document.getElementById("split-trail");
+    const splitMenu = document.getElementById("split-menu");
+    const tbPin = document.getElementById("tb-pin");
+    const tbReview = document.getElementById("tb-review");
+    const tbCompact = document.getElementById("tb-compact");
+    const tbSync = document.getElementById("tb-sync");
+    const fabBtn = document.getElementById("ws-fab");
+    const detailSync = document.getElementById("detail-sync");
+    const detailFlag = document.getElementById("detail-flag");
+
+    const items = [
+      {
+        id: "item-1",
+        title: "Navigation rail collapse",
+        category: "active",
+        status: "Synced",
+        owner: "Layout",
+        token: "--md-surface-container-low",
+        pinned: false,
+        desc: "Transitions from 96px sticky rail on expanded viewports to a docked bottom bar below 840px."
+      },
+      {
+        id: "item-2",
+        title: "Shape morphing buttons",
+        category: "review",
+        status: "In Review",
+        owner: "Motion",
+        token: "--ease-spatial-fast",
+        pinned: true,
+        desc: "Pill buttons morph smoothly toward square corners on press via the 350ms fast spatial spring."
+      },
+      {
+        id: "item-3",
+        title: "Dark scheme tonal contrast",
+        category: "review",
+        status: "In Review",
+        owner: "Color",
+        token: "--md-on-surface-variant",
+        pinned: false,
+        desc: "Verifies 4.5:1 text contrast across all five surface tiers in both Baseline Violet schemes."
+      },
+      {
+        id: "item-4",
+        title: "Vibrant toolbar & FAB strip",
+        category: "active",
+        status: "Queued",
+        owner: "Actions",
+        token: "--md-tertiary-container",
+        pinned: false,
+        desc: "Pairs a floating pill toolbar with a tertiary squircle FAB inside a collision-free action strip."
+      }
+    ];
+
+    let activeFilter = "all";
+    let selectedId = items[0].id;
+    let nextCount = 5;
+
+    function syncThemeButton() {
+      const isDark = root.getAttribute("data-theme") === "dark";
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+      themeToggle.textContent = isDark ? "Light" : "Dark";
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      syncThemeButton();
+    });
+
+    new MutationObserver(syncThemeButton).observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"]
+    });
+    syncThemeButton();
+
+    function getSelected() {
+      return items.find((item) => item.id === selectedId) || items[0];
+    }
+
+    function setFilter(nextFilter) {
+      activeFilter = nextFilter;
+      document.querySelectorAll(".m3-btn-group__item").forEach((btn) => {
+        const match = btn.getAttribute("data-filter") === activeFilter;
+        btn.classList.toggle("is-selected", match);
+        btn.setAttribute("aria-pressed", String(match));
+      });
+      const navTarget = activeFilter === "review" ? "reviews" : "tasks";
+      document.querySelectorAll("[data-nav]").forEach((navBtn) => {
+        const match = navBtn.getAttribute("data-nav") === navTarget;
+        navBtn.classList.toggle("is-active", match);
+        if (match) {
+          navBtn.setAttribute("aria-current", "page");
+        } else {
+          navBtn.removeAttribute("aria-current");
+        }
+      });
+      tbReview.classList.toggle("is-active", activeFilter === "review");
+      tbReview.setAttribute("aria-pressed", String(activeFilter === "review"));
+      render();
+    }
+
+    function render() {
+      const visible = items.filter((item) => {
+        if (activeFilter === "all") return true;
+        return item.category === activeFilter;
+      });
+      if (!visible.some((item) => item.id === selectedId) && visible.length > 0) {
+        selectedId = visible[0].id;
+      }
+
+      listEl.textContent = "";
+      visible.forEach((item) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ws-item" + (item.id === selectedId ? " is-selected" : "");
+        btn.setAttribute("role", "option");
+        btn.setAttribute("aria-selected", String(item.id === selectedId));
+
+        const top = document.createElement("span");
+        top.className = "ws-item__top";
+
+        const title = document.createElement("span");
+        title.className = "ws-item__title";
+        title.textContent = item.title;
+
+        const badge = document.createElement("span");
+        badge.className = "ws-badge";
+        badge.textContent = item.status;
+
+        top.append(title, badge);
+
+        const meta = document.createElement("span");
+        meta.className = "ws-item__meta";
+        meta.textContent = item.owner + " · " + (item.pinned ? "Pinned" : "Standard");
+
+        btn.append(top, meta);
+        btn.addEventListener("click", () => {
+          selectedId = item.id;
+          render();
+        });
+        listEl.appendChild(btn);
+      });
+
+      const current = getSelected();
+      detailTitle.textContent = current.title;
+      detailStatus.textContent = current.status;
+      detailDesc.textContent = current.desc;
+      detailOwner.textContent = current.owner;
+      detailToken.textContent = current.token;
+      detailPin.textContent = current.pinned ? "Pinned" : "Standard";
+
+      tbPin.classList.toggle("is-active", current.pinned);
+      tbPin.setAttribute("aria-pressed", String(current.pinned));
+
+      listSummary.textContent = visible.length + " visible";
+      statTotal.textContent = String(items.length);
+      statReviews.textContent = String(items.filter((i) => i.category === "review" || i.status === "In Review").length);
+    }
+
+    document.querySelectorAll(".m3-btn-group__item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setFilter(btn.getAttribute("data-filter"));
+      });
+    });
+
+    document.querySelectorAll("[data-nav]").forEach((navBtn) => {
+      navBtn.addEventListener("click", () => {
+        setFilter(navBtn.getAttribute("data-nav") === "reviews" ? "review" : "all");
+      });
+    });
+
+    function closeMenu() {
+      splitMenu.hidden = true;
+      splitTrail.setAttribute("aria-expanded", "false");
+    }
+
+    splitLead.addEventListener("click", () => {
+      const current = getSelected();
+      current.status = "Published";
+      current.category = "active";
+      statusChip.textContent = "Updated";
+      closeMenu();
+      render();
+    });
+
+    splitTrail.addEventListener("click", () => {
+      const willOpen = splitMenu.hidden;
+      splitMenu.hidden = !willOpen;
+      splitTrail.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    document.querySelectorAll(".split-menu__item").forEach((menuBtn) => {
+      menuBtn.addEventListener("click", () => {
+        const nextStatus = menuBtn.getAttribute("data-action");
+        const current = getSelected();
+        current.status = nextStatus;
+        current.category = nextStatus === "In Review" ? "review" : "active";
+        statusChip.textContent = "Updated";
+        closeMenu();
+        render();
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!splitMenu.hidden && !event.target.closest(".split-anchor")) {
+        closeMenu();
+      }
+    });
+
+    detailSync.addEventListener("click", () => {
+      const current = getSelected();
+      current.status = "Synced";
+      current.category = "active";
+      statusChip.textContent = "Synced";
+      render();
+    });
+
+    detailFlag.addEventListener("click", () => {
+      const current = getSelected();
+      current.status = "In Review";
+      current.category = "review";
+      statusChip.textContent = "Updated";
+      render();
+    });
+
+    tbPin.addEventListener("click", () => {
+      const current = getSelected();
+      current.pinned = !current.pinned;
+      statusChip.textContent = current.pinned ? "Pinned" : "Synced";
+      render();
+    });
+
+    tbReview.addEventListener("click", () => {
+      setFilter(activeFilter === "review" ? "all" : "review");
+    });
+
+    tbCompact.addEventListener("click", () => {
+      const compact = listEl.classList.toggle("is-compact");
+      tbCompact.classList.toggle("is-active", compact);
+      tbCompact.setAttribute("aria-pressed", String(compact));
+    });
+
+    tbSync.addEventListener("click", () => {
+      items.forEach((item) => {
+        if (item.status === "Queued") item.status = "Synced";
+      });
+      statusChip.textContent = "Synced";
+      render();
+    });
+
+    fabBtn.addEventListener("click", () => {
+      if (items.length >= 8) {
+        items.splice(4);
+        nextCount = 5;
+      }
+      const created = {
+        id: "item-" + nextCount,
+        title: "Spring polish pass #" + nextCount,
+        category: "active",
+        status: "Queued",
+        owner: "Design",
+        token: "--r-lg",
+        pinned: false,
+        desc: "Added via vibrant tertiary FAB to verify dynamic queue updates without layout shift."
+      };
+      nextCount++;
+      items.push(created);
+      selectedId = created.id;
+      statusChip.textContent = "Updated";
+      if (activeFilter === "review") {
+        setFilter("all");
+      } else {
+        render();
+      }
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>

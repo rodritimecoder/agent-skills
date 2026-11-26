@@ -183,25 +183,6 @@
       "forum"
     ]
   },
-  "gh-action-subagent": {
-    "aliases": [
-      "github actions",
-      "ci runner",
-      "cloud sandbox",
-      "spawn agent in cloud",
-      "pull request from agent",
-      "github actions subagent",
-      "cloud subagent",
-      "remote agent vm",
-      "browser sandbox ci",
-      "fix issue pull request"
-    ],
-    "tags": [
-      "github",
-      "cloud",
-      "autonomy"
-    ]
-  },
   "github-architect": {
     "aliases": [
       "git sync",

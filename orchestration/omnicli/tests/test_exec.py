@@ -168,6 +168,94 @@ console.log(JSON.stringify({
         self.assertTrue(payload["hasKnown"])
 
     @needs_js_runtime
+    def test_tools_proxy_resolves_the_generated_function_name(self):
+        # The id carries `/`, so `tools.<fn>` is the only identifier-safe form.
+        # Both spellings must land on the same row; an unknown name stays
+        # undefined rather than becoming a callable that fails later.
+        payload = json.loads(self._probe("""
+import { tools, SPEC } from "./omnicli_tools.mjs";
+const row = SPEC.find((r) => r.id === "cornell-notes/cli");
+console.log(JSON.stringify({
+  fn: row.fn,
+  differs: row.fn !== row.id,
+  byFn: typeof tools[row.fn],
+  byId: typeof tools[row.id],
+  hasFn: row.fn in tools,
+  unknown: tools.not_a_real_tool_name === undefined,
+}));
+""").stdout)
+        self.assertTrue(payload["differs"], payload["fn"])
+        self.assertEqual(payload["byFn"], "function")
+        self.assertEqual(payload["byId"], "function")
+        self.assertTrue(payload["hasFn"])
+        self.assertTrue(payload["unknown"])
+
+    @needs_js_runtime
+    def test_spec_and_bindings_agree_on_function_names(self):
+        # `omnicli spec` used to name over every row, so a disabled tool could
+        # take a live tool's name. The binding row is the contract.
+        probe = json.loads(self._probe("""
+import { SPEC } from "./omnicli_tools.mjs";
+console.log(JSON.stringify(Object.fromEntries(SPEC.map((r) => [r.id, r.fn]))));
+""").stdout)
+        proc = subprocess.run(
+            [sys.executable, OMNICLI, "spec", "--json", "--omni-max-bytes", "4000000"],
+            capture_output=True, text=True, timeout=120)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        rows = json.loads(proc.stdout)
+        by_id = {row["id"]: row for row in rows} if isinstance(rows, list) else rows
+        drift = {tid: (probe.get(tid), row.get("fn") if isinstance(row, dict) else None)
+                 for tid, row in by_id.items()
+                 if tid in probe and isinstance(row, dict) and row.get("enabled", True)
+                 and probe[tid] != row.get("fn")}
+        self.assertEqual(drift, {}, f"spec fn drift: {drift}")
+
+    @needs_js_runtime
+    def test_models_classify_returns_typed_answers(self):
+        stub = self.out / "stub_decide.py"
+        stub.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "print(json.dumps({'tool': 'local/decide', 'exit_code': 0, 'output': json.dumps({\n"
+            "    'model': 'jev', 'type': 'choice', 'answer': 'billing',\n"
+            "    'p': {'billing': 0.9, 'tech': 0.1}, 'confidence': 0.8})}))\n",
+            encoding="utf-8")
+        stub.chmod(0o755)
+        proc = _node_probe(self.out, """
+import { models } from "./omnicli_tools.mjs";
+const good = await models.classify("jev", {
+  state: { message: "the invoice is wrong" },
+  questions: {
+    topic: { type: "choice", instructions: "What is this about?",
+             criteria: { billing: "money", tech: "code" } },
+  },
+});
+const bad = await models.classify("jev", {
+  state: {},
+  questions: { broken: { type: "not-a-type", instructions: "?" } },
+});
+console.log(JSON.stringify({ good, bad }));
+""", {"OMNICLI_BIN": str(stub), "OMNICLI_MAX_CALLS": "4"})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["good"]["stopReason"], "stop")
+        self.assertEqual(payload["good"]["answers"]["topic"]["choice"], "billing")
+        self.assertEqual(payload["good"]["answers"]["topic"]["confidence"], 0.8)
+        self.assertEqual(payload["bad"]["stopReason"], "error")
+        self.assertIn("not-a-type", payload["bad"]["errorMessage"])
+
+    @needs_js_runtime
+    def test_models_registry_only_lists_installed_backends(self):
+        payload = json.loads(self._probe("""
+import { models } from "./omnicli_tools.mjs";
+console.log(JSON.stringify({ all: models.list(), classifiers: models.list("classifier").map((m) => m.id) }));
+""").stdout)
+        self.assertTrue(payload["all"])
+        for entry in payload["all"]:
+            with self.subTest(entry=entry["id"]):
+                self.assertIn("tool", entry)
+
+    @needs_js_runtime
     def test_shell_gate_strict_throws_before_spawn_none_succeeds(self):
         marker = self.out / "shell-gate-marker.txt"
         strict = _node_probe(self.out, f"""
@@ -597,6 +685,58 @@ for (;;) big.push(new Array(1 << 20).fill(7));
         )
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("cannot pass both", proc.stderr)
+
+    def test_top_level_return_and_text_reach_stdout_in_order(self):
+        report, proc = self._exec(
+            "-c", 'text("first"); console.log("second"); return { third: true };',
+            "--sandbox", "none")
+        self.assertEqual(proc.returncode, 0, report["stderr"])
+        stdout = report["stdout"]
+        self.assertLess(stdout.index("first"), stdout.index("second"))
+        self.assertLess(stdout.index("second"), stdout.index('"third": true'))
+        # A plan with no return prints nothing extra.
+        quiet, _ = self._exec("-c", 'console.log("only")', "--sandbox", "none")
+        self.assertEqual(quiet["stdout"].strip(), "only")
+
+    def test_exit_ends_the_plan_successfully(self):
+        report, proc = self._exec(
+            "-c", 'text("before"); exit(); text("after");', "--sandbox", "none")
+        self.assertEqual(proc.returncode, 0, report["stderr"])
+        self.assertEqual(report["stdout"].strip(), "before")
+
+    def test_store_persists_across_runs_and_survives_a_failed_plan(self):
+        sid = f"test-store-{uuid.uuid4().hex[:10]}"
+        paths = (Path.home() / ".local" / "share" / "omnicli" / "sessions" / f"{sid}.json",
+                 Path.home() / ".local" / "share" / "omnicli" / "sessions" / f"{sid}.store.json")
+        self.addCleanup(lambda: [p.unlink(missing_ok=True) for p in paths])
+        try:
+            first, proc = self._exec("-c", 'store("cursor", 1); return load("cursor");',
+                                     "--session", sid, "--sandbox", "none")
+            self.assertEqual(proc.returncode, 0, first["stderr"])
+            self.assertEqual(first["stdout"].strip(), "1")
+
+            second, proc = self._exec("-c", 'store("cursor", 2); return load("cursor");',
+                                      "--session", sid, "--sandbox", "none")
+            self.assertEqual(proc.returncode, 0, second["stderr"])
+            self.assertEqual(second["stdout"].strip(), "2")
+
+            # A failed plan writes into the run's temp file, never the session.
+            failed, _ = self._exec("-c", 'store("cursor", 99); throw new Error("boom");',
+                                   "--session", sid, "--sandbox", "none")
+            self.assertNotEqual(failed["exit_code"], 0)
+            after, proc = self._exec("-c", 'return load("cursor");',
+                                     "--session", sid, "--sandbox", "none")
+            self.assertEqual(proc.returncode, 0, after["stderr"])
+            self.assertEqual(after["stdout"].strip(), "2")
+
+            # store(key, undefined) deletes; load() then returns undefined.
+            gone, proc = self._exec("-c", 'store("cursor", undefined); return load("cursor") === undefined;',
+                                    "--session", sid, "--sandbox", "none")
+            self.assertEqual(proc.returncode, 0, gone["stderr"])
+            self.assertEqual(gone["stdout"].strip(), "true")
+        finally:
+            for path in paths:
+                path.unlink(missing_ok=True)
 
 
 class TestCatalogReadOnly(unittest.TestCase):

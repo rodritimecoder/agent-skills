@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>material3-expressive · motion</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  [hidden] { display: none !important; }
+
+  /* Tonal card cascade restoration over tokens.css .m3-card base */
+  .m3-card.m3-surface-lowest { background: var(--md-surface-container-lowest); }
+  .m3-card.m3-surface-low { background: var(--md-surface-container-low); }
+  .m3-card.m3-surface-default,
+  .m3-card.m3-surface-container { background: var(--md-surface-container); }
+  .m3-card.m3-surface-high { background: var(--md-surface-container-high); }
+  .m3-card.m3-surface-highest { background: var(--md-surface-container-highest); }
+
+  .mo-shell {
+    min-height: 100vh;
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+  }
+
+  .mo-topbar {
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+    transition: box-shadow var(--dur-effects-default) var(--ease-effects-default);
+  }
+
+  .mo-bar-lead {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-width: 0;
+  }
+
+  .mo-main {
+    width: min(1080px, 100%);
+    margin: 0 auto;
+    padding: var(--s-5) var(--s-4) var(--s-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+  }
+
+  .mo-hero {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .mo-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+    align-items: start;
+  }
+
+  .mo-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .mo-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-full);
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-size: var(--fs-label-md);
+    line-height: var(--lh-label-md);
+    font-weight: var(--fw-medium);
+  }
+
+  .mo-badge--tertiary {
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+  }
+
+  .mo-track {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-3);
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-lowest);
+  }
+
+  .mo-track__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .mo-track__meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+  }
+
+  .mo-token-code {
+    display: inline-block;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-xs);
+    background: var(--md-surface-container-high);
+    color: var(--md-on-surface);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+  }
+
+  .mo-rail {
+    container-type: inline-size;
+    position: relative;
+    height: var(--s-9);
+    padding: var(--s-1);
+    border-radius: var(--r-full);
+    background: var(--md-surface-container-high);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  .mo-puck {
+    width: var(--s-8);
+    height: var(--s-8);
+    border-radius: var(--r-full);
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: var(--fw-bold);
+    transform: translateX(0);
+  }
+
+  .mo-puck--spatial-fast {
+    transition:
+      transform var(--dur-spatial-fast) var(--ease-spatial-fast),
+      border-radius var(--dur-spatial-fast) var(--ease-spatial-fast);
+  }
+
+  .mo-puck--spatial-default {
+    transition:
+      transform var(--dur-spatial-default) var(--ease-spatial-default),
+      border-radius var(--dur-spatial-default) var(--ease-spatial-default);
+  }
+
+  .mo-puck--spatial-slow {
+    transition:
+      transform var(--dur-spatial-slow) var(--ease-spatial-slow),
+      border-radius var(--dur-spatial-slow) var(--ease-spatial-slow);
+  }
+
+  .mo-track.is-triggered .mo-puck {
+    transform: translateX(calc(100cqi - var(--s-10) - var(--s-4)));
+    border-radius: var(--r-sm);
+  }
+
+  .mo-effect-bar {
+    height: var(--s-9);
+    padding: 0 var(--s-4);
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-high);
+    color: var(--md-on-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .mo-columns.is-armed .mo-effect-bar--fast {
+    transition:
+      background-color var(--dur-effects-fast) var(--ease-effects-fast),
+      color var(--dur-effects-fast) var(--ease-effects-fast),
+      box-shadow var(--dur-effects-fast) var(--ease-effects-fast);
+  }
+
+  .mo-columns.is-armed .mo-effect-bar--default {
+    transition:
+      background-color var(--dur-effects-default) var(--ease-effects-default),
+      color var(--dur-effects-default) var(--ease-effects-default),
+      box-shadow var(--dur-effects-default) var(--ease-effects-default);
+  }
+
+  .mo-columns.is-armed .mo-effect-bar--slow {
+    transition:
+      background-color var(--dur-effects-slow) var(--ease-effects-slow),
+      color var(--dur-effects-slow) var(--ease-effects-slow),
+      box-shadow var(--dur-effects-slow) var(--ease-effects-slow);
+  }
+
+  .mo-track.is-triggered .mo-effect-bar {
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+    box-shadow: var(--md-elev-1);
+  }
+
+  .mo-effect-pill {
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-full);
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-size: var(--fs-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: var(--fw-medium);
+  }
+
+  .mo-track.is-triggered .mo-effect-pill {
+    background: var(--md-tertiary);
+    color: var(--md-on-tertiary);
+  }
+
+  .mo-morph-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-4);
+  }
+
+  .mo-loader-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-5);
+  }
+
+  .m3-loader.is-paused,
+  .m3-loader.is-paused .m3-loader__morph {
+    animation-play-state: paused;
+  }
+
+  .mo-svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 600px) {
+    .mo-main {
+      padding: var(--s-6) var(--s-6) var(--s-9);
+    }
+  }
+
+  @media (min-width: 840px) {
+    .mo-columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+</head>
+<body>
+<div class="mo-shell">
+<header class="m3-app-bar mo-topbar">
+  <div class="mo-bar-lead">
+    <a class="m3-btn m3-btn--text m3-btn--xs" href="workspace.html">← Workspace</a>
+    <h1 class="m3-app-bar__title">Motion</h1>
+  </div>
+  <div class="m3-app-bar__actions">
+    <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs" id="theme-toggle" aria-pressed="false">Dark</button>
+  </div>
+</header>
+
+<main class="mo-main">
+  <section class="mo-hero">
+    <h2 class="m3-headline-md is-emphasized">Expressive spring &amp; shape specimen</h2>
+    <p class="m3-body-md m3-supporting">Compare spatial overshoot against critically damped effects across all six declared M3 Expressive motion tokens.</p>
+    <nav class="m3-pack-links" aria-label="Example screens">
+      <a class="m3-btn m3-btn--text m3-btn--xs" href="workspace.html">Workspace shell</a>
+      <a class="m3-btn m3-btn--text m3-btn--xs" href="settings.html">Preference studio</a>
+    </nav>
+    <div class="m3-row">
+      <button type="button" class="m3-btn m3-btn--filled" id="trigger-all">Trigger all</button>
+      <button type="button" class="m3-btn m3-btn--tonal" id="reset-all">Reset</button>
+      <span class="m3-label-md m3-supporting" id="motion-status" role="status" aria-live="polite">Ready</span>
+    </div>
+  </section>
+
+  <section class="mo-columns" aria-label="Spring motion tokens">
+    <article class="m3-card m3-surface-low">
+      <div class="mo-card-head">
+        <h3 class="m3-title-md">Spatial springs</h3>
+        <span class="mo-badge">Overshoot</span>
+      </div>
+
+      <div class="mo-track" id="track-spatial-fast">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Spatial Fast · 350ms</span>
+            <code class="mo-token-code">--dur-spatial-fast · --ease-spatial-fast</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-spatial-fast">Play</button>
+        </div>
+        <div class="mo-rail" aria-hidden="true">
+          <div class="mo-puck mo-puck--spatial-fast">350</div>
+        </div>
+      </div>
+
+      <div class="mo-track" id="track-spatial-default">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Spatial Default · 500ms</span>
+            <code class="mo-token-code">--dur-spatial-default · --ease-spatial-default</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-spatial-default">Play</button>
+        </div>
+        <div class="mo-rail" aria-hidden="true">
+          <div class="mo-puck mo-puck--spatial-default">500</div>
+        </div>
+      </div>
+
+      <div class="mo-track" id="track-spatial-slow">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Spatial Slow · 650ms</span>
+            <code class="mo-token-code">--dur-spatial-slow · --ease-spatial-slow</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-spatial-slow">Play</button>
+        </div>
+        <div class="mo-rail" aria-hidden="true">
+          <div class="mo-puck mo-puck--spatial-slow">650</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="m3-card m3-surface-default">
+      <div class="mo-card-head">
+        <h3 class="m3-title-md">Effects springs</h3>
+        <span class="mo-badge mo-badge--tertiary">Critically damped</span>
+      </div>
+
+      <div class="mo-track" id="track-effects-fast">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Effects Fast · 150ms</span>
+            <code class="mo-token-code">--dur-effects-fast · --ease-effects-fast</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-effects-fast">Play</button>
+        </div>
+        <div class="mo-effect-bar mo-effect-bar--fast">
+          <span class="m3-label-md">Hover &amp; press state layer</span>
+          <span class="mo-effect-pill">0% overshoot</span>
+        </div>
+      </div>
+
+      <div class="mo-track" id="track-effects-default">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Effects Default · 200ms</span>
+            <code class="mo-token-code">--dur-effects-default · --ease-effects-default</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-effects-default">Play</button>
+        </div>
+        <div class="mo-effect-bar mo-effect-bar--default">
+          <span class="m3-label-md">Color &amp; elevation crossfade</span>
+          <span class="mo-effect-pill">0% overshoot</span>
+        </div>
+      </div>
+
+      <div class="mo-track" id="track-effects-slow">
+        <div class="mo-track__head">
+          <div class="mo-track__meta">
+            <span class="m3-title-sm">Effects Slow · 300ms</span>
+            <code class="mo-token-code">--dur-effects-slow · --ease-effects-slow</code>
+          </div>
+          <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs mo-play" data-target="track-effects-slow">Play</button>
+        </div>
+        <div class="mo-effect-bar mo-effect-bar--slow">
+          <span class="m3-label-md">Surface &amp; backdrop transition</span>
+          <span class="mo-effect-pill">0% overshoot</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="m3-card m3-surface-high" aria-labelledby="shape-heading">
+    <div class="mo-card-head">
+      <h3 class="m3-title-md" id="shape-heading">Shape-morphing button &amp; split-button specimen</h3>
+      <button type="button" class="m3-btn m3-btn--outlined m3-btn--xs" id="lock-shape" aria-pressed="false">Lock pressed shape</button>
+    </div>
+    <p class="m3-body-sm m3-supporting" id="morph-readout">Click any button below to toggle its pressed squircle corner radius.</p>
+
+    <div class="mo-morph-row">
+      <button type="button" class="m3-btn m3-btn--tonal m3-btn--sm morph-target" aria-pressed="false">Small pill</button>
+      <button type="button" class="m3-btn m3-btn--outlined m3-btn--md morph-target" aria-pressed="false">Medium</button>
+      <button type="button" class="m3-btn m3-btn--tonal m3-btn--lg morph-target" aria-pressed="false">Large</button>
+      <div class="m3-split-btn m3-split-btn--tonal">
+        <button type="button" class="m3-split-btn__lead morph-target" aria-pressed="false">Morph action</button>
+        <button type="button" class="m3-split-btn__trail" id="specimen-split-trail" aria-expanded="false" aria-label="Toggle chevron rotation">
+          <span class="m3-split-btn__chevron" aria-hidden="true">
+            <svg class="mo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="m3-card m3-surface-highest" aria-labelledby="loader-heading">
+    <div class="mo-card-head">
+      <h3 class="m3-title-md" id="loader-heading">Polygon morph loader &amp; reduced motion</h3>
+      <span class="mo-badge" id="loader-status">Syncing…</span>
+    </div>
+
+    <div class="mo-loader-row">
+      <div class="m3-loader" role="img" aria-label="Shape morphing progress indicator">
+        <span class="m3-loader__morph" aria-hidden="true"></span>
+      </div>
+      <div class="m3-loader m3-loader--contained" role="img" aria-label="Contained shape morphing progress indicator">
+        <span class="m3-loader__morph" aria-hidden="true"></span>
+      </div>
+      <button type="button" class="m3-btn m3-btn--tonal" id="toggle-loader" aria-pressed="true">Pause loader</button>
+    </div>
+
+    <p class="m3-body-md m3-supporting">
+      When <code class="mo-token-code">@media (prefers-reduced-motion: reduce)</code> is active, spatial spring overshoot and continuous morph keyframes collapse to instant state updates while preserving high-contrast focus and shape indicators.
+    </p>
+  </section>
+</main>
+</div>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const themeToggle = document.getElementById("theme-toggle");
+    const triggerAllBtn = document.getElementById("trigger-all");
+    const resetAllBtn = document.getElementById("reset-all");
+    const motionStatus = document.getElementById("motion-status");
+    const columnsEl = document.querySelector(".mo-columns");
+    const tracks = document.querySelectorAll(".mo-track");
+    const lockShapeBtn = document.getElementById("lock-shape");
+    const morphTargets = document.querySelectorAll(".morph-target");
+    const morphReadout = document.getElementById("morph-readout");
+    const splitTrail = document.getElementById("specimen-split-trail");
+    const toggleLoaderBtn = document.getElementById("toggle-loader");
+    const loaderStatus = document.getElementById("loader-status");
+    const loaders = document.querySelectorAll(".m3-loader");
+
+    function syncThemeButton() {
+      const isDark = root.getAttribute("data-theme") === "dark";
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+      themeToggle.textContent = isDark ? "Light" : "Dark";
+    }
+
+    function armEffects() {
+      if (columnsEl && !columnsEl.classList.contains("is-armed")) {
+        columnsEl.classList.add("is-armed");
+        void columnsEl.offsetWidth;
+      }
+    }
+
+    themeToggle.addEventListener("click", () => {
+      if (columnsEl) columnsEl.classList.remove("is-armed");
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      syncThemeButton();
+    });
+
+    new MutationObserver(syncThemeButton).observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"]
+    });
+    syncThemeButton();
+
+    function updateMotionStatus() {
+      const activeCount = document.querySelectorAll(".mo-track.is-triggered").length;
+      motionStatus.textContent = activeCount === 0
+        ? "Ready"
+        : activeCount === tracks.length
+          ? "All 6 springs active"
+          : activeCount + " of 6 active";
+    }
+
+    document.querySelectorAll(".mo-play").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = document.getElementById(btn.getAttribute("data-target"));
+        if (!target) return;
+        armEffects();
+        const active = target.classList.toggle("is-triggered");
+        btn.textContent = active ? "Reset" : "Play";
+        updateMotionStatus();
+      });
+    });
+
+    triggerAllBtn.addEventListener("click", () => {
+      armEffects();
+      const anyInactive = Array.from(tracks).some((t) => !t.classList.contains("is-triggered"));
+      tracks.forEach((track) => {
+        track.classList.toggle("is-triggered", anyInactive);
+        const btn = track.querySelector(".mo-play");
+        if (btn) btn.textContent = anyInactive ? "Reset" : "Play";
+      });
+      updateMotionStatus();
+    });
+
+    resetAllBtn.addEventListener("click", () => {
+      armEffects();
+      tracks.forEach((track) => {
+        track.classList.remove("is-triggered");
+        const btn = track.querySelector(".mo-play");
+        if (btn) btn.textContent = "Play";
+      });
+      updateMotionStatus();
+    });
+
+    function syncMorphReadout() {
+      const pressedCount = document.querySelectorAll(".morph-target.is-pressed").length;
+      const allLocked = pressedCount === morphTargets.length;
+      lockShapeBtn.setAttribute("aria-pressed", String(allLocked));
+      lockShapeBtn.textContent = allLocked ? "Unlock shapes" : "Lock pressed shape";
+      morphReadout.textContent = pressedCount === 0
+        ? "Click any button below to toggle its pressed squircle corner radius."
+        : pressedCount + " control(s) holding pressed squircle shape.";
+    }
+
+    morphTargets.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const pressed = btn.classList.toggle("is-pressed");
+        btn.setAttribute("aria-pressed", String(pressed));
+        syncMorphReadout();
+      });
+    });
+
+    lockShapeBtn.addEventListener("click", () => {
+      const shouldPress = document.querySelectorAll(".morph-target.is-pressed").length < morphTargets.length;
+      morphTargets.forEach((btn) => {
+        btn.classList.toggle("is-pressed", shouldPress);
+        btn.setAttribute("aria-pressed", String(shouldPress));
+      });
+      splitTrail.classList.toggle("is-pressed", shouldPress);
+      splitTrail.setAttribute("aria-expanded", String(shouldPress));
+      syncMorphReadout();
+    });
+
+    splitTrail.addEventListener("click", () => {
+      const expanded = splitTrail.getAttribute("aria-expanded") === "true";
+      const next = !expanded;
+      splitTrail.setAttribute("aria-expanded", String(next));
+      splitTrail.classList.toggle("is-pressed", next);
+    });
+
+    let running = true;
+    toggleLoaderBtn.addEventListener("click", () => {
+      running = !running;
+      loaders.forEach((loader) => loader.classList.toggle("is-paused", !running));
+      toggleLoaderBtn.setAttribute("aria-pressed", String(running));
+      toggleLoaderBtn.textContent = running ? "Pause loader" : "Resume loader";
+      loaderStatus.textContent = running ? "Syncing…" : "Paused";
+    });
+  })();
+</script>
+</body>
+</html>

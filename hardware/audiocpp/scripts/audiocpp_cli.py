@@ -107,6 +107,9 @@ def cmd_transcribe(
             args.extend(["--request-option", f"transcription_mode={mode}"])
         if words_out:
             args.extend(["--words-out", str(Path(words_out).resolve())])
+            # The binary defaults return_timestamps to false; without this the
+            # words file is silently absent even though --words-out was given.
+            args.extend(["--request-option", "return_timestamps=true"])
     elif words_out:
         # Silence here would look like a bug in the caller: the model simply has
         # no word timing to give, so say so instead of writing an empty file.

@@ -12,6 +12,7 @@ Implements the Glitch Cat Club / Kem Pattern & Anthropic Parallel Worktree Archi
 
 import argparse
 import datetime
+import importlib.util
 import json
 import os
 import re
@@ -195,8 +196,73 @@ def execute_gate_command(command: str, cwd: Path, label: str) -> dict:
     }
 
 
-def cmd_gate(run_id: str, worker: str, test_cmd: str = None, verify_cmd: str = None) -> dict:
+def _load_mutate_module():
+    """Import parallel-test-lane/scripts/mutate.py by path (same pattern the tests use)."""
+    script = Path(__file__).resolve().parents[2] / "parallel-test-lane" / "scripts" / "mutate.py"
+    if not script.is_file():
+        sys.exit(f"❌ Error: mutation tester not found at {script}")
+    spec = importlib.util.spec_from_file_location("mutate", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _mutation_check(mutate, mutate_path: Path, test_cmd: str, worktree: Path, baseline_passed: bool, limit: int = 8) -> dict:
+    """Prove the test kills every mutant, with the worktree root as cwd.
+
+    The baseline (unmutated) test run must be green first: a broken test exits
+    non-zero on every mutant, which would look like a perfect kill rate.
+    """
+    started = time.time()
+    record = {
+        "label": "mutation",
+        "command": f"mutate {mutate_path.name} --test {test_cmd}",
+        "passed": False,
+        "exit_code": 1,
+        "duration_seconds": 0.0,
+        "baseline_passed": bool(baseline_passed),
+        "mutants_run": 0,
+        "survivors": [],
+        "stdout": "",
+        "stderr": "",
+    }
+    if not baseline_passed:
+        record["stderr"] = ("baseline --test run failed: a broken test kills every mutant, "
+                            "so mutation proof would be vacuous")
+        return record
+    try:
+        results = mutate.check(mutate_path, test_cmd, limit=limit, cwd=worktree)
+    except Exception as exc:
+        record["duration_seconds"] = round(time.time() - started, 2)
+        record["stderr"] = f"mutation run refused: {exc}"
+        return record
+
+    survivors = [f"line {r['line']}: {r['mutation']}" for r in results if not r["killed"]]
+    record["duration_seconds"] = round(time.time() - started, 2)
+    if not results:
+        record["stderr"] = "no mutants generated: mutation proof would be vacuous"
+        return record
+
+    record.update({
+        "mutants_run": len(results),
+        "survivors": survivors,
+        "passed": not survivors,
+        "exit_code": 0 if not survivors else 1,
+        "stdout": "\n".join(
+            f"{'KILLED' if r['killed'] else 'SURVIVED'} line {r['line']}: {r['mutation']}"
+            for r in results
+        ),
+    })
+    if survivors:
+        record["stderr"] = f"{len(survivors)} mutant(s) survived: the test cannot fail on this code"
+    return record
+
+
+def cmd_gate(run_id: str, worker: str, test_cmd: str = None, verify_cmd: str = None,
+             mutate_file: str = None) -> dict:
     """Deterministic Quality Gate: 'Code decides wherever it can'."""
+    if mutate_file and not test_cmd:
+        sys.exit("❌ Error: --mutate needs --test. A mutation gate must know which command should kill mutants.")
     if not test_cmd and not verify_cmd:
         sys.exit("❌ Error: gate needs --test or --verify. A gate with nothing to run is not a gate.")
     repo = get_git_root()
@@ -206,11 +272,30 @@ def cmd_gate(run_id: str, worker: str, test_cmd: str = None, verify_cmd: str = N
     if not worker_info:
         sys.exit(f"❌ Error: Worker '{worker}' not found in run '{run_id}'.")
 
-    worktree_path = repo / worker_info["worktree_path"]
+    worktree_path = (repo / worker_info["worktree_path"]).resolve()
+
+    mutate_path = None
+    if mutate_file:
+        candidate = Path(mutate_file)
+        if candidate.is_absolute():
+            sys.exit("❌ Error: --mutate must be a path inside the worker worktree, not an absolute path.")
+        mutate_path = (worktree_path / candidate).resolve()
+        if mutate_path != worktree_path and worktree_path not in mutate_path.parents:
+            sys.exit(f"❌ Error: --mutate path '{mutate_file}' escapes the worker worktree.")
+        if not mutate_path.is_file():
+            sys.exit(f"❌ Error: --mutate file not found in worker worktree: {mutate_file}")
+
     checks = []
+    baseline = None
     if test_cmd:
         sys.stderr.write(f"🔬 [Quality Gate] Running tests in {worker} worktree: $ {test_cmd}\n")
-        checks.append(execute_gate_command(test_cmd, worktree_path, "test"))
+        baseline = execute_gate_command(test_cmd, worktree_path, "test")
+        checks.append(baseline)
+    if mutate_path is not None:
+        sys.stderr.write(f"🔬 [Quality Gate] Mutation check in {worker} worktree: {mutate_file} "
+                         f"(baseline run first)\n")
+        mutate = _load_mutate_module()
+        checks.append(_mutation_check(mutate, mutate_path, test_cmd, worktree_path, baseline["passed"]))
     if verify_cmd:
         sys.stderr.write(f"🔬 [Quality Gate] Running app verification in {worker} worktree: $ {verify_cmd}\n")
         checks.append(execute_gate_command(verify_cmd, worktree_path, "verify"))
@@ -223,6 +308,7 @@ def cmd_gate(run_id: str, worker: str, test_cmd: str = None, verify_cmd: str = N
         "worker": worker,
         "command": test_cmd,
         "verify_command": verify_cmd,
+        "mutate_command": mutate_file,
         "checks": checks,
         "passed": passed,
         "exit_code": next((c["exit_code"] for c in checks if not c["passed"]), 0),
@@ -230,12 +316,21 @@ def cmd_gate(run_id: str, worker: str, test_cmd: str = None, verify_cmd: str = N
     }
 
     log_event(harness_dir, status, record)
-    manifest["workers"][worker]["gate"] = {
+    gate_record = {
         "status": status,
         "passed": passed,
         "duration": duration,
         "checks": [{"label": c["label"], "command": c["command"], "passed": c["passed"]} for c in checks],
     }
+    if mutate_path is not None:
+        mutation = next(c for c in checks if c["label"] == "mutation")
+        gate_record.update({
+            "mutate": mutate_file,
+            "baseline_passed": mutation["baseline_passed"],
+            "mutants_run": mutation["mutants_run"],
+            "survivors": mutation["survivors"],
+        })
+    manifest["workers"][worker]["gate"] = gate_record
     (harness_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     if passed:
@@ -628,6 +723,9 @@ if __name__ == "__main__":
     p_gate.add_argument("--worker", required=True, metavar="N", help="Worker name")
     p_gate.add_argument("--test", default=None, help="Shell test command (e.g. 'pytest tests/test_auth.py')")
     p_gate.add_argument("--verify", default=None, help="App verification command (e.g. 'verify-app run --pass .verify/pass.json')")
+    p_gate.add_argument("--mutate", default=None, metavar="FILE",
+                        help="Mutation-prove FILE (relative to the worker worktree) against --test; "
+                             "surviving mutants fail the gate")
 
     # 4. Integrate
     p_int = sub.add_parser("integrate", help="Merge GATE_PASSED worker branches with conflict arbitration")
@@ -670,7 +768,7 @@ if __name__ == "__main__":
     elif args.action == "claim":
         cmd_claim(args.run_id, args.worker, args.file, args.lines)
     elif args.action == "gate":
-        cmd_gate(args.run_id, args.worker, args.test, args.verify)
+        cmd_gate(args.run_id, args.worker, args.test, args.verify, args.mutate)
     elif args.action == "integrate":
         if args.dry_run:
             print(json.dumps({"action": "integrate", "dry_run": True, "run_id": args.run_id,

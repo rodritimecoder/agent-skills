@@ -19,17 +19,20 @@ from typing import Dict, Any, List, Optional
 
 
 def _drive_root() -> Path:
-    """The AI volume root: $AI_ROOT, else the nearest ancestor holding models/.
+    """The AI volume root: $AI_ROOT, else the nearest ancestor that is one.
 
-    Every path below is relative to this, so the skill works wherever the
-    volume is mounted (or from a harness copy with $AI_ROOT set) instead of
-    only at the one absolute path it was written for.
+    A bare ``models/`` directory is not enough: ``/home/rodri/models`` exists
+    on this machine and used to hijack the root, hiding the real install and
+    every launcher. The volume also owns ``sh/`` (launchers) or ``audio.cpp/``
+    (runtime), so require one of those before accepting a parent.
     """
     env = os.environ.get("AI_ROOT")
     if env:
         return Path(env).expanduser()
     for parent in Path(__file__).resolve().parents:
-        if (parent / "models").is_dir():
+        if (parent / "models").is_dir() and (
+            (parent / "sh").is_dir() or (parent / "audio.cpp").is_dir()
+        ):
             return parent
     return Path("/run/media/rodri/AI")
 

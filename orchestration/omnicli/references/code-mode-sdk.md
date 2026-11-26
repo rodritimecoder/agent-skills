@@ -31,11 +31,15 @@ the 500 KB module.
 | `describe` | `describe(toolId)` → `Promise<object>` | Optional: read one tool's usage contract, flags, parameters and help text. |
 | `spec` | `spec(grepOrFilter)` → `SpecRow[]` | Synchronous query over the in-memory spec table when a tool ID is unknown. |
 | `skills` | `skills()` → `Promise<unknown>` | List every registered skill; fallback for broad discovery. |
-| `tools` | `tools[id](args)` → `Promise<InvokeEnvelope>` | Sleek Proxy over the generated typed functions (`TOOLS` is an alias). To enumerate a skill's tools, use `spec({ skill })` or `skills()`. |
+| `tools` | `tools[id](args)` / `tools.<fn>(args)` → `Promise<InvokeEnvelope>` | Sleek Proxy over the generated typed functions (`TOOLS` is an alias). Ids carry `/` and `:`, so the identifier form (`tools.local_asr`) is the ergonomic one; both resolve to the same row. To enumerate a skill's tools, use `spec({ skill })` or `skills()`. |
 | `parallel` | `parallel(calls, limit = 8)` → `Promise<unknown[]>` | Fan out async thunks, keeping results in input order. |
 | `emitResult` | `emitResult(value)` | Hand one value back on its own channel (`emit_result` is an alias). |
 | `getState` | `getState()` → `Record<string, unknown>` | Read the session's JSON object (`{}` when unset). |
 | `emitState` | `emitState(value)` | Replace that object; it persists across runs sharing `--session ID`. |
+| `store` / `load` | `store(key, value)` / `load(key)` | Named JSON values beside that state; committed only on a successful plan. `store(key, undefined)` deletes. |
+| `text` | `text(value)` | One output item: strings as is, everything else as JSON. A top-level `return` does the same. |
+| `exit` | `exit()` | End the plan successfully; calls already made stay done. |
+| `models` | `models.list(type?)` / `models.describe(model)` / `models.classify(model, ctx)` | Names the decision/OCR/ASR backends the way `tools` names CLIs. `classify()` takes `{ state, questions: { id: { type: "bool"\|"choice"\|"score", instructions, criteria } } }` and returns answers keyed by id, four decisions at a time. |
 
 Known tool IDs need no discovery or schema round-trip. Use `spec()` or the
 read-only `omnicli_skills` window only when the target is unknown; use
@@ -51,13 +55,30 @@ spec({ grep: "decide|jev", kind: "cli" });     // several filters at once
 
 A `SpecRow` is `{ id, fn, skill, kind, summary, sig, args, required, params,
 positionalSpecs, commands, command }` — everything needed to call a tool without
-invoking `describe` on it first.
+invoking `describe` on it first. `spec()` names tools exactly as the bindings do,
+so a `fn` it prints is always callable as `tools.<fn>`.
 
 Session state is a plain JSON object, not variable persistence: `getState()` reads
 the value saved for `--session ID` (default: the trace session identity) and
 `emitState(value)` replaces it. It lives at
 `~/.local/share/omnicli/sessions/<safe-id>.json` (8 KB bound on load) and holds
 only plan data.
+
+`store(key, value)` / `load(key)` hold named JSON values beside that state in
+`sessions/<safe-id>.store.json`, so a plan can advance one cursor without
+rewriting the whole object. `store(key, undefined)` deletes a key; a value is
+capped at 256 KB and all values at 1 MB. Writes are committed only when the plan
+exits 0, so a crashed run cannot advance a cursor it never finished.
+
+`text(value)` emits one output item (strings as is, everything else as JSON) and
+a top-level `return value` is emitted the same way, in order with `console.log`.
+`exit()` ends the plan successfully from anywhere; calls already made stay done.
+
+```js
+text({ page: 3 });            // ordered plan output
+store("cursor", 3);           // survives the next plan in this session
+const next = load("cursor");  // 3
+```
 
 ### 2. Typed Surface Functions
 
@@ -97,7 +118,33 @@ instead of rejecting every key as "unknown argument":
 tools["some/schema-less-tool"]({ argv: ["--flag", "value", "positional"] });
 ```
 
-### 3. Zero boilerplate or ESM — same module
+### 3. Models: typed questions, no backend name
+
+`models` is the same idea one level up. A plan asks a typed question of a named
+backend instead of remembering that decisions live behind `local/decide` and
+which `--model` value is up. The registry is built from the catalog, so it only
+lists backends this machine has registered.
+
+```js
+const { answers } = await models.classify("jev", {
+  state: { message: "the invoice total is wrong" },
+  questions: {
+    topic: { type: "choice", instructions: "What is this about?",
+             criteria: { billing: "money owed", tech: "a defect" } },
+    urgent: { type: "bool", instructions: "Needs a reply today?" },
+  },
+});
+answers.topic.choice;        // "billing"
+answers.urgent.probability;  // 0.93
+```
+
+`models.list()` / `models.list("classifier")` print the registry;
+`models.describe(model)` returns one entry. One decision call runs per question,
+four at a time, and a failed question sets `stopReason: "error"` with an
+`errorMessage` naming the id instead of rejecting the whole plan. Image
+questions are not supported on the local decision path and throw.
+
+### 4. Zero boilerplate or ESM — same module
 
 The VM exposes the whole module as globals, so an inline plan needs no import at
 all:
@@ -126,7 +173,7 @@ It prepends a short block naming the skill, tool id and `declare function`
 signatures (plus the globals and an import line) above the stubs. Default
 `--stubs` output stays byte-identical without the flag.
 
-### 4. Sleek call surface
+### 5. Sleek call surface
 
 Beyond the core globals, the module exposes a few designed forms:
 

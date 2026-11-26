@@ -1,0 +1,57 @@
+{
+  "name": "material3-expressive",
+  "description": "Material 3 Expressive — Baseline Violet (#6750a4), Light + Dark tonal elevation, 6 spring curves, shape-morphing controls.",
+  "motion": {
+    "mode": "declared-curves",
+    "allow_keywords": ["none", "inherit", "initial", "unset", "revert", "linear"],
+    "allow_steps": false,
+    "allow_linear": true,
+    "curve_token_prefixes": ["--ease-"],
+    "duration_token_prefixes": ["--dur-"]
+  },
+  "tokens": {
+    "font_prefixes": ["--font-"],
+    "size_prefixes": ["--fs-"],
+    "radius_prefixes": ["--r-"],
+    "allow_color_mix_with_vars": true
+  },
+  "sprites": {
+    "enabled": false
+  },
+  "check": {
+    "viewports": ["375x812", "412x915", "600x960", "840x1024", "1024x768", "1280x800", "1440x900"],
+    "theme_variants": ["light", "dark"],
+    "min_type_px": 11.0,
+    "min_contrast": 4.5,
+    "max_press_ms": 100.0,
+    "fallback_bg": null,
+    "clip_selectors": [
+      ".m3-card", ".m3-btn", ".m3-fab", ".m3-fab-menu__item", ".m3-chip", ".m3-field",
+      ".m3-toolbar", ".m3-app-bar", ".m3-nav-item", ".m3-split-btn"
+    ],
+    "group_selectors": [
+      ".m3-row", ".m3-grid", ".m3-btn-group", ".m3-split-btn",
+      ".m3-toolbar", ".m3-chip-row", ".m3-nav-bar", ".m3-nav-rail", ".m3-pack-links",
+      ".m3-fab-menu__items"
+    ],
+    "forbidden_selectors": [],
+    "skip_contrast_selectors": [
+      "[aria-hidden=\"true\"]", ".is-disabled", "[disabled]", "[aria-disabled=\"true\"]"
+    ],
+    "shortcut_selector": null,
+    "tab_stop_selectors": [
+      "a[href]", "button", "input", "select", "textarea",
+      "[tabindex]", "[role=\"switch\"]", "[role=\"tab\"]"
+    ],
+    "interactive_selectors": [
+      "a[href]", "button:not([disabled])",
+      "[role=\"switch\"]:not([aria-disabled=\"true\"])",
+      "[role=\"tab\"]:not([aria-disabled=\"true\"])"
+    ],
+    "text_selectors": [
+      "p", "span", "div", "a", "b", "figcaption",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "code", "button", "label", "li", "td", "th"
+    ]
+  }
+}

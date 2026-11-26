@@ -55,6 +55,11 @@ worktree-harness gate --run-id run_v1 --worker agent-auth \
   --test "pytest" \
   --verify "verify-app run --pass .verify/pass.json"
 
+# 3b. Mutation proof: survivors fail the gate, and the unmutated baseline must pass first
+worktree-harness gate --run-id run_v1 --worker agent-auth \
+  --test "pytest tests/test_auth.py" \
+  --mutate src/auth.py
+
 # 4. Integrate GATE_PASSED branches only, arbitrating conflicts and re-gating the result
 worktree-harness integrate --run-id run_v1 --test "pytest" \
   --verify "verify-app run --pass .verify/pass.json"
@@ -79,6 +84,14 @@ swarm-dispatch \
 `--test` proves the code; `--verify` proves the app. A branch can pass a unit
 suite and still ship a cut-off button, so the second command is how the
 `verification` gate joins this harness.
+
+`--mutate FILE` adds mutation proof to the same gate. FILE is resolved inside
+the worker worktree (absolute paths and paths escaping it are refused), and the
+gate requires `--test` because that command is what should kill each mutant. The
+unmutated `--test` baseline runs first: if it is already red, the mutation check
+fails outright instead of mistaking a broken suite for a perfect kill rate. At
+least one mutant must run; any survivor fails the gate. The manifest gate record
+persists `mutate`, `baseline_passed`, `mutants_run` and `survivors`.
 
 ---
 

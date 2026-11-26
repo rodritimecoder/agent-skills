@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>material3-expressive · settings</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  [hidden] { display: none !important; }
+
+  /* Tonal card cascade restoration over tokens.css .m3-card base */
+  .m3-card.m3-surface-lowest { background: var(--md-surface-container-lowest); }
+  .m3-card.m3-surface-low { background: var(--md-surface-container-low); }
+  .m3-card.m3-surface-default,
+  .m3-card.m3-surface-container { background: var(--md-surface-container); }
+  .m3-card.m3-surface-high { background: var(--md-surface-container-high); }
+  .m3-card.m3-surface-highest { background: var(--md-surface-container-highest); }
+
+  .st-shell {
+    min-height: 100vh;
+    background: var(--md-surface);
+    color: var(--md-on-surface);
+  }
+
+  .st-topbar {
+    border-bottom: var(--b-1) solid var(--md-outline-variant);
+    transition: box-shadow var(--dur-effects-default) var(--ease-effects-default);
+  }
+
+  .st-bar-lead {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-width: 0;
+  }
+
+  .st-main {
+    width: min(880px, 100%);
+    margin: 0 auto;
+    padding: var(--s-5) var(--s-4) var(--s-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+  }
+
+  .st-hero {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .st-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .st-switch-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+
+  .st-switch-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border-radius: var(--r-md);
+    background: var(--md-surface-container-low);
+  }
+
+  .st-switch-state {
+    font-family: var(--font-plain);
+    font-size: var(--fs-label-md);
+    line-height: var(--lh-label-md);
+    font-weight: var(--fw-medium);
+    color: var(--md-on-surface-variant);
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-sm);
+    background: var(--md-surface-container-high);
+  }
+
+  .st-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+
+  .st-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+  }
+
+  .st-snackbar-slot {
+    min-height: var(--s-9);
+    display: flex;
+    align-items: center;
+  }
+
+  .st-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-full);
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-size: var(--fs-label-md);
+    line-height: var(--lh-label-md);
+    font-weight: var(--fw-medium);
+  }
+
+  @media (min-width: 600px) {
+    .st-main {
+      padding: var(--s-6) var(--s-6) var(--s-9);
+    }
+
+    .st-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+</head>
+<body>
+<div class="st-shell">
+<header class="m3-app-bar st-topbar">
+  <div class="st-bar-lead">
+    <a class="m3-btn m3-btn--text m3-btn--xs" href="workspace.html">← Workspace</a>
+    <h1 class="m3-app-bar__title">Settings</h1>
+  </div>
+  <div class="m3-app-bar__actions">
+    <button type="button" class="m3-btn m3-btn--tonal m3-btn--xs" id="theme-toggle" aria-pressed="false">Dark</button>
+  </div>
+</header>
+
+<main class="st-main">
+  <section class="st-hero">
+    <h2 class="m3-headline-md is-emphasized">Theme &amp; preference studio</h2>
+    <p class="m3-body-md m3-supporting">Configure scheme tokens, motion preferences, filter scopes, and form validation across tonal surfaces.</p>
+    <nav class="m3-pack-links" aria-label="Example screens">
+      <a class="m3-btn m3-btn--text m3-btn--xs" href="workspace.html">Workspace shell</a>
+      <a class="m3-btn m3-btn--text m3-btn--xs" href="motion.html">Motion specimen</a>
+    </nav>
+  </section>
+
+  <section class="m3-card m3-surface-low" aria-labelledby="scheme-heading">
+    <div class="st-card-head">
+      <h3 class="m3-title-md" id="scheme-heading">Color scheme</h3>
+      <span class="st-badge" id="scheme-status">Light active</span>
+    </div>
+    <p class="m3-body-sm m3-supporting">Select Light, Dark, or System resolution for Baseline Violet tokens.</p>
+    <div class="m3-btn-group" role="group" aria-label="Color scheme">
+      <button type="button" class="m3-btn-group__item is-selected" aria-pressed="true" data-scheme="light">Light</button>
+      <button type="button" class="m3-btn-group__item" aria-pressed="false" data-scheme="dark">Dark</button>
+      <button type="button" class="m3-btn-group__item" aria-pressed="false" data-scheme="system">System</button>
+    </div>
+  </section>
+
+  <section class="m3-card m3-surface-container" aria-labelledby="behavior-heading">
+    <div class="st-card-head">
+      <h3 class="m3-title-md" id="behavior-heading">Expressive controls</h3>
+      <span class="m3-label-md m3-supporting">Live state switches</span>
+    </div>
+    <div class="st-switch-list">
+      <div class="st-switch-row">
+        <button type="button" class="m3-switch is-checked" role="switch" aria-checked="true" data-switch="motion">
+          <span class="m3-switch__track" aria-hidden="true"><span class="m3-switch__thumb"></span></span>
+          <span class="m3-switch__label">Expressive spring motion</span>
+        </button>
+        <span class="st-switch-state" id="state-motion">On</span>
+      </div>
+
+      <div class="st-switch-row">
+        <button type="button" class="m3-switch is-checked" role="switch" aria-checked="true" data-switch="tonal">
+          <span class="m3-switch__track" aria-hidden="true"><span class="m3-switch__thumb"></span></span>
+          <span class="m3-switch__label">Tonal surface elevation</span>
+        </button>
+        <span class="st-switch-state" id="state-tonal">On</span>
+      </div>
+
+      <div class="st-switch-row">
+        <button type="button" class="m3-switch" role="switch" aria-checked="false" data-switch="compact">
+          <span class="m3-switch__track" aria-hidden="true"><span class="m3-switch__thumb"></span></span>
+          <span class="m3-switch__label">Compact navigation rail</span>
+        </button>
+        <span class="st-switch-state" id="state-compact">Off</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="m3-card m3-surface-low" aria-labelledby="chips-heading">
+    <div class="st-card-head">
+      <h3 class="m3-title-md" id="chips-heading">Audit &amp; token scope</h3>
+      <span class="st-badge" id="chip-count">2 active</span>
+    </div>
+    <p class="m3-body-sm m3-supporting">Toggle active verification tags exported with workspace presets.</p>
+    <div class="m3-chip-row" role="group" aria-label="Token scopes">
+      <button type="button" class="m3-chip m3-chip--filter is-selected" aria-pressed="true">Design tokens</button>
+      <button type="button" class="m3-chip m3-chip--filter is-selected" aria-pressed="true">Motion specs</button>
+      <button type="button" class="m3-chip m3-chip--filter" aria-pressed="false">Dark preview</button>
+      <button type="button" class="m3-chip m3-chip--filter" aria-pressed="false">Keyboard audit</button>
+      <button type="button" class="m3-chip m3-chip--filter" aria-pressed="false">Contrast gate</button>
+    </div>
+  </section>
+
+  <section class="m3-card m3-surface-container" aria-labelledby="fields-heading">
+    <div class="st-card-head">
+      <h3 class="m3-title-md" id="fields-heading">Workspace identity &amp; sync</h3>
+      <button type="button" class="m3-btn m3-btn--outlined m3-btn--xs" id="toggle-error" aria-pressed="false">Simulate validation error</button>
+    </div>
+    <div class="st-fields">
+      <div class="m3-field m3-field--outlined" id="field-workspace">
+        <label class="m3-field__label" for="input-workspace">Workspace name</label>
+        <div class="m3-field__control">
+          <input id="input-workspace" type="text" value="Baseline Studio" placeholder="Enter workspace name">
+        </div>
+        <span class="m3-field__supporting" id="help-workspace">Shown in the app bar and exported specs.</span>
+      </div>
+
+      <div class="m3-field m3-field--filled" id="field-endpoint">
+        <label class="m3-field__label" for="input-endpoint">Sync endpoint</label>
+        <div class="m3-field__control">
+          <input id="input-endpoint" type="text" value="studio.material.local" placeholder="host.local">
+        </div>
+        <span class="m3-field__supporting" id="help-endpoint">Local address for token preview sync.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="st-footer" aria-label="Save preferences">
+    <div class="m3-row">
+      <button type="button" class="m3-btn m3-btn--filled" id="save-btn">Save preferences</button>
+      <button type="button" class="m3-btn m3-btn--text" id="reset-btn">Reset defaults</button>
+    </div>
+    <div class="st-snackbar-slot">
+      <div class="m3-snackbar" id="save-snackbar" role="status" aria-live="polite" hidden>
+        <span id="snackbar-text">Saved</span>
+        <button type="button" class="m3-snackbar__action" id="snackbar-dismiss">Dismiss</button>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const themeToggle = document.getElementById("theme-toggle");
+    const schemeStatus = document.getElementById("scheme-status");
+    const schemeButtons = document.querySelectorAll("[data-scheme]");
+    const chipCount = document.getElementById("chip-count");
+    const chips = document.querySelectorAll(".m3-chip--filter");
+    const switches = document.querySelectorAll(".m3-switch");
+    const toggleErrorBtn = document.getElementById("toggle-error");
+    const fieldWorkspace = document.getElementById("field-workspace");
+    const fieldEndpoint = document.getElementById("field-endpoint");
+    const inputWorkspace = document.getElementById("input-workspace");
+    const inputEndpoint = document.getElementById("input-endpoint");
+    const helpWorkspace = document.getElementById("help-workspace");
+    const helpEndpoint = document.getElementById("help-endpoint");
+    const saveBtn = document.getElementById("save-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const snackbar = document.getElementById("save-snackbar");
+    const snackbarText = document.getElementById("snackbar-text");
+    const snackbarDismiss = document.getElementById("snackbar-dismiss");
+
+    let selectedScheme = "light";
+    let hasError = false;
+
+    function syncThemeUI() {
+      const current = root.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      const isDark = current === "dark";
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+      themeToggle.textContent = isDark ? "Light" : "Dark";
+      if (selectedScheme !== "system") {
+        selectedScheme = current;
+      }
+      schemeButtons.forEach((btn) => {
+        const match = btn.getAttribute("data-scheme") === selectedScheme;
+        btn.classList.toggle("is-selected", match);
+        btn.setAttribute("aria-pressed", String(match));
+      });
+      if (selectedScheme === "system") {
+        schemeStatus.textContent = "System (" + (isDark ? "Dark" : "Light") + ")";
+      } else {
+        schemeStatus.textContent = (isDark ? "Dark" : "Light") + " active";
+      }
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      selectedScheme = next;
+      root.setAttribute("data-theme", next);
+      syncThemeUI();
+    });
+
+    schemeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedScheme = btn.getAttribute("data-scheme");
+        if (selectedScheme === "system") {
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        } else {
+          root.setAttribute("data-theme", selectedScheme);
+        }
+        syncThemeUI();
+      });
+    });
+
+    new MutationObserver(syncThemeUI).observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"]
+    });
+    syncThemeUI();
+
+    switches.forEach((sw) => {
+      sw.addEventListener("click", () => {
+        const checked = sw.getAttribute("aria-checked") === "true";
+        const next = !checked;
+        sw.setAttribute("aria-checked", String(next));
+        sw.classList.toggle("is-checked", next);
+        const key = sw.getAttribute("data-switch");
+        const stateEl = document.getElementById("state-" + key);
+        if (stateEl) stateEl.textContent = next ? "On" : "Off";
+      });
+    });
+
+    function updateChipCount() {
+      const count = document.querySelectorAll(".m3-chip--filter.is-selected").length;
+      chipCount.textContent = count + " active";
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const next = !chip.classList.contains("is-selected");
+        chip.classList.toggle("is-selected", next);
+        chip.setAttribute("aria-pressed", String(next));
+        updateChipCount();
+      });
+    });
+
+    function setValidationError(state) {
+      hasError = state;
+      fieldWorkspace.classList.toggle("is-error", hasError);
+      fieldEndpoint.classList.toggle("is-error", hasError);
+      inputWorkspace.setAttribute("aria-invalid", String(hasError));
+      inputEndpoint.setAttribute("aria-invalid", String(hasError));
+      toggleErrorBtn.setAttribute("aria-pressed", String(hasError));
+      toggleErrorBtn.textContent = hasError ? "Clear validation error" : "Simulate validation error";
+      helpWorkspace.textContent = hasError
+        ? "Enter a valid workspace name"
+        : "Shown in the app bar and exported specs.";
+      helpEndpoint.textContent = hasError
+        ? "Check connection — try again"
+        : "Local address for token preview sync.";
+    }
+
+    toggleErrorBtn.addEventListener("click", () => {
+      setValidationError(!hasError);
+    });
+
+    saveBtn.addEventListener("click", () => {
+      snackbarText.textContent = "Saved";
+      snackbar.hidden = false;
+    });
+
+    snackbarDismiss.addEventListener("click", () => {
+      snackbar.hidden = true;
+    });
+
+    resetBtn.addEventListener("click", () => {
+      selectedScheme = "light";
+      root.setAttribute("data-theme", "light");
+      syncThemeUI();
+
+      const defaults = { motion: true, tonal: true, compact: false };
+      switches.forEach((sw) => {
+        const key = sw.getAttribute("data-switch");
+        const on = Boolean(defaults[key]);
+        sw.setAttribute("aria-checked", String(on));
+        sw.classList.toggle("is-checked", on);
+        const stateEl = document.getElementById("state-" + key);
+        if (stateEl) stateEl.textContent = on ? "On" : "Off";
+      });
+
+      chips.forEach((chip, idx) => {
+        const on = idx < 2;
+        chip.classList.toggle("is-selected", on);
+        chip.setAttribute("aria-pressed", String(on));
+      });
+      updateChipCount();
+
+      inputWorkspace.value = "Baseline Studio";
+      inputEndpoint.value = "studio.material.local";
+      setValidationError(false);
+      snackbar.hidden = true;
+    });
+  })();
+</script>
+</body>
+</html>

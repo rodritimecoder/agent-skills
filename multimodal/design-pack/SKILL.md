@@ -1,7 +1,7 @@
 ---
 name: design-pack
-description: "Turn a look into a reusable pack an agent can read before it designs anything: references, a style sheet split into idea/look/feel, components drawn in every state, blocks, and one page with the code. Ships a `glitch-console` look — dark terminal, 16×10 pixel sprites, Fantasque Mono, 30 fps pixel-snapped motion. Use when building a UI that should feel like a terminal, a GBA, or a retro pixel system, when a project needs a design system rather than a prompt, or when generated pages keep drifting off-style. Not a prompt library: it is tokens plus sprites plus a gate that fails on drift."
-compatibility: "Python 3.8+ for the verifier (stdlib only). Chromium/Playwright only if you want a screenshot proof. No server, no network."
+description: "Turn a look into a reusable pack an agent can read before it designs anything: references, a style sheet split into idea/look/feel, components drawn in every state, blocks, and one page with the code. Ships two isolated looks configured via look.json: `glitch-console` (dark terminal, 16x10 pixel sprites, Fantasque Mono, 30 fps stepped motion) and `material3-expressive` (Baseline Violet #6750a4, Light + Dark tonal surface elevation, 15-step type scale, 6 spring curves, shape-morphing controls). Use when a project needs an enforceable design system rather than a prompt, or when generated pages keep drifting off-style. Not a prompt library: it is tokens plus per-look policy plus gates that fail on drift."
+compatibility: "Python 3.8+ for the verifier (stdlib only). Chromium/Playwright only if you want runtime checks or screenshot proofs. No server, no network."
 allowed-tools: "Bash(design-pack:*) Bash(sprite-forge:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"
 ---
 
@@ -12,25 +12,29 @@ read it in one pass and put it back down. Refined from Kem's *Design Pack* reel
 (`DfPlX30teKG`): words will never cut it, references replace adjectives, and the
 pack is one page you tell the model to read **before** it does any design work.
 
-The difference from a prompt library: every value here came off a real image, every
-component is drawn in every state, `design-pack verify` **fails** on token drift, and
-`design-pack check` **fails** when an interactive part errors or responds slowly
-(`> 100 ms`), or on layout overlap, clipping, sub-10 px text, or `< 3:1` contrast.
+The difference from a prompt library: every value here came off a real reference,
+every component is drawn in every state, and every look carries its own `look.json`
+policy manifest so looks never leak rules into each other. `design-pack verify`
+**fails** on token or motion drift, and `design-pack check` **fails** when an
+interactive part errors or responds slowly (`> 100 ms`), or on layout overlap,
+clipping, sub-floor text, or low contrast across the look's configured viewports
+and theme variants.
 
 ## Available scripts
 
 Bundled CLI scripts, referenced relative to the skill root. Run `<command> --help`
 for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
 
-- `scripts/check_components.py` — check_components — the behavioural & structural gate for design-pack.
-- `scripts/check_runner.mjs` — Behavioural check runner driving rendered components in a headless browser.
-- `scripts/design_pack.py` — design-pack — the token gate.
-- `scripts/sprite_forge.py` — sprite-forge — trace a pixel-art sprite out of video, in code.
+- `scripts/check_components.py` — check_components — the look-driven behavioural & structural gate for design-pack.
+- `scripts/check_runner.mjs` — Behavioural check runner driving rendered components and Light/Dark themes in headless Chromium.
+- `scripts/design_pack.py` — design-pack — the static token/motion gate and look policy loader (`look.json`).
+- `scripts/sprite_forge.py` — sprite-forge — trace a pixel-art sprite out of video, in code (`glitch-console` pipeline).
 
 ## Layout
 
 ```
-looks/glitch-console/     the shipped look — dark terminal, pixel sprites
+looks/glitch-console/     shipped look 1 — dark terminal, pixel sprites, stepped motion
+  look.json               per-look policy: stepped motion, 10 px floor, >= 3:1 contrast, .win/.keybar checks
   README.md               what this look is, and where each value came from
   tokens.css              the contract: ink, paper, accents, type, space, motion
   sprites.js              ASCII pixel maps -> canvas, stepped, no easing
@@ -41,21 +45,62 @@ looks/glitch-console/     the shipped look — dark terminal, pixel sprites
   traces/conductor_t4/    a measured pose: crop.json + grid.json + frame.png
   traces/conductor_jump_t543/   the jump: 6 rows, 300 ms, platform pinned
   traces/spawn_t18/       the spawn: 5 x 2-row steps + a 23-frame colour ramp
+looks/material3-expressive/   shipped look 2 — Baseline Violet (#6750a4), Light + Dark, spring curves
+  look.json               per-look policy: declared-curves, Light+Dark variants, 11 px floor, >= 4.5:1 contrast
+  README.md               Zone 1 live capture provenance & Zone 2 8-section contract
+  tokens.css              the contract: Light/Dark palettes, 5 tonal tiers, state layers, 6 spring tokens, 8 primitives
+  pack.html               the retrieval target: proportions, Light/Dark contrast, state matrix, do/don't, blocks
+  references/             5 live Material 3 Expressive captures (ref_01 .. ref_05)
+  examples/               workspace.html · settings.html · motion.html
 scripts/design_pack.py    look · tokens · sprite · verify · check
-scripts/check_components.py  Playwright behaviour & layout gate (7 viewports, <=100ms, contrast)
-scripts/sprite_forge.py   crop · grid · map · verify · motion · motion-verify
+scripts/check_components.py  Playwright behaviour & layout gate (per-look viewports, themes, <=100ms, contrast)
+scripts/sprite_forge.py   crop · grid · map · verify · motion · motion-verify (`glitch-console`)
 references/method.md      the five zones + 8-section template, with provenance
+tests/                    fail_control.html · fail_control_m3.html · test_gates.py
 ```
 
-## Quick use
+## Shipped looks & `look.json` policy contract
+
+Each directory under `looks/<name>/` is isolated by `look.json`, deep-merged over
+`NEUTRAL_LOOK_CONFIG` in `scripts/design_pack.py`. Cross-look rules never overlap:
+
+| Policy axis | `glitch-console` | `material3-expressive` |
+| :--- | :--- | :--- |
+| `motion.mode` | `stepped` (`steps(...)`, `linear`, `--snap`/`--hold-`/`--step-`/`--spawn-`/`--scroll`) | `declared-curves` (`--ease-*` curves + `--dur-*` durations + `linear`; `allow_steps: false`) |
+| `tokens.allow_color_mix_with_vars` | `false` (any `color-mix()` fails) | `true` (only `var(--...)`, `transparent`, `currentcolor`) |
+| `tokens` prefixes | `--font-`, `--fs-`, `--r-` | `--font-`, `--fs-`, `--r-` |
+| `sprites.enabled` | `true` (`sprites.js`) | `false` (`design-pack sprite` exits `2`) |
+| `check.theme_variants` | `[]` (single dark theme, 7 viewports) | `["light", "dark"]` via `data-theme` (`7 x 2 = 14` viewport checks/page) |
+| `check.viewports` | `375x812, 480x320, 640x400, 768x1024, 800x600, 1280x800, 1440x900` | `375x812, 412x915, 600x960, 840x1024, 1024x768, 1280x800, 1440x900` |
+| `check.min_type_px` / `min_contrast` | `10.0 px` / `3.0:1` (`fallback_bg: [14, 17, 24]`) | `11.0 px` / `4.5:1` (`fallback_bg: null`, Light `#ffffff` default) |
+| `check.forbidden_selectors` | `.win button`, `.win input`, `.win select`, `.win textarea` | `[]` (native controls allowed) |
+| `check.clip_selectors` / `group_selectors` | `.win`, `.line`, `.chip`, `.ctl`, `.dial`, `.board`, `.stage`, `.keybar`, ... | `.m3-card`, `.m3-btn`, `.m3-fab`, `.m3-chip`, `.m3-field`, `.m3-toolbar`, `.m3-row`, ... |
+| `check.shortcut_selector` | `.keybar .keybar__k` | `null` |
+
+## Quick use & `--look` auto-detection
+
+**How `--look` resolves:**
+- Paths inside `looks/<name>/` automatically select `<name>` for both `verify` and `check` (mixing paths from multiple looks in one invocation exits `2`).
+- Paths outside `looks/` (for example `./dist/page.html`):
+  - `design-pack verify` defaults to `glitch-console` unless `--look <name>` is passed.
+  - `design-pack check` runs in **neutral mode** (4 standard viewports `375x812,768x1024,1280x800,1440x900`, `10 px` floor, `3:1` contrast, `<= 100 ms` latency, no look-specific `forbidden_selectors`) unless `--look <name>` is passed.
 
 ```bash
-design-pack look                          # what looks exist
-design-pack tokens glitch-console         # the declared values
-design-pack verify page.html              # static token gate (exit 1 on drift)
-design-pack check page.html               # runtime behaviour gate (7 viewports, <=100ms, overlap, clipping)
-design-pack verify ./dist --json          # whole builds
-design-pack sprite conductor              # the 16x10 map, for debugging
+design-pack look                                           # list shipped looks
+design-pack tokens glitch-console                          # glitch-console declared tokens
+design-pack tokens material3-expressive                    # M3E declared Light/Dark tokens
+
+design-pack verify looks/glitch-console                    # auto-detects glitch-console
+design-pack verify looks/material3-expressive              # auto-detects material3-expressive
+design-pack verify --look material3-expressive page.html   # external page against M3E tokens & curves
+design-pack verify ./dist --look glitch-console --json     # whole build against glitch-console
+
+design-pack check looks/glitch-console                     # 7 terminal viewports, <=100ms, >=3:1 contrast
+design-pack check looks/material3-expressive               # 14 viewport checks/page (7 viewports x Light+Dark)
+design-pack check --look material3-expressive page.html    # external page with M3E rules (11px, >=4.5:1, Light+Dark)
+design-pack check page.html                                # neutral mode check (no look-specific bans)
+
+design-pack sprite conductor                               # glitch-console only: 16x10 ASCII map
 ```
 
 ## The five zones (see references/method.md)
@@ -71,18 +116,18 @@ design-pack sprite conductor              # the 16x10 map, for debugging
 **Zone 2 is load-bearing.** Do not author a style sheet from nothing: find one you
 like, hand it over *as the format*, and fill it from the references. Before filling
 the 8 sections, name the production constraint the look must obey (two-ink press,
-zero-pointer terminal, fixed DAW host window) and write an explicit `NEVER` block
-of patterns banned by that constraint (such as smooth gradients, black or white ink,
-soft shadows, or perfect register). Map real UI states in **Voice** to the domain's
-own vocabulary (for a print shop: loading -> "inking up", error -> "a misprint",
-done -> "dry"), specify colour **by proportion** (not just a flat hex list), and
-end sections in **drawn `do, don't` pairs**. Format transfers, content must be yours.
+zero-pointer terminal, tonal-surface spring UI, fixed DAW host window) and write an
+explicit `NEVER` block of patterns banned by that constraint. Map real UI states in
+**Voice** to the domain's own vocabulary (for a print shop: loading -> "inking up",
+error -> "a misprint", done -> "dry"), specify colour **by proportion** (not just
+a flat hex list), and end sections in **drawn `do, don't` pairs**. Format transfers,
+content must be yours.
 
-### A terminal has six primitives, not sixty components
+### `glitch-console`: six primitives, not sixty components
 
-The shortcut for this whole look: a terminal cannot render a control. It has a window,
-a line, a chip, a rule, a meter and a sprite — and every screen is a composition of
-those six. That is why zone 3 is small here and zone 4 is nearly free.
+The shortcut for `glitch-console`: a terminal cannot render a web control. It has
+a window, a line, a chip, a rule, a meter and a sprite — and every screen is a
+composition of those six. That is why zone 3 is small here and zone 4 is nearly free.
 
 | Primitive | Class | States |
 | :--- | :--- | :--- |
@@ -93,30 +138,62 @@ those six. That is why zone 3 is small here and zone 4 is nearly free.
 | meter | `.bar` | `rest` · `on` · `dim` · `warn` |
 | sprite | `.sprite` | `rest` · `blink` · `bop` · `squash` · `jump` · `descent` · `flash` + moods |
 
-If a screen needs a seventh, it is not a component — it is a **block**: a new window,
-or a line that asks the question inline. Do not add a `<button>`, `<input>`, select,
-modal or tooltip to a terminal look; drive actions via keyboard triggers (`1` Hide,
-`2` Stop, `s` Spawn, `j` Jump, `m` Moods, `g` Ground, `c` Comm ping).
+If a `glitch-console` screen needs a seventh, it is not a component — it is a
+**block**: a new window, or a line that asks the question inline. Do not add a
+`<button>`, `<input>`, select, modal or tooltip inside `.win` in this terminal look;
+drive actions via keyboard triggers (`1` Hide, `2` Stop, `s` Spawn, `j` Jump, `m` Moods,
+`g` Ground, `c` Comm ping).
 
-**Base look vs substrate profiles.** The core `glitch-console` look stays strictly
-zero-pointer terminal. When targeting a non-terminal substrate (like a DAW plugin),
-add a **profile** that inherits all tokens and writes down its exact exceptions rather
-than mutating the core look: [`profiles/vst3.md`](looks/glitch-console/profiles/vst3.md)
-is the plugin-editor contract (fixed host window, 4 / 6 / 7 column anchors, 10 px type
-floor, clickable `.ctl` chips, the dial as a detent rail borrowed from the meter
-primitive, and the single motion exception — *value feedback eases, chrome never does* —
-measured against `profiles/vst3-controls.html`).
+**Base look vs substrate profiles (`glitch-console`).** The core `glitch-console` look
+stays strictly zero-pointer terminal. When targeting a non-terminal substrate (like
+a DAW plugin), add a **profile** that inherits all tokens and writes down its exact
+exceptions rather than mutating the core look:
+[`profiles/vst3.md`](looks/glitch-console/profiles/vst3.md) is the plugin-editor
+contract (fixed host window, 4 / 6 / 7 column anchors, 10 px type floor, clickable
+`.ctl` chips, the dial as a detent rail borrowed from the meter primitive, and the
+single motion exception — *value feedback eases, chrome never does* — measured
+against `profiles/vst3-controls.html`).
 
+### `material3-expressive`: tonal surfaces, eight primitives, and spring physics
+
+`material3-expressive` targets modern web/app UIs built around Google's **Baseline
+Violet (`#6750a4`)** Light + Dark themes (`[data-theme="light"]` / `[data-theme="dark"]`),
+a **5-tier tonal surface container ladder** (`lowest` -> `low` -> `default` -> `high` -> `highest`),
+interactive **state layers** via `color-mix(in srgb, var(--md-on-*) <pct>, <surface>)`
+(`8%` hover, `10%` focus, `10–12%` pressed, `12%` disabled container / `38%` disabled ink),
+and **spring-physics spatial feedback** (pill-to-square corner morphing on press).
+
+| Primitive | Class | Key variants / states |
+| :--- | :--- | :--- |
+| card | `.m3-card` | `filled` · `elevated` · `outlined` + `is-interactive` (`hover` / `focus` / `pressed` / `disabled`) |
+| button | `.m3-btn` | `filled` · `tonal` · `outlined` · `text` · sizes `xs`/`sm`/`md`/`lg` + pill-to-square press morph |
+| split & group | `.m3-split-btn`, `.m3-btn-group` | connected `lead`/`trail`/`item` shapes + `is-selected` morph |
+| fab | `.m3-fab` | standard `56px` · `lg` (`96px`) · `extended` · `vibrant` (`--md-tertiary-container`) |
+| toolbar | `.m3-toolbar` | `standard` · `vibrant` floating pill bar with `.m3-toolbar__btn` |
+| chip | `.m3-chip` | `assist` · `filter` · `input` + `is-selected` pill morph |
+| text field | `.m3-field` | `outlined` · `filled` + `hover` / `focus` / `pressed` / `is-error` / `is-disabled` |
+| switch & loader | `.m3-switch`, `.m3-loader` | thumb expand on press/checked + shape-morphing `--dur-spin`/`--dur-spatial-slow` loader |
+
+Navigation and layout primitives (`--md-surface*`, `.m3-app-bar`, `.m3-nav-rail`,
+`.m3-nav-bar`, `.m3-nav-item`, `.m3-snackbar`) compose screens across Compact,
+Medium, Expanded, and Large window classes. Motion uses only the 6 declared spring
+tokens (`--ease-spatial-{fast,default,slow}` with overshoot for geometry/morphs and
+`--ease-effects-{fast,default,slow}` critically damped for colour/opacity) paired
+with `--dur-*` tokens; `steps(...)`, `ease`, and `ease-in-out` fail `verify`.
+Runtime `check` enforces the `11 px` type floor (`Label Small`) and `>= 4.5:1`
+WCAG contrast across all 14 Light + Dark viewport checks (`7` M3 viewports × `2` themes).
 
 ## Build a new look
 
-1. **Collect references.** One style only. Public domain, or your own work. Write down
-   what you actually like about each image: that note is the annotation.
+1. **Collect references.** One style only. Public domain, or your own work (or live
+   official spec captures). Write down what you actually like about each image:
+   that note is the annotation.
 2. **Compare candidates at full fidelity.** Render at least two candidate directions
    on the same subject to the same level of finish (a sketch is not comparable). Put
    them side by side, choose by looking, and tag each rejected sheet `AVOID` with
    one concrete reason.
-3. **Copy the closest look.** `cp -r looks/glitch-console looks/<name>`.
+3. **Copy the closest look.** `cp -r looks/<closest> looks/<name>` and inspect its
+   `look.json`.
 4. **Sample the references, do not guess.** Pull real hexes out of the frames:
    ```bash
    python3 - <<'PY'
@@ -126,30 +203,46 @@ measured against `profiles/vst3-controls.html`).
        print("#%02x%02x%02x" % c, k)
    PY
    ```
-5. **Fill tokens.css, then pack.html.** Name the production constraint and write its
-   explicit `NEVER` block first, then fill the 8-section skeleton: map real UI states
-   in Voice to domain vocabulary, specify ink proportions and measured contrast,
-   declare closed inventory counts (`N` parts, `M` timings, `K` marks), draw every
-   component state, and add `do / don't` pairs.
-6. **Gate it.** Run both `design-pack verify looks/<name>/pack.html` and `design-pack check looks/<name>/pack.html`, then run them on pages you generated with it. A pack that cannot fail is not a pack.
+5. **Fill `look.json`, `tokens.css`, then `pack.html`.** Declare the look's motion
+   policy (`stepped` vs `declared-curves`), token prefixes, `color-mix()` policy,
+   optional `theme_variants`, and runtime `check` thresholds/selectors in `look.json`.
+   Name the production constraint and write its explicit `NEVER` block first, then
+   fill the 8-section skeleton: map real UI states in Voice to domain vocabulary,
+   specify ink/surface proportions and measured contrast, declare closed inventory
+   counts (`N` parts, `M` timings, `K` marks), draw every component state, and add
+   `do / don't` pairs.
+6. **Gate it with a negative control.** Run both `design-pack verify looks/<name>`
+   and `design-pack check looks/<name>`, then pair them with a `fail_control*.html`
+   fixture that triggers every static and runtime check (`verify` + `check`). A pack
+   that cannot fail is not a pack.
 
 ## Use the pack when writing UI
 
-- Read `pack.html` (or at least `tokens.css` + `README.md`) **before** designing.
+- Read `looks/<look>/pack.html` (or at least `tokens.css` + `README.md` + `look.json`)
+  **before** designing.
 - Once a pack passes both gates, treat each new surface (brand guidelines, slide
   deck, documents, social kit, merch, landing page) as one more prompt that reads
   `pack.html` and inherits the locked tokens, voice, and motion rather than a fresh
   design brief.
-- Use `var(--token)` for every colour, size and radius. Keep the ink proportion (`~78%` dark ink ground/body, `~12%` type/rules, `~5%` paper chrome, `~5%` semantic accents).
-- Take components from zone 3 rather than inventing a control. In a terminal look
-  there are six primitives and no seventh — see the table above.
-- Motion is stepped: quantise to `floor(t / (1000/fps))`, never an eased property.
-- Run **both** gates on what you produced:
-  - `design-pack verify <file>` (static conformance: undeclared colour, off-ladder font/size, radius, easing).
-  - `design-pack check <file>` (runtime behaviour across 7 viewports: verifies declared interactive controls and `.keybar` triggers actually work within ≤100 ms with zero console/page errors, plus overlap, clipping, 10 px floor, and ≥3:1 contrast, then waits for human sign-off).
+- Use `var(--token)` for every colour, size, radius, and declared motion curve/duration.
+  Keep the look's colour proportion (`glitch-console`: `~78%` dark ink ground/body,
+  `~12%` type/rules, `~5%` paper chrome, `~5%` semantic accents; `material3-expressive`:
+  `~72%` tonal surfaces, `~14%` ink & hairline outlines, `~8%` tonal containers,
+  `~6%` primary/tertiary/error accents).
+- Take components from zone 3 rather than inventing ad-hoc controls (six primitives
+  in `glitch-console`, eight `.m3-*` primitives in `material3-expressive`).
+- Follow the look's motion contract:
+  - In `glitch-console`, motion is stepped (`floor(t / (1000/fps))` / `steps(...)`), never eased.
+  - In `material3-expressive`, motion uses the 6 declared `--ease-*` + `--dur-*` tokens (overshoot on spatial geometry, critically damped on effects), never `steps(...)` or bare `ease*`.
+- Run **both** gates with the target look on what you produced:
+  - `design-pack verify --look <look> <file>` (static conformance: undeclared colour, `color-mix()` policy, off-ladder font/size/radius, disallowed motion).
+  - `design-pack check --look <look> <file>` (runtime behaviour across the look's configured viewports and `theme_variants`: verifies controls/shortcuts respond within `<= 100 ms` with zero console/page errors, plus overlap, clipping, type floor, and contrast, then waits for human sign-off).
   Treat FAIL as a build error, not a suggestion.
 
-## Sprite pipeline (this look)
+## Sprite pipeline (`glitch-console`)
+
+> Specific to `glitch-console` (`sprites.enabled: true` in `looks/glitch-console/look.json`).
+> Looks with `sprites.enabled: false` (such as `material3-expressive`) reject `design-pack sprite` with exit `2`.
 
 Sprites are ASCII maps on a 16×10 body inside a 22×18 grid (`PAD_X = 3`), drawn to
 `<canvas>` at an integer scale with `imageSmoothingEnabled = false`. All four bots
@@ -168,7 +261,7 @@ Pixels.setPaused(true);          // freeze/resume 30 fps loop (2 Stop)
 Pixels.cycleMood(root);          // cycle measured particle moods (m Moods)
 ```
 
-### Motion: the bot never eases
+### Motion: the bot never eases (`glitch-console`)
 
 Everything below was measured off the reference reel at 30 fps, one frame at a time.
 Do not soften it back into a tween.
@@ -189,11 +282,11 @@ Do not soften it back into a tween.
 - **The stage is one window.** Every bot stands on the same floor inside a single
   `win--paper` terminal. Never a card per bot.
 
-`examples/terminal.html`, `examples/board.html`, and `examples/alignment.html` are the
-1-to-1 reference screens; `examples/timing.html` renders the live programs, so none
-can drift from `sprites.js`. `prefers-reduced-motion` keeps the sprites at rest.
+`looks/glitch-console/examples/terminal.html`, `board.html`, and `alignment.html` are
+the 1-to-1 reference screens; `timing.html` renders the live programs, so none can
+drift from `sprites.js`. `prefers-reduced-motion` keeps the sprites at rest.
 
-## Adding a sprite
+## Adding a sprite (`glitch-console`)
 
 A sprite comes out of a frame, not out of an imagination. `sprite-forge` measures
 the grid, the palette and the map, then proves the result reproduces the frame:
@@ -217,7 +310,7 @@ sprite <name>` confirms the grid is rectangular. `traces/conductor_t4/` is a
 worked example you can re-run. Transcribe from the reference; never hand-draw a
 shape you have not measured.
 
-## Motion: tracks, not poses
+## Motion: tracks, not poses (`glitch-console`)
 
 A pose is not the unit of animation. A jump, a bop and a stretch are the same
 primitive at different amplitudes, and the spawn runs two channels on two clocks.
@@ -263,5 +356,7 @@ tracks are a lossy summary and should not be trusted.
   documents, social kit, merch, landing page) is one more prompt inheriting the
   locked tokens, voice, and motion rather than a fresh design brief.
 - It does not judge taste. It only proves the output stayed inside the declared system.
-- It does not ship webfonts. `--font-mono` resolves through `local()` to the installed
-  Fantasque Nerd Font Mono, and degrades to a system mono elsewhere.
+- It does not ship webfonts. `glitch-console`'s `--font-mono` resolves through `local()`
+  to Fantasque Nerd Font Mono (degrading to system mono), and `material3-expressive`'s
+  `--font-brand`/`--font-plain`/`--font-mono` resolve through installed Roboto Flex /
+  Google Sans / Roboto / Roboto Mono or system UI fallbacks.

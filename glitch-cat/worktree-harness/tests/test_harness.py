@@ -10,10 +10,44 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parent.parent / "scripts" / "harness.py"
+
+SCORE = '''\
+def score(n):
+    if n > 10:
+        return "high"
+    if n and n < 5:
+        return "low"
+    return "mid"
+'''
+
+WEAK_TEST = '''
+import unittest
+from pkg.score import score
+
+class T(unittest.TestCase):
+    def test_high(self):
+        self.assertEqual(score(11), "high")
+'''
+
+THOROUGH_TEST = '''
+import unittest
+from pkg.score import score
+
+class T(unittest.TestCase):
+    def test_all(self):
+        self.assertEqual(score(11), "high")
+        self.assertEqual(score(10), "mid")
+        self.assertEqual(score(4), "low")
+        self.assertEqual(score(5), "mid")
+        self.assertEqual(score(0), "mid")
+'''
+
+MUTATION_TEST_CMD = f"test -f ROOT_MARKER && {sys.executable} -m unittest test_score"
 
 
 def git(cwd, *args):
@@ -47,6 +81,78 @@ class TestWorktreeHarness(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.td, ignore_errors=True)
+
+    def _gate(self, worker):
+        manifest = json.loads((self.repo / ".harness" / "runs" / "run_t" / "manifest.json").read_text())
+        return manifest["workers"][worker]["gate"]
+
+    def _write_mutation_fixture(self, test_src=WEAK_TEST, worker="w2"):
+        tree = self.repo / ".harness" / "runs" / "run_t" / "worktrees" / worker
+        (tree / "pkg").mkdir(exist_ok=True)
+        (tree / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+        (tree / "pkg" / "score.py").write_text(SCORE, encoding="utf-8")
+        (tree / "test_score.py").write_text(textwrap.dedent(test_src), encoding="utf-8")
+        (tree / "ROOT_MARKER").write_text("root\n", encoding="utf-8")
+        return tree
+
+    def test_gate_fails_on_surviving_mutant(self):
+        self._write_mutation_fixture()
+        res = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                      "--test", MUTATION_TEST_CMD, "--mutate", "pkg/score.py")
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+        gate = self._gate("w2")
+        self.assertEqual(gate["status"], "GATE_FAILED")
+        self.assertIn("mutation", [c["label"] for c in gate["checks"]])
+        self.assertTrue(gate["baseline_passed"])
+        self.assertEqual(gate["mutate"], "pkg/score.py")
+        self.assertEqual(gate["mutants_run"], 8)
+        self.assertGreaterEqual(len(gate["survivors"]), 1)
+
+    def test_gate_passes_when_baseline_green_and_all_mutants_killed(self):
+        self._write_mutation_fixture(test_src=THOROUGH_TEST)
+        res = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                      "--test", MUTATION_TEST_CMD, "--mutate", "pkg/score.py")
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+        gate = self._gate("w2")
+        self.assertEqual(gate["status"], "GATE_PASSED")
+        self.assertTrue(gate["baseline_passed"])
+        self.assertEqual(gate["mutants_run"], 8)
+        self.assertEqual(gate["survivors"], [])
+
+    def test_gate_fails_on_broken_baseline_even_when_every_mutant_dies(self):
+        self._write_mutation_fixture()
+        res = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                      "--test", "exit 1", "--mutate", "pkg/score.py")
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+        gate = self._gate("w2")
+        self.assertEqual(gate["status"], "GATE_FAILED")
+        self.assertFalse(gate["baseline_passed"])
+        self.assertEqual(gate["mutants_run"], 0)
+        self.assertEqual(gate["survivors"], [])
+        mutation = next(c for c in gate["checks"] if c["label"] == "mutation")
+        self.assertFalse(mutation["passed"])
+
+    def test_gate_refuses_mutate_without_test(self):
+        self._write_mutation_fixture()
+        res = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                      "--mutate", "pkg/score.py")
+        self.assertNotEqual(res.returncode, 0, res.stdout + res.stderr)
+        self.assertIn("--mutate needs --test", res.stderr)
+
+    def test_gate_refuses_mutate_path_outside_worktree(self):
+        self._write_mutation_fixture()
+        absolute = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                           "--test", "true", "--mutate", str(self.repo / "README.md"))
+        self.assertNotEqual(absolute.returncode, 0, absolute.stdout + absolute.stderr)
+        self.assertIn("absolute", absolute.stderr)
+
+        escaping = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w2",
+                           "--test", "true", "--mutate", "../manifest.json")
+        self.assertNotEqual(escaping.returncode, 0, escaping.stdout + escaping.stderr)
+        self.assertIn("escapes", escaping.stderr)
 
     def test_gate_and_integrate(self):
         fail = harness(self.repo, "gate", "--run-id", "run_t", "--worker", "w1", "--test", "true", "--verify", "test -f missing.txt")

@@ -5,8 +5,8 @@ description: >
   heap cap and wall-clock timeout. Use for model-generated snippets, policy/routing
   scripts, scoring functions, JSON transforms and pure-JS test shards when you want
   millisecond startup without a container. Not for native builds, git, browsers or
-  arbitrary shell work — use subagent-spaces (local Podman) or gh-action-subagent
-  (cloud VM) for those.
+  arbitrary shell work — use subagent-spaces (local Podman) for those, or hand
+  parallel coding to a T3 Code delegated task.
 metadata:
   bins: isolate-run
 compatibility: "Requires Deno 2.x (DENO_BIN overrides discovery). Python 3.10+ for the wrapper. No third-party packages. No workerd needed."
@@ -15,8 +15,8 @@ allowed-tools: "Bash(deno:*) Bash(python3:*) Read Write"
 
 # Isolate Run (`isolate-run`)
 
-A cheap inner sandbox for JavaScript. The outer boundary is still
-`subagent-spaces` (Podman) or `gh-action-subagent` (GitHub VM) — this skill covers
+A cheap inner sandbox for JavaScript. The outer boundary for untrusted work that
+needs a container is `subagent-spaces` (local Podman) — this skill covers
 the case where the untrusted thing is *JS itself* and a container is overkill.
 
 ## Available scripts
@@ -36,7 +36,7 @@ no cgroups, no native toolchains. Deno's capability layer is the actual gate.
 | :--- | :--- |
 | Pure JS/TS, untrusted snippets, transforms, scoring, policy scripts | **this skill** |
 | `pytest` / `cargo check` / `npm test`, workspace mounts, CPU pinning | `subagent-spaces` |
-| git, headless Chrome, branches/PRs | `gh-action-subagent` |
+| git, headless Chrome, branches/PRs | T3 Code delegated task (isolated worktree) |
 | Per-request Workers semantics, durable objects | `cf-architect` (`workerd`) |
 
 ## Profiles

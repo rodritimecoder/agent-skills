@@ -106,6 +106,12 @@ def _save_state(path: Path, value: dict) -> None:
         raise
 
 
+def _session_store_path(session: str | None) -> Path:
+    """Per-key store for one session, next to that session's state file."""
+    ident = re.sub(r"[^A-Za-z0-9_-]", "_", str(session or ""))[:128] or "default"
+    return Path.home() / ".local" / "share" / "omnicli" / "sessions" / f"{ident}.store.json"
+
+
 def _deprecation_check(script: str | None, lang: str | None) -> None:
     name = (lang or "").strip().lower()
     if name in PY_LANGS or (
@@ -404,6 +410,14 @@ def run(script: str | None = None, code: str | None = None,
     state_file.write_text(
         json.dumps(_load_state(state_path), ensure_ascii=False), encoding="utf-8")
 
+    # Per-key store: same lifecycle as state, but only committed when the plan
+    # exits 0, so a crashed run cannot advance a cursor it never finished.
+    store_path = _session_store_path(sid)
+    store_file = work / ".omnicli_store.json"
+    store_file.unlink(missing_ok=True)
+    store_file.write_text(
+        json.dumps(_load_state(store_path), ensure_ascii=False), encoding="utf-8")
+
     skills_manifest = work / ".omnicli_skills.json"
     skills_manifest.unlink(missing_ok=True)
     skills_root = _canonical_skills_root()
@@ -448,6 +462,7 @@ def run(script: str | None = None, code: str | None = None,
         "OMNICLI_TRACE": str(trace),
         "OMNICLI_RESULT": str(result_file),
         "OMNICLI_STATE": str(state_file),
+        "OMNICLI_STORE": str(store_file),
         "OMNICLI_MAX_CALLS": str(max_calls),
         "OMNICLI_TRUST_INDEX": "1",
         # The bindings' $ gate reads this; sandboxed modes also pass it
@@ -476,7 +491,7 @@ def run(script: str | None = None, code: str | None = None,
         if not bwrap_works():
             sys.exit("❌ Error: bubblewrap is not available; pass --sandbox none to run unsandboxed.")
         for key, path in (("OMNICLI_TRACE", trace), ("OMNICLI_RESULT", result_file),
-                          ("OMNICLI_STATE", state_file)):
+                          ("OMNICLI_STATE", state_file), ("OMNICLI_STORE", store_file)):
             env[key] = _guest_path(path, work)
         cmd, serving, runtime, bridge_server = _sandboxed(
             node_real, vm_runner, bindings_dir, work, sandbox, script_path,
@@ -486,6 +501,7 @@ def run(script: str | None = None, code: str | None = None,
     if os.environ.get("OMNICLI_EXEC_DEBUG"):
         print(" ".join(cmd), file=sys.stderr)
     saved_state = None
+    saved_store = None
     try:
         proc = subprocess.run(cmd, cwd=str(work), env=env, capture_output=True,
                               text=True, timeout=timeout)
@@ -495,12 +511,19 @@ def run(script: str | None = None, code: str | None = None,
             candidate = None
         if isinstance(candidate, dict):
             saved_state = candidate
+        try:
+            candidate = json.loads(store_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            candidate = None
+        if isinstance(candidate, dict):
+            saved_store = candidate
     except subprocess.TimeoutExpired:
         sys.exit(f"❌ Error: plan exceeded {timeout:g}s")
     finally:
         if is_inline and script_path.is_file():
             script_path.unlink(missing_ok=True)
         state_file.unlink(missing_ok=True)
+        store_file.unlink(missing_ok=True)
         skills_manifest.unlink(missing_ok=True)
         if serving is not None:
             serving.__exit__()
@@ -508,6 +531,8 @@ def run(script: str | None = None, code: str | None = None,
             shutil.rmtree(runtime, ignore_errors=True)
     if saved_state is not None:
         _save_state(state_path, saved_state)
+    if saved_store is not None and proc.returncode == 0:
+        _save_state(store_path, saved_store)
     elapsed = time.time() - started
 
     stderr_text = proc.stderr
