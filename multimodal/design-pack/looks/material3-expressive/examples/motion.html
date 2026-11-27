@@ -392,7 +392,6 @@
     <div class="mo-morph-row">
       <button type="button" class="m3-btn m3-btn--tonal m3-btn--sm morph-target" aria-pressed="false">Small pill</button>
       <button type="button" class="m3-btn m3-btn--outlined m3-btn--md morph-target" aria-pressed="false">Medium</button>
-      <button type="button" class="m3-btn m3-btn--tonal m3-btn--lg morph-target" aria-pressed="false">Large</button>
       <div class="m3-split-btn m3-split-btn--tonal">
         <button type="button" class="m3-split-btn__lead morph-target" aria-pressed="false">Morph action</button>
         <button type="button" class="m3-split-btn__trail" id="specimen-split-trail" aria-expanded="false" aria-label="Toggle chevron rotation">
@@ -401,6 +400,10 @@
           </span>
         </button>
       </div>
+    </div>
+    <div class="mo-morph-row">
+      <span class="m3-label-md m3-supporting">Large · 96px</span>
+      <button type="button" class="m3-btn m3-btn--tonal m3-btn--lg morph-target" aria-pressed="false">Large</button>
     </div>
   </section>
 
@@ -417,16 +420,31 @@
       <div class="m3-loader m3-loader--contained" role="img" aria-label="Contained shape morphing progress indicator">
         <span class="m3-loader__morph" aria-hidden="true"></span>
       </div>
-      <button type="button" class="m3-btn m3-btn--tonal" id="toggle-loader" aria-pressed="true">Pause loader</button>
+      <button type="button" class="m3-btn m3-btn--tonal" id="toggle-loader">Pause motion</button>
     </div>
 
     <p class="m3-body-md m3-supporting">
       When <code class="mo-token-code">@media (prefers-reduced-motion: reduce)</code> is active, spatial spring overshoot and continuous morph keyframes collapse to instant state updates while preserving high-contrast focus and shape indicators.
     </p>
   </section>
+
+  <section class="m3-card m3-surface-highest" aria-labelledby="wavy-heading">
+    <div class="mo-card-head">
+      <h3 class="m3-title-md" id="wavy-heading">Wavy progress indicator (engine)</h3>
+      <span class="mo-badge" id="wavy-readout">40%</span>
+    </div>
+
+    <div class="m3-progress-wavy" id="mo-wavy" role="progressbar" aria-label="Wavy progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.4" data-value="0.4"></div>
+
+    <div class="mo-loader-row">
+      <button type="button" class="m3-btn m3-btn--tonal" id="wavy-step">Advance</button>
+      <button type="button" class="m3-btn m3-btn--text" id="wavy-reset">Reset</button>
+    </div>
+  </section>
 </main>
 </div>
 
+<script src="../motion.js"></script>
 <script>
   (function () {
     const root = document.documentElement;
@@ -551,10 +569,30 @@
     toggleLoaderBtn.addEventListener("click", () => {
       running = !running;
       loaders.forEach((loader) => loader.classList.toggle("is-paused", !running));
-      toggleLoaderBtn.setAttribute("aria-pressed", String(running));
-      toggleLoaderBtn.textContent = running ? "Pause loader" : "Resume loader";
-      loaderStatus.textContent = running ? "Syncing…" : "Paused";
+      if (window.M3Motion) window.M3Motion.setPaused(!running);
+      toggleLoaderBtn.textContent = running ? "Pause motion" : "Resume motion";
+      loaderStatus.textContent = running ? "Syncing…" : "Motion paused";
     });
+
+    const wavyEl = document.getElementById("mo-wavy");
+    const wavyStep = document.getElementById("wavy-step");
+    const wavyReset = document.getElementById("wavy-reset");
+    const wavyReadout = document.getElementById("wavy-readout");
+    let wavyValue = 0.4;
+
+    function paintWavy(value) {
+      wavyValue = value;
+      if (window.M3Motion) window.M3Motion.setProgress(wavyEl, value);
+      else wavyEl.dataset.value = String(value);
+      wavyReadout.textContent = Math.round(value * 100) + "%";
+    }
+
+    if (wavyEl && wavyStep && wavyReset) {
+      wavyStep.addEventListener("click", () => {
+        paintWavy(wavyValue >= 0.98 ? 0.06 : Math.min(1, wavyValue + 0.18));
+      });
+      wavyReset.addEventListener("click", () => paintWavy(0.4));
+    }
   })();
 </script>
 </body>

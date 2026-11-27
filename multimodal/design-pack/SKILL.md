@@ -1,6 +1,6 @@
 ---
 name: design-pack
-description: "Turn a look into a reusable pack an agent can read before it designs anything: references, a style sheet split into idea/look/feel, components drawn in every state, blocks, and one page with the code. Ships two isolated looks configured via look.json: `glitch-console` (dark terminal, 16x10 pixel sprites, Fantasque Mono, 30 fps stepped motion) and `material3-expressive` (Baseline Violet #6750a4, Light + Dark tonal surface elevation, 15-step type scale, 6 spring curves, shape-morphing controls). Use when a project needs an enforceable design system rather than a prompt, or when generated pages keep drifting off-style. Not a prompt library: it is tokens plus per-look policy plus gates that fail on drift."
+description: "Turn a look into a reusable pack an agent can read before it designs anything: references, a style sheet split into idea/look/feel, components drawn in every state, blocks, and one page with the code. Ships two isolated looks configured via look.json: `glitch-console` (dark terminal, 16x10 pixel sprites, Fantasque Mono, 30 fps stepped motion) and `material3-expressive` (Baseline Violet #6750a4, Light + Dark tonal surface elevation, 15-step type scale, 6 spring curves, zero-dependency `motion.js` engine for shape-morphing loaders, wavy progress, and pointer ripples). Use when a project needs an enforceable design system rather than a prompt, or when generated pages keep drifting off-style. Not a prompt library: it is tokens plus per-look policy plus gates that fail on drift."
 compatibility: "Python 3.8+ for the verifier (stdlib only). Chromium/Playwright only if you want runtime checks or screenshot proofs. No server, no network."
 allowed-tools: "Bash(design-pack:*) Bash(sprite-forge:*) Bash(ffmpeg:*) Bash(python3:*) Read Write"
 ---
@@ -49,6 +49,7 @@ looks/material3-expressive/   shipped look 2 — Baseline Violet (#6750a4), Ligh
   look.json               per-look policy: declared-curves, Light+Dark variants, 11 px floor, >= 4.5:1 contrast
   README.md               Zone 1 live capture provenance & Zone 2 8-section contract
   tokens.css              the contract: Light/Dark palettes, 5 tonal tiers, state layers, 6 spring tokens, 8 primitives
+  motion.js               zero-dependency motion engine: spring solver, SVG shape morph, wavy progress, ripple, FAB menu
   pack.html               the retrieval target: proportions, Light/Dark contrast, state matrix, do/don't, blocks
   references/             5 live Material 3 Expressive captures (ref_01 .. ref_05)
   examples/               workspace.html · settings.html · motion.html
@@ -182,6 +183,35 @@ tokens (`--ease-spatial-{fast,default,slow}` with overshoot for geometry/morphs 
 with `--dur-*` tokens; `steps(...)`, `ease`, and `ease-in-out` fail `verify`.
 Runtime `check` enforces the `11 px` type floor (`Label Small`) and `>= 4.5:1`
 WCAG contrast across all 14 Light + Dark viewport checks (`7` M3 viewports × `2` themes).
+
+#### Runtime motion engine (`motion.js`)
+
+`looks/material3-expressive/motion.js` is the zero-dependency companion to `tokens.css`.
+CSS owns the declared curves and hover/focus/pressed state layers; the engine owns what
+CSS cannot express: interrupted spring state, pointer-origin ripples, the 7-shape SVG
+polygon loader, the wavy progress indicator, neighbour-push button groups, and the
+staggered FAB menu. Load it once per page, before your own script:
+
+```html
+<script src="motion.js"></script>       <!-- page at the look root -->
+<script src="../motion.js"></script>    <!-- page under examples/ -->
+```
+
+| API | Use |
+| :--- | :--- |
+| `mount(root)` | Bind loaders, wavy bars, ripples, groups, and FAB menus under `root`. Runs automatically on `DOMContentLoaded`. |
+| `setProgress(el, 0..1)` | Drive a `.m3-progress-wavy` bar (also updates `aria-valuenow` and `data-value`). |
+| `setPaused(bool)` / `isPaused()` | Pause/resume the shared loader + wavy RAF loop. |
+| `evalSpring(name, tSec)` / `sampleLinearCss(name)` | Sample the declared spring at time `t`, or emit its 17-stop `linear(...)` CSS. |
+| `SPRINGS` / `SHAPE_NAMES` / `SHAPES` | Inspect the 6 frozen spring specs and 7 morph shapes (`(damping, stiffness)` from Compose `MotionScheme.expressive()`). |
+| `morphPoints` / `pointsToSvgPath` / `loaderFrame` | Reuse the polygon morph geometry directly. |
+
+Markup contract: `.m3-loader > .m3-loader__morph` gets the engine SVG on mount (CSS
+keeps the pre-JS fallback); `.m3-progress-wavy` needs only `data-value`; ripples attach
+to the closed interactive inventory automatically. `data-dont` opts a subtree out,
+`data-static` freezes one loader/bar, `data-engine="off"` leaves one loader/bar to
+its CSS fallback, and `prefers-reduced-motion: reduce` disables
+every animation while leaving state changes instant.
 
 ## Build a new look
 

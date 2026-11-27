@@ -109,6 +109,19 @@
     return false;
   }
 
+  function hasEngineOff(el) {
+    if (!el) return true;
+    if (typeof el.getAttribute === "function" && el.getAttribute("data-engine") === "off") return true;
+    if (typeof el.closest === "function") {
+      try {
+        if (el.closest('[data-engine="off"]')) return true;
+      } catch (_) {
+        // Ignore selector errors in minimal DOM environments
+      }
+    }
+    return false;
+  }
+
   function collect(root, selector) {
     const out = [];
     if (!root) return out;
@@ -514,7 +527,8 @@
 
   /* ── 3 · Wavy Progress Indicator (.m3-progress-wavy) ────────────────── */
   const WAVY_X_START = 6;
-  const WAVY_X_END = 236;
+  const WAVY_END_INSET = 4;
+  const WAVY_MIN_WIDTH = 120;
   const WAVY_Y_MID = 10;
   const WAVY_GAP = 8;
   const WAVY_WAVELENGTH = 24;
@@ -523,6 +537,42 @@
   const wavyEntries = new WeakMap();
   const liveWavy = new Set();
   let wavePhase = 0;
+  let wavyResizeObserver = null;
+
+  function wavyWidth(el) {
+    const raw = el && typeof el.clientWidth === "number" ? el.clientWidth : 0;
+    return Math.max(WAVY_MIN_WIDTH, Math.round(raw || 240));
+  }
+
+  function syncWavyWidth(entry) {
+    if (!entry || !entry.el) return;
+    const next = wavyWidth(entry.el);
+    if (next === entry.width) return;
+    entry.width = next;
+    if (entry.svg) {
+      entry.svg.setAttribute("viewBox", `0 0 ${next} 20`);
+    }
+    renderWavy(entry, entry.spring ? entry.spring.value : 0, wavePhase);
+  }
+
+  function observeWavyWidth(entry) {
+    if (!entry || !entry.el) return;
+    if (wavyResizeObserver === null && typeof ResizeObserver !== "undefined") {
+      wavyResizeObserver = new ResizeObserver((items) => {
+        for (const item of items) {
+          const found = wavyEntries.get(item.target);
+          if (found) syncWavyWidth(found);
+        }
+      });
+    }
+    if (wavyResizeObserver && typeof wavyResizeObserver.observe === "function") {
+      try {
+        wavyResizeObserver.observe(entry.el);
+      } catch (_) {
+        // Ignore observer errors in minimal DOM environments
+      }
+    }
+  }
 
   function smoothstep(e0, e1, x) {
     const t = clamp01((x - e0) / (e1 - e0));
@@ -531,7 +581,8 @@
 
   function renderWavy(entry, rawVal, phase) {
     const v = clamp01(rawVal);
-    const activeX = WAVY_X_START + (WAVY_X_END - WAVY_X_START) * v;
+    const xEnd = entry.width - WAVY_END_INSET;
+    const activeX = WAVY_X_START + (xEnd - WAVY_X_START) * v;
     const ramp = smoothstep(0.02, 0.12, v) * (1 - smoothstep(0.88, 0.98, v));
     const amplitude = 4.2 * ramp;
 
@@ -553,20 +604,22 @@
       }
     }
 
+    const trackStart = v <= 0.001 ? WAVY_X_START : activeX + WAVY_GAP;
+    const trackEmpty = v > 0.001 && trackStart >= xEnd - 1;
+
     if (entry.track) {
-      const trackStart = v <= 0.001 ? WAVY_X_START : activeX + WAVY_GAP;
-      if (trackStart >= WAVY_X_END - 1) {
+      if (trackEmpty) {
         entry.track.setAttribute("d", "");
       } else {
         entry.track.setAttribute(
           "d",
-          `M ${fmt2(trackStart)} ${fmt2(WAVY_Y_MID)} L ${fmt2(WAVY_X_END)} ${fmt2(WAVY_Y_MID)}`
+          `M ${fmt2(trackStart)} ${fmt2(WAVY_Y_MID)} L ${fmt2(xEnd)} ${fmt2(WAVY_Y_MID)}`
         );
       }
     }
 
     if (entry.dot && entry.dot.style) {
-      entry.dot.style.display = v >= 0.98 ? "none" : "";
+      entry.dot.style.display = trackEmpty ? "none" : "";
     }
   }
 
@@ -574,18 +627,22 @@
     let entry = wavyEntries.get(el);
     if (entry) return entry;
 
+    const width = wavyWidth(el);
     let svg = typeof el.querySelector === "function" ? el.querySelector(".m3-progress-wavy__svg") : null;
     let track = svg && typeof svg.querySelector === "function" ? svg.querySelector(".m3-progress-wavy__track") : null;
     let wave = svg && typeof svg.querySelector === "function" ? svg.querySelector(".m3-progress-wavy__wave") : null;
-    let dot = svg && typeof svg.querySelector === "function" ? svg.querySelector(".m3-progress-wavy__dot") : null;
+    let dot = typeof el.querySelector === "function" ? el.querySelector(".m3-progress-wavy__dot") : null;
 
     if (!svg && typeof document !== "undefined" && typeof document.createElementNS === "function") {
       svg = document.createElementNS(SVG_NS, "svg");
       svg.setAttribute("class", "m3-progress-wavy__svg");
-      svg.setAttribute("viewBox", "0 0 240 20");
+      svg.setAttribute("viewBox", `0 0 ${width} 20`);
       svg.setAttribute("preserveAspectRatio", "none");
       svg.setAttribute("aria-hidden", "true");
       el.appendChild(svg);
+    }
+    if (svg) {
+      svg.setAttribute("viewBox", `0 0 ${width} 20`);
     }
 
     if (svg && typeof document !== "undefined" && typeof document.createElementNS === "function") {
@@ -594,7 +651,7 @@
         track.setAttribute("class", "m3-progress-wavy__track");
         track.setAttribute("fill", "none");
         track.setAttribute("stroke", "currentColor");
-        track.setAttribute("stroke-width", "3.2");
+        track.setAttribute("stroke-width", "4");
         track.setAttribute("stroke-linecap", "round");
         svg.appendChild(track);
       }
@@ -603,31 +660,29 @@
         wave.setAttribute("class", "m3-progress-wavy__wave");
         wave.setAttribute("fill", "none");
         wave.setAttribute("stroke", "currentColor");
-        wave.setAttribute("stroke-width", "3.2");
+        wave.setAttribute("stroke-width", "4");
         wave.setAttribute("stroke-linecap", "round");
         wave.setAttribute("stroke-linejoin", "round");
         svg.appendChild(wave);
       }
       if (!dot) {
-        dot = document.createElementNS(SVG_NS, "circle");
-        dot.setAttribute("class", "m3-progress-wavy__dot");
-        dot.setAttribute("cx", "235");
-        dot.setAttribute("cy", "10");
-        dot.setAttribute("r", "2.5");
-        dot.setAttribute("fill", "currentColor");
-        svg.appendChild(dot);
+        dot = document.createElement("span");
+        dot.className = "m3-progress-wavy__dot";
+        dot.setAttribute("aria-hidden", "true");
+        el.appendChild(dot);
       }
     }
 
     const rawInit = el.dataset && el.dataset.value !== undefined ? parseFloat(el.dataset.value) : 0;
     const initVal = clamp01(Number.isFinite(rawInit) ? rawInit : 0);
 
-    entry = { el, svg, track, wave, dot, spring: null };
+    entry = { el, svg, track, wave, dot, width, spring: null };
     entry.spring = createSpring("spatialDefault", initVal, (curVal) => {
       renderWavy(entry, curVal, wavePhase);
     });
 
     wavyEntries.set(el, entry);
+    observeWavyWidth(entry);
     if (!el.hasAttribute || !el.hasAttribute("data-static")) {
       liveWavy.add(entry);
     }
@@ -651,7 +706,12 @@
     }
 
     const entry = ensureWavyEntry(el);
-    entry.spring.setTarget(next);
+    syncWavyWidth(entry);
+    if (paused) {
+      entry.spring.snap(next);
+    } else {
+      entry.spring.setTarget(next);
+    }
   }
 
   /* ── Shared Animation Loop (Loaders & Wavy Progress) ────────────────── */
@@ -1007,6 +1067,7 @@
     const loaders = collect(root, ".m3-loader");
     for (let i = 0; i < loaders.length; i++) {
       const el = loaders[i];
+      if (hasEngineOff(el)) continue;
       if (!boundLoaders.has(el)) {
         boundLoaders.add(el);
         if (typeof el.setAttribute === "function") {
@@ -1022,6 +1083,7 @@
     const wavyBars = collect(root, ".m3-progress-wavy");
     for (let i = 0; i < wavyBars.length; i++) {
       const el = wavyBars[i];
+      if (hasEngineOff(el)) continue;
       if (!boundWavy.has(el)) {
         boundWavy.add(el);
         if (typeof el.setAttribute === "function") {

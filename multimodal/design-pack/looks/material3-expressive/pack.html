@@ -337,10 +337,18 @@
   .pack-state-cell {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--s-1);
     min-width: 0;
     max-width: 100%;
+    text-align: center;
+  }
+  .pack-fab-row {
+    align-items: flex-start;
+  }
+  .pack-fab-row .pack-state-cell {
+    width: calc(var(--s-10) * 2 - var(--s-2));
+    align-items: center;
   }
   .pack-state-tag {
     color: var(--md-on-surface-variant);
@@ -382,23 +390,12 @@
     border-radius: var(--r-md);
     background: var(--md-surface-container);
   }
-  .pack-poly-svg {
-    width: var(--s-7);
-    height: var(--s-7);
-    display: block;
-    fill: currentcolor;
-    animation: pack-poly-morph var(--dur-spatial-slow) var(--ease-spatial-slow) infinite alternate;
-  }
-  @keyframes pack-poly-morph {
-    0% {
-      transform: scale(0.88) rotate(0deg);
-    }
-    50% {
-      transform: scale(1.06) rotate(18deg);
-    }
-    100% {
-      transform: scale(0.96) rotate(45deg);
-    }
+  .pack-wavy-slot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    min-width: 0;
+    width: 100%;
   }
   .pack-morph-demo {
     display: inline-flex;
@@ -972,7 +969,10 @@
               <button type="button" class="m3-btn m3-btn--filled m3-btn--sm">S</button>
               <button type="button" class="m3-btn m3-btn--tonal m3-btn--md">M</button>
               <button type="button" class="m3-btn m3-btn--tonal m3-btn--md is-pressed">M Pressed</button>
-              <button type="button" class="m3-btn m3-btn--filled m3-btn--lg">LG</button>
+            </div>
+            <div class="m3-row">
+              <span class="pack-state-tag">Large · 96px</span>
+              <button type="button" class="m3-btn m3-btn--filled m3-btn--lg">Large</button>
             </div>
           </div>
         </article>
@@ -1039,7 +1039,7 @@
             <h3 class="m3-title-lg is-emphasized">4 · Floating Action Button (FAB)</h3>
             <span class="m3-label-md m3-supporting">Standard, Vibrant, Extended across 5 states</span>
           </div>
-          <div class="m3-row">
+          <div class="m3-row pack-fab-row">
             <div class="pack-state-cell">
               <button type="button" class="m3-fab" aria-label="Add item">
                 <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
@@ -1076,7 +1076,22 @@
             </div>
             <div class="pack-state-cell">
               <button type="button" class="m3-fab m3-fab--vibrant m3-fab--extended">New note</button>
-              <span class="pack-state-tag">.vibrant --extended</span>
+              <span class="pack-state-tag">vibrant ext</span>
+            </div>
+            <div class="pack-state-cell">
+              <div class="m3-fab-menu">
+                <div class="m3-fab-menu__items" hidden>
+                  <button type="button" class="m3-fab-menu__item">New note</button>
+                  <button type="button" class="m3-fab-menu__item">Upload</button>
+                  <button type="button" class="m3-fab-menu__item">Invite</button>
+                </div>
+                <button type="button" class="m3-fab m3-fab--vibrant m3-fab-menu__trigger" aria-label="Open create menu" aria-expanded="false">
+                  <span class="m3-fab-menu__icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+                  </span>
+                </button>
+              </div>
+              <span class="pack-state-tag">.m3-fab-menu</span>
             </div>
           </div>
         </article>
@@ -1197,8 +1212,8 @@
         <!-- 8. Switch & Loading Indicator -->
         <article class="m3-card m3-card--elevated pack-card">
           <div class="pack-card__head">
-            <h3 class="m3-title-lg is-emphasized">8 · Switch, Polygon Loader &amp; 6 Spring Tokens</h3>
-            <span class="m3-label-md m3-supporting">Live aria-checked switches + morphing SVG polygon</span>
+            <h3 class="m3-title-lg is-emphasized">8 · Switch, Loaders, Wavy Progress &amp; 6 Spring Tokens</h3>
+            <span class="m3-label-md m3-supporting">Live switches + spring-morph loaders + wavy progress</span>
           </div>
           <div class="pack-stack">
             <div class="m3-row">
@@ -1213,37 +1228,21 @@
             <div class="m3-row">
               <div class="pack-loader-slot">
                 <div class="m3-loader" role="status" aria-label="Syncing">
-                  <svg class="pack-poly-svg" viewBox="0 0 36 36" aria-hidden="true">
-                    <path d="M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z">
-                      <animate attributeName="d" dur="2400ms" repeatCount="indefinite"
-                        values="M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z;
-                                M18 2 C22 7 29 14 34 18 C29 22 22 29 18 34 C14 29 7 22 2 18 C7 14 14 7 18 2 Z;
-                                M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z;
-                                M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z" />
-                    </path>
-                  </svg>
+                  <span class="m3-loader__morph" aria-hidden="true"></span>
                 </div>
-                <span class="m3-label-md">Syncing…</span>
+                <span class="m3-label-md">Engine · default</span>
               </div>
               <div class="pack-loader-slot">
                 <div class="m3-loader m3-loader--contained" role="status" aria-label="Contained loader">
-                  <svg class="pack-poly-svg" viewBox="0 0 36 36" aria-hidden="true">
-                    <path d="M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z">
-                      <animate attributeName="d" dur="2400ms" repeatCount="indefinite"
-                        values="M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z;
-                                M18 3 C26 3 33 10 33 18 C33 26 26 33 18 33 C10 33 3 26 3 18 C3 10 10 3 18 3 Z;
-                                M18 2 C22 7 29 14 34 18 C29 22 22 29 18 34 C14 29 7 22 2 18 C7 14 14 7 18 2 Z;
-                                M18 5 C24 1 35 12 31 18 C35 24 24 35 18 31 C12 35 1 24 5 18 C1 12 12 1 18 5 Z" />
-                    </path>
-                  </svg>
+                  <span class="m3-loader__morph" aria-hidden="true"></span>
                 </div>
-                <span class="m3-label-md">Contained SVG</span>
+                <span class="m3-label-md">Engine · contained</span>
               </div>
-              <div class="pack-loader-slot">
+              <div class="pack-loader-slot" data-engine="off">
                 <div class="m3-loader m3-loader--contained" aria-hidden="true">
                   <span class="m3-loader__morph"></span>
                 </div>
-                <span class="m3-label-md">.m3-loader__morph</span>
+                <span class="m3-label-md">CSS fallback (data-engine=off)</span>
               </div>
               <div class="pack-stack">
                 <div class="m3-row">
@@ -1253,6 +1252,14 @@
                 <p class="m3-body-sm m3-supporting">
                   Spatial overshoot: <code class="pack-code">--ease-spatial-fast</code> (350ms), <code class="pack-code">--ease-spatial-default</code> (500ms), <code class="pack-code">--ease-spatial-slow</code> (650ms). Critically damped effects: <code class="pack-code">--ease-effects-fast/default/slow</code> (150/200/300ms).
                 </p>
+              </div>
+            </div>
+            <div class="pack-wavy-slot">
+              <div class="m3-progress-wavy" id="pack-wavy" role="progressbar" aria-label="Engine wavy progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.35" data-value="0.35"></div>
+              <div class="m3-row">
+                <button type="button" class="m3-btn m3-btn--tonal" id="wavy-step-btn">Advance wave</button>
+                <span class="m3-label-md" id="wavy-readout">35%</span>
+                <span class="m3-body-sm m3-supporting">Engine-driven <code class="pack-code">setProgress()</code></span>
               </div>
             </div>
           </div>
@@ -1538,6 +1545,7 @@ design-pack check  looks/material3-expressive/</pre>
   </main>
 </div>
 
+<script src="motion.js"></script>
 <script>
   (() => {
     const root = document.documentElement;
@@ -1693,6 +1701,19 @@ design-pack check  looks/material3-expressive/</pre>
     if (undoBtn && snackMsg) {
       undoBtn.addEventListener("click", () => {
         snackMsg.textContent = "Restored defaults";
+      });
+    }
+
+    const wavy = document.getElementById("pack-wavy");
+    const wavyStep = document.getElementById("wavy-step-btn");
+    const wavyReadout = document.getElementById("wavy-readout");
+    if (wavy && wavyStep) {
+      let wavyValue = 0.35;
+      wavyStep.addEventListener("click", () => {
+        wavyValue = wavyValue >= 0.98 ? 0.08 : Math.min(1, wavyValue + 0.22);
+        if (window.M3Motion) window.M3Motion.setProgress(wavy, wavyValue);
+        else wavy.dataset.value = String(wavyValue);
+        if (wavyReadout) wavyReadout.textContent = Math.round(wavyValue * 100) + "%";
       });
     }
   })();

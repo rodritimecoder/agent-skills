@@ -1600,8 +1600,8 @@ textarea:focus-visible,
 }
 .m3-loader__svg {
   display: block;
-  width: var(--s-7);
-  height: var(--s-7);
+  width: calc(var(--s-7) + var(--s-1));
+  height: calc(var(--s-7) + var(--s-1));
   color: currentcolor;
 }
 
@@ -1631,6 +1631,7 @@ textarea:focus-visible,
 
 /* Wavy Progress Indicator */
 .m3-progress-wavy {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
@@ -1645,9 +1646,10 @@ textarea:focus-visible,
 }
 .m3-progress-wavy__track {
   fill: none;
-  stroke: var(--md-secondary-container);
+  stroke: var(--md-outline);
   stroke-width: 4px;
   stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 .m3-progress-wavy__wave {
   fill: none;
@@ -1655,9 +1657,18 @@ textarea:focus-visible,
   stroke-width: 4px;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 .m3-progress-wavy__dot {
-  fill: var(--md-primary);
+  position: absolute;
+  right: 1.5px;
+  top: calc(var(--s-5) / 2);
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-full);
+  background: var(--md-primary);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 /* ── 12 · Layout & Navigation Primitives ─────────────────────────── */

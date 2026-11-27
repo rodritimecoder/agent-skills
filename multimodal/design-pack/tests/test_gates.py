@@ -4,6 +4,7 @@
 import contextlib
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -485,6 +486,59 @@ class TestDesignPackGates(unittest.TestCase):
             self.assertTrue(any(v.startswith("light:") for v in vp_names), vp_names)
             self.assertTrue(any(v.startswith("dark:") for v in vp_names), vp_names)
             self.assertEqual(set(vp_names), expected)
+
+    def test_material3_pages_wire_the_motion_engine(self):
+        engine = M3_LOOK / "motion.js"
+        self.assertTrue(engine.exists(), "motion.js is missing from the look")
+        pages = {
+            M3_LOOK / "pack.html": 'src="motion.js"',
+            M3_LOOK / "examples" / "workspace.html": 'src="../motion.js"',
+            M3_LOOK / "examples" / "settings.html": 'src="../motion.js"',
+            M3_LOOK / "examples" / "motion.html": 'src="../motion.js"',
+        }
+        for page, needle in pages.items():
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(needle, text, f"{page.name} does not load the motion engine")
+            self.assertNotIn("pack-poly-svg", text, f"{page.name} keeps the SMIL demo")
+        engine_text = engine.read_text(encoding="utf-8")
+        self.assertIn("window.M3Motion = M3Motion", engine_text)
+        self.assertIn("module.exports = M3Motion", engine_text)
+        pack = (M3_LOOK / "pack.html").read_text(encoding="utf-8")
+        self.assertIn('data-engine="off"', pack)
+        self.assertIn("m3-fab-menu__trigger", pack)
+        self.assertIn("m3-progress-wavy", pack)
+
+    def test_motion_engine_spring_and_shape_api(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        probe = (
+            "const m = require(process.argv[1]);"
+            "const css = m.sampleLinearCss('spatialFast');"
+            "console.log(JSON.stringify({"
+            "keys: Object.keys(m.SPRINGS).length,"
+            "shapes: m.SHAPE_NAMES.length,"
+            "spatial: m.evalSpring('spatialDefault', 10),"
+            "effects: m.evalSpring('effectsDefault', 10),"
+            "stops: (css.match(/,/g) || []).length + 1,"
+            "morph: m.morphPoints(m.SHAPES.softBurst, m.SHAPES.pentagon, 0.5).length,"
+            "path: m.pointsToSvgPath(m.SHAPES.softBurst).startsWith('M ')"
+            "}));"
+        )
+        proc = subprocess.run(
+            [node, "-e", probe, str(M3_LOOK / "motion.js")],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        data = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual(data["keys"], 6, data)
+        self.assertEqual(data["shapes"], 7, data)
+        self.assertAlmostEqual(data["spatial"], 1.0, delta=0.01)
+        self.assertAlmostEqual(data["effects"], 1.0, delta=0.01)
+        self.assertEqual(data["stops"], 17, data)
+        self.assertGreaterEqual(data["morph"], 3)
+        self.assertTrue(data["path"])
 
     def test_check_fails_on_m3_control(self):
         proc = run_check(
