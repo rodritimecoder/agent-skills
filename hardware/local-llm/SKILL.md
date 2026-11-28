@@ -188,5 +188,10 @@ server can be moved to another port by editing one file.
 - **Stopping takes 30-60 s.** SIGTERM makes the engine release the pinned
   expert pool; a 3-second SIGKILL fallback (`llama-rig down`) can cut that
   short, so prefer a plain SIGTERM when you have the time.
+- **Sampling profiles.** The launcher picks a set with `PROFILE`: `agent` (default — temperature 0.7,
+  top_p 0.95, top_k 20), `rp` (1.05 / 0.98, no top_k) or `raw` (1.0 / 1.0). `TEMP`, `TOP_P` and
+  `TOP_K` override any profile. Only those three reach maya-ik2: `min_p` and the repetition /
+  frequency / presence penalties are forwarded by the server and dropped by the engine, so setting
+  them here changes nothing (use `:8091`, a llama.cpp server, when penalties matter).
 - **Text only.** The image tower (`maya-vision`) is not built here, so
   `/health` reports `images: false` and picture inputs are refused.
