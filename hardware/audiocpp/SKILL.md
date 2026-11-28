@@ -3,13 +3,13 @@ name: audiocpp
 
 description: >
   Local audio intelligence: speech-to-text, text-to-speech, forced alignment and voice
-  cloning, powered by audio.cpp v0.9.4 on dual AMD Radeon RX 9060 XT GPUs. Every model runs
+  cloning, powered by audio.cpp v0.9.6 on dual AMD Radeon RX 9060 XT GPUs. Every model runs
   faster than real time. Use this skill when you need to transcribe a recording, turn speech
   into text, narrate or speak text out loud to a wav file, clone a voice, align a transcript to
   its audio, identify who spoke when, or diarize speakers. For a spoken chat page with an
   avatar, use companion.
 
-compatibility: "Requires Dual AMD Radeon RX 9060 XT GPUs with Vulkan and the audio.cpp v0.9.4 binary."
+compatibility: "Requires Dual AMD Radeon RX 9060 XT GPUs with Vulkan and the audio.cpp v0.9.6 binary."
 allowed-tools: "Bash(audiocpp:*) Bash(python3:*) Read Write"
 ---
 
@@ -20,7 +20,7 @@ allowed-tools: "Bash(audiocpp:*) Bash(python3:*) Read Write"
 # Local Audio Intelligence (`audiocpp`)
 
 Hardware-accelerated speech-to-text, text-to-speech, forced alignment and voice
-cloning, powered by `audio.cpp v0.9.4` on **dual AMD Radeon RX 9060 XT** GPUs
+cloning, powered by `audio.cpp v0.9.6` on **dual AMD Radeon RX 9060 XT** GPUs
 over Vulkan. Every model runs faster than real time, so a minute of audio
 transcribes in under a second and a sentence narrates in under fifty
 milliseconds.
@@ -197,7 +197,7 @@ python3 $AC tts "Synthesizing from laptop over Tailscale" --model kokoro -o spee
 The install is reached through one symlink, so a version change is a link flip:
 
 ```
-/run/media/rodri/AI/audio.cpp -> /run/media/rodri/AI/audio-v0.9.4-bin-ubuntu-x64-vulkan
+/run/media/rodri/AI/audio.cpp -> /run/media/rodri/AI/audio-v0.9.6-bin-ubuntu-x64-vulkan
 ```
 
 Flip it with the gate, never by hand:
@@ -205,7 +205,7 @@ Flip it with the gate, never by hand:
 ```bash
 S=hardware/audiocpp/scripts/switch-version.sh
 $S --status                                  # what is live, and what answers :8081
-$S /home/rodri/audio-v0.9.5-bin-ubuntu-x64-vulkan
+$S /path/to/audio-vX.Y.Z-bin-ubuntu-x64-vulkan
 $S --rollback
 ```
 

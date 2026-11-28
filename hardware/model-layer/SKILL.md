@@ -177,7 +177,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 ### `:8081` audio — `local-audio-audiocpp`
 
 - **Role:** Speech-to-text, text-to-speech, forced alignment, voice cloning
-- **Service:** audio.cpp 0.9.4 (Vulkan)
+- **Service:** audio.cpp 0.9.6 (Vulkan)
 - **Start:** `run-audiocpp.sh` (volume `sh/`; in-repo copy `launchers/run-audiocpp.sh`)
 - **Health:** `curl -s http://127.0.0.1:8081/health`
 - **API:** `/v1/audio/*`

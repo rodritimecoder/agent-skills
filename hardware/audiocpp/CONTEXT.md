@@ -48,16 +48,17 @@ python3 scripts/audiocpp_cli.py doctor # binary, config, GPU, model files
 `check-docs.py` is the gate that was missing. It fails when a claim in this folder
 disagrees with what is installed, which is exactly how every fault below survived.
 
-## Live state — 2026-11-08
+## Live state — 2026-11-28
 
-- **Version:** `0.9.4`  <!-- check-docs.py: binary, this line and ports.json must agree -->
-- **Install:** `/run/media/rodri/AI/audio-v0.9.4-bin-ubuntu-x64-vulkan` (git `f7ac446f`, built 2026-11-04)
+- **Version:** `0.9.6`  <!-- check-docs.py: binary, this line and ports.json must agree -->
+- **Install:** `/run/media/rodri/AI/audio-v0.9.6-bin-ubuntu-x64-vulkan` (git `04a37f2e`, built 2026-11-21)
 - **Symlink:** `/run/media/rodri/AI/audio.cpp` -> the install above
 - **Backends:** `cpu,vulkan` — Vulkan only in practice, `RADV GFX1200`
 - **Skill path:** `/run/media/rodri/AI/skills/audiocpp` -> `~/src/my-agent-skills/hardware/audiocpp`
-- **Model specs:** 140 families; **configured:** 15 in `server.json`
+- **Model specs:** 152 families; **configured:** 15 in `server.json`
+- **New families in 0.9.6:** granite_speech5, m5_tts, voxmel_tts, tiny_voca, soulx_singer, rosvot, voice_isolator, zonos2, zonos3, edda_asr, moss_soundeffect, mulacover — specs ship, weights do not
 - **Server:** `127.0.0.1:8081`, `lazy_load`, `max_loaded_models 3`
-- **Port slot:** `ports.json` id `audio`, service `audio.cpp 0.9.4 (Vulkan)`, owning skill `audiocpp`
+- **Port slot:** `ports.json` id `audio`, service `audio.cpp 0.9.6 (Vulkan)`, owning skill `audiocpp`
 - **Defaults:** tts `kokoro` · asr `nemotron` — both served `mode: streaming`
 - **Word timings:** only `crisperwhisper` emits them; `--words-out` with any other model warns and writes nothing
 - **Launcher:** `/run/media/rodri/AI/sh/run-audiocpp.sh` (falls through to the symlink)

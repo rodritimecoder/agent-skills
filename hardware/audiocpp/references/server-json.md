@@ -4,7 +4,7 @@ The config an audio.cpp install runs on: which models exist, which GGUF backs ea
 one, and which voice presets are wired. The install lives on ext4; this copy lives
 in git so it survives a re-extraction, a wiped install, or a machine rebuild.
 
-**Snapshot:** audio.cpp 0.9.4 · 2026-11-08 · 15 models, 3 of them pointing at absent files (below)
+**Snapshot:** audio.cpp 0.9.6 · 2026-11-28 · 15 models, 3 of them pointing at absent files (below)
 **Machine copy:** `references/server.json` — the seed the switch script installs
 **Why this file exists:** the config was never versioned. On 2026-11-08 a rebuild
 revealed that `/run/media/rodri/AI/sh/run-audiocpp.sh` had always pointed at
@@ -15,7 +15,7 @@ on an NTFS volume does not.
 ## Restore
 
 ```bash
-# the switch script seeds a fresh install that ships no config (v0.9.4 does not)
+# the switch script seeds a fresh install that ships no config (0.9.6 ships none)
 hardware/audiocpp/scripts/switch-version.sh /path/to/audio-vX.Y.Z-bin-ubuntu-x64-vulkan
 
 # or by hand

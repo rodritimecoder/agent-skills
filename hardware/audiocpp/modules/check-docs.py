@@ -169,7 +169,7 @@ def main() -> int:
     m = re.search(r"\*\*Defaults:\*\*\s+tts\s+`([^`]+)`\s+·\s+asr\s+`([^`]+)`", read(ROOT / "CONTEXT.md"))
     if check(m is not None, "CONTEXT.md declares Defaults"):
         default_tts, default_asr = m.group(1), m.group(2)
-        cli_src = read(ROOT / "scripts/audiocpp_core.py")
+        cli_src = read(ROOT / "modules/audiocpp_core.py")
         for const, want in (("DEFAULT_TTS", default_tts), ("DEFAULT_ASR", default_asr)):
             got = re.search(rf'^{const}\s*=\s*"([^"]+)"', cli_src, re.M)
             check(
