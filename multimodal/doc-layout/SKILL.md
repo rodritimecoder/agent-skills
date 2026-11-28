@@ -164,7 +164,7 @@ figure descriptions, and `--embed-images` crops the figures from those bboxes.
 
 ## Ports (do not default onto :8080)
 
-`:8080` is the **primary LLM** (Qwen3.6-35B), not a vision model. `--vlm` is
+`:8080` is the **primary LLM** (Inkling-2-Mini-Unbound-v2), not a vision model. `--vlm` is
 therefore required rather than defaulted:
 
 | port | service | works here? |

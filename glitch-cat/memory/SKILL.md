@@ -13,7 +13,7 @@ description: >
   request for context from earlier work. Works locally with SQLite FTS5; no
   embedding server and no cloud account required.
 
-compatibility: "Local only. Python 3.10+ standard library and SQLite FTS5. Markdown is the source of truth; db/memory.db is a derived index you can delete. The optional `--llm` salience pass needs the local Genesis model on :8080 and falls back to the deterministic heuristic when it is offline."
+compatibility: "Local only. Python 3.10+ standard library and SQLite FTS5. Markdown is the source of truth; db/memory.db is a derived index you can delete. The optional `--llm` salience pass needs the local :8080 model and falls back to the deterministic heuristic when it is offline."
 
 allowed-tools: "Bash(memory:*) Bash(python3:*) Read Write"
 ---

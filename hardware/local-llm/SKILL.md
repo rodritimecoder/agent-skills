@@ -1,26 +1,28 @@
 ---
 name: local-llm
 
-description: "Query the local LLM: Qwen3.6-35B-A3B Uncensored Genesis on port 8080, a zero-cost, offline, dual-GPU Vulkan coder and writer. Use when the user says \"the local llm\", \"use the local model\", or \"write a python script\" with it, or wants drafting, refactors, long-form text, or any prompt that should not leave the machine — even when they never name the model. Also starts and health-checks the server when it is down. The full endpoint roster is model-layer; this skill is the :8080 coder itself."
+description: "Query the local LLM: Inkling-2-Mini-Unbound-v2 on port 8080, a zero-cost, offline coder and writer served by the maya-ik2 engine on one RX 9060 XT. Use when the user says \"the local llm\", \"use the local model\", or \"write a python script\" with it, or wants drafting, refactors, long-form text, or any prompt that should not leave the machine — even when they never name the model. Also starts and health-checks the server when it is down. The full endpoint roster is model-layer; this skill is the :8080 coder itself."
 
-compatibility: "Requires dual AMD Radeon RX 9060 XT GPUs with Vulkan and the llama.cpp Vulkan build. The server is NOT started by default: port 8080 is offline until launched with the skill's start command or /run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh. Takes ~15-20s to load 22GB into VRAM."
+compatibility: "Requires an AMD Radeon RX 9060 XT (gfx1200) with ROCm 10 and the maya-ik2 HIP build in /home/rodri/build/maya-ik2, driven by serve/server.py. The server is NOT started by default: port 8080 is offline until launched with the skill's start command or /run/media/rodri/AI/sh/inkling-2-mini-unbound.sh. Takes ~10-25 s to open the model; 14.7 GiB of experts then stay in a pinned host-RAM pool."
 allowed-tools: "Bash(python3:*) Bash(local-llm:*) Bash(curl:*) Read"
 ---
 
 > **Model layer:** the server behind this skill is registered in the `model-layer` skill (slot `:8080`) — launcher, weights files, health and quirks. Read it before starting, swapping or debugging the model. If it is down, the client starts it via `llama-rig up 8080` (`--no-autostart` skips).
 
-# Local LLM — Qwen3.6-35B Genesis (`local-llm`)
+# Local LLM — Inkling-2-Mini-Unbound-v2 (`local-llm`)
 
-An OpenAI-compatible `llama-server` on `:8080`, serving
-**Qwen3.6-35B-A3B Uncensored Genesis Final** (Q4_0 ROCMFP4, layer-split
-45/55 across two RX 9060 XT cards, 131k context, thinking disabled).
+An OpenAI- and Anthropic-compatible `serve/server.py` on `:8080`, serving
+**Inkling-2-Mini-Unbound-v2** (UD-Q4_K_XL, the Unbound finetune of Thinking
+Machines' 26B looped MoE) through the **maya-ik2** engine: one RX 9060 XT,
+65,536-token context, FP8 KV, 10 GiB expert cache over a 14.7 GiB pinned host
+pool, ~33 tok/s decode. Text only — no image tower is built.
 
 Use it when a task should cost nothing and stay offline. Pass `--fallback` to
 route to OpenRouter Free or Gemini when the local server is down.
 
 ```
 agent ──▶ scripts/llm_client.py ──▶ http://127.0.0.1:8080/v1/chat/completions
-                                        └── llama-server (22 GB VRAM)
+                                        └── serve/server.py ──▶ maya-ik2 (HIP, GPU 0)
 ```
 
 ---
@@ -95,7 +97,7 @@ python3 scripts/llm_client.py doctor
 # Ask something
 python3 scripts/llm_client.py "write a bash function that retries a command"
 
-# Bring it up first (loads 22 GB into VRAM, ~15-20s)
+# Bring it up first (opens the engine in ~10-25s)
 python3 scripts/llm_client.py start
 
 # Offline? Borrow a cloud model for this call only
@@ -175,7 +177,16 @@ server can be moved to another port by editing one file.
   poll `doctor` rather than the first request.
 - **`--fallback` is per call.** It does not start the local server, and the
   reply comes from a remote model — say so if the caller needs provenance.
-- **OOM.** The server wants ~22 GB across both cards. If something else holds
-  VRAM on another slot, start this first or free the other ports.
-- **Thinking is disabled** in the launcher's chat template. Prompts expecting
-  a visible chain of thought will get a direct answer instead.
+- **OOM.** The server holds one whole 16 GB card (~15.5 GiB: dense weights, FP8
+  KV cache and a 10 GiB expert cache) plus 14.7 GiB of **pinned host RAM** for
+  the expert pool. GPU 1 stays free for the auxiliary slots, but the host RAM is
+  shared with everything else on the box.
+- **Thinking follows the model's own default.** With no level named the server
+  reports `auto` (the template's 0.9, "high"); send
+  `chat_template_kwargs: {"enable_thinking": false}` or `reasoning_effort:
+  "none"` when you want the answer with no reasoning segment.
+- **Stopping takes 30-60 s.** SIGTERM makes the engine release the pinned
+  expert pool; a 3-second SIGKILL fallback (`llama-rig down`) can cut that
+  short, so prefer a plain SIGTERM when you have the time.
+- **Text only.** The image tower (`maya-vision`) is not built here, so
+  `/health` reports `images: false` and picture inputs are refused.

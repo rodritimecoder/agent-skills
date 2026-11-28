@@ -9,7 +9,7 @@ description: >
   state to a subagent, or to slice a huge file instead of reading it whole. It preserves facts
   rather than summarising them away.
 
-compatibility: "Requires the local Qwen3.6-35B Genesis LLM on :8080 for `cgate query` projection (see the `local-llm` skill). `cgate view` and `cgate grep` need no server."
+compatibility: "Requires the local LLM on :8080 (Inkling-2-Mini-Unbound-v2, the `local-llm` skill) for `cgate query` projection (see the `local-llm` skill). `cgate view` and `cgate grep` need no server."
 allowed-tools: "Bash(state-compactor:*) Bash(python3:*) Read Write"
 ---
 
@@ -45,7 +45,7 @@ for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
 1. **Context Rot & Token Exhaustion:** Long conversations degrade reasoning, drop earlier constraints, and burn context windows on massive log files or code dumps.
 2. **Context Poisoning:** Native auto-compaction triggers too late, runs an uncontrolled LLM summary over past turns, compresses an error into "fact", and poisons all subsequent turns.
 3. **The State File Solution (`state-compactor`):** Continuous writing of ground-truth facts, invariants, decisions, and negative constraints into `.agent_state.json` and mirrored in human-readable `STATE.md`.
-4. **The Retrieval Gating Solution (`cgate`):** Reading full files to find a 2-line detail bloats context. `cgate` uses AST symbol extraction and the local **Qwen3.6-35B Genesis LLM (`:8080`)** to project only what is strictly needed into the prompt.
+4. **The Retrieval Gating Solution (`cgate`):** Reading full files to find a 2-line detail bloats context. `cgate` uses AST symbol extraction and the local **LLM on `:8080` (Inkling-2-Mini-Unbound-v2)** to project only what is strictly needed into the prompt.
 
 ---
 

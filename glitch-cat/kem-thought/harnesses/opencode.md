@@ -3,7 +3,7 @@
 > *"Code decides wherever it can; a model should only judge when it's absolutely necessary."*  
 > — Kem Glitch, *Code Decides*
 
-OpenCode is an open-source, terminal-native AI agent environment. In this workstation setup, OpenCode connects directly to the local model layer (Genesis 35B coder on `:8080`, Nemotron ASR on `:8081`, Jev decision engine on `:8083`) and free OpenRouter tiers, reading skills directly from `~/src/my-agent-skills/surface`.
+OpenCode is an open-source, terminal-native AI agent environment. In this workstation setup, OpenCode connects directly to the local model layer (Inkling-2-Mini-Unbound-v2 on `:8080`, Nemotron ASR on `:8081`, Jev decision engine on `:8083`) and free OpenRouter tiers, reading skills directly from `~/src/my-agent-skills/surface`.
 
 ---
 
@@ -11,7 +11,7 @@ OpenCode is an open-source, terminal-native AI agent environment. In this workst
 
 1. **Zero-Copy Surface Discovery:** OpenCode reads skills directly from `~/src/my-agent-skills/surface` as configured in `~/.config/opencode/opencode.json`. Any skill symlinked into `surface/` is discovered instantly.
 2. **Local Model Affinity:** OpenCode can route sub-tasks directly to local daemon ports without spending API tokens:
-   - `:8080` — Genesis Qwen 35B coder (`local-llm`)
+   - `:8080` — Inkling-2-Mini-Unbound-v2 coder (`local-llm`)
    - `:8083` — Jev calibrated decision engine (`jev-decision`)
    - `:8082` — Document & slide OCR (`ocr`)
 3. **Compound Bash Batching:** OpenCode supports running multiple commands in structured batch sequences. Scripts should be written to fail-fast (`set -e` or `&&`).
@@ -29,7 +29,7 @@ In OpenCode, execute tasks as discrete pipeline steps, tagging each step explici
   python3 scripts/classify_task.py --task "Implement payment gateway" > step_01_classify.json
   ```
 - **`[P]` Step 2: Implement Vertical Slice**
-  Run code generation using local Genesis or OpenRouter:
+  Run code generation using the local model or OpenRouter:
   ```bash
   python3 hardware/local-llm/scripts/llm_client.py "Implement payment provider interface in src/payment/provider.ts" > step_02_patch.diff
   patch -p1 < step_02_patch.diff

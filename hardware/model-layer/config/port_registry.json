@@ -7,12 +7,12 @@
   ],
   "models": {
     "8080": {
-      "alias": "local-coder-genesis",
-      "vram_mb": 20500,
+      "alias": "inkling-unbound",
+      "vram_mb": 16000,
       "pinned": true,
-      "name": "Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP",
-      "cmd": "bash $HOME/src/my-agent-skills/launchers/luffy-hermes-mtp-vulkan.sh",
-      "role": "Primary generative LLM \u2014 chat, code, long-form writing, prose projection"
+      "name": "Inkling-2-Mini-Unbound-v2",
+      "cmd": "bash $HOME/src/my-agent-skills/launchers/inkling-2-mini-unbound.sh",
+      "role": "Primary generative LLM \u2014 chat, code, long-form writing, agent calls"
     },
     "8081": {
       "alias": "local-audio-audiocpp",

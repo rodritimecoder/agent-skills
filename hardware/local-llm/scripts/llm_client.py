@@ -48,7 +48,7 @@ def load_config() -> Dict[str, Any]:
             pass
     return {
         "default_endpoint": "http://127.0.0.1:8080",
-        "model_name": "qwen3.6-35b-genesis",
+        "model_name": "inkling-2-mini-unbound-v2",
         "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
         "defaults": {"temperature": 0.7, "top_p": 0.8, "max_tokens": 4096}
     }
@@ -94,8 +94,8 @@ def get_llm_candidates() -> List[Dict[str, Any]]:
     default_launcher = cfg.get("launcher_script", "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh")
     return [
         {
-            "model": cfg.get("model_name", "qwen3.6-35b-genesis"),
-            "quant": "Q4_K_M",
+            "model": cfg.get("model_name", "inkling-2-mini-unbound-v2"),
+            "quant": "UD-Q4_K_XL",
             "status": "default",
             "launcher": default_launcher,
             "launcher_path": default_launcher,
@@ -105,9 +105,17 @@ def get_llm_candidates() -> List[Dict[str, Any]]:
     ]
 
 
+LOCAL_PROC_RE = r"[l]lama-server|serve/server[.]py"
+
+
+def local_process_running() -> bool:
+    """A model server for this slot is alive: llama-server, or any engine behind serve/server.py."""
+    return subprocess.run(["pgrep", "-f", LOCAL_PROC_RE], capture_output=True).returncode == 0
+
+
 def is_genesis_online(endpoint: str = "http://127.0.0.1:8080") -> bool:
-    res = subprocess.run("pgrep -f '[l]lama-server.*([Q]wen|[G]emma|[S]wift|[T]hinking)'", shell=True, capture_output=True)
-    if res.returncode != 0:
+    """The :8080 slot answers, whatever engine serves it (llama-server, or maya-ik2 via serve/server.py)."""
+    if not local_process_running():
         return False
 
     try:
@@ -232,7 +240,7 @@ def doctor_check(json_mode: bool = False) -> Dict[str, Any]:
     launcher = cfg.get("launcher_script", "")
 
     online = is_genesis_online(endpoint)
-    proc_running = subprocess.run("pgrep -f '[l]lama-server.*([Q]wen|[G]emma|[S]wift|[T]hinking)'", shell=True, capture_output=True).returncode == 0
+    proc_running = local_process_running()
     candidates = get_llm_candidates()
 
     res = {
@@ -240,7 +248,7 @@ def doctor_check(json_mode: bool = False) -> Dict[str, Any]:
         "online": online,
         "process_running": proc_running,
         "endpoint": endpoint,
-        "model_name": cfg.get("model_name", "qwen3.6-35b-genesis"),
+        "model_name": cfg.get("model_name", "inkling-2-mini-unbound-v2"),
         "launcher_path": launcher,
         "available_models_count": len(candidates),
     }
@@ -250,7 +258,7 @@ def doctor_check(json_mode: bool = False) -> Dict[str, Any]:
         return res
 
     print("\n" + "=" * 55)
-    print(" 🏥 LOCAL-LLM DOCTOR — Dual-GPU Model Status")
+    print(" 🏥 LOCAL-LLM DOCTOR — Model Status")
     print("=" * 55)
     print(f" Target Endpoint   : {endpoint}")
     print(f" Service Status    : {'ONLINE ✅' if online else 'OFFLINE ⚠️'}")
@@ -260,7 +268,7 @@ def doctor_check(json_mode: bool = False) -> Dict[str, Any]:
 
     if not online:
         print("\n💡 LLM server is not running on :8080.")
-        print("   To start the dual-GPU server, run in another terminal:")
+        print("   To start the server, run in another terminal:")
         print(f"   bash {launcher}")
         print("   (Or use `scripts/llm_client.py start` to launch in background)")
     print("=" * 55 + "\n")
@@ -335,7 +343,7 @@ def emit(res: str, args) -> None:
     --json      wrap the reply in JSON
     --project   keep only these JSON keys (implies --json)
     """
-    payload = {"content": res, "model": load_config().get("model_name", "qwen3.6-35b-genesis")}
+    payload = {"content": res, "model": load_config().get("model_name", "inkling-2-mini-unbound-v2")}
 
     if getattr(args, "project", None):
         keys = [k.strip() for k in args.project.split(",") if k.strip()]

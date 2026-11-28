@@ -117,7 +117,7 @@ Every request received through `/v1/chat/completions` is automatically classifie
 | Component | Target Port | Model / Engine | Role |
 | :--- | :--- | :--- | :--- |
 | **Classifier & Judge** | `:8083` | `h2o-lightning-4b` via `jev-decision` | Calibrated P(true) quality judgement & 3-way triage |
-| **Local Zero-Cost Tier** | `:8080` | Qwen3.6-35B Genesis via llama-swap | Free local execution for Easy tier |
+| **Local Zero-Cost Tier** | `:8080` | Inkling-2-Mini-Unbound-v2 (maya-ik2) | Free local execution for Easy tier |
 | **Cloud Free Tier** | OpenRouter Free | Nemotron 3.5 Lightning / Nemotron Ultra | Zero-quota offload |
 | **Frontier Tier** | OpenRouter / Gemini | Claude 3.7 Sonnet / Gemini 2.5 Pro | High-complexity tasks and fallback swaps |
 

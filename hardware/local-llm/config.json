@@ -1,14 +1,14 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "local-llm",
-  "description": "Client for the local Qwen3.6-35B-A3B Uncensored Genesis server on :8080 with dual-GPU Vulkan offload",
+  "description": "Client for the local Inkling-2-Mini-Unbound-v2 server on :8080, served by the maya-ik2 engine on one RX 9060 XT",
   "default_endpoint": "http://127.0.0.1:8080",
-  "model_name": "qwen3.6-35b-genesis",
-  "launcher_script": "/run/media/rodri/AI/sh/luffy-hermes-mtp-vulkan.sh",
+  "model_name": "inkling-2-mini-unbound-v2",
+  "launcher_script": "/run/media/rodri/AI/sh/inkling-2-mini-unbound.sh",
   "defaults": {
     "temperature": 0.7,
-    "top_p": 0.8,
+    "top_p": 0.95,
     "max_tokens": 4096,
-    "presence_penalty": 1.5
+    "presence_penalty": 0.0
   }
 }

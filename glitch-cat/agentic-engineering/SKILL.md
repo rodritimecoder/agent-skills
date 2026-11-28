@@ -56,7 +56,7 @@ for flags and exit codes; structured data goes to stdout, diagnostics to stderr.
    - Invokes a **Fresh-Context Judge** — a separate model call with the diff, the requirements and the gate results, and no conversation history. Ticked checkboxes are claims, not evidence.
    - If a gate or the judge rejects, Kem's pink arrow (`SENT BACK`) returns the card with a structured rejection delta.
 5. **The Splitter**: Partitions approved specs into parallel single-writer task lanes.
-6. **Multi-Model Sandboxes**: Allocates concurrent lanes across model tiers (Opus, Sonnet, local Genesis 35B) in isolated sandboxes / worktrees.
+6. **Multi-Model Sandboxes**: Allocates concurrent lanes across model tiers (Opus, Sonnet, local Inkling 26B) in isolated sandboxes / worktrees.
 7. **Delivery to YOU**: The human is the final verifier. `agentic run` stops at `03_review`; only an explicit `agentic kanban move <card> done`, or `--mark-done`, closes the card.
 
 ---

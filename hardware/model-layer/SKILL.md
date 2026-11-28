@@ -152,7 +152,7 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 <!-- ports:begin -->
 | Slot | Port | Alias | Default launcher | Model | Weights | Used by |
 |---|---|---|---|---|---|---|
-| `llm` | `:8080` | `local-coder-genesis` | `luffy-hermes-mtp-vulkan.sh` | Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft) **(candidate)** | `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf`<br>`models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf` | local-llm, omnicli |
+| `llm` | `:8080` | `inkling-unbound` | `inkling-2-mini-unbound.sh` | Inkling-2-Mini-Unbound-v2 (UD-Q4_K_XL (NVFP4 experts, Unbound v2 finetune)) | `models/kelsey1337/Inkling-2-Mini-Unbound-UD-Q4_K_XL-Maya-GGUF/Inkling-2-Mini-Unbound-v2-UD-Q4_K_XL.gguf` | local-llm, omnicli |
 | `audio` | `:8081` | `local-audio-audiocpp` | `run-audiocpp.sh` | nemotron-asr | — | audiocpp |
 | `decision` | `:8083` | `local-decide` | `h2o.sh` | h2o-lightning-4b (Q4_K_M + mmproj F16) | — | jev-decision, decision-model, frontend-uat, eval-router |
 | `decision-aux` | `:8089` | `local-decide-aux` | `imajev-decider.sh` | Imajev-4B (Q4_K_M + mmproj f16) | `models/mindchain/imajev-4b-GGUF/imajev-4b-Q4_K_M.gguf`<br>`models/mindchain/imajev-4b-GGUF/imajev-4b-mmproj-f16.gguf` | jev-decision |
@@ -162,17 +162,17 @@ the models it swaps. Note: `qwen3.6-35b` is backed by the Hermes MTP MXFP4 weigh
 | `llm-aux` | `:8091` | `local-llm-aux` | `lfm3-1.7b-uncensored.sh` | LFM3-1.7B-Uncensored-AD (Q4_K_M) | `models/AtomicChat/LFM3-1.7B-Uncensored-GGUF/LFM3-1.7B-Uncensored-AD-Q4_K_M.gguf` | — |
 | `raon` | `:8085` | `local-raon-nano` | `raon-nano-official-mtp.sh` | Raon-1 nano (official) (Q8_0_MTP) | `models/KRAFTON/Raon-1-nano-gguf/raon-1-nano-Q8_0_MTP.gguf` | — |
 
-### `:8080` llm — `local-coder-genesis`
+### `:8080` llm — `inkling-unbound`
 
-- **Role:** Primary generative LLM — chat, code, long-form writing, prose projection
-- **Service:** llama-server (Vulkan)
-- **Start:** `luffy-hermes-mtp-vulkan.sh` (volume `sh/`; in-repo copy `launchers/luffy-hermes-mtp-vulkan.sh`)
+- **Role:** Primary generative LLM — chat, code, long-form writing, agent calls
+- **Service:** maya-ik2 (ROCm/HIP) + serve/server.py
+- **Start:** `inkling-2-mini-unbound.sh` (volume `sh/`; in-repo copy `launchers/inkling-2-mini-unbound.sh`)
 - **Health:** `curl -s http://127.0.0.1:8080/health`
 - **API:** `/v1/chat/completions`
 - **Owner:** `local-llm` · **Used by:** local-llm, omnicli
-- **Weights:** `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/Hermes3.6-35B-A3B-Uncensored-Genesis-MTP-MXFP4.gguf` · `models/LuffyTheFox/Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP-GGUF/mmproj-Hermes3.6-35B-A3B-Uncensored-Genesis-F16.gguf`
-- **Quirks:** 131072 context, nextn head, --spec-type draft-mtp,ngram-simple (n-max 4, ngram m=31), dual-GPU ROCm/HIP tensor split 50/50, -lm none.
-- **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Clover-35B-A3B-Preview` (Q4_K_M, candidate) · `SenseNova-Loop-9B-abliterated` (Q4_K_M + DFlash drafter-2 Q4_K_M, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate) · `Inkling-2-Mini` (UD-Q3_K_XL (no draft, no mmproj), candidate) · `llama-router (multi-model multiplexer)` (n/a — presets live in hardware/model-layer/config/llama-router.ini, candidate)
+- **Weights:** `models/kelsey1337/Inkling-2-Mini-Unbound-UD-Q4_K_XL-Maya-GGUF/Inkling-2-Mini-Unbound-v2-UD-Q4_K_XL.gguf`
+- **Quirks:** maya-ik2 (ROCm/HIP, gfx1200) behind serve/server.py: 26B looped MoE (48 layer visits, 8/128 experts), served on ONE RX 9060 XT (GPU 1 stays free), 65536 ctx, FP8 KV, 10 GiB expert cache over 14.7 GiB of pinned host RAM, no drafter (DSpark needs the 24 GB single-GPU resident path).
+- **Candidates:** `Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-MTP` (MXFP4 experts (FFN 1-38) + Q8_0, MTP draft, candidate) · `Clover-35B-A3B-Preview` (Q4_K_M, candidate) · `SenseNova-Loop-9B-abliterated` (Q4_K_M + DFlash drafter-2 Q4_K_M, candidate) · `Qwen3.8-27B-GSQ-RCO + DFlash2 draft` (IQ3_XXS target, Q4_K_M draft, candidate) · `Swift-1.5-Qwen3.8-27B-heretic` (IQ3_XXS + MTP draft, candidate) · `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive` (Q4_K_P, candidate) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced` (Q4_K_M, legacy) · `Qwen3.6-35B-A3B-MTP` (UD-Q3_K_M, candidate) · `ThinkingCap-Qwen3.6-27B` (Q4_K_M + f16 mmproj, candidate) · `Inkling-2-Mini` (UD-Q3_K_XL (no draft, no mmproj), candidate) · `llama-router (multi-model multiplexer)` (n/a — presets live in hardware/model-layer/config/llama-router.ini, candidate) · `Inkling-2-Mini-Unbound-v2` (UD-Q4_K_XL (NVFP4 experts, Unbound v2 finetune), current)
 
 ### `:8081` audio — `local-audio-audiocpp`
 

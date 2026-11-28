@@ -62,7 +62,7 @@ Either may carry an **explainer video** (Zoom recording or local MP4). Store URL
 
 ## 5. Stage 2 — Sifting (parallel classifiers)
 
-**Concurrency (planned):** the local 35B classifier (Qwen3.6-35B-A3B, port 8080 per `ports.py list`) + free OpenRouter models (`openrouter-free`: nemotron, etc.) running in parallel, plus `free-swarm` fan-out. Repeated classifier prompts are skipped by the `glitch-cat/semantic-cache` Python module. Classifiers are cheap and fast — high-volume triage, not deep reasoning.
+**Concurrency (planned):** the local 26B classifier (Inkling-2-Mini-Unbound-v2, port 8080 per `ports.py list`) + free OpenRouter models (`openrouter-free`: nemotron, etc.) running in parallel, plus `free-swarm` fan-out. Repeated classifier prompts are skipped by the `glitch-cat/semantic-cache` Python module. Classifiers are cheap and fast — high-volume triage, not deep reasoning.
 
 **`free-swarm` (real path `orchestration/free-swarm`):** it is not a CLI command. It is an OpenCode subagent skill. Invocation:
 1. Install once: `python3 orchestration/free-swarm/scripts/install.py` (symlinks the nine `free-*` agents into `~/.config/opencode/agents`).
@@ -123,7 +123,7 @@ Three Kem/Glitch Cat skills anchor the pipeline. Each maps to a distinct concern
 ### 7.1 `eval-router` — digestion workhorse (sifting stage)
 - **What:** self-calibrating request router. Classifies prompt complexity (Easy/Moderate/Hard) via a local model, dispatches to local zero-cost models or free tiers (OpenRouter), verifies output quality (speculative shadow eval), and harvests failures into training evals. Claimed 30-40% token cost reduction.
 - **Real CLI (verified in `DE-RISK.md`):** `python3 glitch-cat/eval-router/eval_router.py {route,exec,stats,harvest}`. Stage 2 will call `eval_router.py route` for tier classification and `eval_router.py exec` for routed execution with fallback.
-- **How implemented (planned):** digestion prompts (is_admin_fluff, is_duplicate, topic_tag, quality_score, cue_candidate, node_type) get routed — easy ones to the cheapest free 9B, harder ones to the local 35B (Qwen3.6-35B-A3B, :8080). Shadow verification catches bad classifier outputs; harvested failures feed back into better prompts. Replaces ad-hoc fan-out with measured routing + verification + learning.
+- **How implemented (planned):** digestion prompts (is_admin_fluff, is_duplicate, topic_tag, quality_score, cue_candidate, node_type) get routed — easy ones to the cheapest free 9B, harder ones to the local 26B (Inkling-2-Mini-Unbound-v2, :8080). Shadow verification catches bad classifier outputs; harvested failures feed back into better prompts. Replaces ad-hoc fan-out with measured routing + verification + learning.
 - **Why here:** this is the digestion engine — "mix of free models + classifiers in parallel with quality control."
 
 ### 7.2 `free-swarm` (path `orchestration/free-swarm`) — parallel fan-out (digestion + conversion)
@@ -183,11 +183,11 @@ Exit codes gate CI. "Always run the control."
 2. **CURRICULUM_TREE.md:** fully gone. OKF v0.2 (`okf-architect`) handles curriculum/knowledge architecture.
 3. **Kem/Glitch Cat:** heavy incorporation (state-compactor, cgate, guard-hooks, jev-decision, eval-pipeline, semantic-cache, graph-memory).
 4. **Digestion:** smart, classifier-gated — only download relevant note stuff; skip admin/fluff/dupes before writing to disk.
-5. **Local model:** Qwen3.6-35B-A3B on :8080 (per `ports.py list`). All "27B" references are corrected to 35B.
+5. **Local model:** Inkling-2-Mini-Unbound-v2 on :8080 (per `ports.py list`). All "27B" references are corrected to 35B.
 
 ## 12. Still open (need your call)
 
-1. ~~Classifier concurrency~~ — RESOLVED: local 35B (Qwen3.6-35B-A3B, :8080) running alongside the free hosted classifier tier in parallel.
+1. ~~Classifier concurrency~~ — RESOLVED: local 26B (Inkling-2-Mini-Unbound-v2, :8080) running alongside the free hosted classifier tier in parallel.
 2. ~~Smart digestion~~ — RESOLVED: first stage; light classifier (`jev-decision` bool) triages on Canvas metadata (names) before download; scope = weeks 1-12 notes + tutorial solutions only.
 3. ~~Anki~~ — RESOLVED: full hub (deck mgmt + review), reusing the Anki UI from old `viz.html`.
 4. ~~Phase 0 subject~~ — RESOLVED: user-specified subject list (default all 4: 41200, 48430, 48520, 48521); not hardcoded.
