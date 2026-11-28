@@ -61,8 +61,6 @@ disagrees with what is installed, which is exactly how every fault below survive
 - **Defaults:** tts `kokoro` · asr `nemotron` — both served `mode: streaming`
 - **Word timings:** only `crisperwhisper` emits them; `--words-out` with any other model warns and writes nothing
 - **Launcher:** `/run/media/rodri/AI/sh/run-audiocpp.sh` (falls through to the symlink)
-- **Previous install:** `/home/rodri/audio-v0.9.3-bin-ubuntu-x64-vulkan`, kept as fallback
-- **Unusable:** `/home/rodri/Downloads/audio-v0.9.4-bin-ubuntu-x64-rocm10.0.0-test` — needs the ROCm 10.0.0 runtime, dies on `libhipblas.so.3`
 - **Stale config entries:** `omnivoice`, `audio8-tts-bf16`, `index-tts2-f16` — declared, tolerated, each costs one failed request
 
 Model inventory and voice presets live in `references/server-json.md`; measured
