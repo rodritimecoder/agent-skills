@@ -177,10 +177,13 @@ server can be moved to another port by editing one file.
   poll `doctor` rather than the first request.
 - **`--fallback` is per call.** It does not start the local server, and the
   reply comes from a remote model — say so if the caller needs provenance.
-- **OOM.** The server holds one whole 16 GB card (~15.5 GiB: dense weights, FP8
-  KV cache and a 10 GiB expert cache) plus 14.7 GiB of **pinned host RAM** for
-  the expert pool. GPU 1 stays free for the auxiliary slots, but the host RAM is
-  shared with everything else on the box.
+- **RAM is the binding limit, not VRAM.** The server holds one whole 16 GB card
+  (~15.5 GiB: dense weights, FP8 KV cache, 10 GiB expert cache) plus 14.7 GiB of
+  **pinned host RAM** for the expert pool, out of this box's 30 GB. That leaves
+  room for one chat model only: starting `llm-aux` (`:8091`) beside it drove free
+  RAM to zero, swap to 7/7 and decode from 33 to 0.8 tok/s (measured 2026-11-29).
+  Swap chat models, never stack them; GPU 1 is free for the small aux slots but
+  the RAM is not.
 - **Thinking follows the model's own default.** With no level named the server
   reports `auto` (the template's 0.9, "high"); send
   `chat_template_kwargs: {"enable_thinking": false}` or `reasoning_effort:
@@ -189,7 +192,10 @@ server can be moved to another port by editing one file.
   expert pool; a 3-second SIGKILL fallback (`llama-rig down`) can cut that
   short, so prefer a plain SIGTERM when you have the time.
 - **Sampling profiles.** The launcher picks a set with `PROFILE`: `agent` (default — temperature 0.7,
-  top_p 0.95, top_k 20), `rp` (1.05 / 0.98, no top_k) or `raw` (1.0 / 1.0). `TEMP`, `TOP_P` and
+  top_p 0.95, top_k 20, thinking at the model's default), `rp` (1.05 / 0.98, no top_k, thinking **off**)
+  or `raw` (1.0 / 1.0, thinking off). RP and raw think off because this model spends its whole budget in
+  the reasoning segment at any effort level (effort `low`, 700 tokens → 2 364 chars of reasoning, 0 of
+  answer). `TEMP`, `TOP_P` and
   `TOP_K` override any profile. Only those three reach maya-ik2: `min_p` and the repetition /
   frequency / presence penalties are forwarded by the server and dropped by the engine, so setting
   them here changes nothing (use `:8091`, a llama.cpp server, when penalties matter).
